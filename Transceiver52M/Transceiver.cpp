@@ -838,6 +838,7 @@ void Transceiver::driveControl(size_t chan)
   }
   else {
     LOG(WARNING) << "bogus command " << command << " on control interface.";
+    sprintf(response,"RSP ERR 1");
   }
 
   mCtrlSockets[chan]->write(response, strlen(response) + 1);
