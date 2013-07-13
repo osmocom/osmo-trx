@@ -1,5 +1,6 @@
 /*
 * Copyright 2008, 2010 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 *
 * This software is distributed under the terms of the GNU Affero Public License.
@@ -127,6 +128,11 @@ void DatagramSocket::blocking()
 void DatagramSocket::close()
 {
 	::close(mSocketFD);
+}
+
+void DatagramSocket::shutdown()
+{
+  ::shutdown(mSocketFD, SHUT_RDWR);
 }
 
 

@@ -1,5 +1,6 @@
 /*
 * Copyright 2008, 2010 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -133,6 +134,11 @@ public:
 
 	/** Close the socket. */
 	void close();
+
+  /** Shutdown the socket without destroying the descriptor
+   *  Use this to interrupt blocking read()
+   */
+  void shutdown();
 
 };
 
