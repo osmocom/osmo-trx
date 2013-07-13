@@ -41,6 +41,7 @@
 //@{
 
 
+// UNUSED in osmo-trx
 /** Pointer FIFO for interthread operations.  */
 // (pat) The elements in the queue are type T*, and
 // the Fifo class implements the underlying queue.
@@ -155,6 +156,7 @@ template <class T, class Fifo=PointerFIFO> class InterthreadQueue {
 	}
 };
 
+// UNUSED in osmo-trx
 // (pat) Identical to above but with the threading problem fixed.
 template <class T, class Fifo=PointerFIFO> class InterthreadQueue2 {
 
@@ -276,6 +278,7 @@ template <class T, class Fifo=PointerFIFO> class InterthreadQueue2 {
 
 
 
+// UNUSED in osmo-trx
 /** Pointer FIFO for interthread operations.  */
 template <class T> class InterthreadQueueWithWait {
 
@@ -380,7 +383,7 @@ template <class T> class InterthreadQueueWithWait {
 
 
 
-
+// UNUSED in osmo-trx
 /** Thread-safe map of pointers to class D, keyed by class K. */
 template <class K, class D > class InterthreadMap {
 
@@ -644,7 +647,7 @@ template <class T, class C = std::vector<T*>, class Cmp = PointerCompare<T> > cl
 
 
 
-
+// UNUSED in osmo-trx
 class Semaphore {
 
 	private:
