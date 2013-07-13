@@ -1,5 +1,6 @@
 /*
 * Copyright 2008, 2011 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -99,7 +100,7 @@ template <class T, class Fifo=PointerFIFO> class InterthreadQueue {
 	{
 		ScopedLock lock(mLock);
 		T* retVal = (T*)mQ.get();
-		while (retVal==NULL) {
+		if (retVal==NULL) {
 			mWriteSignal.wait(mLock);
 			retVal = (T*)mQ.get();
 		}
