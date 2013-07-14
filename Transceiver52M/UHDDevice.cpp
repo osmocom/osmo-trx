@@ -3,6 +3,7 @@
  * Written by Thomas Tsou <ttsou@vt.edu>
  *
  * Copyright 2010,2011 Free Software Foundation, Inc.
+ * Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -206,6 +207,15 @@ private:
 	size_t data_end;
 };
 
+/** transmit queueing thread loop */
+class UHDAsyncEventThread : public Thread {
+public:
+	UHDAsyncEventThread() : Thread("UHDAsyncEventThread") {}
+
+protected:
+	virtual void runThread();
+};
+
 /*
     uhd_device - UHD implementation of the Device interface. Timestamped samples
                 are sent to and received from the device. An intermediate buffer
@@ -312,14 +322,14 @@ private:
 	std::string str_code(uhd::rx_metadata_t metadata);
 	std::string str_code(uhd::async_metadata_t metadata);
 
-	Thread *async_event_thrd;
+	UHDAsyncEventThread async_event_thrd;
 };
 
-void *async_event_loop(uhd_device *dev)
+void UHDAsyncEventThread::runThread()
 {
-	while (dev->running()) {
+	uhd_device *dev = (uhd_device *)mThreadData;
+	while (isThreadRunning()) {
 		dev->recv_async_msg();
-		pthread_testcancel();
 	}
 }
 
@@ -349,8 +359,7 @@ uhd_device::uhd_device(int sps, bool skip_rx)
 	: tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0), started(false), aligned(false),
-	  rx_pkt_cnt(0), drop_cnt(0), prev_ts(0,0), ts_offset(0),
-	  async_event_thrd(NULL)
+	  rx_pkt_cnt(0), drop_cnt(0), prev_ts(0,0), ts_offset(0)
 {
 	this->sps = sps;
 	this->skip_rx = skip_rx;
@@ -698,8 +707,7 @@ bool uhd_device::start()
 	setPriority();
 
 	// Start asynchronous event (underrun check) loop
-	async_event_thrd = new Thread(32768);
-	async_event_thrd->start((void * (*)(void*))async_event_loop, (void*)this);
+	async_event_thrd.startThread((void*)this);
 
 	// Start streaming
 	restart(uhd::time_spec_t(0.0));
@@ -716,14 +724,13 @@ bool uhd_device::stop()
 	if (!started)
 		return false;
 
+	async_event_thrd.stopThread();
 	started = false;
 
 	uhd::stream_cmd_t stream_cmd = 
 		uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
 
 	usrp_dev->issue_stream_cmd(stream_cmd);
-
-	delete async_event_thrd;
 
 	return true;
 }

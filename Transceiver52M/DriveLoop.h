@@ -1,5 +1,6 @@
 /*
 * Copyright 2008, 2012 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 * This software is distributed under the terms of the GNU Public License.
 * See the COPYING file in the main directory for details.
@@ -44,7 +45,7 @@
 //#define TRANSMIT_LOGGING 1
 
 /** The Transceiver class, responsible for physical layer of basestation */
-class DriveLoop {
+class DriveLoop : public Thread {
   
 private:
 
@@ -55,8 +56,6 @@ private:
   UDPSocket mClockSocket;	  ///< socket for writing clock updates to GSM core
 
   VectorQueue  mTransmitPriorityQueue[CHAN_MAX];   ///< priority queue of transmit bursts received from GSM core
-
-  Thread *mRadioDriveLoopThread;  ///< thread to push/pull bursts into transmit/receive FIFO
 
   GSM::Time mTransmitDeadlineClock;       ///< deadline for pushing bursts into transmit FIFO 
   GSM::Time mStartTime;                   ///< random start time of the radio clock
@@ -83,7 +82,6 @@ private:
 
   int mSamplesPerSymbol;               ///< number of samples per GSM symbol
 
-  bool mOn;			       ///< flag to indicate that transceiver is powered on
   int fillerModulus[CHAN_MAX][8];                ///< modulus values of all timeslots, in frames
   signalVector *fillerTable[CHAN_MAX][102][8];   ///< table of modulated filler waveforms for all timeslots
 
@@ -111,9 +109,6 @@ public:
    
   /** Destructor */
   ~DriveLoop();
-
-  /** start the Transceiver */
-  void start();
 
   VectorQueue *priorityQueue(int m) { return &mTransmitPriorityQueue[m]; }
 
@@ -178,12 +173,9 @@ protected:
   */
   bool driveTransmitPriorityQueue();
 
-  friend void *RadioDriveLoopAdapter(DriveLoop *);
+  virtual void runThread();
 
   void reset();
-
-  /** return drive loop status */
-  bool on() { return mOn; }
 
   /** set priority on current thread */
   void setPriority() { mRadioInterface->setPriority(); }

@@ -1,5 +1,6 @@
 /*
 * Copyright 2008, 2012 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 * This software is distributed under the terms of the GNU Public License.
 * See the COPYING file in the main directory for details.
@@ -41,21 +42,56 @@
 /** Define this to be the slot number to be logged. */
 //#define TRANSMIT_LOGGING 1
 
+/** FIFO thread loop */
+class FIFOServiceLoopThread : public Thread {
+public:
+  FIFOServiceLoopThread() : Thread("FIFOServiceLoopThread") {}
+  Thread::ReturnStatus shutdown();
+
+protected:
+  virtual void runThread();
+};
+
+/** control message handler thread loop */
+class ControlServiceLoopThread : public Thread {
+public:
+  ControlServiceLoopThread() : Thread("ControlServiceLoopThread") {}
+  Thread::ReturnStatus shutdown();
+
+protected:
+  virtual void runThread();
+};
+
+/** transmit queueing thread loop */
+class TransmitPriorityQueueServiceLoopThread : public Thread {
+public:
+  TransmitPriorityQueueServiceLoopThread() : Thread("TransmitPriorityQueueServiceLoopThread") {}
+  Thread::ReturnStatus shutdown();
+
+protected:
+  virtual void runThread();
+};
+
 /** The Transceiver class, responsible for physical layer of basestation */
 class Transceiver {
   
 private:
   DriveLoop *mDriveLoop;
 
+  int mBasePort;                  ///< Base port address for all our ports
+  std::string mTRXAddress;        ///< Address of the BTS TRX control interface
   UDPSocket mDataSocket;	  ///< socket for writing to/reading from GSM core
   UDPSocket mControlSocket;	  ///< socket for writing/reading control commands from GSM core
 
   VectorQueue  *mTransmitPriorityQueue;   ///< priority queue of transmit bursts received from GSM core
   VectorFIFO*  mReceiveFIFO;      ///< radioInterface FIFO of receive bursts 
 
-  Thread *mFIFOServiceLoopThread;  ///< thread to push/pull bursts into transmit/receive FIFO
-  Thread *mControlServiceLoopThread;       ///< thread to process control messages from GSM core
-  Thread *mTransmitPriorityQueueServiceLoopThread;///< thread to process transmit bursts from GSM core
+  friend class FIFOServiceLoopThread;
+  FIFOServiceLoopThread mFIFOServiceLoop;      ///< thread to push/pull bursts into transmit/receive FIFO
+  friend class ControlServiceLoopThread;
+  ControlServiceLoopThread mControlServiceLoop;   ///< thread to process control messages from GSM core
+  friend class TransmitPriorityQueueServiceLoopThread;
+  TransmitPriorityQueueServiceLoopThread mTransmitPriorityQueueServiceLoop;///< thread to process transmit bursts from GSM core
 
   int mChannel;                           ///< channelizer attach number between 0 and 'M-1'
 
@@ -151,12 +187,6 @@ protected:
   */
   bool driveTransmitPriorityQueue();
 
-  friend void *FIFOServiceLoopAdapter(Transceiver *);
-
-  friend void *ControlServiceLoopAdapter(Transceiver *);
-
-  friend void *TransmitPriorityQueueServiceLoopAdapter(Transceiver *);
-
   void reset();
 
   /** return transceiver on/off status */ 
@@ -171,12 +201,3 @@ protected:
   /** set priority on current thread */
   void setPriority() { mRadioInterface->setPriority(); }
 };
-
-/** FIFO thread loop */
-void *FIFOServiceLoopAdapter(Transceiver *);
-
-/** control message handler thread loop */
-void *ControlServiceLoopAdapter(Transceiver *);
-
-/** transmit queueing thread loop */
-void *TransmitPriorityQueueServiceLoopAdapter(Transceiver *);

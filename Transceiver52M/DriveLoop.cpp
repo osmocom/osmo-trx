@@ -1,5 +1,6 @@
 /*
 * Copyright 2008, 2009, 2010, 2012 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 * This software is distributed under the terms of the GNU Public License.
 * See the COPYING file in the main directory for details.
@@ -31,10 +32,11 @@ DriveLoop::DriveLoop(int wBasePort, const char *TRXAddress,
                      RadioInterface *wRadioInterface,
 		     int wChanM, int wC0, int wSamplesPerSymbol,
                      GSM::Time wTransmitLatency)
-	:mClockSocket(wBasePort, TRXAddress, wBasePort + 100), mC0(wC0)
+: Thread("DriveLoop")
+, mClockSocket(wBasePort, TRXAddress, wBasePort + 100)
+, mC0(wC0)
 {
   mChanM = wChanM;
-  mRadioDriveLoopThread = NULL;
   mSamplesPerSymbol = wSamplesPerSymbol;
   mRadioInterface = wRadioInterface;
 
@@ -74,31 +76,13 @@ DriveLoop::DriveLoop(int wBasePort, const char *TRXAddress,
       mChanType[n][i] = NONE;
     }
   }
-
-  mOn = false;
 }
 
 DriveLoop::~DriveLoop()
 {
-  if (mOn) {
-    mOn = false;
-
-    if (mRadioDriveLoopThread)
-      delete mRadioDriveLoopThread;
-  }
-
+  stopThread();
   delete gsmPulse;
   sigProcLibDestroy();
-}
-
-void DriveLoop::start()
-{
-  if (mOn)
-    return;
-
-  mOn = true;
-  mRadioDriveLoopThread = new Thread(32768);
-  mRadioDriveLoopThread->start((void * (*)(void*))RadioDriveLoopAdapter, (void*) this);
 }
 
 void DriveLoop::pushRadioVector(GSM::Time &nowTime)
@@ -273,15 +257,12 @@ void DriveLoop::writeClockInterface()
   mLastClockUpdateTime = mTransmitDeadlineClock;
 }
 
-void *RadioDriveLoopAdapter(DriveLoop *drive)
+void DriveLoop::runThread()
 {
-  drive->setPriority();
+  setPriority();
 
-  while (drive->on()) {
-    drive->driveReceiveFIFO();
-    drive->driveTransmitFIFO();
-    pthread_testcancel();
+  while (isThreadRunning()) {
+    driveReceiveFIFO();
+    driveTransmitFIFO();
   }
-
-  return NULL;
 }

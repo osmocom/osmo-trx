@@ -1,5 +1,6 @@
 /*
 * Copyright 2008, 2009, 2010, 2012 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 * This software is distributed under the terms of the GNU Public License.
 * See the COPYING file in the main directory for details.
@@ -51,15 +52,13 @@ using namespace GSM;
 Transceiver::Transceiver(int wBasePort, const char *TRXAddress,
 			 DriveLoop *wDriveLoop, RadioInterface *wRadioInterface,
 			 int wSamplesPerSymbol, int wChannel, bool wPrimary)
-	:mDataSocket(wBasePort+2,TRXAddress,wBasePort+102),
+	:mBasePort(wBasePort), mTRXAddress(TRXAddress),
+	 mDataSocket(wBasePort+2,TRXAddress,wBasePort+102),
 	 mControlSocket(wBasePort+1,TRXAddress,wBasePort+101),
 	 mDriveLoop(wDriveLoop), mRadioInterface(wRadioInterface),
 	 mSamplesPerSymbol(wSamplesPerSymbol), mTransmitPriorityQueue(NULL),
 	 mChannel(wChannel), mPrimary(wPrimary)
 {
-  mFIFOServiceLoopThread = NULL;
-  mControlServiceLoopThread = NULL;
-  mTransmitPriorityQueueServiceLoopThread = NULL;
   mMaxExpectedDelay = 0;
 
   // generate pulse and setup up signal processing library
@@ -93,12 +92,14 @@ Transceiver::Transceiver(int wBasePort, const char *TRXAddress,
 
 Transceiver::~Transceiver()
 {
+  // Stop all threads before freeing up
+  mFIFOServiceLoop.shutdown();
+  mControlServiceLoop.shutdown();
+  mTransmitPriorityQueueServiceLoop.shutdown();
+
+  // Now free all allocated data
   delete gsmPulse;
   mTransmitPriorityQueue->clear();
-
-  delete mFIFOServiceLoopThread;
-  delete mControlServiceLoopThread;
-  delete mTransmitPriorityQueueServiceLoopThread;
 }
   
 
@@ -304,16 +305,12 @@ void Transceiver::pullFIFO()
 void Transceiver::start()
 {
   mRunning = true;
-  mControlServiceLoopThread = new Thread(32768);
-  mControlServiceLoopThread->start((void * (*)(void*))ControlServiceLoopAdapter,(void*) this);
+  mControlServiceLoop.startThread((void*) this);
 
   if (!mPrimary) {
     mOn = true;
-    mFIFOServiceLoopThread = new Thread(32768);
-    mFIFOServiceLoopThread->start((void * (*)(void*))FIFOServiceLoopAdapter,(void*) this);
- 
-    mTransmitPriorityQueueServiceLoopThread = new Thread(32768);
-    mTransmitPriorityQueueServiceLoopThread->start((void * (*)(void*))TransmitPriorityQueueServiceLoopAdapter,(void*) this);
+    mFIFOServiceLoop.startThread((void*) this);
+    mTransmitPriorityQueueServiceLoop.startThread((void*) this);
   }
 }
 
@@ -321,6 +318,9 @@ void Transceiver::shutdown()
 {
   mOn = false;
   mRunning = false;
+  mControlServiceLoop.shutdown();
+  mFIFOServiceLoop.shutdown();
+  mTransmitPriorityQueueServiceLoop.shutdown();
 }
 
 void Transceiver::reset()
@@ -382,18 +382,15 @@ void Transceiver::driveControl()
         // Prepare for thread start
         mPower = -20;
         mRadioInterface->start();
-        mDriveLoop->start();
+        mDriveLoop->startThread();
 
         mDriveLoop->writeClockInterface();
         generateRACHSequence(*gsmPulse,mSamplesPerSymbol);
 
         // Start radio interface threads.
         mOn = true;
-        mFIFOServiceLoopThread = new Thread(32768);
-        mFIFOServiceLoopThread->start((void * (*)(void*))FIFOServiceLoopAdapter,(void*) this);
-
-        mTransmitPriorityQueueServiceLoopThread = new Thread(32768);
-        mTransmitPriorityQueueServiceLoopThread->start((void * (*)(void*))TransmitPriorityQueueServiceLoopAdapter,(void*) this);
+        mFIFOServiceLoop.startThread((void*) this);
+        mTransmitPriorityQueueServiceLoop.startThread((void*) this);
       }
     }
   }
@@ -560,27 +557,94 @@ bool Transceiver::driveTransmitPriorityQueue()
 
 }
 
-void *FIFOServiceLoopAdapter(Transceiver *transceiver)
+Thread::ReturnStatus FIFOServiceLoopThread::shutdown()
 {
-  while (transceiver->on()) {
+  Transceiver *transceiver = (Transceiver *)mThreadData;
+
+  if (transceiver == NULL)
+    // Nothing to do
+    return ALREADY_IDLE;
+
+  transceiver->mFIFOServiceLoop.requestThreadStop();
+  if (transceiver->mReceiveFIFO != NULL) {
+    // Write twice, because read() function may read twice in case of NULL.
+    transceiver->mReceiveFIFO->write(NULL);
+    transceiver->mReceiveFIFO->write(NULL);
+  }
+  return transceiver->mFIFOServiceLoop.stopThread();
+}
+
+void FIFOServiceLoopThread::runThread()
+{
+  Transceiver *transceiver = (Transceiver *)mThreadData;
+
+  while (isThreadRunning()) {
     transceiver->pullFIFO();
-    pthread_testcancel();
   }
-  return NULL;
+
+  LOG(DEBUG) << "FIFOServiceLoopThread has finished operations";
 }
 
-void *ControlServiceLoopAdapter(Transceiver *transceiver)
+Thread::ReturnStatus ControlServiceLoopThread::shutdown()
 {
-  while (transceiver->running()) {
+  Transceiver *transceiver = (Transceiver *)mThreadData;
+  
+  if (transceiver == NULL)
+    // Nothing to do
+    return ALREADY_IDLE;
+
+  transceiver->mControlServiceLoop.requestThreadStop();
+  // FIXME: We should use shutdown() here, but the socket should be
+  //        re-openned on the next start() then. Righ now the socket
+  //        is created in the constructor and if we shutdown() it here,
+  //        we'll get errors when we try to use it on the next start.
+//  transceiver->mControlSocket.shutdown();
+  {
+    // mBasePort+1 is mControlSocket port
+    UDPSocket tmpSock(0, "127.0.0.1", transceiver->mBasePort+1);
+    tmpSock.write(NULL, 0);
+  }
+  return transceiver->mControlServiceLoop.stopThread();
+}
+
+void ControlServiceLoopThread::runThread()
+{
+  Transceiver *transceiver = (Transceiver *)mThreadData;
+
+  while (isThreadRunning()) {
     transceiver->driveControl();
-    pthread_testcancel();
   }
-  return NULL;
+
+  LOG(DEBUG) << "ControlServiceLoopThread has finished operations";
 }
 
-void *TransmitPriorityQueueServiceLoopAdapter(Transceiver *transceiver)
+Thread::ReturnStatus TransmitPriorityQueueServiceLoopThread::shutdown()
 {
-  while (transceiver->on()) {
+  Transceiver *transceiver = (Transceiver *)mThreadData;
+  
+  if (transceiver == NULL)
+    // Nothing to do
+    return ALREADY_IDLE;
+
+  transceiver->mTransmitPriorityQueueServiceLoop.requestThreadStop();
+  // FIXME: We should use shutdown() here, but the socket should be
+  //        re-openned on the next start() then. Righ now the socket
+  //        is created in the constructor and if we shutdown() it here,
+  //        we'll get errors when we try to use it on the next start.
+//  transceiver->mDataSocket.shutdown();
+  {
+    // mBasePort+2 is mDataSocket port
+    UDPSocket tmpSock(0, "127.0.0.1", transceiver->mBasePort+2);
+    tmpSock.write(NULL, 0);
+  }
+  return transceiver->mTransmitPriorityQueueServiceLoop.stopThread();
+}
+
+void TransmitPriorityQueueServiceLoopThread::runThread()
+{
+  Transceiver *transceiver = (Transceiver *)mThreadData;
+
+  while (isThreadRunning()) {
     bool stale = false;
 
     // Flush the UDP packets until a successful transfer.
@@ -591,7 +655,7 @@ void *TransmitPriorityQueueServiceLoopAdapter(Transceiver *transceiver)
       // If a packet was stale, remind the GSM stack of the clock.
       transceiver->getDriveLoop()->writeClockInterface();
     }
-    pthread_testcancel();
   }
-  return NULL;
+
+  LOG(DEBUG) << "TransmitPriorityQueueServiceLoopThread has finished operations";
 }
