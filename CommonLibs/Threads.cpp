@@ -95,11 +95,11 @@ Mutex::~Mutex()
 
 
 /** Block for the signal up to the cancellation timeout. */
-void Signal::wait(Mutex& wMutex, unsigned timeout) const
+int Signal::wait(Mutex& wMutex, unsigned timeout) const
 {
 	Timeval then(timeout);
 	struct timespec waitTime = then.timespec();
-	pthread_cond_timedwait(&mSignal,&wMutex.mMutex,&waitTime);
+	return pthread_cond_timedwait(&mSignal,&wMutex.mMutex,&waitTime);
 }
 
 

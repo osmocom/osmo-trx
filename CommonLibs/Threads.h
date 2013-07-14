@@ -121,14 +121,14 @@ class Signal {
 		Block for the signal up to the cancellation timeout.
 		Under Linux, spurious returns are possible.
 	*/
-	void wait(Mutex& wMutex, unsigned timeout) const;
+	int wait(Mutex& wMutex, unsigned timeout) const;
 
 	/**
 		Block for the signal.
 		Under Linux, spurious returns are possible.
 	*/
-	void wait(Mutex& wMutex) const
-		{ pthread_cond_wait(&mSignal,&wMutex.mMutex); }
+	int wait(Mutex& wMutex) const
+		{ return pthread_cond_wait(&mSignal,&wMutex.mMutex); }
 
 	void signal() { pthread_cond_signal(&mSignal); }
 
