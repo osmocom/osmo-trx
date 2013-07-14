@@ -33,6 +33,7 @@ DriveLoop::DriveLoop(int wBasePort, const char *TRXAddress,
 		     int wChanM, int wC0, int wSamplesPerSymbol,
                      GSM::Time wTransmitLatency)
 : Thread("DriveLoop")
+, mUseCount(0)
 , mClockSocket(wBasePort, TRXAddress, wBasePort + 100)
 , mC0(wC0)
 {
@@ -83,6 +84,32 @@ DriveLoop::~DriveLoop()
   stopThread();
   delete gsmPulse;
   sigProcLibDestroy();
+}
+
+bool DriveLoop::start()
+{
+  // Use count must not be negative
+  assert(mUseCount>=0);
+
+  mUseCount++;
+  if (mUseCount>1)
+    return false;
+  
+  startThread();
+  return true;
+}
+
+bool DriveLoop::stop()
+{
+  // Use count must not be negative or zero
+  assert(mUseCount>0);
+
+  mUseCount--;
+  if (mUseCount>0)
+    return false;
+  
+  stopThread();
+  return true;
 }
 
 void DriveLoop::pushRadioVector(GSM::Time &nowTime)

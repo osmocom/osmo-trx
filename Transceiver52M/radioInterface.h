@@ -59,6 +59,7 @@ protected:
   int receiveOffset;                          ///< offset b/w transmit and receive GSM timestamps, in timeslots
 
   bool mOn;				      ///< indicates radio is on
+  int  mUseCount;                 ///< Use counter
 
   double powerScaling;
 
@@ -90,8 +91,9 @@ private:
 
 public:
 
-  /** start the interface */
+  /** Increase usage counter and start the interface if not started yet */
   bool start();
+  /** Decrease usage counter and stop the interface if no users left */
   bool stop();
 
   bool started() { return mOn; };

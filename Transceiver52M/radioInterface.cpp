@@ -55,6 +55,7 @@ RadioInterface::RadioInterface(RadioDevice *wRadio,
                                int wReceiveOffset,
 			       GSM::Time wStartTime)
   : mChanM(wChanM), underrun(false), sendCursor(0), rcvCursor(0), mOn(false),
+    mUseCount(0),
     mRadio(wRadio), receiveOffset(wReceiveOffset), samplesPerSymbol(wSPS),
     powerScaling(1.0), loadTest(false)
 {
@@ -147,9 +148,13 @@ bool RadioInterface::tuneRx(double freq, int chan)
 
 bool RadioInterface::start()
 {
-  int i;
+  // Use count must not be negative
+  assert(mUseCount>=0);
+  // Being on while mUseCount is 0 is a wrong condition
+  assert(!(mOn && mUseCount==0));
 
-  if (mOn)
+  mUseCount++;
+  if (mOn || mUseCount>1)
     return false;
 
   mOn = true;
@@ -160,7 +165,7 @@ bool RadioInterface::start()
 #endif
   writeTimestamp = mRadio->initialWriteTimestamp();
   readTimestamp = mRadio->initialReadTimestamp();
-  for (i = 0; i < mChanM; i++) {
+  for (int i = 0; i < mChanM; i++) {
     sendBuffer[i] = new float[8*2*INCHUNK];
     rcvBuffer[i] = new float[8*2*OUTCHUNK];
   }
@@ -178,11 +183,18 @@ bool RadioInterface::start()
 
 bool RadioInterface::stop()
 {
-  if (!mOn)
+  // Use count must not be negative or zero
+  assert(mUseCount>0);
+  // Must be on while stopping
+  assert(mOn);
+
+  mUseCount--;
+  if (mUseCount>0)
     return false;
 
   mOn = false;
   mRadio->stop();
+  return true;
 }
 
 #ifdef USRP1

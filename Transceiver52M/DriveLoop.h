@@ -45,9 +45,11 @@
 //#define TRANSMIT_LOGGING 1
 
 /** The Transceiver class, responsible for physical layer of basestation */
-class DriveLoop : public Thread {
+class DriveLoop : private Thread {
   
 private:
+
+  int  mUseCount;                 ///< Use counter
 
   GSM::Time mTransmitLatency;     ///< latency between basestation clock and transmit deadline clock
   GSM::Time mLatencyUpdateTime;   ///< last time latency was updated
@@ -109,6 +111,11 @@ public:
    
   /** Destructor */
   ~DriveLoop();
+
+  /** Increase usage counter and start the thread if not started yet */
+  bool start();
+  /** Decrease usage counter and stop the thread if no users left */
+  bool stop();
 
   VectorQueue *priorityQueue(int m) { return &mTransmitPriorityQueue[m]; }
 
