@@ -44,6 +44,7 @@ libcommon_la_SOURCES = \
 	Utils.cpp
 
 noinst_PROGRAMS = \
+	ThreadsTest \
 	BitVectorTest \
 	InterthreadTest \
 	SocketsTest \
@@ -79,6 +80,10 @@ URLEncodeTest_LDADD = libcommon.la
 
 BitVectorTest_SOURCES = BitVectorTest.cpp
 BitVectorTest_LDADD = libcommon.la $(SQLITE_LA)
+
+ThreadsTest_SOURCES = ThreadsTest.cpp
+ThreadsTest_LDADD = libcommon.la $(SQLITE_LA)
+ThreadsTest_LDFLAGS = -lpthread
 
 InterthreadTest_SOURCES = InterthreadTest.cpp
 InterthreadTest_LDADD = libcommon.la $(SQLITE_LA)
