@@ -85,7 +85,7 @@ Transceiver::Transceiver(int wBasePort, const char *TRXAddress,
   mRxFreq = 0.0;
   mFreqOffset = 0.0;
 
-  mPower = -10;
+  mPower = -20;
   mEnergyThreshold = INIT_ENERGY_THRSHD;
   prevFalseDetectionTime = mDriveLoop->getStartTime();
 }
@@ -306,12 +306,6 @@ void Transceiver::start()
 {
   mRunning = true;
   mControlServiceLoop.startThread((void*) this);
-
-  if (!mPrimary) {
-    mOn = true;
-    mFIFOServiceLoop.startThread((void*) this);
-    mTransmitPriorityQueueServiceLoop.startThread((void*) this);
-  }
 }
 
 void Transceiver::shutdown()
@@ -371,6 +365,15 @@ void Transceiver::driveControl()
   if (strcmp(command,"POWEROFF")==0) {
     // turn off transmitter/demod
     sprintf(response,"RSP POWEROFF 0"); 
+    if (mOn) {
+      // Stop radio interface threads.
+      mOn = false;
+      mFIFOServiceLoop.shutdown();
+      mTransmitPriorityQueueServiceLoop.shutdown();
+
+      mRadioInterface->stop();
+      mDriveLoop->stop();
+    }
   }
   else if (strcmp(command,"POWERON")==0) {
     // turn on transmitter/demod
@@ -378,14 +381,15 @@ void Transceiver::driveControl()
       sprintf(response,"RSP POWERON 1");
     else {
       sprintf(response,"RSP POWERON 0");
-      if (mPrimary && !mOn) {
+      if (!mOn) {
         // Prepare for thread start
-        mPower = -20;
         mRadioInterface->start();
-        mDriveLoop->startThread();
+        mDriveLoop->start();
 
         mDriveLoop->writeClockInterface();
-        generateRACHSequence(*gsmPulse,mSamplesPerSymbol);
+        if (mPrimary) {
+          generateRACHSequence(*gsmPulse,mSamplesPerSymbol);
+        }
 
         // Start radio interface threads.
         mOn = true;
