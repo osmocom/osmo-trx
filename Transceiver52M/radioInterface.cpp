@@ -66,8 +66,6 @@ RadioInterface::~RadioInterface(void)
   if (mOn) {
     mRadio->stop();
     close();
- 
-    delete mAlignRadioServiceLoopThread;
 
     for (int i = 0; i < mChanM; i++) {
       if (rcvBuffer[i] != NULL)

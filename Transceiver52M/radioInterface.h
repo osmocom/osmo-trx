@@ -37,7 +37,6 @@ class RadioInterface {
 protected:
 
   int mChanM;                                 ///< channelizer width
-  Thread *mAlignRadioServiceLoopThread;	      ///< thread that synchronizes transmit and receive sections
 
   VectorFIFO mReceiveFIFO[CHAN_MAX];	      ///< FIFO that holds receive  bursts
 
