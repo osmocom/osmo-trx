@@ -37,6 +37,8 @@
 #include "config.h"
 #endif
 
+extern volatile bool gbShutdown;
+
 using namespace GSM;
 
 #define USB_LATENCY_INTRVL		10,0
@@ -373,6 +375,10 @@ void Transceiver::driveControl()
 
       mRadioInterface->stop();
       mDriveLoop->stop();
+
+      if (mPrimary) {
+        gbShutdown = true;
+      }
     }
   }
   else if (strcmp(command,"POWERON")==0) {
