@@ -1,5 +1,6 @@
 /*
 * Copyright 2008, 2011 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -137,46 +138,104 @@ class Signal {
 };
 
 
-
-#define START_THREAD(thread,function,argument) \
-	thread.start((void *(*)(void*))function, (void*)argument);
-
 /** A C++ wrapper for pthread threads.  */
 class Thread {
 
-	private:
+public:
 
-	pthread_t mThread;
-	pthread_attr_t mAttrib;
-	// FIXME -- Can this be reduced now?
-	size_t mStackSize;
-	
+    typedef void *(*Adaptor)(void*);
+    enum ReturnStatus {
+        RETURN_OK = 0,
+        ALREADY_STARTED,
+        ALREADY_IDLE,
+        PTHREAD_ERROR,
+        WRONG_STATE,
+        RETURN_TIMEOUT
+    };
+    enum ThreadState {
+        THREAD_STATE_IDLE,      ///< Thread is not started. On start() => STARTING
+        THREAD_STATE_STARTING,  ///< Thread is about to start. When actually started => RUNNING
+        THREAD_STATE_RUNNING,   ///< Thread is active. On stop() => STOPPING
+        THREAD_STATE_STOPPING   ///< Thread is about to stop. When actually stopped => IDLE
+    };
+    enum {
+       THREAD_STARTUP_TIMEOUT=5, ///< Time to wait for thread startup (in seconds).
+       THREAD_STOP_TIMEOUT=5     ///< Time to wait for thread stop (in seconds).
+    };
 
-	public:
+    /** Create a thread in a non-running state. */
+    Thread(const std::string &name, size_t stackSize = (65536*4));
 
-	/** Create a thread in a non-running state. */
-	Thread(size_t wStackSize = (65536*4)):mThread((pthread_t)0) {
-		pthread_attr_init(&mAttrib);	// (pat) moved this here.
-		mStackSize=wStackSize;
-	}
+    /** Destroy the Thread. */
+    virtual ~Thread();
 
-	/**
-		Destroy the Thread.
-		It should be stopped and joined.
-	*/
-	// (pat) If the Thread is destroyed without being started, then mAttrib is undefined.  Oops.
-	~Thread() { pthread_attr_destroy(&mAttrib); }
+    /** Start the thread. */
+    ReturnStatus startThread(void *data=NULL);
 
+    /** Stop the thread. */
+    ReturnStatus stopThread();
 
-	/** Start the thread on a task. */
-	void start(void *(*task)(void*), void *arg);
+    ThreadState getThreadState() const
+    {
+        ScopedLock lock(mThreadStateMutex);
+        return mThreadState;
+    }
 
-	/** Join a thread that will stop on its own. */
-	void join() { int s = pthread_join(mThread,NULL); assert(!s); mThread = 0; }
+    bool isThreadRunning() const
+    {
+        ScopedLock lock(mThreadStateMutex);
+        return mThreadState == THREAD_STATE_RUNNING;
+    }
+    void requestThreadStop()
+    {
+        ScopedLock lock(mThreadStateMutex);
+        if (mThreadState == THREAD_STATE_RUNNING)
+            mThreadState = THREAD_STATE_STOPPING;
+    }
+    bool isThreadStopping() const
+    {
+        ScopedLock lock(mThreadStateMutex);
+        return mThreadState == THREAD_STATE_STOPPING;
+    }
 
+    const std::string &getThreadName() const {return mThreadName;}
+
+protected:
+
+    pthread_t mThreadId; ///< OS id of the thread.
+    const std::string mThreadName; ///< Name of the thread.
+    size_t mStackSize;  ///< Requested stack size for the thread.
+    ThreadState mThreadState; ///< The current state of the thread.
+    mutable Mutex mThreadStateMutex; ///< Mutex to protect ThreadState variable
+    void *mThreadData;  ///< Data to be passed to the thread loop.
+    Mutex mThreadStartupMutex; ///< Mutex, used with the next two conditional
+                        ///< variables to synchronize thread startup.
+    Signal  mThreadInitializedEvent; ///< Conditional variable, signaling
+                        ///< that this thread object initialization is completed
+                        ///< and the thread could go on.
+    Signal  mThreadStartStopEvent; ///< Conditional variable, signaling
+                        ///< that the thread is started and start() method could
+                        ///< return to caller.
+
+    /** Function with the actual thread loop.
+     *  Override this function in child classes to do real work.
+     */
+    virtual void runThread() =0;
+
+    // Static funciton which actually starts the run() method.
+    static void *threadAdaptor(void *data);
+
+    void ackThreadStart() {
+        ScopedLock lock(mThreadStateMutex);
+        assert(mThreadState == THREAD_STATE_STARTING);
+        mThreadState = THREAD_STATE_RUNNING;
+    }
+    void ackThreadStop() {
+        ScopedLock lock(mThreadStateMutex);
+        assert(mThreadState == THREAD_STATE_STOPPING);
+        mThreadState = THREAD_STATE_IDLE;
+    }
 };
-
-
 
 
 #endif
