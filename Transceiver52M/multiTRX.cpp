@@ -112,9 +112,6 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < numARFCN; i++)
 		trx[i]->shutdown();
 
-	/* Allow time for threads to end before we start freeing objects */
-	sleep(2);
-
 	for (int i = 0; i < numARFCN; i++)
 		delete trx[i];
 	delete drive;
