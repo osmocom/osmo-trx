@@ -1,5 +1,6 @@
 /*
 * Copyright 2008 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 *
 * This software is distributed under the terms of the GNU Affero Public License.
@@ -27,66 +28,91 @@
 
 #include "Threads.h"
 #include "Interthread.h"
+#include "Configuration.h"
 #include <iostream>
 
 using namespace std;
 
+ConfigurationTable gConfig;
 
 InterthreadQueue<int> gQ;
 InterthreadMap<int,int> gMap;
 
-void* qWriter(void*)
+class QueueWriter : public Thread
 {
-	int *p;
-	for (int i=0; i<20; i++) {
+public:
+	QueueWriter() : Thread("QueueWriter") {}
+
+protected:
+	virtual void runThread()
+	{
+		int *p;
+		for (int i=0; i<20; i++) {
+			p = new int;
+			*p = i;
+			COUT("queue write " << *p);
+			gQ.write(p);
+			msleep(1);
+		}
 		p = new int;
-		*p = i;
-		COUT("queue write " << *p);
+		*p = -1;
 		gQ.write(p);
-		if (random()%2) sleep(1);
 	}
-	p = new int;
-	*p = -1;
-	gQ.write(p);
-	return NULL;
-}
+};
 
-void* qReader(void*)
+class QueueReader : public Thread
 {
-	bool done = false;
-	while (!done) {
-		int *p = gQ.read();
-		COUT("queue read " << *p);
-		if (*p<0) done=true;
-		delete p;
+public:
+	QueueReader() : Thread("QueueReader") {}
+
+protected:
+	virtual void runThread()
+	{
+		bool done = false;
+		while (!done) {
+			int *p = gQ.read();
+			COUT("queue read " << *p);
+			if (*p<0) done=true;
+			delete p;
+		}
 	}
-	return NULL;
-}
+};
 
 
-void* mapWriter(void*)
+class MapWriter : public Thread
 {
-	int *p;
-	for (int i=0; i<20; i++) {
-		p = new int;
-		*p = i;
-		COUT("map write " << *p);
-		gMap.write(i,p);
-		if (random()%2) sleep(1);
-	}
-	return NULL;
-}
+public:
+	MapWriter() : Thread("MapWriter") {}
 
-void* mapReader(void*)
-{
-	for (int i=0; i<20; i++) {
-		int *p = gMap.read(i);
-		COUT("map read " << *p);
-		// InterthreadMap will delete the pointers
-		// delete p;
+protected:
+	virtual void runThread()
+	{
+		int *p;
+		for (int i=0; i<20; i++) {
+			p = new int;
+			*p = i;
+			COUT("map write " << *p);
+			gMap.write(i,p);
+			msleep(1);
+		}
 	}
-	return NULL;
-}
+};
+
+class MapReader : public Thread
+{
+public:
+	MapReader() : Thread("MapReader") {}
+
+protected:
+	virtual void runThread()
+	{
+		for (int i=0; i<20; i++) {
+			int *p = gMap.read(i);
+			COUT("map read " << *p);
+			// InterthreadMap will delete the pointers
+		}
+	}
+};
 
 
 
@@ -95,20 +121,25 @@ void* mapReader(void*)
 
 int main(int argc, char *argv[])
 {
-	Thread qReaderThread;
-	qReaderThread.start(qReader,NULL);
-	Thread mapReaderThread;
-	mapReaderThread.start(mapReader,NULL);
+	COUT("TEST 1: InterthreadQueue")
+	QueueReader qReaderThread;
+	QueueWriter qWriterThread;
+	qReaderThread.startThread();
+	qWriterThread.startThread();
+	// stopThread() will wait for a thread to stop for 5 seconds, which
+	// is more than enough for this test to finish.
+	qReaderThread.stopThread();
+	qWriterThread.stopThread();
 
-	Thread qWriterThread;
-	qWriterThread.start(qWriter,NULL);
-	Thread mapWriterThread;
-	mapWriterThread.start(mapWriter,NULL);
-
-	qReaderThread.join();
-	qWriterThread.join();
-	mapReaderThread.join();
-	mapWriterThread.join();
+	COUT("TEST 2: InterthreadMap")
+	MapReader mapReaderThread;
+	mapReaderThread.startThread();
+	MapWriter mapWriterThread;
+	mapWriterThread.startThread();
+	// stopThread() will wait for a thread to stop for 5 seconds, which
+	// is more than enough for this test to finish.
+	mapReaderThread.stopThread();
+	mapWriterThread.stopThread();
 }
 
 

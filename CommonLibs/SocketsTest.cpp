@@ -1,5 +1,6 @@
 /*
 * Copyright 2008 Free Software Foundation, Inc.
+* Copyright 2013 Alexander Chemeris <Alexander.Chemeris@fairwaves.ru>
 *
 *
 * This software is distributed under the terms of the GNU Affero Public License.
@@ -28,59 +29,73 @@
 
 #include "Sockets.h"
 #include "Threads.h"
-#include <stdio.h>
+#include "Configuration.h"
+#include "Timeval.h"
 #include <stdlib.h>
 
+ConfigurationTable gConfig;
 
 static const int gNumToSend = 10;
 
 
-void *testReaderIP(void *)
+class TestReaderIP : public Thread
 {
-	UDPSocket readSocket(5934, "localhost", 5061);
-	readSocket.nonblocking();
-	int rc = 0;
-	while (rc<gNumToSend) {
-		char buf[MAX_UDP_LENGTH];
-		int count = readSocket.read(buf);
-		if (count>0) {
-			COUT("read: " << buf);
-			rc++;
-		} else {
-			sleep(2);
+public:
+	TestReaderIP() : Thread("TestReaderIP") {}
+
+protected:
+	virtual void runThread()
+	{
+		UDPSocket readSocket(5934, "localhost", 5061);
+		readSocket.nonblocking();
+		int rc = 0;
+		while (rc<gNumToSend) {
+			char buf[MAX_UDP_LENGTH];
+			int count = readSocket.read(buf);
+			if (count>0) {
+				COUT("IP read: " << buf);
+				rc++;
+			} else {
+				COUT("IP sleeping...");
+				sleep(2);
+			}
 		}
 	}
-	return NULL;
-}
+};
 
-
-
-void *testReaderUnix(void *)
+class TestReaderUnix : public Thread
 {
-	UDDSocket readSocket("testDestination");
-	readSocket.nonblocking();
-	int rc = 0;
-	while (rc<gNumToSend) {
-		char buf[MAX_UDP_LENGTH];
-		int count = readSocket.read(buf);
-		if (count>0) {
-			COUT("read: " << buf);
-			rc++;
-		} else {
-			sleep(2);
+public:
+	TestReaderUnix() : Thread("TestReaderUnix") {}
+
+protected:
+	virtual void runThread()
+	{
+		UDDSocket readSocket("testDestination");
+		readSocket.nonblocking();
+		int rc = 0;
+		while (rc<gNumToSend) {
+			char buf[MAX_UDP_LENGTH];
+			int count = readSocket.read(buf);
+			if (count>0) {
+				COUT("UNIX read: " << buf);
+				rc++;
+			} else {
+				COUT("UNIX sleeping...");
+				sleep(2);
+			}
 		}
 	}
-	return NULL;
-}
+};
 
 
 int main(int argc, char * argv[] )
 {
 
-  Thread readerThreadIP;
-  readerThreadIP.start(testReaderIP,NULL);
-  Thread readerThreadUnix;
-  readerThreadUnix.start(testReaderUnix,NULL);
+  TestReaderIP readerThreadIP;
+  TestReaderUnix readerThreadUnix;
+  readerThreadIP.startThread();
+  readerThreadUnix.startThread();
 
   UDPSocket socket1(5061, "127.0.0.1",5934);
   UDDSocket socket1U("testSource","testDestination");
@@ -92,12 +107,10 @@ int main(int argc, char * argv[] )
 
   for (int i=0; i<gNumToSend; i++) {
     socket1.write("Hello IP land");	
-	socket1U.write("Hello Unix domain");
-	sleep(1);
+    socket1U.write("Hello Unix domain");
+    msleep(1);
   }
 
-  readerThreadIP.join();
-  readerThreadUnix.join();
 }
 
 // vim: ts=4 sw=4

@@ -81,11 +81,11 @@ BitVectorTest_SOURCES = BitVectorTest.cpp
 BitVectorTest_LDADD = libcommon.la $(SQLITE_LA)
 
 InterthreadTest_SOURCES = InterthreadTest.cpp
-InterthreadTest_LDADD = libcommon.la
+InterthreadTest_LDADD = libcommon.la $(SQLITE_LA)
 InterthreadTest_LDFLAGS = -lpthread
 
 SocketsTest_SOURCES = SocketsTest.cpp
-SocketsTest_LDADD = libcommon.la
+SocketsTest_LDADD = libcommon.la $(SQLITE_LA)
 SocketsTest_LDFLAGS = -lpthread
 
 TimevalTest_SOURCES = TimevalTest.cpp
