@@ -381,8 +381,7 @@ uhd_device::~uhd_device()
 	stop();
 
 	for (int i = 0; i < NUM_RX_CHANS; i++) {
-		if (rx_smpl_buf[i])
-			delete rx_smpl_buf[i];
+		delete rx_smpl_buf[i];
 	}
 }
 
