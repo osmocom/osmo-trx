@@ -52,7 +52,7 @@ protected:
 
   RadioClock mClock;                          ///< the basestation clock!
 
-  int samplesPerSymbol;			      ///< samples per GSM symbol
+  int sps;                                    ///< samples per GSM symbol
   int receiveOffset;                          ///< offset b/w transmit and receive GSM timestamps, in timeslots
 
   bool mOn;				      ///< indicates radio is on
@@ -93,10 +93,6 @@ public:
     
   /** destructor */
   ~RadioInterface();
-
-  void setSamplesPerSymbol(int wSamplesPerSymbol) {if (!mOn) samplesPerSymbol = wSamplesPerSymbol;}
-
-  int getSamplesPerSymbol() { return samplesPerSymbol;}
 
   /** check for underrun, resets underrun value */
   bool isUnderrun();
