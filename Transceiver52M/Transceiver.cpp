@@ -501,7 +501,6 @@ void Transceiver::driveControl()
         // Prepare for thread start
         mPower = -20;
         mRadioInterface->start();
-        generateRACHSequence(mSPS);
 
         // Start radio interface threads.
         mFIFOServiceLoopThread->start((void * (*)(void*))FIFOServiceLoopAdapter,(void*) this);
