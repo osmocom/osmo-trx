@@ -50,9 +50,6 @@ int main(int argc, char **argv) {
 
   sigProcLibSetup(samplesPerSymbol);
   
-  signalVector *gsmPulse = generateGSMPulse(2,samplesPerSymbol);
-  cout << *gsmPulse << endl;
-
   BitVector RACHBurstStart = "01010101";
   BitVector RACHBurstRest = "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
@@ -60,11 +57,8 @@ int main(int argc, char **argv) {
  
 
   signalVector *RACHSeq = modulateBurst(RACHBurst,
-                                        *gsmPulse,
                                         9,
                                         samplesPerSymbol);
-
-  generateRACHSequence(*gsmPulse,samplesPerSymbol);
 
   complex a; float t;
   detectRACHBurst(*RACHSeq, 5, samplesPerSymbol,&a,&t); 
@@ -94,12 +88,9 @@ int main(int argc, char **argv) {
 
   BitVector normalBurst(BitVector(normalBurstSeg,gTrainingSequence[TSC]),normalBurstSeg);
 
+  generateMidamble(samplesPerSymbol,TSC);
 
-  generateMidamble(*gsmPulse,samplesPerSymbol,TSC);
-
-
-  signalVector *modBurst = modulateBurst(normalBurst,*gsmPulse,
-                                         0,samplesPerSymbol);
+  signalVector *modBurst = modulateBurst(normalBurst,0,samplesPerSymbol);
 
   
   //delayVector(*rsVector2,6.932);
@@ -133,7 +124,7 @@ int main(int argc, char **argv) {
   cout << "ampl:" << ampl << endl;
   cout << "TOA: " << TOA << endl;
   //cout << "chanResp: " << *chanResp << endl;
-  SoftVector *demodBurst = demodulateBurst(*modBurst,*gsmPulse,samplesPerSymbol,(complex) ampl, TOA);
+  SoftVector *demodBurst = demodulateBurst(*modBurst,samplesPerSymbol,(complex) ampl, TOA);
   
   cout << *demodBurst << endl;
 
