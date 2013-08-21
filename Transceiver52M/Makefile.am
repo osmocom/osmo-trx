@@ -53,7 +53,8 @@ COMMON_SOURCES = \
 	sigProcLib.cpp \
 	Transceiver.cpp \
 	DummyLoad.cpp \
-	convolve.c
+	convolve.c \
+	convert.c
 
 libtransceiver_la_SOURCES = \
 	$(COMMON_SOURCES) \
@@ -78,7 +79,8 @@ noinst_HEADERS = \
 	rcvLPF_651.h \
 	sendLPF_961.h \
 	Resampler.h \
-	convolve.h
+	convolve.h \
+	convert.h
 
 USRPping_SOURCES = USRPping.cpp
 USRPping_LDADD = \
