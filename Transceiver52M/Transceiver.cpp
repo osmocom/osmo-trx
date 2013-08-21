@@ -327,6 +327,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
   complex amplitude = 0.0;
   float TOA = 0.0;
   float avgPwr = 0.0;
+#ifdef ENERGY_DETECT
   if (!energyDetect(*vectorBurst, 20 * mSPS, mEnergyThreshold, &avgPwr)) {
      LOG(DEBUG) << "Estimated Energy: " << sqrt(avgPwr) << ", at time " << rxBurst->getTime();
      double framesElapsed = rxBurst->getTime()-prevFalseDetectionTime;
@@ -341,7 +342,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
      return NULL;
   }
   LOG(DEBUG) << "Estimated Energy: " << sqrt(avgPwr) << ", at time " << rxBurst->getTime();
-
+#endif
   // run the proper correlator
   bool success = false;
   if (corrType==TSC) {
