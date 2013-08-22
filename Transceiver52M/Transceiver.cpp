@@ -363,7 +363,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
     float chanOffset;
     success = analyzeTrafficBurst(*vectorBurst,
 				  mTSC,
-				  3.0,
+				  5.0,
 				  mSPS,
 				  &amplitude,
 				  &TOA,
@@ -398,7 +398,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
   else {
     // RACH burst
     success = detectRACHBurst(*vectorBurst,
-			      5.0,  // detection threshold
+			      6.0,
 			      mSPS,
 			      &amplitude,
 			      &TOA);
