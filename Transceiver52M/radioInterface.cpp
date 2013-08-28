@@ -24,6 +24,8 @@
 
 #include "radioInterface.h"
 #include <Logger.h>
+#include "RTMD.h"
+#define WITH_RTMD
 
 bool started = false;
 
@@ -243,11 +245,18 @@ void RadioInterface::loadVectors(unsigned tN, int samplesPerBurst,
 
 void RadioInterface::driveReceiveRadio()
 {
-  if (!mOn)
+  RTMD_SET("driveReceiveRadio");
+  if (!mOn) {
+    RTMD_VAL("driveReceiveRadio", -1);
+    RTMD_CLEAR("driveReceiveRadio");
     return;
+  }
 
-  if (mReceiveFIFO[0].size() > 8)
+  if (mReceiveFIFO[0].size() > 8) {
+    RTMD_VAL("driveReceiveRadio", 2);
+    RTMD_CLEAR("driveReceiveRadio");
     return;
+  }
 
   pullBuffer();
 
@@ -281,6 +290,7 @@ void RadioInterface::driveReceiveRadio()
     rcvCursor -= readSz;
     shiftRxBuffers(rcvBuffer, 2 * readSz, 2 * rcvCursor, mChanM);
   }
+  RTMD_CLEAR("driveReceiveRadio");
 }
 
 double RadioInterface::setRxGain(double dB, int chan)

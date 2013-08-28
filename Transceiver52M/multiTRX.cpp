@@ -25,6 +25,8 @@
 
 #include "Transceiver.h"
 #include "radioDevice.h"
+#include "RTMD.h"
+#define WITH_RTMD
 
 ConfigurationTable gConfig("/etc/OpenBTS/OpenBTS.db");
 
@@ -69,6 +71,8 @@ int main(int argc, char *argv[])
 
 	gLogInit("transceiver", gConfig.getStr("Log.Level").c_str(), LOG_LOCAL7);
 	srandom(time(NULL));
+	// Allocate 100Mb of RAM to the real-time log
+	RTMD_INIT(100*1024*1024);
 
 	if (setupSignals() < 0) {
 		LOG(ERR) << "Failed to setup signal handlers, exiting...";
@@ -109,6 +113,7 @@ int main(int argc, char *argv[])
 		sleep(1);
 
 	LOG(NOTICE) << "Shutting down transceivers...";
+	RTMD_FLUSH("osmo-trx.rtmd");
 	for (int i = 0; i < numARFCN; i++)
 		trx[i]->shutdown();
 

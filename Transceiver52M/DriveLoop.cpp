@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include "DriveLoop.h"
 #include <Logger.h>
+#include "RTMD.h"
+#define WITH_RTMD
 
 using namespace GSM;
 
@@ -90,6 +92,7 @@ void DriveLoop::pushRadioVector(GSM::Time &nowTime)
   int i;
   radioVector *staleBurst;
   radioVector *next;
+  RTMD_SET("pushRadioVector");
 
   for (i = 0; i < mChanM; i++) {
     // dump stale bursts, if any
@@ -121,6 +124,7 @@ void DriveLoop::pushRadioVector(GSM::Time &nowTime)
     if (!mIsFiller[i])
       delete mTxBursts[i];
   }
+  RTMD_CLEAR("pushRadioVector");
 }
 
 void DriveLoop::setModulus(int channel, int timeslot)
@@ -231,11 +235,15 @@ void DriveLoop::driveReceiveFIFO()
 void DriveLoop::driveTransmitFIFO() 
 {
   int i;
+  GSM::Time timeDiff;
 
   RadioClock *radioClock = (mRadioInterface->getClock());
-  while (radioClock->get() + mTransmitLatency > mTransmitDeadlineClock) {
+  timeDiff = radioClock->get() + mTransmitLatency - mTransmitDeadlineClock;
+  while (timeDiff > 0) {
+    RTMD_VAL("DriveTimeDiff", timeDiff.FN()*8+timeDiff.TN());
     pushRadioVector(mTransmitDeadlineClock);
     mTransmitDeadlineClock.incTN();
+    timeDiff = radioClock->get() + mTransmitLatency - mTransmitDeadlineClock;
   }
 
   // FIXME -- This should not be a hard spin.

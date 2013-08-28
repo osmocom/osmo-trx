@@ -20,6 +20,8 @@
  */
 
 #include "radioVector.h"
+#include "RTMD.h"
+#define WITH_RTMD
 
 radioVector::radioVector(const signalVector& wVector, GSM::Time& wTime)
 	: signalVector(wVector), mTime(wTime)
@@ -44,6 +46,8 @@ bool radioVector::operator>(const radioVector& other) const
 GSM::Time VectorQueue::nextTime() const
 {
 	GSM::Time retVal;
+
+	RTMD_SET("getStaleBurst");
 	mLock.lock();
 
 	while (mQ.size()==0)
@@ -52,14 +56,18 @@ GSM::Time VectorQueue::nextTime() const
 	retVal = mQ.top()->getTime();
 	mLock.unlock();
 
+	RTMD_CLEAR("getStaleBurst");
 	return retVal;
 }
 
 radioVector* VectorQueue::getStaleBurst(const GSM::Time& targTime)
 {
+	RTMD_SET("getStaleBurst");
 	mLock.lock();
 	if ((mQ.size()==0)) {
 		mLock.unlock();
+		RTMD_VAL("getStaleBurst",2);
+		RTMD_CLEAR("getStaleBurst");
 		return NULL;
 	}
 
@@ -67,18 +75,24 @@ radioVector* VectorQueue::getStaleBurst(const GSM::Time& targTime)
 		radioVector* retVal = mQ.top();
 		mQ.pop();
 		mLock.unlock();
+		RTMD_CLEAR("getStaleBurst");
 		return retVal;
 	}
 	mLock.unlock();
 
+	RTMD_VAL("getStaleBurst",2);
+	RTMD_CLEAR("getStaleBurst");
 	return NULL;
 }
 
 radioVector* VectorQueue::getCurrentBurst(const GSM::Time& targTime)
 {
+	RTMD_SET("getStaleBurst");
 	mLock.lock();
 	if ((mQ.size()==0)) {
 		mLock.unlock();
+		RTMD_VAL("getStaleBurst",2);
+		RTMD_CLEAR("getStaleBurst");
 		return NULL;
 	}
 
@@ -86,9 +100,12 @@ radioVector* VectorQueue::getCurrentBurst(const GSM::Time& targTime)
 		radioVector* retVal = mQ.top();
 		mQ.pop();
 		mLock.unlock();
+		RTMD_CLEAR("getStaleBurst");
 		return retVal;
 	}
 	mLock.unlock();
 
+	RTMD_VAL("getStaleBurst",2);
+	RTMD_CLEAR("getStaleBurst");
 	return NULL;
 }
