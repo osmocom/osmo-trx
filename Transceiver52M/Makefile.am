@@ -47,6 +47,11 @@ EXTRA_DIST = \
 
 noinst_LTLIBRARIES = libtransceiver.la
 
+RTMD_SOURCES = \
+	RTMD.c
+
+
+
 COMMON_SOURCES = \
 	radioInterface.cpp \
 	radioVector.cpp \
@@ -57,7 +62,8 @@ COMMON_SOURCES = \
 	DummyLoad.cpp
 
 libtransceiver_la_SOURCES = \
-	$(COMMON_SOURCES)
+	$(COMMON_SOURCES) \
+	$(RTMD_SOURCES)
 
 noinst_PROGRAMS = \
 	transceiver \
@@ -74,7 +80,9 @@ noinst_HEADERS = \
 	USRPDevice.h \
 	DummyLoad.h \
 	rcvLPF_651.h \
-	sendLPF_961.h
+	sendLPF_961.h \
+	RTMD.h \
+	cycle.h
 
 transceiver_SOURCES = multiTRX.cpp
 transceiver_LDADD = \
