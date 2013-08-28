@@ -18,18 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-#hack to get around symlink svn:externals in git -kurtis
-top_srcdir = $(abs_top_srcdir)
-top_builddir = $(abs_top_builddir)
-
 COMMON_INCLUDEDIR = $(top_srcdir)/CommonLibs
 GSM_INCLUDEDIR = $(top_srcdir)/GSM
 SQLITE_INCLUDEDIR = $(top_srcdir)/sqlite3
 
-SVNDEV = -D'SVN_REV="$(shell svnversion -n $(top_builddir))"'
-
 STD_DEFINES_AND_INCLUDES = \
-	$(SVNDEV) \
 	-I$(COMMON_INCLUDEDIR) \
 	-I$(GSM_INCLUDEDIR) \
 	-I$(SQLITE_INCLUDEDIR)
