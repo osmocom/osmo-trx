@@ -33,7 +33,8 @@ else
 AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
 endif
 endif
-AM_CXXFLAGS = -ldl -lpthread
+RTMD_FLAGS = -DWITH_RTMD
+AM_CXXFLAGS = -ldl -lpthread $(RTMD_FLAGS)
 
 rev2dir = $(datadir)/usrp/rev2
 rev4dir = $(datadir)/usrp/rev4
