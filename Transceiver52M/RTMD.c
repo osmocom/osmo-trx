@@ -201,11 +201,30 @@ void RTMD_InitCycleTime(const char* name)
 
 }
 
+#ifdef __linux
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
+
+inline void RTMD_SetIntThread(const char*  name, int clineNumber, int cval)
+{
+    static __thread pid_t stid; // __thread variables can't be initialized (zeroed on clone)
+    if (stid == 0) {
+        stid = (pid_t) syscall (SYS_gettid);
+    }
+
+    int s = -(int)stid;
+
+    RTMD_SetInt(name, s, cval);
+    return;
+}
+
+#endif
+
+
 void RTMD_SetInt(const char*  name, int clineNumber, int cval)
 {
-//	if (mem == NULL)
-//		return;
-
 	if (ptr < count)
 	{
 		unsigned slot;
