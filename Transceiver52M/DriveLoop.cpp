@@ -26,7 +26,6 @@
 #include "DriveLoop.h"
 #include <Logger.h>
 #include "RTMD.h"
-#define WITH_RTMD
 
 using namespace GSM;
 

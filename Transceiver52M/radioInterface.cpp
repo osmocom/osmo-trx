@@ -25,7 +25,6 @@
 #include "radioInterface.h"
 #include <Logger.h>
 #include "RTMD.h"
-#define WITH_RTMD
 
 bool started = false;
 
@@ -206,9 +205,13 @@ void RadioInterface::alignRadio() {
 void RadioInterface::driveTransmitRadio(signalVector **radioBurst, bool *zeroBurst)
 {
   int i;
+  RTMD_SET("drvTxRadio");
 
-  if (!mOn)
+  if (!mOn) {
+    RTMD_VAL("drvTxRadio", -1);
+    RTMD_CLEAR("drvTxRadio");
     return;
+  }
 
   for (i = 0; i < mChanM; i++) {
     radioifyVector(*radioBurst[i], sendBuffer[i] + 2 * sendCursor,
@@ -222,6 +225,7 @@ void RadioInterface::driveTransmitRadio(signalVector **radioBurst, bool *zeroBur
   sendCursor += radioBurst[0]->size();
 
   pushBuffer();
+  RTMD_CLEAR("drvTxRadio");
 }
 
 static inline void shiftRxBuffers(float **buf, int offset, int len, int chanM)
@@ -329,6 +333,7 @@ void RadioInterface::close()
 void RadioInterface::pullBuffer()
 {
   bool local_underrun;
+  RTMD_SET("RIPullBuff");
 
   /* Read samples. Fail if we don't get what we want. */
   int num_rd = mRadio->readSamples(rx_buf, mChanM, OUTCHUNK, readTimestamp);
@@ -343,13 +348,18 @@ void RadioInterface::pullBuffer()
     shortToFloat(rcvBuffer[i] + 2 * rcvCursor, rx_buf[i], num_rd);
 
   rcvCursor += num_rd;
+  RTMD_CLEAR("RIPullBuff");
 }
 
 /* Send timestamped chunk to the device with arbitrary size */ 
 void RadioInterface::pushBuffer()
 {
-  if (sendCursor < INCHUNK)
+  RTMD_SET("RIPushBuff");
+  if (sendCursor < INCHUNK) {
+    RTMD_VAL("RIPushBuff", -1);
+    RTMD_CLEAR("RIPushBuff");
     return;
+  }
 
   for (int i = 0; i < mChanM; i++)
     floatToShort(tx_buf[i], sendBuffer[i], sendCursor);
@@ -361,4 +371,5 @@ void RadioInterface::pushBuffer()
 
   writeTimestamp += (TIMESTAMP) num_smpls;
   sendCursor = 0;
+  RTMD_CLEAR("RIPushBuff");
 }

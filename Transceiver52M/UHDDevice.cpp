@@ -28,6 +28,7 @@
 #include <uhd/usrp/multi_usrp.hpp>
 #include <uhd/utils/thread_priority.hpp>
 #include <uhd/utils/msg.hpp>
+#include "RTMD.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -788,14 +789,19 @@ int uhd_device::readSamples(short **buf, int chans, int len,
 	ssize_t rc;
 	uhd::time_spec_t ts;
 	uhd::rx_metadata_t metadata;
+	RTMD_SET("readSamples");
 
 	if (skip_rx) {
 		LOG(INFO) << "Skipping Rx";
+		RTMD_VAL("readSamples", -1);
+		RTMD_CLEAR("readSamples");
 		return 0;
 	}
 
 	if (chans != NUM_RX_CHANS) {
 		LOG(ERR) << "Number of requested channels does not match build";
+		RTMD_VAL("readSamples", -2);
+		RTMD_CLEAR("readSamples");
 		return -1;
 	}
 
@@ -810,6 +816,8 @@ int uhd_device::readSamples(short **buf, int chans, int len,
 	if (rc < 0) {
 		LOG(ERR) << rx_smpl_buf[0]->str_code(rc);
 		LOG(ERR) << rx_smpl_buf[0]->str_status();
+		RTMD_VAL("readSamples", -3);
+		RTMD_CLEAR("readSamples");
 		return 0;
 	}
 
@@ -852,8 +860,11 @@ int uhd_device::readSamples(short **buf, int chans, int len,
 			if ((rc < 0)) {
 				LOG(ERR) << rx_smpl_buf[i]->str_code(rc);
 				LOG(ERR) << rx_smpl_buf[i]->str_status();
-				if (rc != smpl_buf::ERROR_OVERFLOW)
+				if (rc != smpl_buf::ERROR_OVERFLOW) {
+					RTMD_VAL("readSamples", -4);
+					RTMD_CLEAR("readSamples");
 					return 0;
+				}
 			}
 		}
 	}
@@ -864,10 +875,14 @@ int uhd_device::readSamples(short **buf, int chans, int len,
 		if ((rc < 0) || (rc != len)) {
 			LOG(ERR) << rx_smpl_buf[i]->str_code(rc);
 			LOG(ERR) << rx_smpl_buf[i]->str_status();
+			RTMD_VAL("readSamples", -5);
+			RTMD_CLEAR("readSamples");
 			return 0;
 		}
 	}
 
+	RTMD_VAL("readSamples", len);
+	RTMD_CLEAR("readSamples");
 	return len;
 }
 
@@ -875,6 +890,8 @@ int uhd_device::writeSamples(short **buf, int chans, int len,
 			     TIMESTAMP timestamp, bool *underrun,
 			     bool isControl)
 {
+	RTMD_SET("writeSamples");
+
 	uhd::tx_metadata_t metadata;
 	metadata.has_time_spec = true;
 	metadata.start_of_burst = false;
@@ -884,6 +901,8 @@ int uhd_device::writeSamples(short **buf, int chans, int len,
 	// No control packets
 	if (isControl) {
 		LOG(ERR) << "Control packets not supported";
+		RTMD_VAL("writeSamples", -1);
+		RTMD_CLEAR("writeSamples");
 		return 0;
 	}
 
@@ -897,6 +916,8 @@ int uhd_device::writeSamples(short **buf, int chans, int len,
 			metadata.end_of_burst = true;
 		} else if (drop_cnt < 30) {
 			LOG(DEBUG) << "Aligning transmitter: packet advance";
+			RTMD_VAL("writeSamples", -2);
+			RTMD_CLEAR("writeSamples");
 			return len;
 		} else {
 			LOG(DEBUG) << "Aligning transmitter: start burst";
@@ -918,6 +939,8 @@ int uhd_device::writeSamples(short **buf, int chans, int len,
 		exit(-1);
 	}
 
+	RTMD_VAL("writeSamples", num_smpls);
+	RTMD_CLEAR("writeSamples");
 	return num_smpls;
 }
 

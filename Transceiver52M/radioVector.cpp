@@ -21,7 +21,6 @@
 
 #include "radioVector.h"
 #include "RTMD.h"
-#define WITH_RTMD
 
 radioVector::radioVector(const signalVector& wVector, GSM::Time& wTime)
 	: signalVector(wVector), mTime(wTime)

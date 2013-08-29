@@ -26,7 +26,6 @@
 #include "Transceiver.h"
 #include "radioDevice.h"
 #include "RTMD.h"
-#define WITH_RTMD
 
 ConfigurationTable gConfig("/etc/OpenBTS/OpenBTS.db");
 
