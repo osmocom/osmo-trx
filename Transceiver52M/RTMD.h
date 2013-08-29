@@ -60,16 +60,16 @@ typedef struct RTMD_Node {
 } RTMD_Node_t;
 
 
-# define RTMD_VAL(a, v)        RTMD_SetInt((a), __LINE__, (v))
-# define RTMD_SET(a)           RTMD_SetInt((a), __LINE__, 1)
-# define RTMD_CLEAR(a)         RTMD_SetInt((a), __LINE__, 0)
-# define RTMD_PULSE(a)         ( RTMD_SET(a), RTMD_CLEAR(a))
+//# define RTMD_VAL(a, v)        RTMD_SetInt((a), __LINE__, (v))
+//# define RTMD_SET(a)           RTMD_SetInt((a), __LINE__, 1)
+//# define RTMD_CLEAR(a)         RTMD_SetInt((a), __LINE__, 0)
+//# define RTMD_PULSE(a)         ( RTMD_SET(a), RTMD_CLEAR(a))
 
-# define RTMD_TH_NAME(a)       RTMD_SetThreadName(a)
-# define RTMD_TH_VAL(a, v)     RTMD_SetIntThread((a), __LINE__, (v))
-# define RTMD_TH_SET(a)        RTMD_SetIntThread((a), __LINE__, 1)
-# define RTMD_TH_CLEAR(a)      RTMD_SetIntThread((a), __LINE__, 0)
-# define RTMD_TH_PULSE(a)      ( RTMD_TH_SET(a), RTMD_TH_CLEAR(a))
+# define RTMD_THREAD_NAME(a)       RTMD_SetThreadName(a)
+# define RTMD_VAL(a, v)     RTMD_SetIntThread((a), __LINE__, (v))
+# define RTMD_SET(a)        RTMD_SetIntThread((a), __LINE__, 1)
+# define RTMD_CLEAR(a)      RTMD_SetIntThread((a), __LINE__, 0)
+# define RTMD_PULSE(a)      ( RTMD_SET(a), RTMD_CLEAR(a))
 
 # define RTMD_INIT(x)             RTMD_InitStorage((x))
 # define RTMD_FLUSH(x)            RTMD_FlushStorage((x))
