@@ -70,8 +70,9 @@ int main(int argc, char *argv[])
 
 	gLogInit("transceiver", gConfig.getStr("Log.Level").c_str(), LOG_LOCAL7);
 	srandom(time(NULL));
-	// Allocate 100Mb of RAM to the real-time log
-	RTMD_INIT(100*1024*1024);
+	// Allocate RAM for the real-time log.
+	// 4M items = 4*32Mb RAM
+	RTMD_INIT(4*1024*1024);
 
 	if (setupSignals() < 0) {
 		LOG(ERR) << "Failed to setup signal handlers, exiting...";
