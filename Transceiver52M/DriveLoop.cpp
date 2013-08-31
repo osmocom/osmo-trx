@@ -239,7 +239,7 @@ void DriveLoop::driveTransmitFIFO()
   RadioClock *radioClock = (mRadioInterface->getClock());
   timeDiff = radioClock->get() + mTransmitLatency - mTransmitDeadlineClock;
   while (timeDiff > 0) {
-    RTMD_VAL("DriveTimeDiff", timeDiff.FN()*8+timeDiff.TN());
+    RTMD_VAL("DrvTxFIFO-TDiff", timeDiff.FN()*8+timeDiff.TN());
     pushRadioVector(mTransmitDeadlineClock);
     mTransmitDeadlineClock.incTN();
     timeDiff = radioClock->get() + mTransmitLatency - mTransmitDeadlineClock;
@@ -252,6 +252,7 @@ void DriveLoop::driveTransmitFIFO()
 
 void DriveLoop::writeClockInterface()
 {
+  RTMD_SET("TRX-writeClk");
   char command[50];
   // FIXME -- This should be adaptive.
   sprintf(command,"IND CLOCK %llu",
@@ -262,6 +263,8 @@ void DriveLoop::writeClockInterface()
   mClockSocket.write(command,strlen(command)+1);
 
   mLastClockUpdateTime = mTransmitDeadlineClock;
+
+  RTMD_CLEAR("TRX-writeClk");
 }
 
 void DriveLoop::runThread()

@@ -249,16 +249,16 @@ void RadioInterface::loadVectors(unsigned tN, int samplesPerBurst,
 
 void RadioInterface::driveReceiveRadio()
 {
-  RTMD_SET("driveReceiveRadio");
+  RTMD_SET("drvRxRadio");
   if (!mOn) {
-    RTMD_VAL("driveReceiveRadio", -1);
-    RTMD_CLEAR("driveReceiveRadio");
+    RTMD_VAL("drvRxRadio", -1);
+    RTMD_CLEAR("drvRxRadio");
     return;
   }
 
   if (mReceiveFIFO[0].size() > 8) {
-    RTMD_VAL("driveReceiveRadio", 2);
-    RTMD_CLEAR("driveReceiveRadio");
+    RTMD_VAL("drvRxRadio", 2);
+    RTMD_CLEAR("drvRxRadio");
     return;
   }
 
@@ -294,7 +294,7 @@ void RadioInterface::driveReceiveRadio()
     rcvCursor -= readSz;
     shiftRxBuffers(rcvBuffer, 2 * readSz, 2 * rcvCursor, mChanM);
   }
-  RTMD_CLEAR("driveReceiveRadio");
+  RTMD_CLEAR("drvRxRadio");
 }
 
 double RadioInterface::setRxGain(double dB, int chan)
@@ -333,7 +333,7 @@ void RadioInterface::close()
 void RadioInterface::pullBuffer()
 {
   bool local_underrun;
-  RTMD_SET("RIPullBuff");
+  RTMD_SET("RI-PullBuff");
 
   /* Read samples. Fail if we don't get what we want. */
   int num_rd = mRadio->readSamples(rx_buf, mChanM, OUTCHUNK, readTimestamp);
@@ -348,16 +348,16 @@ void RadioInterface::pullBuffer()
     shortToFloat(rcvBuffer[i] + 2 * rcvCursor, rx_buf[i], num_rd);
 
   rcvCursor += num_rd;
-  RTMD_CLEAR("RIPullBuff");
+  RTMD_CLEAR("RI-PullBuff");
 }
 
 /* Send timestamped chunk to the device with arbitrary size */ 
 void RadioInterface::pushBuffer()
 {
-  RTMD_SET("RIPushBuff");
+  RTMD_SET("RI-PushBuff");
   if (sendCursor < INCHUNK) {
-    RTMD_VAL("RIPushBuff", -1);
-    RTMD_CLEAR("RIPushBuff");
+    RTMD_VAL("RI-PushBuff", -1);
+    RTMD_CLEAR("RI-PushBuff");
     return;
   }
 
@@ -371,5 +371,5 @@ void RadioInterface::pushBuffer()
 
   writeTimestamp += (TIMESTAMP) num_smpls;
   sendCursor = 0;
-  RTMD_CLEAR("RIPushBuff");
+  RTMD_CLEAR("RI-PushBuff");
 }

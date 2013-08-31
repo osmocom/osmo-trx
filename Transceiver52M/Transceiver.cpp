@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include "Transceiver.h"
 #include <Logger.h>
+#include "RTMD.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -122,11 +123,16 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
 				      int &RSSI,
 				      int &timingOffset)
 {
+  RTMD_SET("TRX-pullRadioVector");
   bool needDFE = (mMaxExpectedDelay > 1);
 
   radioVector *rxBurst = (radioVector *) mReceiveFIFO->read();
 
-  if (!rxBurst) return NULL;
+  if (!rxBurst) {
+    RTMD_VAL("TRX-pullRadioVector", -1);
+    RTMD_CLEAR("TRX-pullRadioVector");
+    return NULL;
+  }
 
   LOG(DEBUG) << "receiveFIFO: read radio vector at time: " << rxBurst->getTime() << ", new size: " << mReceiveFIFO->size();
 
@@ -136,6 +142,8 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
 
   if ((corrType == DriveLoop::OFF) || (corrType == DriveLoop::IDLE)) {
     delete rxBurst;
+    RTMD_VAL("TRX-pullRadioVector", -2);
+    RTMD_CLEAR("TRX-pullRadioVector");
     return NULL;
   }
  
@@ -156,6 +164,8 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
         prevFalseDetectionTime = rxBurst->getTime();
      }
      delete rxBurst;
+     RTMD_VAL("TRX-pullRadioVector", -3);
+     RTMD_CLEAR("TRX-pullRadioVector");
      return NULL;
   }
   LOG(DEBUG) << "Estimated Energy: " << sqrt(avgPwr) << ", at time " << rxBurst->getTime();
@@ -233,6 +243,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
     }
   }
   LOG(DEBUG) << "energy Threshold = " << mEnergyThreshold; 
+  RTMD_VAL("TRX-EnergyThresh", int(mEnergyThreshold*10));
 
   // demodulate burst
   SoftVector *burst = NULL;
@@ -261,11 +272,13 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
 
   delete rxBurst;
 
+  RTMD_CLEAR("TRX-pullRadioVector");
   return burst;
 }
 
 void Transceiver::pullFIFO()
 {
+  RTMD_SET("TRX-pullFIFO");
   SoftVector *rxBurst = NULL;
   int RSSI;
   int TOA;  // in 1/256 of a symbol
@@ -279,6 +292,10 @@ void Transceiver::pullFIFO()
                << " RSSI: " << RSSI
                << " TOA: "  << TOA
                << " bits: " << *rxBurst;
+    RTMD_VAL("TRX-RSSI", RSSI);
+    RTMD_CLEAR("TRX-RSSI");
+    RTMD_VAL("TRX-TOA", TOA);
+    RTMD_CLEAR("TRX-TOA");
 
     char burstString[gSlotLen+10];
     burstString[0] = burstTime.TN();
@@ -300,6 +317,7 @@ void Transceiver::pullFIFO()
 
     mDataSocket.write(burstString,gSlotLen+10);
   }
+  RTMD_CLEAR("TRX-pullFIFO");
 }
 
 void Transceiver::start()
@@ -331,6 +349,7 @@ void Transceiver::reset()
   
 void Transceiver::driveControl()
 {
+  RTMD_SET("driveControl");
 
   int MAX_PACKET_LENGTH = 100;
 
@@ -342,15 +361,21 @@ void Transceiver::driveControl()
   try { 
     msgLen = mControlSocket.read(buffer);
     if (msgLen < 1) {
+      RTMD_VAL("driveControl", -1);
+      RTMD_CLEAR("driveControl");
       return;
     }
   } catch (...) {
     /* Ignore the read exception on shutdown */
     if (!mRunning) {
+      RTMD_VAL("driveControl", -2);
+      RTMD_CLEAR("driveControl");
       return;
     }
 
     LOG(ALERT) << "Caught UHD socket exception";
+    RTMD_VAL("driveControl", -3);
+    RTMD_CLEAR("driveControl");
     return;
   }
 
@@ -364,6 +389,8 @@ void Transceiver::driveControl()
 
   if (strcmp(cmdcheck,"CMD")!=0) {
     LOG(WARNING) << "bogus message on control interface";
+    RTMD_VAL("driveControl", -4);
+    RTMD_CLEAR("driveControl");
     return;
   }
   LOG(INFO) << "command is " << buffer;
@@ -486,6 +513,8 @@ void Transceiver::driveControl()
     if ((timeslot < 0) || (timeslot > 7)) {
       LOG(WARNING) << "bogus message on control interface";
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
+      RTMD_VAL("driveControl", -5);
+      RTMD_CLEAR("driveControl");
       return;
     }     
     mDriveLoop->setTimeslot(mChannel, timeslot, (DriveLoop::ChannelCombination) corrCode);
@@ -500,28 +529,39 @@ void Transceiver::driveControl()
 
   mControlSocket.write(response,strlen(response)+1);
 
+  RTMD_CLEAR("driveControl");
 }
 
 bool Transceiver::driveTransmitPriorityQueue() 
 {
+  RTMD_SET("TRX-drvTxPQueue");
   char buffer[gSlotLen+50];
 
-  if (!mOn)
+  if (!mOn) {
+    RTMD_VAL("TRX-drvTxPQueue", -1);
+    RTMD_CLEAR("TRX-drvTxPQueue");
     return true;
+  }
 
   try { 
     size_t msgLen = mDataSocket.read(buffer);
     if (msgLen!=gSlotLen+1+4+1) {
       LOG(ERR) << "badly formatted packet on GSM->TRX interface";
+      RTMD_VAL("TRX-drvTxPQueue", -2);
+      RTMD_CLEAR("TRX-drvTxPQueue");
       return false;
     }
   } catch (...) {
     if (!mOn) {
       /* Shutdown condition. End the thread. */
+      RTMD_VAL("TRX-drvTxPQueue", -3);
+      RTMD_CLEAR("TRX-drvTxPQueue");
       return true;
     }
 
     LOG(ALERT) << "Caught UHD socket exception";
+    RTMD_VAL("TRX-drvTxPQueue", -4);
+    RTMD_CLEAR("TRX-drvTxPQueue");
     return false;
   }
 
@@ -552,6 +592,7 @@ bool Transceiver::driveTransmitPriorityQueue()
   
   LOG(DEBUG) "added burst - time: " << currTime << ", RSSI: " << RSSI; // << ", data: " << newBurst; 
 
+  RTMD_CLEAR("TRX-drvTxPQueue");
   return true;
 
 
