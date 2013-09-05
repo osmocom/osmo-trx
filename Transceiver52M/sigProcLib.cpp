@@ -1143,18 +1143,25 @@ static int detectBurst(signalVector &burst,
   /* Correlate */
   if (!convolve(&burst, sync->sequence, &corr,
                 CUSTOM, start, len, sps, 0)) {
+#ifndef TRX_LOAD_TESTING
     return -1;
+#endif
   }
 
   /* Peak detection - place restrictions at correlation edges */
   *amp = fastPeakDetect(corr, toa);
 
+#ifndef TRX_LOAD_TESTING
   if ((*toa < 3 * sps) || (*toa > len - 3 * sps))
     return 0;
+#endif
 
   /* Peak -to-average ratio */
-  if (computePeakRatio(&corr, sps, *toa, *amp) < thresh)
+  if (computePeakRatio(&corr, sps, *toa, *amp) < thresh) {
+#ifndef TRX_LOAD_TESTING
     return 0;
+#endif
+  }
 
   /* Run the full peak detection when we have a burst */
   *amp = peakDetect(corr, toa, NULL);

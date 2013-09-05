@@ -60,7 +60,11 @@ Transceiver::Transceiver(int wBasePort, const char *TRXAddress,
   mFIFOServiceLoopThread = NULL;
   mControlServiceLoopThread = NULL;
   mTransmitPriorityQueueServiceLoopThread = NULL;
+#ifndef TRX_LOAD_TESTING
   mMaxExpectedDelay = 0;
+#else
+  mMaxExpectedDelay = 10;
+#endif
 
   mTransmitPriorityQueue = mDriveLoop->priorityQueue(mChannel);
   mReceiveFIFO = mRadioInterface->receiveFIFO(mChannel);
@@ -131,11 +135,13 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
 
   DriveLoop::CorrType corrType = mDriveLoop->expectedCorrType(mChannel, rxBurst->getTime());
 
+#ifndef TRX_LOAD_TESTING
   if ((corrType == DriveLoop::OFF) || (corrType == DriveLoop::IDLE)) {
     delete rxBurst;
     return NULL;
   }
- 
+#endif
+
   // check to see if received burst has sufficient 
   signalVector *vectorBurst = rxBurst;
   complex amplitude = 0.0;
@@ -152,8 +158,10 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
 
         prevFalseDetectionTime = rxBurst->getTime();
      }
+#ifndef TRX_LOAD_TESTING
      delete rxBurst;
      return NULL;
+#endif
   }
   LOG(DEBUG) << "Estimated Energy: " << sqrt(avgPwr) << ", at time " << rxBurst->getTime();
 #endif
@@ -186,6 +194,9 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
 				  estimateChannel,
 				  &channelResp,
 				  &chanOffset);
+#ifdef TRX_LOAD_TESTING
+    success = true;
+#endif
     if (success) {
       LOG(DEBUG) << "FOUND TSC!!!!!! " << amplitude << " " << TOA;
       mEnergyThreshold -= 1.0F/10.0F;
@@ -217,6 +228,9 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
 			      mSPS,
 			      &amplitude,
 			      &TOA);
+#ifdef TRX_LOAD_TESTING
+    success = true;
+#endif
     if (success) {
       LOG(DEBUG) << "FOUND RACH!!!!!! " << amplitude << " " << TOA;
       mEnergyThreshold -= (1.0F/10.0F);
@@ -396,7 +410,9 @@ void Transceiver::driveControl()
     //set expected maximum time-of-arrival
     int maxDelay;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&maxDelay);
+#ifndef TRX_LOAD_TESTING
     mMaxExpectedDelay = maxDelay; // 1 GSM symbol is approx. 1 km
+#endif
     sprintf(response,"RSP SETMAXDLY 0 %d",maxDelay);
   }
   else if (strcmp(command,"SETRXGAIN")==0) {

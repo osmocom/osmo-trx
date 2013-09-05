@@ -21,9 +21,10 @@
 
 include $(top_srcdir)/Makefile.common
 
+LOAD_TEST_FLAGS = -DTRX_LOAD_TESTING
 AM_CFLAGS = $(STD_DEFINES_AND_INCLUDES) -std=gnu99 -march=native
 AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
-AM_CXXFLAGS = -ldl -lpthread
+AM_CXXFLAGS = -ldl -lpthread $(LOAD_TEST_FLAGS)
 
 #UHD wins if both are defined
 if UHD

@@ -83,10 +83,14 @@ bool DriveLoop::init()
     scaleVector(*modBurst, txFullScale);
     for (int j = 0; j < 102; j++) {
       for (int n = 0; n < mChanM; n++) {
+#ifndef TRX_LOAD_TESTING
         if (n == mC0)
           fillerTable[n][j][i] = new signalVector(*modBurst);
         else
           fillerTable[n][j][i] = new signalVector(modBurst->size());
+#else
+          fillerTable[n][j][i] = new signalVector(*modBurst);
+#endif
       }
     }
     delete modBurst;
@@ -129,7 +133,11 @@ void DriveLoop::pushRadioVector(GSM::Time &nowTime)
 
     mTxBursts[i] = fillerTable[i][modFN][TN];
     mIsFiller[i] = true;
+#ifndef TRX_LOAD_TESTING
     mIsZero[i] = (mChanType[i][TN] == NONE);
+#else
+	mIsZero[i] = false;
+#endif
 
     // if queue contains data at the desired timestamp, stick it into FIFO
     if (next = (radioVector*) mTransmitPriorityQueue[i].getCurrentBurst(nowTime)) {
