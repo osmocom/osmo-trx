@@ -47,16 +47,14 @@
  */
 #define SPS                 4
 
-using namespace std;
-
 ConfigurationTable gConfig(CONFIGDB);
 
 volatile bool gbShutdown = false;
 
 static void ctrlCHandler(int signo)
 {
-   cout << "Received shutdown signal" << endl;;
-   gbShutdown = true;
+  std::cout << "Received shutdown signal" << std::endl;
+  gbShutdown = true;
 }
 
 /*
@@ -110,28 +108,25 @@ int testConfig(const char *filename)
 
 int main(int argc, char *argv[])
 {
-  int trxPort;
+  int trxPort, fail = 0;
   std::string deviceArgs, logLevel, trxAddr;
+  RadioDevice *usrp = NULL;
+  RadioInterface *radio = NULL;
+  Transceiver *trx = NULL;
 
   if (argc == 3)
-  {
     deviceArgs = std::string(argv[2]);
-  }
   else
-  {
     deviceArgs = "";
+
+  if (signal(SIGINT, ctrlCHandler) == SIG_ERR) {
+    std::cerr << "Couldn't install signal handler for SIGINT" << std::endl;
+    return EXIT_FAILURE;
   }
 
-  if ( signal( SIGINT, ctrlCHandler ) == SIG_ERR )
-  {
-    cerr << "Couldn't install signal handler for SIGINT" << endl;
-    exit(1);
-  }
-
-  if ( signal( SIGTERM, ctrlCHandler ) == SIG_ERR )
-  {
-    cerr << "Couldn't install signal handler for SIGTERM" << endl;
-    exit(1);
+  if (signal(SIGTERM, ctrlCHandler) == SIG_ERR)  {
+    std::cerr << "Couldn't install signal handler for SIGTERM" << std::endl;
+    return EXIT_FAILURE;
   }
 
   // Configure logger.
@@ -147,14 +142,13 @@ int main(int argc, char *argv[])
 
   srandom(time(NULL));
 
-  RadioDevice *usrp = RadioDevice::make(SPS);
+  usrp = RadioDevice::make(SPS);
   int radioType = usrp->open(deviceArgs);
   if (radioType < 0) {
     LOG(ALERT) << "Transceiver exiting..." << std::endl;
     return EXIT_FAILURE;
   }
 
-  RadioInterface* radio;
   switch (radioType) {
   case RadioDevice::NORMAL:
     radio = new RadioInterface(usrp, 3, SPS, false);
@@ -165,25 +159,36 @@ int main(int argc, char *argv[])
     break;
   default:
     LOG(ALERT) << "Unsupported configuration";
-    return EXIT_FAILURE;
+    fail = 1;
+    goto shutdown;
   }
   if (!radio->init(radioType)) {
     LOG(ALERT) << "Failed to initialize radio interface";
+    fail = 1;
+    goto shutdown;
   }
 
-  Transceiver *trx = new Transceiver(trxPort, trxAddr.c_str(),
-                                     SPS, GSM::Time(3,0), radio);
+  trx = new Transceiver(trxPort, trxAddr.c_str(), SPS, GSM::Time(3,0), radio);
   if (!trx->init()) {
     LOG(ALERT) << "Failed to initialize transceiver";
+    fail = 1;
+    goto shutdown;
   }
   trx->receiveFIFO(radio->receiveFIFO());
   trx->start();
 
-  while (!gbShutdown) {
+  while (!gbShutdown)
     sleep(1);
-  }
 
-  cout << "Shutting down transceiver..." << endl;
+shutdown:
+  std::cout << "Shutting down transceiver..." << std::endl;
 
   delete trx;
+  delete radio;
+  delete usrp;
+
+  if (fail)
+    return EXIT_FAILURE;
+
+  return 0;
 }
