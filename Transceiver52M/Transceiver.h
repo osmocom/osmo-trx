@@ -97,6 +97,8 @@ private:
     LOOPBACK            ///< similar go VII, used in loopback testing
   } ChannelCombination;
 
+  float mNoiseLev;      ///< Average noise level
+  noiseVector mNoises;  ///< Vector holding running noise measurements
 
   /** unmodulate a modulated burst */
 #ifdef TRANSMIT_LOGGING
@@ -134,8 +136,6 @@ private:
   double mRxFreq;                      ///< the receive frequency
   int mPower;                          ///< the transmit power in dB
   unsigned mTSC;                       ///< the midamble sequence code
-  double mEnergyThreshold;             ///< threshold to determine if received data is potentially a GSM burst
-  GSM::Time prevFalseDetectionTime;    ///< last timestamp of a false energy detection
   int fillerModulus[8];                ///< modulus values of all timeslots, in frames
   signalVector *fillerTable[102][8];   ///< table of modulated filler waveforms for all timeslots
   unsigned mMaxExpectedDelay;            ///< maximum expected time-of-arrival offset in GSM symbols
