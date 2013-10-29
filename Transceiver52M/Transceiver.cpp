@@ -47,10 +47,9 @@ Transceiver::Transceiver(int wBasePort,
 			 int wSPS,
 			 GSM::Time wTransmitLatency,
 			 RadioInterface *wRadioInterface)
-	:mDataSocket(wBasePort+2,TRXAddress,wBasePort+102),
-	 mControlSocket(wBasePort+1,TRXAddress,wBasePort+101),
-	 mClockSocket(wBasePort,TRXAddress,wBasePort+100),
-	 mSPSTx(wSPS), mSPSRx(1), mNoises(NOISE_CNT)
+  : mBasePort(wBasePort), mAddr(TRXAddress),
+    mDataSocket(NULL), mCtrlSocket(NULL), mClockSocket(NULL),
+    mSPSTx(wSPS), mSPSRx(1), mNoises(NOISE_CNT)
 {
   GSM::Time startTime(random() % gHyperframe,0);
 
@@ -81,6 +80,10 @@ Transceiver::~Transceiver()
 {
   sigProcLibDestroy();
   mTransmitPriorityQueue.clear();
+
+  delete mClockSocket;
+  delete mCtrlSocket;
+  delete mDataSocket;
 }
 
 bool Transceiver::init()
@@ -89,6 +92,10 @@ bool Transceiver::init()
     LOG(ALERT) << "Failed to initialize signal processing library";
     return false;
   }
+
+  mClockSocket = new UDPSocket(mBasePort, mAddr.c_str(), mBasePort + 100);
+  mCtrlSocket = new UDPSocket(mBasePort + 1, mAddr.c_str(), mBasePort + 101);
+  mDataSocket = new UDPSocket(mBasePort + 2, mAddr.c_str(), mBasePort + 102);
 
   // initialize filler tables with dummy bursts
   for (int i = 0; i < 8; i++) {
@@ -395,8 +402,8 @@ void Transceiver::driveControl()
   char buffer[MAX_PACKET_LENGTH];
   int msgLen = -1;
   buffer[0] = '\0';
- 
-  msgLen = mControlSocket.read(buffer);
+
+  msgLen = mCtrlSocket->read(buffer);
 
   if (msgLen < 1) {
     return;
@@ -544,8 +551,7 @@ void Transceiver::driveControl()
     LOG(WARNING) << "bogus command " << command << " on control interface.";
   }
 
-  mControlSocket.write(response,strlen(response)+1);
-
+  mCtrlSocket->write(response, strlen(response) + 1);
 }
 
 bool Transceiver::driveTransmitPriorityQueue() 
@@ -554,7 +560,7 @@ bool Transceiver::driveTransmitPriorityQueue()
   char buffer[gSlotLen+50];
 
   // check data socket
-  size_t msgLen = mDataSocket.read(buffer);
+  size_t msgLen = mDataSocket->read(buffer);
 
   if (msgLen!=gSlotLen+1+4+1) {
     LOG(ERR) << "badly formatted packet on GSM->TRX interface";
@@ -644,9 +650,8 @@ void Transceiver::driveReceiveFIFO()
     burstString[gSlotLen+9] = '\0';
     delete rxBurst;
 
-    mDataSocket.write(burstString,gSlotLen+10);
+    mDataSocket->write(burstString, gSlotLen + 10);
   }
-
 }
 
 void Transceiver::driveTransmitFIFO() 
@@ -711,7 +716,7 @@ void Transceiver::writeClockInterface()
 
   LOG(INFO) << "ClockInterface: sending " << command;
 
-  mClockSocket.write(command,strlen(command)+1);
+  mClockSocket->write(command, strlen(command) + 1);
 
   mLastClockUpdateTime = mTransmitDeadlineClock;
 

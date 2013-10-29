@@ -32,15 +32,15 @@
 
 /** The Transceiver class, responsible for physical layer of basestation */
 class Transceiver {
-  
 private:
-
+  int mBasePort;
+  std::string mAddr;
   GSM::Time mTransmitLatency;     ///< latency between basestation clock and transmit deadline clock
   GSM::Time mLatencyUpdateTime;   ///< last time latency was updated
 
-  UDPSocket mDataSocket;	  ///< socket for writing to/reading from GSM core
-  UDPSocket mControlSocket;	  ///< socket for writing/reading control commands from GSM core
-  UDPSocket mClockSocket;	  ///< socket for writing clock updates to GSM core
+  UDPSocket *mDataSocket;         ///< socket for writing to/reading from GSM core
+  UDPSocket *mCtrlSocket;         ///< socket for writing/reading control commands from GSM core
+  UDPSocket *mClockSocket;        ///< socket for writing clock updates to GSM core
 
   VectorQueue  mTransmitPriorityQueue;   ///< priority queue of transmit bursts received from GSM core
   VectorFIFO*  mTransmitFIFO;     ///< radioInterface FIFO of transmit bursts 
