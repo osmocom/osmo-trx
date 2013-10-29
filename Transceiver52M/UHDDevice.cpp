@@ -293,7 +293,6 @@ private:
 	smpl_buf *rx_smpl_buf;
 
 	void init_gains();
-	void set_ref_clk(bool ext_clk);
 	int set_master_clk(double rate);
 	int set_rates(double tx_rate, double rx_rate);
 	bool parse_dev_type();
@@ -372,14 +371,6 @@ void uhd_device::init_gains()
 
 	tx_gain = usrp_dev->get_tx_gain();
 	rx_gain = usrp_dev->get_rx_gain();
-
-	return;
-}
-
-void uhd_device::set_ref_clk(bool ext_clk)
-{
-	if (ext_clk)
-		usrp_dev->set_clock_source("external");
 
 	return;
 }
@@ -543,7 +534,7 @@ int uhd_device::open(const std::string &args, bool extref)
 		return -1;
 
 	if (extref)
-		set_ref_clk(true);
+		usrp_dev->set_clock_source("external");
 
 	// Create TX and RX streamers
 	uhd::stream_args_t stream_args("sc16");
