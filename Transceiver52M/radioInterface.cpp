@@ -35,13 +35,12 @@ extern "C" {
 
 RadioInterface::RadioInterface(RadioDevice *wRadio,
 			       int wReceiveOffset,
-			       int wSPS,
+			       size_t sps, size_t chans,
 			       GSM::Time wStartTime)
-  : underrun(false), sendCursor(0), recvCursor(0), mOn(false),
-    mRadio(wRadio), receiveOffset(wReceiveOffset),
-    mSPSTx(wSPS), mSPSRx(1), powerScaling(1.0),
-    loadTest(false), sendBuffer(NULL), recvBuffer(NULL),
-    convertRecvBuffer(NULL), convertSendBuffer(NULL)
+  : mRadio(wRadio), mSPSTx(sps), mSPSRx(1), mChans(chans),
+    sendCursor(0), recvCursor(0), underrun(false), overrun(false),
+    receiveOffset(wReceiveOffset), mOn(false), powerScaling(1.0),
+    loadTest(false)
 {
   mClock.set(wStartTime);
 }
@@ -56,13 +55,26 @@ bool RadioInterface::init(int type)
   if (type != RadioDevice::NORMAL)
     return false;
 
+  if (!mChans) {
+    LOG(ALERT) << "Invalid number of channels " << mChans;
+    return false;
+  }
+
   close();
 
-  sendBuffer = new signalVector(CHUNK * mSPSTx);
-  recvBuffer = new signalVector(NUMCHUNKS * CHUNK * mSPSRx);
+  sendBuffer.resize(mChans);
+  recvBuffer.resize(mChans);
+  convertSendBuffer.resize(mChans);
+  convertRecvBuffer.resize(mChans);
+  mReceiveFIFO.resize(mChans);
 
-  convertSendBuffer = new short[sendBuffer->size() * 2];
-  convertRecvBuffer = new short[recvBuffer->size() * 2];
+  for (size_t i = 0; i < mChans; i++) {
+    sendBuffer[i] = new signalVector(CHUNK * mSPSTx);
+    recvBuffer[i] = new signalVector(NUMCHUNKS * CHUNK * mSPSRx);
+
+    convertSendBuffer[i] = new short[sendBuffer[i]->size() * 2];
+    convertRecvBuffer[i] = new short[recvBuffer[i]->size() * 2];
+  }
 
   sendCursor = 0;
   recvCursor = 0;
@@ -72,17 +84,23 @@ bool RadioInterface::init(int type)
 
 void RadioInterface::close()
 {
-  delete sendBuffer;
-  delete recvBuffer;
-  delete convertSendBuffer;
-  delete convertRecvBuffer;
+  for (size_t i = 0; i < sendBuffer.size(); i++)
+    delete sendBuffer[i];
 
-  sendBuffer = NULL;
-  recvBuffer = NULL;
-  convertRecvBuffer = NULL;
-  convertSendBuffer = NULL;
+  for (size_t i = 0; i < recvBuffer.size(); i++)
+    delete recvBuffer[i];
+
+  for (size_t i = 0; i < convertSendBuffer.size(); i++)
+    delete convertSendBuffer[i];
+
+  for (size_t i = 0; i < convertRecvBuffer.size(); i++)
+    delete convertRecvBuffer[i];
+
+  sendBuffer.resize(0);
+  recvBuffer.resize(0);
+  convertSendBuffer.resize(0);
+  convertRecvBuffer.resize(0);
 }
-
 
 double RadioInterface::fullScaleInputValue(void) {
   return mRadio->fullScaleInputValue();
@@ -93,11 +111,16 @@ double RadioInterface::fullScaleOutputValue(void) {
 }
 
 
-void RadioInterface::setPowerAttenuation(double atten)
+void RadioInterface::setPowerAttenuation(double atten, size_t chan)
 {
   double rfGain, digAtten;
 
-  rfGain = mRadio->setTxGain(mRadio->maxTxGain() - atten);
+  if (chan >= mChans) {
+    LOG(ALERT) << "Invalid channel requested";
+    return;
+  }
+
+  rfGain = mRadio->setTxGain(mRadio->maxTxGain() - atten, chan);
   digAtten = atten - mRadio->maxTxGain() + rfGain;
 
   if (digAtten < 1.0)
@@ -138,14 +161,14 @@ int RadioInterface::unRadioifyVector(float *floatVector,
   return newVector.size();
 }
 
-bool RadioInterface::tuneTx(double freq)
+bool RadioInterface::tuneTx(double freq, size_t chan)
 {
-  return mRadio->setTxFreq(freq);
+  return mRadio->setTxFreq(freq, chan);
 }
 
-bool RadioInterface::tuneRx(double freq)
+bool RadioInterface::tuneRx(double freq, size_t chan)
 {
-  return mRadio->setRxFreq(freq);
+  return mRadio->setRxFreq(freq, chan);
 }
 
 
@@ -183,24 +206,28 @@ void RadioInterface::alignRadio() {
 }
 #endif
 
-void RadioInterface::driveTransmitRadio(signalVector &radioBurst, bool zeroBurst)
+void RadioInterface::driveTransmitRadio(std::vector<signalVector *> &bursts,
+                                        std::vector<bool> &zeros)
 {
   if (!mOn)
     return;
 
-  radioifyVector(radioBurst,
-                 (float *) (sendBuffer->begin() + sendCursor), zeroBurst);
+  for (size_t i = 0; i < mChans; i++) {
+    radioifyVector(*bursts[i],
+                   (float *) (sendBuffer[i]->begin() + sendCursor), zeros[i]);
+  }
 
-  sendCursor += radioBurst.size();
+  sendCursor += bursts[0]->size();
 
   pushBuffer();
 }
 
-void RadioInterface::driveReceiveRadio() {
+bool RadioInterface::driveReceiveRadio()
+{
+  radioVector *burst = NULL;
 
-  if (!mOn) return;
-
-  if (mReceiveFIFO.size() > 8) return;
+  if (!mOn)
+    return false;
 
   pullBuffer();
 
@@ -215,23 +242,23 @@ void RadioInterface::driveReceiveRadio() {
   //    GSM bursts and pass up to Transceiver
   // Using the 157-156-156-156 symbols per timeslot format.
   while (rcvSz > (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx) {
-    signalVector rxVector((symbolsPerSlot + (tN % 4 == 0)) * mSPSRx);
-    unRadioifyVector((float *) (recvBuffer->begin() + readSz), rxVector);
     GSM::Time tmpTime = rcvClock;
-    if (rcvClock.FN() >= 0) {
-      //LOG(DEBUG) << "FN: " << rcvClock.FN();
-      radioVector *rxBurst = NULL;
-      if (!loadTest)
-        rxBurst = new radioVector(rxVector,tmpTime);
+
+    for (size_t i = 0; i < mChans; i++) {
+      signalVector rxVector((symbolsPerSlot + (tN % 4 == 0)) * mSPSRx);
+      unRadioifyVector((float *) (recvBuffer[i]->begin() + readSz), rxVector);
+
+      if (rcvClock.FN() >= 0)
+        burst = new radioVector(rxVector, tmpTime);
+
+      if (burst && (mReceiveFIFO[i].size() < 32))
+        mReceiveFIFO[i].write(burst);
       else {
-	if (tN % 4 == 0)
-	  rxBurst = new radioVector(*finalVec9,tmpTime);
-        else
-          rxBurst = new radioVector(*finalVec,tmpTime); 
+        delete burst;
       }
-      mReceiveFIFO.put(rxBurst); 
     }
-    mClock.incTN(); 
+
+    mClock.incTN();
     rcvClock.incTN();
     readSz += (symbolsPerSlot+(tN % 4 == 0)) * mSPSRx;
     rcvSz -= (symbolsPerSlot+(tN % 4 == 0)) * mSPSRx;
@@ -240,12 +267,16 @@ void RadioInterface::driveReceiveRadio() {
   }
 
   if (readSz > 0) {
-    memmove(recvBuffer->begin(),
-            recvBuffer->begin() + readSz,
-            (recvCursor - readSz) * 2 * sizeof(float));
+    for (size_t i = 0; i < recvBuffer.size(); i++) {
+      memmove(recvBuffer[i]->begin(),
+              recvBuffer[i]->begin() + readSz,
+              (recvCursor - readSz) * 2 * sizeof(float));
+    }
 
     recvCursor -= readSz;
   }
+
+  return true;
 }
 
 bool RadioInterface::isUnderrun()
@@ -256,18 +287,26 @@ bool RadioInterface::isUnderrun()
   return retVal;
 }
 
-double RadioInterface::setRxGain(double dB)
+VectorFIFO* RadioInterface::receiveFIFO(size_t chan)
+{
+  if (chan >= mReceiveFIFO.size())
+    return NULL;
+
+  return &mReceiveFIFO[chan];
+}
+
+double RadioInterface::setRxGain(double dB, size_t chan)
 {
   if (mRadio)
-    return mRadio->setRxGain(dB);
+    return mRadio->setRxGain(dB, chan);
   else
     return -1;
 }
 
-double RadioInterface::getRxGain()
+double RadioInterface::getRxGain(size_t chan)
 {
   if (mRadio)
-    return mRadio->getRxGain();
+    return mRadio->getRxGain(chan);
   else
     return -1;
 }
@@ -279,7 +318,7 @@ void RadioInterface::pullBuffer()
   int num_recv;
   float *output;
 
-  if (recvCursor > recvBuffer->size() - CHUNK)
+  if (recvCursor > recvBuffer[0]->size() - CHUNK)
     return;
 
   /* Outer buffer access size is fixed */
@@ -293,9 +332,10 @@ void RadioInterface::pullBuffer()
           return;
   }
 
-  output = (float *) (recvBuffer->begin() + recvCursor);
-
-  convert_short_float(output, convertRecvBuffer, 2 * num_recv);
+  for (size_t i = 0; i < mChans; i++) {
+    output = (float *) (recvBuffer[i]->begin() + recvCursor);
+    convert_short_float(output, convertRecvBuffer[i], 2 * num_recv);
+  }
 
   underrun |= local_underrun;
 
@@ -311,12 +351,14 @@ void RadioInterface::pushBuffer()
   if (sendCursor < CHUNK)
     return;
 
-  if (sendCursor > sendBuffer->size())
+  if (sendCursor > sendBuffer[0]->size())
     LOG(ALERT) << "Send buffer overflow";
 
-  convert_float_short(convertSendBuffer,
-                      (float *) sendBuffer->begin(),
-                      powerScaling, 2 * sendCursor);
+  for (size_t i = 0; i < mChans; i++) {
+    convert_float_short(convertSendBuffer[i],
+                        (float *) sendBuffer[i]->begin(),
+                        powerScaling, 2 * sendCursor);
+  }
 
   /* Send the all samples in the send buffer */ 
   num_sent = mRadio->writeSamples(convertSendBuffer,

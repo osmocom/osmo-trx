@@ -30,19 +30,20 @@ protected:
 
   Thread mAlignRadioServiceLoopThread;	      ///< thread that synchronizes transmit and receive sections
 
-  VectorFIFO  mReceiveFIFO;		      ///< FIFO that holds receive  bursts
+  std::vector<VectorFIFO>  mReceiveFIFO;      ///< FIFO that holds receive  bursts
 
   RadioDevice *mRadio;			      ///< the USRP object
 
-  int mSPSTx;
-  int mSPSRx;
-  signalVector *sendBuffer;
-  signalVector *recvBuffer;
+  size_t mSPSTx;
+  size_t mSPSRx;
+  size_t mChans;
+  std::vector<signalVector *> sendBuffer;
+  std::vector<signalVector *> recvBuffer;
   unsigned sendCursor;
   unsigned recvCursor;
 
-  short *convertRecvBuffer;
-  short *convertSendBuffer;
+  std::vector<short *> convertRecvBuffer;
+  std::vector<short *> convertSendBuffer;
 
   bool underrun;			      ///< indicates writes to USRP are too slow
   bool overrun;				      ///< indicates reads from USRP are too slow
@@ -89,43 +90,41 @@ public:
   /** constructor */
   RadioInterface(RadioDevice* wRadio = NULL,
 		 int receiveOffset = 3,
-		 int wSPS = 4,
+		 size_t sps = 4, size_t chans = 1,
 		 GSM::Time wStartTime = GSM::Time(0));
-    
+
   /** destructor */
   virtual ~RadioInterface();
 
   /** check for underrun, resets underrun value */
   bool isUnderrun();
-  
-  /** attach an existing USRP to this interface */
-  void attach(RadioDevice *wRadio, int wRadioOversampling);
 
   /** return the receive FIFO */
-  VectorFIFO* receiveFIFO() { return &mReceiveFIFO;}
+  VectorFIFO* receiveFIFO(size_t chan = 0);
 
   /** return the basestation clock */
   RadioClock* getClock(void) { return &mClock;};
 
   /** set transmit frequency */
-  bool tuneTx(double freq);
+  bool tuneTx(double freq, size_t chan = 0);
 
   /** set receive frequency */
-  bool tuneRx(double freq);
+  bool tuneRx(double freq, size_t chan = 0);
 
   /** set receive gain */
-  double setRxGain(double dB);
+  double setRxGain(double dB, size_t chan = 0);
 
   /** get receive gain */
-  double getRxGain(void);
+  double getRxGain(size_t chan = 0);
 
   /** drive transmission of GSM bursts */
-  void driveTransmitRadio(signalVector &radioBurst, bool zeroBurst);
+  void driveTransmitRadio(std::vector<signalVector *> &bursts,
+                          std::vector<bool> &zeros);
 
   /** drive reception of GSM bursts */
-  void driveReceiveRadio();
+  bool driveReceiveRadio();
 
-  void setPowerAttenuation(double atten);
+  void setPowerAttenuation(double atten, size_t chan = 0);
 
   /** returns the full-scale transmit amplitude **/
   double fullScaleInputValue();
@@ -169,7 +168,7 @@ public:
 
   RadioInterfaceResamp(RadioDevice* wRadio = NULL,
 		       int receiveOffset = 3,
-		       int wSPS = 4,
+		       size_t wSPS = 4, size_t chans = 1,
 		       GSM::Time wStartTime = GSM::Time(0));
 
   ~RadioInterfaceResamp();

@@ -55,14 +55,11 @@ static int resamp_inchunk = 0;
 static int resamp_outrate = 0;
 static int resamp_outchunk = 0;
 
-short *convertRecvBuffer = NULL;
-short *convertSendBuffer = NULL;
-
 RadioInterfaceResamp::RadioInterfaceResamp(RadioDevice *wRadio,
 					   int wReceiveOffset,
-					   int wSPS,
+					   size_t sps, size_t chan,
 					   GSM::Time wStartTime)
-	: RadioInterface(wRadio, wReceiveOffset, wSPS, wStartTime),
+	: RadioInterface(wRadio, wReceiveOffset, sps, chan, wStartTime),
 	  innerSendBuffer(NULL), outerSendBuffer(NULL),
 	  innerRecvBuffer(NULL), outerRecvBuffer(NULL)
 {
@@ -87,11 +84,14 @@ void RadioInterfaceResamp::close()
 	outerSendBuffer = NULL;
 	innerRecvBuffer = NULL;
 	outerRecvBuffer = NULL;
-	sendBuffer = NULL;
-	recvBuffer = NULL;
 
 	upsampler = NULL;
 	dnsampler = NULL;
+
+	if (sendBuffer.size())
+		sendBuffer[0] = NULL;
+	if (recvBuffer.size())
+		recvBuffer[0] = NULL;
 
 	RadioInterface::close();
 }
@@ -101,7 +101,18 @@ bool RadioInterfaceResamp::init(int type)
 {
 	float cutoff = 1.0f;
 
+	if (mChans != 1) {
+		LOG(ALERT) << "Unsupported channel configuration " << mChans;
+		return false;
+	}
+
 	close();
+
+	sendBuffer.resize(1);
+	recvBuffer.resize(1);
+	convertSendBuffer.resize(1);
+	convertRecvBuffer.resize(1);
+	mReceiveFIFO.resize(1);
 
 	switch (type) {
 	case RadioDevice::RESAMP_64M:
@@ -156,11 +167,11 @@ bool RadioInterfaceResamp::init(int type)
 	innerRecvBuffer =
 		new signalVector(NUMCHUNKS * resamp_inchunk / mSPSTx);
 
-	convertSendBuffer = new short[outerSendBuffer->size() * 2];
-	convertRecvBuffer = new short[outerRecvBuffer->size() * 2];
+	convertSendBuffer[0] = new short[outerSendBuffer->size() * 2];
+	convertRecvBuffer[0] = new short[outerRecvBuffer->size() * 2];
 
-	sendBuffer = innerSendBuffer;
-	recvBuffer = innerRecvBuffer;
+	sendBuffer[0] = innerSendBuffer;
+	recvBuffer[0] = innerRecvBuffer;
 
 	return true;
 }
@@ -186,7 +197,7 @@ void RadioInterfaceResamp::pullBuffer()
 	}
 
 	convert_short_float((float *) outerRecvBuffer->begin(),
-			    convertRecvBuffer, 2 * resamp_outchunk);
+			    convertRecvBuffer[0], 2 * resamp_outchunk);
 
 	underrun |= local_underrun;
 	readTimestamp += (TIMESTAMP) resamp_outchunk;
@@ -227,7 +238,7 @@ void RadioInterfaceResamp::pushBuffer()
 		LOG(ALERT) << "Sample rate downsampling error";
 	}
 
-	convert_float_short(convertSendBuffer,
+	convert_float_short(convertSendBuffer[0],
 			    (float *) outerSendBuffer->begin(),
 			    powerScaling, 2 * outer_len);
 

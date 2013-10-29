@@ -86,18 +86,18 @@ private:
   GSM::Time mTransmitLatency;     ///< latency between basestation clock and transmit deadline clock
   GSM::Time mLatencyUpdateTime;   ///< last time latency was updated
 
-  UDPSocket *mDataSocket;         ///< socket for writing to/reading from GSM core
-  UDPSocket *mCtrlSocket;         ///< socket for writing/reading control commands from GSM core
-  UDPSocket *mClockSocket;        ///< socket for writing clock updates to GSM core
+  std::vector<UDPSocket *> mDataSockets;  ///< socket for writing to/reading from GSM core
+  std::vector<UDPSocket *> mCtrlSockets;  ///< socket for writing/reading control commands from GSM core
+  UDPSocket *mClockSocket;                ///< socket for writing clock updates to GSM core
 
-  VectorQueue  mTransmitPriorityQueue;   ///< priority queue of transmit bursts received from GSM core
-  VectorFIFO*  mTransmitFIFO;     ///< radioInterface FIFO of transmit bursts 
-  VectorFIFO*  mReceiveFIFO;      ///< radioInterface FIFO of receive bursts 
+  std::vector<VectorQueue> mTxPriorityQueues;   ///< priority queue of transmit bursts received from GSM core
+  std::vector<VectorFIFO *>  mReceiveFIFO;      ///< radioInterface FIFO of receive bursts
 
-  Thread *mRxServiceLoopThread;   ///< thread to pull bursts into receive FIFO
-  Thread *mTxServiceLoopThread;   ///< thread to push bursts into transmit FIFO
-  Thread *mControlServiceLoopThread;       ///< thread to process control messages from GSM core
-  Thread *mTransmitPriorityQueueServiceLoopThread;///< thread to process transmit bursts from GSM core
+  std::vector<Thread *> mRxServiceLoopThreads;  ///< thread to pull bursts into receive FIFO
+  Thread *mRxLowerLoopThread;                   ///< thread to pull bursts into receive FIFO
+  Thread *mTxLowerLoopThread;                   ///< thread to push bursts into transmit FIFO
+  std::vector<Thread *> mControlServiceLoopThreads;         ///< thread to process control messages from GSM core
+  std::vector<Thread *> mTxPriorityQueueServiceLoopThreads; ///< thread to process transmit bursts from GSM core
 
   GSM::Time mTransmitDeadlineClock;       ///< deadline for pushing bursts into transmit FIFO 
   GSM::Time mLastClockUpdateTime;         ///< last time clock update was sent up to core
@@ -118,29 +118,28 @@ private:
   noiseVector mNoises;  ///< Vector holding running noise measurements
 
   /** modulate and add a burst to the transmit queue */
-  void addRadioVector(BitVector &burst,
-		      int RSSI,
-		      GSM::Time &wTime);
+  void addRadioVector(size_t chan, BitVector &burst,
+                      int RSSI, GSM::Time &wTime);
 
   /** Push modulated burst into transmit FIFO corresponding to a particular timestamp */
   void pushRadioVector(GSM::Time &nowTime);
 
-  /** Pull and demodulate a burst from the receive FIFO */ 
-  SoftVector *pullRadioVector(GSM::Time &wTime,
-			   int &RSSI,
-			   int &timingOffset);
-   
+  /** Pull and demodulate a burst from the receive FIFO */
+  SoftVector *pullRadioVector(GSM::Time &wTime, int &RSSI,
+                              int &timingOffset, size_t chan = 0);
+
   /** Set modulus for specific timeslot */
-  void setModulus(int timeslot);
+  void setModulus(size_t timeslot, size_t chan);
 
   /** return the expected burst type for the specified timestamp */
-  CorrType expectedCorrType(GSM::Time currTime);
+  CorrType expectedCorrType(GSM::Time currTime, size_t chan);
 
   /** send messages over the clock socket */
   void writeClockInterface(void);
 
   int mSPSTx;                          ///< number of samples per Tx symbol
   int mSPSRx;                          ///< number of samples per Rx symbol
+  size_t mChans;
 
   bool mOn;			       ///< flag to indicate that transceiver is powered on
   double mTxFreq;                      ///< the transmit frequency
@@ -149,7 +148,7 @@ private:
   unsigned mTSC;                       ///< the midamble sequence code
   unsigned mMaxExpectedDelay;            ///< maximum expected time-of-arrival offset in GSM symbols
 
-  TransceiverState mState;
+  std::vector<TransceiverState> mStates;
 
 public:
 
@@ -162,10 +161,10 @@ public:
   */
   Transceiver(int wBasePort,
 	      const char *TRXAddress,
-	      int wSPS,
+	      size_t wSPS, size_t chans,
 	      GSM::Time wTransmitLatency,
 	      RadioInterface *wRadioInterface);
-   
+
   /** Destructor */
   ~Transceiver();
 
@@ -174,10 +173,14 @@ public:
   bool init();
 
   /** attach the radioInterface receive FIFO */
-  void receiveFIFO(VectorFIFO *wFIFO) { mReceiveFIFO = wFIFO;}
+  bool receiveFIFO(VectorFIFO *wFIFO, size_t chan)
+  {
+    if (chan >= mReceiveFIFO.size())
+      return false;
 
-  /** attach the radioInterface transmit FIFO */
-  void transmitFIFO(VectorFIFO *wFIFO) { mTransmitFIFO = wFIFO;}
+    mReceiveFIFO[chan] = wFIFO;
+    return true;
+  }
 
   /** Codes for channel combinations */
   typedef enum {
@@ -200,29 +203,34 @@ public:
   } ChannelCombination;
 
 protected:
+  /** drive lower receive I/O and burst generation */
+  void driveReceiveRadio();
 
-  /** drive reception and demodulation of GSM bursts */ 
-  void driveReceiveFIFO();
+  /** drive demodulation of GSM bursts */
+  void driveReceiveFIFO(size_t chan);
 
   /** drive transmission of GSM bursts */
-  void driveTransmitFIFO();
+  void driveTxFIFO();
 
   /** drive handling of control messages from GSM core */
-  void driveControl();
+  void driveControl(size_t chan);
 
   /**
     drive modulation and sorting of GSM bursts from GSM core
     @return true if a burst was transferred successfully
   */
-  bool driveTransmitPriorityQueue();
+  bool driveTxPriorityQueue(size_t chan);
 
-  friend void *RxServiceLoopAdapter(Transceiver *);
+  friend void *RxUpperLoopAdapter(TransceiverChannel *);
 
-  friend void *TxServiceLoopAdapter(Transceiver *);
+  friend void *TxUpperLoopAdapter(TransceiverChannel *);
 
-  friend void *ControlServiceLoopAdapter(Transceiver *);
+  friend void *RxLowerLoopAdapter(Transceiver *);
 
-  friend void *TransmitPriorityQueueServiceLoopAdapter(Transceiver *);
+  friend void *TxLowerLoopAdapter(Transceiver *);
+
+  friend void *ControlServiceLoopAdapter(TransceiverChannel *);
+
 
   void reset();
 
@@ -231,13 +239,15 @@ protected:
 
 };
 
+void *RxUpperLoopAdapter(TransceiverChannel *);
+
 /** Main drive threads */
-void *RxServiceLoopAdapter(Transceiver *);
-void *TxServiceLoopAdapter(Transceiver *);
+void *RxLowerLoopAdapter(Transceiver *);
+void *TxLowerLoopAdapter(Transceiver *);
 
 /** control message handler thread loop */
-void *ControlServiceLoopAdapter(Transceiver *);
+void *ControlServiceLoopAdapter(TransceiverChannel *);
 
 /** transmit queueing thread loop */
-void *TransmitPriorityQueueServiceLoopAdapter(Transceiver *);
+void *TxUpperLoopAdapter(TransceiverChannel *);
 

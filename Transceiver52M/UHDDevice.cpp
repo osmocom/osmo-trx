@@ -211,7 +211,7 @@ private:
 */
 class uhd_device : public RadioDevice {
 public:
-	uhd_device(int sps, bool skip_rx);
+	uhd_device(size_t sps, size_t chans);
 	~uhd_device();
 
 	int open(const std::string &args, bool extref);
@@ -221,16 +221,16 @@ public:
 	void setPriority();
 	enum TxWindowType getWindowType() { return tx_window; }
 
-	int readSamples(short *buf, int len, bool *overrun, 
+	int readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 			TIMESTAMP timestamp, bool *underrun, unsigned *RSSI);
 
-	int writeSamples(short *buf, int len, bool *underrun, 
+	int writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
 			 TIMESTAMP timestamp, bool isControl);
 
 	bool updateAlignment(TIMESTAMP timestamp);
 
-	bool setTxFreq(double wFreq);
-	bool setRxFreq(double wFreq);
+	bool setTxFreq(double wFreq, size_t chan);
+	bool setRxFreq(double wFreq, size_t chan);
 
 	inline TIMESTAMP initialWriteTimestamp() { return 0; }
 	inline TIMESTAMP initialReadTimestamp() { return 0; }
@@ -238,17 +238,18 @@ public:
 	inline double fullScaleInputValue() { return 32000 * TX_AMPL; }
 	inline double fullScaleOutputValue() { return 32000; }
 
-	double setRxGain(double db);
-	double getRxGain(void) { return rx_gain; }
+	double setRxGain(double db, size_t chan);
+	double getRxGain(size_t chan);
 	double maxRxGain(void) { return rx_gain_max; }
 	double minRxGain(void) { return rx_gain_min; }
 
-	double setTxGain(double db);
+	double setTxGain(double db, size_t chan);
 	double maxTxGain(void) { return tx_gain_max; }
 	double minTxGain(void) { return tx_gain_min; }
 
-	double getTxFreq() { return tx_freq; }
-	double getRxFreq() { return rx_freq; }
+	double getTxFreq(size_t chan);
+	double getRxFreq(size_t chan);
+	double getRxFreq();
 
 	inline double getSampleRate() { return tx_rate; }
 	inline double numberRead() { return rx_pkt_cnt; }
@@ -272,25 +273,25 @@ private:
 	enum TxWindowType tx_window;
 	enum uhd_dev_type dev_type;
 
-	int sps;
+	size_t sps, chans;
 	double tx_rate, rx_rate;
 
-	double tx_gain, tx_gain_min, tx_gain_max;
-	double rx_gain, rx_gain_min, rx_gain_max;
+	double tx_gain_min, tx_gain_max;
+	double rx_gain_min, rx_gain_max;
 
-	double tx_freq, rx_freq;
+	std::vector<double> tx_gains, rx_gains;
+	std::vector<double> tx_freqs, rx_freqs;
 	size_t tx_spp, rx_spp;
 
 	bool started;
 	bool aligned;
-	bool skip_rx;
 
 	size_t rx_pkt_cnt;
 	size_t drop_cnt;
 	uhd::time_spec_t prev_ts;
 
 	TIMESTAMP ts_offset;
-	smpl_buf *rx_smpl_buf;
+	std::vector<smpl_buf *> rx_buffers;
 
 	void init_gains();
 	int set_master_clk(double rate);
@@ -335,23 +336,23 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 	}
 }
 
-uhd_device::uhd_device(int sps, bool skip_rx)
-	: tx_gain(0.0), tx_gain_min(0.0), tx_gain_max(0.0),
-	  rx_gain(0.0), rx_gain_min(0.0), rx_gain_max(0.0),
-	  tx_freq(0.0), rx_freq(0.0), tx_spp(0), rx_spp(0),
+uhd_device::uhd_device(size_t sps, size_t chans)
+	: tx_gain_min(0.0), tx_gain_max(0.0),
+	  rx_gain_min(0.0), rx_gain_max(0.0),
+	  tx_spp(0), rx_spp(0),
 	  started(false), aligned(false), rx_pkt_cnt(0), drop_cnt(0),
-	  prev_ts(0,0), ts_offset(0), rx_smpl_buf(NULL)
+	  prev_ts(0,0), ts_offset(0)
 {
 	this->sps = sps;
-	this->skip_rx = skip_rx;
+	this->chans = chans;
 }
 
 uhd_device::~uhd_device()
 {
 	stop();
 
-	if (rx_smpl_buf)
-		delete rx_smpl_buf;
+	for (size_t i = 0; i < rx_buffers.size(); i++)
+		delete rx_buffers[i];
 }
 
 void uhd_device::init_gains()
@@ -366,13 +367,18 @@ void uhd_device::init_gains()
 	rx_gain_min = range.start();
 	rx_gain_max = range.stop();
 
-	usrp_dev->set_tx_gain((tx_gain_min + tx_gain_max) / 2);
-	usrp_dev->set_rx_gain((rx_gain_min + rx_gain_max) / 2);
+	for (size_t i = 0; i < tx_gains.size(); i++) {
+		usrp_dev->set_tx_gain((tx_gain_min + tx_gain_max) / 2, i);
+		tx_gains[i] = usrp_dev->get_tx_gain(i);
+	}
 
-	tx_gain = usrp_dev->get_tx_gain();
-	rx_gain = usrp_dev->get_rx_gain();
+	for (size_t i = 0; i < rx_gains.size(); i++) {
+		usrp_dev->set_rx_gain((rx_gain_min + rx_gain_max) / 2, i);
+		rx_gains[i] = usrp_dev->get_rx_gain(i);
+	}
 
 	return;
+
 }
 
 int uhd_device::set_master_clk(double clk_rate)
@@ -435,24 +441,44 @@ int uhd_device::set_rates(double tx_rate, double rx_rate)
 	return 0;
 }
 
-double uhd_device::setTxGain(double db)
+double uhd_device::setTxGain(double db, size_t chan)
 {
-	usrp_dev->set_tx_gain(db);
-	tx_gain = usrp_dev->get_tx_gain();
+	if (chan >= tx_gains.size()) {
+		LOG(ALERT) << "Requested non-existent channel" << chan;
+		return 0.0f;
+	}
 
-	LOG(INFO) << "Set TX gain to " << tx_gain << "dB";
+	usrp_dev->set_tx_gain(db, chan);
+	tx_gains[chan] = usrp_dev->get_tx_gain(chan);
 
-	return tx_gain;
+	LOG(INFO) << "Set TX gain to " << tx_gains[chan] << "dB";
+
+	return tx_gains[chan];
 }
 
-double uhd_device::setRxGain(double db)
+double uhd_device::setRxGain(double db, size_t chan)
 {
-	usrp_dev->set_rx_gain(db);
-	rx_gain = usrp_dev->get_rx_gain();
+	if (chan >= rx_gains.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return 0.0f;
+	}
 
-	LOG(INFO) << "Set RX gain to " << rx_gain << "dB";
+	usrp_dev->set_rx_gain(db, chan);
+	rx_gains[chan] = usrp_dev->get_rx_gain(chan);
 
-	return rx_gain;
+	LOG(INFO) << "Set RX gain to " << rx_gains[chan] << "dB";
+
+	return rx_gains[chan];
+}
+
+double uhd_device::getRxGain(size_t chan)
+{
+	if (chan >= rx_gains.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return 0.0f;
+	}
+
+	return rx_gains[chan];
 }
 
 /*
@@ -533,11 +559,30 @@ int uhd_device::open(const std::string &args, bool extref)
 	if (!parse_dev_type())
 		return -1;
 
+	// Verify and set channels
+	if ((dev_type == UMTRX) && (chans == 2)) {
+		uhd::usrp::subdev_spec_t subdev_spec("A:0 B:0");
+		usrp_dev->set_tx_subdev_spec(subdev_spec);
+		usrp_dev->set_rx_subdev_spec(subdev_spec);
+	} else if (chans != 1) {
+		LOG(ALERT) << "Invalid channel combination for device";
+		return -1;
+	}
+
+	tx_freqs.resize(chans);
+	rx_freqs.resize(chans);
+	tx_gains.resize(chans);
+	rx_gains.resize(chans);
+	rx_buffers.resize(chans);
+
 	if (extref)
 		usrp_dev->set_clock_source("external");
 
 	// Create TX and RX streamers
 	uhd::stream_args_t stream_args("sc16");
+	for (size_t i = 0; i < chans; i++)
+		stream_args.channels.push_back(i);
+
 	tx_stream = usrp_dev->get_tx_stream(stream_args);
 	rx_stream = usrp_dev->get_rx_stream(stream_args);
 
@@ -553,7 +598,8 @@ int uhd_device::open(const std::string &args, bool extref)
 
 	// Create receive buffer
 	size_t buf_len = SAMPLE_BUF_SZ / sizeof(uint32_t);
-	rx_smpl_buf = new smpl_buf(buf_len, rx_rate);
+	for (size_t i = 0; i < rx_buffers.size(); i++)
+		rx_buffers[i] = new smpl_buf(buf_len, rx_rate);
 
 	// Set receive chain sample offset 
 	double offset = get_dev_offset(dev_type, sps);
@@ -608,16 +654,13 @@ bool uhd_device::flush_recv(size_t num_pkts)
 
 void uhd_device::restart(uhd::time_spec_t ts)
 {
-	uhd::stream_cmd_t cmd = uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
-	usrp_dev->issue_stream_cmd(cmd);
-
-	flush_recv(50);
-
 	usrp_dev->set_time_now(ts);
 	aligned = false;
 
-	cmd = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
-	cmd.stream_now = true;
+	uhd::stream_cmd_t cmd = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
+	cmd.time_spec = uhd::time_spec_t(0.1);
+	cmd.stream_now = false;
+
 	usrp_dev->issue_stream_cmd(cmd);
 }
 
@@ -707,16 +750,17 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 	return 0;
 }
 
-int uhd_device::readSamples(short *buf, int len, bool *overrun,
-			TIMESTAMP timestamp, bool *underrun, unsigned *RSSI)
+int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
+			    TIMESTAMP timestamp, bool *underrun, unsigned *RSSI)
 {
 	ssize_t rc;
 	uhd::time_spec_t ts;
 	uhd::rx_metadata_t metadata;
-	uint32_t pkt_buf[rx_spp];
 
-	if (skip_rx)
-		return 0;
+	if (bufs.size() != chans) {
+		LOG(ALERT) << "Invalid channel combination " << bufs.size();
+		return -1;
+	}
 
 	*overrun = false;
 	*underrun = false;
@@ -728,21 +772,25 @@ int uhd_device::readSamples(short *buf, int len, bool *overrun,
 	LOG(DEBUG) << "Requested timestamp = " << ts.get_real_secs();
 
 	// Check that timestamp is valid
-	rc = rx_smpl_buf->avail_smpls(timestamp);
+	rc = rx_buffers[0]->avail_smpls(timestamp);
 	if (rc < 0) {
-		LOG(ERR) << rx_smpl_buf->str_code(rc);
-		LOG(ERR) << rx_smpl_buf->str_status();
+		LOG(ERR) << rx_buffers[0]->str_code(rc);
+		LOG(ERR) << rx_buffers[0]->str_status();
 		return 0;
 	}
 
+	// Create vector buffer
+	std::vector<std::vector<short> >
+		pkt_bufs(chans, std::vector<short>(2 * rx_spp));
+
+	std::vector<short *> pkt_ptrs;
+	for (size_t i = 0; i < pkt_bufs.size(); i++)
+		pkt_ptrs.push_back(&pkt_bufs[i].front());
+
 	// Receive samples from the usrp until we have enough
-	while (rx_smpl_buf->avail_smpls(timestamp) < len) {
-		size_t num_smpls = rx_stream->recv(
-					(void*)pkt_buf,
-					rx_spp,
-					metadata,
-					0.1,
-					true);
+	while (rx_buffers[0]->avail_smpls(timestamp) < len) {
+		size_t num_smpls = rx_stream->recv(pkt_ptrs, rx_spp,
+						   metadata, 0.1, true);
 		rx_pkt_cnt++;
 
 		// Check for errors 
@@ -758,36 +806,39 @@ int uhd_device::readSamples(short *buf, int len, bool *overrun,
 			continue;
 		}
 
-
 		ts = metadata.time_spec;
 		LOG(DEBUG) << "Received timestamp = " << ts.get_real_secs();
 
-		rc = rx_smpl_buf->write(pkt_buf,
-					num_smpls,
-					metadata.time_spec);
+		for (size_t i = 0; i < rx_buffers.size(); i++) {
+			rc = rx_buffers[i]->write((short *) &pkt_bufs[i].front(),
+						  num_smpls,
+						  metadata.time_spec);
 
-		// Continue on local overrun, exit on other errors
-		if ((rc < 0)) {
-			LOG(ERR) << rx_smpl_buf->str_code(rc);
-			LOG(ERR) << rx_smpl_buf->str_status();
-			if (rc != smpl_buf::ERROR_OVERFLOW)
-				return 0;
+			// Continue on local overrun, exit on other errors
+			if ((rc < 0)) {
+				LOG(ERR) << rx_buffers[i]->str_code(rc);
+				LOG(ERR) << rx_buffers[i]->str_status();
+				if (rc != smpl_buf::ERROR_OVERFLOW)
+					return 0;
+			}
 		}
 	}
 
 	// We have enough samples
-	rc = rx_smpl_buf->read(buf, len, timestamp);
-	if ((rc < 0) || (rc != len)) {
-		LOG(ERR) << rx_smpl_buf->str_code(rc);
-		LOG(ERR) << rx_smpl_buf->str_status();
-		return 0;
+	for (size_t i = 0; i < rx_buffers.size(); i++) {
+		rc = rx_buffers[i]->read(bufs[i], len, timestamp);
+		if ((rc < 0) || (rc != len)) {
+			LOG(ERR) << rx_buffers[i]->str_code(rc);
+			LOG(ERR) << rx_buffers[i]->str_status();
+			return 0;
+		}
 	}
 
 	return len;
 }
 
-int uhd_device::writeSamples(short *buf, int len, bool *underrun,
-			unsigned long long timestamp,bool isControl)
+int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
+			     unsigned long long timestamp,bool isControl)
 {
 	uhd::tx_metadata_t metadata;
 	metadata.has_time_spec = true;
@@ -801,6 +852,11 @@ int uhd_device::writeSamples(short *buf, int len, bool *underrun,
 	if (isControl) {
 		LOG(ERR) << "Control packets not supported";
 		return 0;
+	}
+
+	if (bufs.size() != chans) {
+		LOG(ALERT) << "Invalid channel combination " << bufs.size();
+		return -1;
 	}
 
 	// Drop a fixed number of packets (magic value)
@@ -822,8 +878,7 @@ int uhd_device::writeSamples(short *buf, int len, bool *underrun,
 		}
 	}
 
-	size_t num_smpls = tx_stream->send(buf, len, metadata);
-
+	size_t num_smpls = tx_stream->send(bufs, len, metadata);
 	if (num_smpls != (unsigned) len) {
 		LOG(ALERT) << "UHD: Device send timed out";
 		LOG(ALERT) << "UHD: Version " << uhd::get_version_string();
@@ -839,22 +894,52 @@ bool uhd_device::updateAlignment(TIMESTAMP timestamp)
 	return true;
 }
 
-bool uhd_device::setTxFreq(double wFreq)
+bool uhd_device::setTxFreq(double wFreq, size_t chan)
 {
-	uhd::tune_result_t tr = usrp_dev->set_tx_freq(wFreq);
+	if (chan >= tx_freqs.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return false;
+	}
+
+	uhd::tune_result_t tr = usrp_dev->set_tx_freq(wFreq, chan);
 	LOG(INFO) << "\n" << tr.to_pp_string();
-	tx_freq = usrp_dev->get_tx_freq();
+	tx_freqs[chan] = usrp_dev->get_tx_freq(chan);
 
 	return true;
 }
 
-bool uhd_device::setRxFreq(double wFreq)
+bool uhd_device::setRxFreq(double wFreq, size_t chan)
 {
-	uhd::tune_result_t tr = usrp_dev->set_rx_freq(wFreq);
+	if (chan >= rx_freqs.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return false;
+	}
+
+	uhd::tune_result_t tr = usrp_dev->set_rx_freq(wFreq, chan);
 	LOG(INFO) << "\n" << tr.to_pp_string();
-	rx_freq = usrp_dev->get_rx_freq();
+	rx_freqs[chan] = usrp_dev->get_rx_freq(chan);
 
 	return true;
+}
+
+double uhd_device::getTxFreq(size_t chan)
+{
+	if (chan >= tx_freqs.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return 0.0;
+	}
+
+	return tx_freqs[chan];
+}
+
+double uhd_device::getRxFreq(size_t chan)
+{
+	if (chan >= rx_freqs.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return 0.0;
+	}
+
+	return rx_freqs[chan];
 }
 
 bool uhd_device::recv_async_msg()
@@ -1085,7 +1170,7 @@ std::string smpl_buf::str_code(ssize_t code)
 	}
 }
 
-RadioDevice *RadioDevice::make(int sps, bool skip_rx)
+RadioDevice *RadioDevice::make(size_t sps, size_t chans)
 {
-	return new uhd_device(sps, skip_rx);
+	return new uhd_device(sps, chans);
 }

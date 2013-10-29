@@ -76,142 +76,172 @@ void TransceiverState::init(size_t slot, signalVector *burst)
 
 Transceiver::Transceiver(int wBasePort,
 			 const char *TRXAddress,
-			 int wSPS,
+			 size_t wSPS, size_t wChans,
 			 GSM::Time wTransmitLatency,
 			 RadioInterface *wRadioInterface)
   : mBasePort(wBasePort), mAddr(TRXAddress),
-    mDataSocket(NULL), mCtrlSocket(NULL), mClockSocket(NULL),
-    mSPSTx(wSPS), mSPSRx(1), mNoises(NOISE_CNT)
+    mTransmitLatency(wTransmitLatency), mClockSocket(NULL), mRadioInterface(wRadioInterface),
+    mNoiseLev(0.0), mNoises(NOISE_CNT), mSPSTx(wSPS), mSPSRx(1), mChans(wChans),
+    mOn(false), mTxFreq(0.0), mRxFreq(0.0), mPower(-10), mMaxExpectedDelay(0)
 {
   GSM::Time startTime(random() % gHyperframe,0);
 
-  mRxServiceLoopThread = new Thread(32768);
-  mTxServiceLoopThread = new Thread(32768);
-  mControlServiceLoopThread = new Thread(32768);       ///< thread to process control messages from GSM core
-  mTransmitPriorityQueueServiceLoopThread = new Thread(32768);///< thread to process transmit bursts from GSM core
+  mRxLowerLoopThread = new Thread(32768);
+  mTxLowerLoopThread = new Thread(32768);
 
-  mRadioInterface = wRadioInterface;
-  mTransmitLatency = wTransmitLatency;
   mTransmitDeadlineClock = startTime;
   mLastClockUpdateTime = startTime;
   mLatencyUpdateTime = startTime;
   mRadioInterface->getClock()->set(startTime);
-  mMaxExpectedDelay = 0;
 
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
-
-  mOn = false;
-  mTxFreq = 0.0;
-  mRxFreq = 0.0;
-  mPower = -10;
-  mNoiseLev = 0.0;
 }
 
 Transceiver::~Transceiver()
 {
   sigProcLibDestroy();
-  mTransmitPriorityQueue.clear();
 
   delete mClockSocket;
-  delete mCtrlSocket;
-  delete mDataSocket;
+
+  for (size_t i = 0; i < mChans; i++) {
+    mTxPriorityQueues[i].clear();
+    delete mCtrlSockets[i];
+    delete mDataSockets[i];
+  }
 }
 
 bool Transceiver::init()
 {
   signalVector *burst;
 
+  if (!mChans) {
+    LOG(ALERT) << "No channels assigned";
+    return false;
+  }
+
   if (!sigProcLibSetup(mSPSTx)) {
     LOG(ALERT) << "Failed to initialize signal processing library";
     return false;
   }
 
+  mDataSockets.resize(mChans);
+  mCtrlSockets.resize(mChans);
+
+  mControlServiceLoopThreads.resize(mChans);
+  mTxPriorityQueueServiceLoopThreads.resize(mChans);
+  mRxServiceLoopThreads.resize(mChans);
+
+  mTxPriorityQueues.resize(mChans);
+  mReceiveFIFO.resize(mChans);
+  mStates.resize(mChans);
+
   mClockSocket = new UDPSocket(mBasePort, mAddr.c_str(), mBasePort + 100);
-  mCtrlSocket = new UDPSocket(mBasePort + 1, mAddr.c_str(), mBasePort + 101);
-  mDataSocket = new UDPSocket(mBasePort + 2, mAddr.c_str(), mBasePort + 102);
 
-  for (size_t n = 0; n < 8; n++) {
-    burst = modulateBurst(gDummyBurst, 8 + (n % 4 == 0), mSPSTx);
-    scaleVector(*burst, txFullScale);
-    mState.init(n, burst);
-    mState.chanEstimateTime[n] = mTransmitDeadlineClock;
+  for (size_t i = 0; i < mChans; i++) {
+    mDataSockets[i] = new UDPSocket(mBasePort + 2 * i + 2, mAddr.c_str(),
+                                    mBasePort + 2 * i + 102);
+    mCtrlSockets[i] = new UDPSocket(mBasePort + 2 * i + 1, mAddr.c_str(),
+                                    mBasePort + 2 * i + 101);
+  }
 
-    delete burst;
+  for (size_t i = 0; i < mChans; i++) {
+    mControlServiceLoopThreads[i] = new Thread(32768);
+    mTxPriorityQueueServiceLoopThreads[i] = new Thread(32768);
+    mRxServiceLoopThreads[i] = new Thread(32768);
+
+    for (size_t n = 0; n < 8; n++) {
+      burst = modulateBurst(gDummyBurst, 8 + (n % 4 == 0), mSPSTx);
+      scaleVector(*burst, txFullScale);
+      mStates[i].init(n, burst);
+      delete burst;
+    }
   }
 
   return true;
 }
 
-void Transceiver::addRadioVector(BitVector &burst,
-				 int RSSI,
-				 GSM::Time &wTime)
+void Transceiver::addRadioVector(size_t chan, BitVector &burst,
+                                 int RSSI, GSM::Time &wTime)
 {
+  if (chan >= mTxPriorityQueues.size()) {
+    LOG(ALERT) << "Invalid channel " << chan;
+    return;
+  }
+
   // modulate and stick into queue 
   signalVector* modBurst = modulateBurst(burst,
 					 8 + (wTime.TN() % 4 == 0),
 					 mSPSTx);
   scaleVector(*modBurst,txFullScale * pow(10,-RSSI/10));
   radioVector *newVec = new radioVector(*modBurst,wTime);
-  mTransmitPriorityQueue.write(newVec);
+  mTxPriorityQueues[chan].write(newVec);
 
   delete modBurst;
 }
 
 void Transceiver::pushRadioVector(GSM::Time &nowTime)
 {
+  int TN, modFN;
+  radioVector *burst;
+  TransceiverState *state;
+  std::vector<signalVector *> bursts(mChans);
+  std::vector<bool> zeros(mChans);
 
-  // dump stale bursts, if any
-  while (radioVector* staleBurst = mTransmitPriorityQueue.getStaleBurst(nowTime)) {
-    // Even if the burst is stale, put it in the fillter table.
-    // (It might be an idle pattern.)
-    LOG(NOTICE) << "dumping STALE burst in TRX->USRP interface";
-    const GSM::Time& nextTime = staleBurst->getTime();
-    int TN = nextTime.TN();
-    int modFN = nextTime.FN() % mState.fillerModulus[TN];
-    delete mState.fillerTable[modFN][TN];
-    mState.fillerTable[modFN][TN] = staleBurst;
+  for (size_t i = 0; i < mChans; i ++) {
+    state = &mStates[i];
+
+    while ((burst = mTxPriorityQueues[i].getStaleBurst(nowTime))) {
+      LOG(NOTICE) << "dumping STALE burst in TRX->USRP interface";
+
+      TN = burst->getTime().TN();
+      modFN = burst->getTime().FN() % state->fillerModulus[TN];
+
+      delete state->fillerTable[modFN][TN];
+      state->fillerTable[modFN][TN] = burst;
+    }
+
+    TN = nowTime.TN();
+    modFN = nowTime.FN() % state->fillerModulus[TN];
+
+    bursts[i] = state->fillerTable[modFN][TN];
+    zeros[i] = state->chanType[TN] == NONE;
+
+    if ((burst = mTxPriorityQueues[i].getCurrentBurst(nowTime))) {
+      delete state->fillerTable[modFN][TN];
+      state->fillerTable[modFN][TN] = burst;
+      bursts[i] = burst;
+    }
   }
-  
-  int TN = nowTime.TN();
-  int modFN = nowTime.FN() % mState.fillerModulus[nowTime.TN()];
 
-  // if queue contains data at the desired timestamp, stick it into FIFO
-  if (radioVector *next = (radioVector*) mTransmitPriorityQueue.getCurrentBurst(nowTime)) {
-    LOG(DEBUG) << "transmitFIFO: wrote burst " << next << " at time: " << nowTime;
-    delete mState.fillerTable[modFN][TN];
-    mState.fillerTable[modFN][TN] = new signalVector(*(next));
-    mRadioInterface->driveTransmitRadio(*(next), mState.chanType[TN] == NONE);
-    delete next;
-    return;
-  }
+  mRadioInterface->driveTransmitRadio(bursts, zeros);
 
-  // otherwise, pull filler data, and push to radio FIFO
-  mRadioInterface->driveTransmitRadio(*(mState.fillerTable[modFN][TN]),
-                                      mState.chanType[TN]==NONE);
+  return;
 }
 
-void Transceiver::setModulus(int timeslot)
+void Transceiver::setModulus(size_t timeslot, size_t chan)
 {
-  switch (mState.chanType[timeslot]) {
+  TransceiverState *state = &mStates[chan];
+
+  switch (state->chanType[timeslot]) {
   case NONE:
   case I:
   case II:
   case III:
   case FILL:
-    mState.fillerModulus[timeslot] = 26;
+    state->fillerModulus[timeslot] = 26;
     break;
   case IV:
   case VI:
   case V:
-    mState.fillerModulus[timeslot] = 51;
+    state->fillerModulus[timeslot] = 51;
     break;
     //case V: 
   case VII:
-    mState.fillerModulus[timeslot] = 102;
+    state->fillerModulus[timeslot] = 102;
     break;
   case XIII:
-    mState.fillerModulus[timeslot] = 52;
+    state->fillerModulus[timeslot] = 52;
     break;
   default:
     break;
@@ -219,13 +249,14 @@ void Transceiver::setModulus(int timeslot)
 }
 
 
-Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime)
+Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
+                                                    size_t chan)
 {
-  
+  TransceiverState *state = &mStates[chan];
   unsigned burstTN = currTime.TN();
   unsigned burstFN = currTime.FN();
 
-  switch (mState.chanType[burstTN]) {
+  switch (state->chanType[burstTN]) {
   case NONE:
     return OFF;
     break;
@@ -287,25 +318,24 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime)
     return OFF;
     break;
   }
-
 }
 
-SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
-				      int &RSSI,
-				      int &timingOffset)
+SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
+                                         int &timingOffset, size_t chan)
 {
-  bool needDFE = false, success = false, estimateChannel = false;
+  bool needDFE = false;
+  bool success = false;
   complex amp = 0.0;
   float TOA = 0.0, avg = 0.0;
-  signalVector *chanResponse;
+  TransceiverState *state = &mStates[chan];
 
-  radioVector *rxBurst = (radioVector *) mReceiveFIFO->get();
+  radioVector *rxBurst = (radioVector *) mReceiveFIFO[chan]->read();
 
   if (!rxBurst) return NULL;
 
   int timeslot = rxBurst->getTime().TN();
 
-  CorrType corrType = expectedCorrType(rxBurst->getTime());
+  CorrType corrType = expectedCorrType(rxBurst->getTime(), chan);
 
   if ((corrType==OFF) || (corrType==IDLE)) {
     delete rxBurst;
@@ -323,55 +353,58 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
   // run the proper correlator
   if (corrType==TSC) {
     LOG(DEBUG) << "looking for TSC at time: " << rxBurst->getTime();
-    double framesElapsed = rxBurst->getTime() - mState.chanEstimateTime[timeslot];
-    if ((framesElapsed > 50) || (!mState.chanResponse[timeslot])) {
-      delete mState.chanResponse[timeslot];
-      delete mState.DFEForward[timeslot];
-      delete mState.DFEFeedback[timeslot];
+    signalVector *channelResp;
+    double framesElapsed = rxBurst->getTime() - state->chanEstimateTime[timeslot];
+    bool estimateChannel = false;
+    if ((framesElapsed > 50) || (state->chanResponse[timeslot]==NULL)) {
+	if (state->chanResponse[timeslot])
+          delete state->chanResponse[timeslot];
+        if (state->DFEForward[timeslot])
+          delete state->DFEForward[timeslot];
+        if (state->DFEFeedback[timeslot])
+          delete state->DFEFeedback[timeslot];
 
-      mState.chanResponse[timeslot] = NULL;
-      mState.DFEForward[timeslot] = NULL;
-      mState.DFEFeedback[timeslot] = NULL;
-
-      if (needDFE)
-        estimateChannel = true;
+        state->chanResponse[timeslot] = NULL;
+        state->DFEForward[timeslot] = NULL;
+        state->DFEFeedback[timeslot] = NULL;
+	estimateChannel = true;
     }
-
+    if (!needDFE) estimateChannel = false;
     float chanOffset;
     success = analyzeTrafficBurst(*vectorBurst,
-				  mTSC,
-				  5.0,
-				  mSPSRx,
-				  &amp,
-				  &TOA,
-				  mMaxExpectedDelay, 
-				  estimateChannel,
-				  &chanResponse,
-				  &chanOffset);
+                                  mTSC,
+                                  5.0,
+                                  mSPSRx,
+                                  &amp,
+                                  &TOA,
+                                  mMaxExpectedDelay,
+                                  estimateChannel,
+                                  &channelResp,
+                                  &chanOffset);
     if (success) {
-      mState.SNRestimate[timeslot] = amp.norm2() / (mNoiseLev * mNoiseLev+1.0);
+      state->SNRestimate[timeslot] = amp.norm2() / (mNoiseLev * mNoiseLev + 1.0);
+
       if (estimateChannel) {
-         mState.chanResponse[timeslot] = chanResponse;
-       	 mState.chanRespOffset[timeslot] = chanOffset;
-         mState.chanRespAmplitude[timeslot] = amp;
-	 scaleVector(*chanResponse, complex(1.0,0.0) / amp);
+         state->chanResponse[timeslot] = channelResp;
+         state->chanRespOffset[timeslot] = chanOffset;
+         state->chanRespAmplitude[timeslot] = amp;
+	 scaleVector(*channelResp, complex(1.0, 0.0) / amp);
+         designDFE(*channelResp, state->SNRestimate[timeslot],
+                   7, &state->DFEForward[timeslot],
+                   &state->DFEFeedback[timeslot]);
 
-         designDFE(*chanResponse, mState.SNRestimate[timeslot], 7,
-                   &mState.DFEForward[timeslot],
-                   &mState.DFEFeedback[timeslot]);
-
-         mState.chanEstimateTime[timeslot] = rxBurst->getTime();
+         state->chanEstimateTime[timeslot] = rxBurst->getTime();
       }
     }
     else {
-      mState.chanResponse[timeslot] = NULL;
+      state->chanResponse[timeslot] = NULL;
       mNoises.insert(avg);
     }
   }
   else {
     // RACH burst
-    if (success = detectRACHBurst(*vectorBurst, 6.0, mSPSRx, &amp, &TOA))
-      mState.chanResponse[timeslot] = NULL;
+    if ((success = detectRACHBurst(*vectorBurst, 6.0, mSPSRx, &amp, &TOA)))
+      state->chanResponse[timeslot] = NULL;
     else
       mNoises.insert(avg);
   }
@@ -382,20 +415,18 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
     if ((corrType==RACH) || (!needDFE)) {
       burst = demodulateBurst(*vectorBurst, mSPSRx, amp, TOA);
     } else {
-      scaleVector(*vectorBurst,complex(1.0,0.0) / amp);
+      scaleVector(*vectorBurst, complex(1.0, 0.0) / amp);
       burst = equalizeBurst(*vectorBurst,
-                            TOA - mState.chanRespOffset[timeslot],
-                            mSPSRx,
-                            *mState.DFEForward[timeslot],
-                            *mState.DFEFeedback[timeslot]);
+			    TOA - state->chanRespOffset[timeslot],
+			    mSPSRx,
+			    *state->DFEForward[timeslot],
+			    *state->DFEFeedback[timeslot]);
     }
     wTime = rxBurst->getTime();
     RSSI = (int) floor(20.0*log10(rxFullScale/avg));
     LOG(DEBUG) << "RSSI: " << RSSI;
     timingOffset = (int) round(TOA * 256.0 / mSPSRx);
   }
-
-  //if (burst) LOG(DEBUG) << "burst: " << *burst << '\n';
 
   delete rxBurst;
 
@@ -404,20 +435,24 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
 
 void Transceiver::start()
 {
-  mControlServiceLoopThread->start((void * (*)(void*))ControlServiceLoopAdapter,(void*) this);
+  TransceiverChannel *chan;
+
+  for (size_t i = 0; i < mControlServiceLoopThreads.size(); i++) {
+    chan = new TransceiverChannel(this, i);
+    mControlServiceLoopThreads[i]->start((void * (*)(void*))
+                                 ControlServiceLoopAdapter, (void*) chan);
+  }
 }
 
 void Transceiver::reset()
 {
-  mTransmitPriorityQueue.clear();
-  //mTransmitFIFO->clear();
-  //mReceiveFIFO->clear();
+  for (size_t i = 0; i < mTxPriorityQueues.size(); i++)
+    mTxPriorityQueues[i].clear();
 }
 
   
-void Transceiver::driveControl()
+void Transceiver::driveControl(size_t chan)
 {
-
   int MAX_PACKET_LENGTH = 100;
 
   // check control socket
@@ -425,7 +460,7 @@ void Transceiver::driveControl()
   int msgLen = -1;
   buffer[0] = '\0';
 
-  msgLen = mCtrlSocket->read(buffer);
+  msgLen = mCtrlSockets[chan]->read(buffer);
 
   if (msgLen < 1) {
     return;
@@ -436,8 +471,9 @@ void Transceiver::driveControl()
   char response[MAX_PACKET_LENGTH];
 
   sscanf(buffer,"%3s %s",cmdcheck,command);
- 
-  writeClockInterface();
+
+  if (!chan)
+    writeClockInterface();
 
   if (strcmp(cmdcheck,"CMD")!=0) {
     LOG(WARNING) << "bogus message on control interface";
@@ -455,17 +491,28 @@ void Transceiver::driveControl()
       sprintf(response,"RSP POWERON 1");
     else {
       sprintf(response,"RSP POWERON 0");
-      if (!mOn) {
+      if (!chan && !mOn) {
         // Prepare for thread start
         mPower = -20;
         mRadioInterface->start();
 
         // Start radio interface threads.
-        mTxServiceLoopThread->start((void * (*)(void*))TxServiceLoopAdapter,(void*) this);
-        mRxServiceLoopThread->start((void * (*)(void*))RxServiceLoopAdapter,(void*) this);
-        mTransmitPriorityQueueServiceLoopThread->start((void * (*)(void*))TransmitPriorityQueueServiceLoopAdapter,(void*) this);
-        writeClockInterface();
+        mTxLowerLoopThread->start((void * (*)(void*))
+                                  TxLowerLoopAdapter,(void*) this);
+        mRxLowerLoopThread->start((void * (*)(void*))
+                                  RxLowerLoopAdapter,(void*) this);
 
+        for (size_t i = 0; i < mChans; i++) {
+          TransceiverChannel *chan = new TransceiverChannel(this, i);
+          mRxServiceLoopThreads[i]->start((void * (*)(void*))
+                                  RxUpperLoopAdapter, (void*) chan);
+
+          chan = new TransceiverChannel(this, i);
+          mTxPriorityQueueServiceLoopThreads[i]->start((void * (*)(void*))
+                                  TxUpperLoopAdapter, (void*) chan);
+        }
+
+        writeClockInterface();
         mOn = true;
       }
     }
@@ -481,7 +528,7 @@ void Transceiver::driveControl()
     //set expected maximum time-of-arrival
     int newGain;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&newGain);
-    newGain = mRadioInterface->setRxGain(newGain);
+    newGain = mRadioInterface->setRxGain(newGain, chan);
     sprintf(response,"RSP SETRXGAIN 0 %d",newGain);
   }
   else if (strcmp(command,"NOISELEV")==0) {
@@ -501,7 +548,7 @@ void Transceiver::driveControl()
       sprintf(response,"RSP SETPOWER 1 %d",dbPwr);
     else {
       mPower = dbPwr;
-      mRadioInterface->setPowerAttenuation(dbPwr);
+      mRadioInterface->setPowerAttenuation(dbPwr, chan);
       sprintf(response,"RSP SETPOWER 0 %d",dbPwr);
     }
   }
@@ -522,7 +569,7 @@ void Transceiver::driveControl()
     int freqKhz;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&freqKhz);
     mRxFreq = freqKhz*1.0e3+FREQOFFSET;
-    if (!mRadioInterface->tuneRx(mRxFreq)) {
+    if (!mRadioInterface->tuneRx(mRxFreq, chan)) {
        LOG(ALERT) << "RX failed to tune";
        sprintf(response,"RSP RXTUNE 1 %d",freqKhz);
     }
@@ -535,7 +582,7 @@ void Transceiver::driveControl()
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&freqKhz);
     //freqKhz = 890e3;
     mTxFreq = freqKhz*1.0e3+FREQOFFSET;
-    if (!mRadioInterface->tuneTx(mTxFreq)) {
+    if (!mRadioInterface->tuneTx(mTxFreq, chan)) {
        LOG(ALERT) << "TX failed to tune";
        sprintf(response,"RSP TXTUNE 1 %d",freqKhz);
     }
@@ -564,8 +611,8 @@ void Transceiver::driveControl()
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
       return;
     }     
-    mState.chanType[timeslot] = corrCode;
-    setModulus(timeslot);
+    mStates[chan].chanType[timeslot] = (ChannelCombination) corrCode;
+    setModulus(timeslot, chan);
     sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
 
   }
@@ -573,16 +620,15 @@ void Transceiver::driveControl()
     LOG(WARNING) << "bogus command " << command << " on control interface.";
   }
 
-  mCtrlSocket->write(response, strlen(response) + 1);
+  mCtrlSockets[chan]->write(response, strlen(response) + 1);
 }
 
-bool Transceiver::driveTransmitPriorityQueue() 
+bool Transceiver::driveTxPriorityQueue(size_t chan)
 {
-
   char buffer[gSlotLen+50];
 
   // check data socket
-  size_t msgLen = mDataSocket->read(buffer);
+  size_t msgLen = mDataSockets[chan]->read(buffer);
 
   if (msgLen!=gSlotLen+1+4+1) {
     LOG(ERR) << "badly formatted packet on GSM->TRX interface";
@@ -613,9 +659,11 @@ bool Transceiver::driveTransmitPriorityQueue()
   // periodically update GSM core clock
   LOG(DEBUG) << "mTransmitDeadlineClock " << mTransmitDeadlineClock
 		<< " mLastClockUpdateTime " << mLastClockUpdateTime;
-  if (mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0))
-    writeClockInterface();
 
+  if (!chan) {
+    if (mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0))
+      writeClockInterface();
+  }
 
   LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(frameNum,timeSlot);
   
@@ -627,27 +675,28 @@ bool Transceiver::driveTransmitPriorityQueue()
     *itr++ = *bufferItr++;
   
   GSM::Time currTime = GSM::Time(frameNum,timeSlot);
-  
-  addRadioVector(newBurst,RSSI,currTime);
-  
-  LOG(DEBUG) "added burst - time: " << currTime << ", RSSI: " << RSSI; // << ", data: " << newBurst; 
+
+  addRadioVector(chan, newBurst, RSSI, currTime);
 
   return true;
 
 
 }
- 
-void Transceiver::driveReceiveFIFO() 
-{
 
+void Transceiver::driveReceiveRadio()
+{
+  if (!mRadioInterface->driveReceiveRadio())
+    usleep(100000);
+}
+
+void Transceiver::driveReceiveFIFO(size_t chan)
+{
   SoftVector *rxBurst = NULL;
   int RSSI;
   int TOA;  // in 1/256 of a symbol
   GSM::Time burstTime;
 
-  mRadioInterface->driveReceiveRadio();
-
-  rxBurst = pullRadioVector(burstTime,RSSI,TOA);
+  rxBurst = pullRadioVector(burstTime, RSSI, TOA, chan);
 
   if (rxBurst) { 
 
@@ -672,11 +721,11 @@ void Transceiver::driveReceiveFIFO()
     burstString[gSlotLen+9] = '\0';
     delete rxBurst;
 
-    mDataSocket->write(burstString, gSlotLen + 10);
+    mDataSockets[chan]->write(burstString,gSlotLen+10);
   }
 }
 
-void Transceiver::driveTransmitFIFO() 
+void Transceiver::driveTxFIFO()
 {
 
   /**
@@ -744,46 +793,70 @@ void Transceiver::writeClockInterface()
 
 }
 
-void *RxServiceLoopAdapter(Transceiver *transceiver)
+void *RxUpperLoopAdapter(TransceiverChannel *chan)
+{
+  Transceiver *trx = chan->trx;
+  size_t num = chan->num;
+
+  delete chan;
+
+  while (1) {
+    trx->driveReceiveFIFO(num);
+    pthread_testcancel();
+  }
+  return NULL;
+}
+
+void *RxLowerLoopAdapter(Transceiver *transceiver)
 {
   transceiver->setPriority();
 
   while (1) {
-    transceiver->driveReceiveFIFO();
+    transceiver->driveReceiveRadio();
     pthread_testcancel();
   }
   return NULL;
 }
 
-void *TxServiceLoopAdapter(Transceiver *transceiver)
+void *TxLowerLoopAdapter(Transceiver *transceiver)
 {
   while (1) {
-    transceiver->driveTransmitFIFO();
+    transceiver->driveTxFIFO();
     pthread_testcancel();
   }
   return NULL;
 }
 
-void *ControlServiceLoopAdapter(Transceiver *transceiver)
+void *ControlServiceLoopAdapter(TransceiverChannel *chan)
 {
+  Transceiver *trx = chan->trx;
+  size_t num = chan->num;
+
+  delete chan;
+
   while (1) {
-    transceiver->driveControl();
+    trx->driveControl(num);
     pthread_testcancel();
   }
   return NULL;
 }
 
-void *TransmitPriorityQueueServiceLoopAdapter(Transceiver *transceiver)
+void *TxUpperLoopAdapter(TransceiverChannel *chan)
 {
+  Transceiver *trx = chan->trx;
+  size_t num = chan->num;
+
+  delete chan;
+
   while (1) {
     bool stale = false;
     // Flush the UDP packets until a successful transfer.
-    while (!transceiver->driveTransmitPriorityQueue()) {
-      stale = true; 
+    while (!trx->driveTxPriorityQueue(num)) {
+      stale = true;
     }
-    if (stale) {
+    if (!num && stale) {
       // If a packet was stale, remind the GSM stack of the clock.
-      transceiver->writeClockInterface();
+      trx->writeClockInterface();
     }
     pthread_testcancel();
   }

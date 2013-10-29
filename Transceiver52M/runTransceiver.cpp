@@ -27,7 +27,6 @@
 
 #include "Transceiver.h"
 #include "radioDevice.h"
-#include "DummyLoad.h"
 
 #include <time.h>
 #include <signal.h>
@@ -108,16 +107,21 @@ int testConfig(const char *filename)
 
 int main(int argc, char *argv[])
 {
-  int trxPort, radioType, extref = 0, fail = 0;
-  std::string deviceArgs, logLevel, trxAddr;
+  int trxPort, radioType, chans = 1, extref = 0, fail = 0;
+  std::string logLevel, trxAddr, deviceArgs = "";
   RadioDevice *usrp = NULL;
   RadioInterface *radio = NULL;
   Transceiver *trx = NULL;
+  VectorFIFO *fifo = NULL;
 
-  if (argc == 3)
+  if (argc == 3) {
     deviceArgs = std::string(argv[2]);
-  else
-    deviceArgs = "";
+    chans = atoi(argv[1]);
+  } else if (argc == 2) {
+    chans = atoi(argv[1]);
+  } else if (argc != 1) {
+    std::cout << argv[0] << " <number of channels> <device args>" << std::endl;
+  }
 
   if (signal(SIGINT, ctrlCHandler) == SIG_ERR) {
     std::cerr << "Couldn't install signal handler for SIGINT" << std::endl;
@@ -151,7 +155,7 @@ int main(int argc, char *argv[])
 
   srandom(time(NULL));
 
-  usrp = RadioDevice::make(SPS);
+  usrp = RadioDevice::make(SPS, chans);
   radioType = usrp->open(deviceArgs, extref);
   if (radioType < 0) {
     LOG(ALERT) << "Transceiver exiting..." << std::endl;
@@ -160,11 +164,11 @@ int main(int argc, char *argv[])
 
   switch (radioType) {
   case RadioDevice::NORMAL:
-    radio = new RadioInterface(usrp, 3, SPS, false);
+    radio = new RadioInterface(usrp, 3, SPS, chans);
     break;
   case RadioDevice::RESAMP_64M:
   case RadioDevice::RESAMP_100M:
-    radio = new RadioInterfaceResamp(usrp, 3, SPS, false);
+    radio = new RadioInterfaceResamp(usrp, 3, SPS, chans);
     break;
   default:
     LOG(ALERT) << "Unsupported configuration";
@@ -177,13 +181,24 @@ int main(int argc, char *argv[])
     goto shutdown;
   }
 
-  trx = new Transceiver(trxPort, trxAddr.c_str(), SPS, GSM::Time(3,0), radio);
+  trx = new Transceiver(trxPort, trxAddr.c_str(),
+                        SPS, chans, GSM::Time(3,0), radio);
   if (!trx->init()) {
     LOG(ALERT) << "Failed to initialize transceiver";
     fail = 1;
     goto shutdown;
   }
-  trx->receiveFIFO(radio->receiveFIFO());
+
+  for (int i = 0; i < chans; i++) {
+    fifo = radio->receiveFIFO(i);
+    if (fifo && trx->receiveFIFO(fifo, i))
+      continue;
+
+    LOG(ALERT) << "Could not attach FIFO to channel " << i;
+    fail = 1;
+    goto shutdown;
+  }
+
   trx->start();
 
   while (!gbShutdown)

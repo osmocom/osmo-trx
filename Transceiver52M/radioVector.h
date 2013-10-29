@@ -47,15 +47,7 @@ private:
 	std::vector<float>::iterator it;
 };
 
-class VectorFIFO {
-public:
-	unsigned size();
-	void put(radioVector *ptr);
-	radioVector *get();
-
-private:
-	PointerFIFO mQ;
-};
+class VectorFIFO : public InterthreadQueue<radioVector> { };
 
 class VectorQueue : public InterthreadPriorityQueue<radioVector> {
 public:

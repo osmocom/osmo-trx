@@ -16,6 +16,7 @@
 #define __RADIO_DEVICE_H__
 
 #include <string>
+#include <vector>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -36,7 +37,7 @@ class RadioDevice {
   /* Radio interface types */
   enum RadioInterfaceType { NORMAL, RESAMP_64M, RESAMP_100M };
 
-  static RadioDevice *make(int sps, bool skipRx = false);
+  static RadioDevice *make(size_t sps, size_t chans = 1);
 
   /** Initialize the USRP */
   virtual int open(const std::string &args = "", bool extref = false)=0;
@@ -63,10 +64,9 @@ class RadioDevice {
 	@param RSSI The received signal strength of the read result
 	@return The number of samples actually read
   */
-  virtual int readSamples(short *buf, int len, bool *overrun, 
-		   TIMESTAMP timestamp = 0xffffffff,
-		   bool *underrun = 0,
-		   unsigned *RSSI = 0)=0;
+  virtual int readSamples(std::vector<short *> &bufs, int len, bool *overrun,
+                          TIMESTAMP timestamp = 0xffffffff, bool *underrun = 0,
+                          unsigned *RSSI = 0) = 0;
   /**
         Write samples to the radio.
         @param buf Contains the data to be written.
@@ -76,18 +76,17 @@ class RadioDevice {
         @param isControl Set if data is a control packet, e.g. a ping command
         @return The number of samples actually written
   */
-  virtual int writeSamples(short *buf, int len, bool *underrun, 
-		    TIMESTAMP timestamp,
-		    bool isControl=false)=0;
- 
+  virtual int writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
+                           TIMESTAMP timestamp, bool isControl = false) = 0;
+
   /** Update the alignment between the read and write timestamps */
   virtual bool updateAlignment(TIMESTAMP timestamp)=0;
-  
+
   /** Set the transmitter frequency */
-  virtual bool setTxFreq(double wFreq)=0;
+  virtual bool setTxFreq(double wFreq, size_t chan = 0) = 0;
 
   /** Set the receiver frequency */
-  virtual bool setRxFreq(double wFreq)=0;
+  virtual bool setRxFreq(double wFreq, size_t chan = 0) = 0;
 
   /** Returns the starting write Timestamp*/
   virtual TIMESTAMP initialWriteTimestamp(void)=0;
@@ -102,10 +101,10 @@ class RadioDevice {
   virtual double fullScaleOutputValue()=0;
 
   /** sets the receive chan gain, returns the gain setting **/
-  virtual double setRxGain(double dB)=0;
+  virtual double setRxGain(double dB, size_t chan = 0) = 0;
 
   /** gets the current receive gain **/
-  virtual double getRxGain(void)=0;
+  virtual double getRxGain(size_t chan = 0) = 0;
 
   /** return maximum Rx Gain **/
   virtual double maxRxGain(void) = 0;
@@ -114,7 +113,7 @@ class RadioDevice {
   virtual double minRxGain(void) = 0;
 
   /** sets the transmit chan gain, returns the gain setting **/
-  virtual double setTxGain(double dB)=0;
+  virtual double setTxGain(double dB, size_t chan = 0) = 0;
 
   /** return maximum Tx Gain **/
   virtual double maxTxGain(void) = 0;
@@ -123,8 +122,8 @@ class RadioDevice {
   virtual double minTxGain(void) = 0;
 
   /** Return internal status values */
-  virtual double getTxFreq()=0;
-  virtual double getRxFreq()=0;
+  virtual double getTxFreq(size_t chan = 0) = 0;
+  virtual double getRxFreq(size_t chan = 0) = 0;
   virtual double getSampleRate()=0;
   virtual double numberRead()=0;
   virtual double numberWritten()=0;

@@ -59,7 +59,7 @@ const dboardConfigType dboardConfig = TXA_RXB;
 
 const double USRPDevice::masterClockRate = 52.0e6;
 
-USRPDevice::USRPDevice(int sps, bool skipRx)
+USRPDevice::USRPDevice(size_t sps, size_t)
   : skipRx(skipRx)
 {
   LOG(INFO) << "creating USRP device...";
@@ -266,49 +266,66 @@ double USRPDevice::minRxGain()
   return m_dbRx->gain_min();
 }
 
-double USRPDevice::setTxGain(double dB) {
- 
-   writeLock.lock();
-   if (dB > maxTxGain()) dB = maxTxGain();
-   if (dB < minTxGain()) dB = minTxGain();
+double USRPDevice::setTxGain(double dB, size_t chan)
+{
+  if (chan) {
+    LOG(ALERT) << "Invalid channel " << chan;
+    return 0.0;
+  }
 
-   LOG(NOTICE) << "Setting TX gain to " << dB << " dB.";
+  writeLock.lock();
+  if (dB > maxTxGain())
+    dB = maxTxGain();
+  if (dB < minTxGain())
+    dB = minTxGain();
 
-   if (!m_dbTx->set_gain(dB))
-     LOG(ERR) << "Error setting TX gain";
+  LOG(NOTICE) << "Setting TX gain to " << dB << " dB.";
 
-   writeLock.unlock();
-  
-   return dB;
+  if (!m_dbTx->set_gain(dB))
+    LOG(ERR) << "Error setting TX gain";
+
+  writeLock.unlock();
+
+  return dB;
 }
 
 
-double USRPDevice::setRxGain(double dB) {
+double USRPDevice::setRxGain(double dB, size_t chan)
+{
+  if (chan) {
+    LOG(ALERT) << "Invalid channel " << chan;
+    return 0.0;
+  }
 
-   writeLock.lock();
-   if (dB > maxRxGain()) dB = maxRxGain();
-   if (dB < minRxGain()) dB = minRxGain();
-   
-   LOG(NOTICE) << "Setting RX gain to " << dB << " dB.";
+  dB = 47.0;
 
-   if (!m_dbRx->set_gain(dB))
-     LOG(ERR) << "Error setting RX gain";
-  
-   writeLock.unlock();
-   
-   return dB;
+  writeLock.lock();
+  if (dB > maxRxGain())
+    dB = maxRxGain();
+  if (dB < minRxGain())
+    dB = minRxGain();
+
+  LOG(NOTICE) << "Setting RX gain to " << dB << " dB.";
+
+  if (!m_dbRx->set_gain(dB))
+    LOG(ERR) << "Error setting RX gain";
+
+  writeLock.unlock();
+
+  return dB;
 }
 
 
 // NOTE: Assumes sequential reads
-int USRPDevice::readSamples(short *buf, int len, bool *overrun, 
-			    TIMESTAMP timestamp,
-			    bool *underrun,
-			    unsigned *RSSI) 
+int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
+                            TIMESTAMP timestamp, bool *underrun, unsigned *RSSI)
 {
 #ifndef SWLOOPBACK 
-  if (!m_uRx) return 0;
-  
+  if (!m_uRx)
+    return 0;
+
+  short *buf = bufs[0];
+
   timestamp += timestampOffset;
   
   if (timestamp + len < timeStart) {
@@ -450,17 +467,20 @@ int USRPDevice::readSamples(short *buf, int len, bool *overrun,
 #endif
 }
 
-int USRPDevice::writeSamples(short *buf, int len, bool *underrun, 
-			     unsigned long long timestamp,
-			     bool isControl) 
+int USRPDevice::writeSamples(std::vector<short *> &bufs, int len,
+                             bool *underrun, unsigned long long timestamp,
+                             bool isControl)
 {
   writeLock.lock();
 
 #ifndef SWLOOPBACK 
-  if (!m_uTx) return 0;
- 
+  if (!m_uTx)
+    return 0;
+
+  short *buf = bufs[0];
+
   static uint32_t outData[128*20];
- 
+
   for (int i = 0; i < len*2; i++) {
 	buf[i] = host_to_usrp_short(buf[i]);
   }
@@ -512,7 +532,9 @@ bool USRPDevice::updateAlignment(TIMESTAMP timestamp)
   uint32_t *wordPtr = (uint32_t *) data;
   *wordPtr = host_to_usrp_u32(*wordPtr);
   bool tmpUnderrun;
-  if (writeSamples((short *) data,1,&tmpUnderrun,timestamp & 0x0ffffffffll,true)) {
+
+  std::vector<short *> buf(1, data);
+  if (writeSamples(buf, 1, &tmpUnderrun, timestamp & 0x0ffffffffll, true)) {
     pingTimestamp = timestamp;
     return true;
   }
@@ -523,9 +545,14 @@ bool USRPDevice::updateAlignment(TIMESTAMP timestamp)
 }
 
 #ifndef SWLOOPBACK 
-bool USRPDevice::setTxFreq(double wFreq)
+bool USRPDevice::setTxFreq(double wFreq, size_t chan)
 {
   usrp_tune_result result;
+
+  if (chan) {
+    LOG(ALERT) << "Invalid channel " << chan;
+    return false;
+  }
 
   if (m_uTx->tune(txSubdevSpec.side, m_dbTx, wFreq, &result)) {
     LOG(INFO) << "set TX: " << wFreq << std::endl
@@ -543,9 +570,14 @@ bool USRPDevice::setTxFreq(double wFreq)
   }
 }
 
-bool USRPDevice::setRxFreq(double wFreq)
+bool USRPDevice::setRxFreq(double wFreq, size_t chan)
 {
   usrp_tune_result result;
+
+  if (chan) {
+    LOG(ALERT) << "Invalid channel " << chan;
+    return false;
+  }
 
   if (m_uRx->tune(0, m_dbRx, wFreq, &result)) {
     LOG(INFO) << "set RX: " << wFreq << std::endl
@@ -569,7 +601,7 @@ bool USRPDevice::setTxFreq(double wFreq) { return true;};
 bool USRPDevice::setRxFreq(double wFreq) { return true;};
 #endif
 
-RadioDevice *RadioDevice::make(int sps, bool skipRx)
+RadioDevice *RadioDevice::make(size_t sps, size_t chans)
 {
-	return new USRPDevice(sps, skipRx);
+	return new USRPDevice(sps, chans);
 }

@@ -93,16 +93,10 @@ private:
   bool   firstRead;
 #endif
 
-  /** Set the transmission frequency */
-  bool tx_setFreq(double freq, double *actual_freq);
-
-  /** Set the receiver frequency */
-  bool rx_setFreq(double freq, double *actual_freq);
-  
  public:
 
   /** Object constructor */
-  USRPDevice(int sps, bool skipRx);
+  USRPDevice(size_t sps, size_t chans = 1);
 
   /** Instantiate the USRP */
   int open(const std::string &, bool);
@@ -114,7 +108,7 @@ private:
   bool stop();
 
   /** Set priority not supported */
-  void setPriority() { return; }
+  void setPriority() { }
 
   enum TxWindowType getWindowType() { return TX_WINDOW_USRP1; }
 
@@ -128,10 +122,9 @@ private:
 	@param RSSI The received signal strength of the read result
 	@return The number of samples actually read
   */
-  int  readSamples(short *buf, int len, bool *overrun, 
-		   TIMESTAMP timestamp = 0xffffffff,
-		   bool *underrun = NULL,
-		   unsigned *RSSI = NULL);
+  int readSamples(std::vector<short *> &buf, int len, bool *overrun,
+                  TIMESTAMP timestamp = 0xffffffff, bool *underrun = NULL,
+                  unsigned *RSSI = NULL);
   /**
         Write samples to the USRP.
         @param buf Contains the data to be written.
@@ -141,18 +134,17 @@ private:
         @param isControl Set if data is a control packet, e.g. a ping command
         @return The number of samples actually written
   */
-  int  writeSamples(short *buf, int len, bool *underrun, 
-		    TIMESTAMP timestamp = 0xffffffff,
-		    bool isControl = false);
- 
+  int writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
+                   TIMESTAMP timestamp = 0xffffffff, bool isControl = false);
+
   /** Update the alignment between the read and write timestamps */
   bool updateAlignment(TIMESTAMP timestamp);
-  
+
   /** Set the transmitter frequency */
-  bool setTxFreq(double wFreq);
+  bool setTxFreq(double wFreq, size_t chan = 0);
 
   /** Set the receiver frequency */
-  bool setRxFreq(double wFreq);
+  bool setRxFreq(double wFreq, size_t chan = 0);
 
   /** Returns the starting write Timestamp*/
   TIMESTAMP initialWriteTimestamp(void) { return 20000;}
@@ -167,10 +159,10 @@ private:
   double fullScaleOutputValue() {return 9450.0;}
 
   /** sets the receive chan gain, returns the gain setting **/
-  double setRxGain(double dB);
+  double setRxGain(double dB, size_t chan = 0);
 
   /** get the current receive gain */
-  double getRxGain(void) {return rxGain;}
+  double getRxGain(size_t chan = 0) { return rxGain; }
 
   /** return maximum Rx Gain **/
   double maxRxGain(void);
@@ -179,7 +171,7 @@ private:
   double minRxGain(void);
 
   /** sets the transmit chan gain, returns the gain setting **/
-  double setTxGain(double dB);
+  double setTxGain(double dB, size_t chan = 0);
 
   /** return maximum Tx Gain **/
   double maxTxGain(void);
@@ -187,13 +179,12 @@ private:
   /** return minimum Rx Gain **/
   double minTxGain(void);
 
-
   /** Return internal status values */
-  inline double getTxFreq() { return 0;}
-  inline double getRxFreq() { return 0;}
-  inline double getSampleRate() {return actualSampleRate;}
+  inline double getTxFreq(size_t chan = 0) { return 0; }
+  inline double getRxFreq(size_t chan = 0) { return 0; }
+  inline double getSampleRate() { return actualSampleRate; }
   inline double numberRead() { return samplesRead; }
-  inline double numberWritten() { return samplesWritten;}
+  inline double numberWritten() { return samplesWritten; }
 
 };
 

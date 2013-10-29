@@ -70,21 +70,6 @@ bool noiseVector::insert(float val)
 	return true;
 }
 
-unsigned VectorFIFO::size()
-{
-	return mQ.size();
-}
-
-void VectorFIFO::put(radioVector *ptr)
-{
-	mQ.put((void*) ptr);
-}
-
-radioVector *VectorFIFO::get()
-{
-	return (radioVector*) mQ.get();
-}
-
 GSM::Time VectorQueue::nextTime() const
 {
 	GSM::Time retVal;
