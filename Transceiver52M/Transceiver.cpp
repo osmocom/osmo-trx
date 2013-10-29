@@ -21,13 +21,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-/*
-	Compilation switches
-	TRANSMIT_LOGGING	write every burst on the given slot to a log
-*/
-
-
 #include <stdio.h>
 #include "Transceiver.h"
 #include <Logger.h>
@@ -140,26 +133,6 @@ void Transceiver::addRadioVector(BitVector &burst,
   delete modBurst;
 }
 
-#ifdef TRANSMIT_LOGGING
-void Transceiver::unModulateVector(signalVector wVector) 
-{
-  SoftVector *burst = demodulateBurst(wVector, mSPSTx, 1.0, 0.0);
-  LOG(DEBUG) << "LOGGED BURST: " << *burst;
-
-/*
-  unsigned char burstStr[gSlotLen+1];
-  SoftVector::iterator burstItr = burst->begin();
-  for (int i = 0; i < gSlotLen; i++) {
-    // FIXME: Demod bits are inverted!
-    burstStr[i] = (unsigned char) ((*burstItr++)*255.0);
-  }
-  burstStr[gSlotLen]='\0';
-  LOG(DEBUG) << "LOGGED BURST: " << burstStr;
-*/
-  delete burst;
-}
-#endif
-
 void Transceiver::pushRadioVector(GSM::Time &nowTime)
 {
 
@@ -185,21 +158,11 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     fillerTable[modFN][TN] = new signalVector(*(next));
     mRadioInterface->driveTransmitRadio(*(next),(mChanType[TN]==NONE)); //fillerTable[modFN][TN]));
     delete next;
-#ifdef TRANSMIT_LOGGING
-    if (nowTime.TN()==TRANSMIT_LOGGING) { 
-      unModulateVector(*(fillerTable[modFN][TN]));
-    }
-#endif
     return;
   }
 
   // otherwise, pull filler data, and push to radio FIFO
   mRadioInterface->driveTransmitRadio(*(fillerTable[modFN][TN]),(mChanType[TN]==NONE));
-#ifdef TRANSMIT_LOGGING
-  if (nowTime.TN()==TRANSMIT_LOGGING) 
-    unModulateVector(*fillerTable[modFN][TN]);
-#endif
-
 }
 
 void Transceiver::setModulus(int timeslot)

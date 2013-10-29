@@ -22,13 +22,6 @@
 
 */
 
-
-
-/*
-	Compilation switches
-	TRANSMIT_LOGGING	write every burst on the given slot to a log
-*/
-
 #include "radioInterface.h"
 #include "Interthread.h"
 #include "GSMCommon.h"
@@ -36,9 +29,6 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
-
-/** Define this to be the slot number to be logged. */
-//#define TRANSMIT_LOGGING 1
 
 /** The Transceiver class, responsible for physical layer of basestation */
 class Transceiver {
@@ -99,11 +89,6 @@ private:
 
   float mNoiseLev;      ///< Average noise level
   noiseVector mNoises;  ///< Vector holding running noise measurements
-
-  /** unmodulate a modulated burst */
-#ifdef TRANSMIT_LOGGING
-  void unModulateVector(signalVector wVector); 
-#endif
 
   /** modulate and add a burst to the transmit queue */
   void addRadioVector(BitVector &burst,
