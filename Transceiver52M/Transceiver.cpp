@@ -42,6 +42,38 @@ using namespace GSM;
 /* Number of running values use in noise average */
 #define NOISE_CNT			20
 
+TransceiverState::TransceiverState()
+{
+  for (int i = 0; i < 8; i++) {
+    chanType[i] = Transceiver::NONE;
+    fillerModulus[i] = 26;
+    chanResponse[i] = NULL;
+    DFEForward[i] = NULL;
+    DFEFeedback[i] = NULL;
+
+    for (int n = 0; n < 102; n++)
+      fillerTable[n][i] = NULL;
+  }
+}
+
+TransceiverState::~TransceiverState()
+{
+  for (int i = 0; i < 8; i++) {
+    delete chanResponse[i];
+    delete DFEForward[i];
+    delete DFEFeedback[i];
+
+    for (int n = 0; n < 102; n++)
+      delete fillerTable[n][i];
+  }
+}
+
+void TransceiverState::init(size_t slot, signalVector *burst)
+{
+  for (int i = 0; i < 102; i++)
+    fillerTable[i][slot] = new signalVector(*burst);
+}
+
 Transceiver::Transceiver(int wBasePort,
 			 const char *TRXAddress,
 			 int wSPS,
@@ -88,6 +120,8 @@ Transceiver::~Transceiver()
 
 bool Transceiver::init()
 {
+  signalVector *burst;
+
   if (!sigProcLibSetup(mSPSTx)) {
     LOG(ALERT) << "Failed to initialize signal processing library";
     return false;
@@ -97,29 +131,13 @@ bool Transceiver::init()
   mCtrlSocket = new UDPSocket(mBasePort + 1, mAddr.c_str(), mBasePort + 101);
   mDataSocket = new UDPSocket(mBasePort + 2, mAddr.c_str(), mBasePort + 102);
 
-  // initialize filler tables with dummy bursts
-  for (int i = 0; i < 8; i++) {
-    signalVector* modBurst = modulateBurst(gDummyBurst,
-					   8 + (i % 4 == 0),
-					   mSPSTx);
-    if (!modBurst) {
-      sigProcLibDestroy();
-      LOG(ALERT) << "Failed to initialize filler table";
-      return false;
-    }
+  for (size_t n = 0; n < 8; n++) {
+    burst = modulateBurst(gDummyBurst, 8 + (n % 4 == 0), mSPSTx);
+    scaleVector(*burst, txFullScale);
+    mState.init(n, burst);
+    mState.chanEstimateTime[n] = mTransmitDeadlineClock;
 
-    scaleVector(*modBurst,txFullScale);
-    fillerModulus[i]=26;
-    for (int j = 0; j < 102; j++) {
-      fillerTable[j][i] = new signalVector(*modBurst);
-    }
-
-    delete modBurst;
-    mChanType[i] = NONE;
-    channelResponse[i] = NULL;
-    DFEForward[i] = NULL;
-    DFEFeedback[i] = NULL;
-    channelEstimateTime[i] = mTransmitDeadlineClock;
+    delete burst;
   }
 
   return true;
@@ -150,49 +168,50 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     LOG(NOTICE) << "dumping STALE burst in TRX->USRP interface";
     const GSM::Time& nextTime = staleBurst->getTime();
     int TN = nextTime.TN();
-    int modFN = nextTime.FN() % fillerModulus[TN];
-    delete fillerTable[modFN][TN];
-    fillerTable[modFN][TN] = staleBurst;
+    int modFN = nextTime.FN() % mState.fillerModulus[TN];
+    delete mState.fillerTable[modFN][TN];
+    mState.fillerTable[modFN][TN] = staleBurst;
   }
   
   int TN = nowTime.TN();
-  int modFN = nowTime.FN() % fillerModulus[nowTime.TN()];
+  int modFN = nowTime.FN() % mState.fillerModulus[nowTime.TN()];
 
   // if queue contains data at the desired timestamp, stick it into FIFO
   if (radioVector *next = (radioVector*) mTransmitPriorityQueue.getCurrentBurst(nowTime)) {
     LOG(DEBUG) << "transmitFIFO: wrote burst " << next << " at time: " << nowTime;
-    delete fillerTable[modFN][TN];
-    fillerTable[modFN][TN] = new signalVector(*(next));
-    mRadioInterface->driveTransmitRadio(*(next),(mChanType[TN]==NONE)); //fillerTable[modFN][TN]));
+    delete mState.fillerTable[modFN][TN];
+    mState.fillerTable[modFN][TN] = new signalVector(*(next));
+    mRadioInterface->driveTransmitRadio(*(next), mState.chanType[TN] == NONE);
     delete next;
     return;
   }
 
   // otherwise, pull filler data, and push to radio FIFO
-  mRadioInterface->driveTransmitRadio(*(fillerTable[modFN][TN]),(mChanType[TN]==NONE));
+  mRadioInterface->driveTransmitRadio(*(mState.fillerTable[modFN][TN]),
+                                      mState.chanType[TN]==NONE);
 }
 
 void Transceiver::setModulus(int timeslot)
 {
-  switch (mChanType[timeslot]) {
+  switch (mState.chanType[timeslot]) {
   case NONE:
   case I:
   case II:
   case III:
   case FILL:
-    fillerModulus[timeslot] = 26;
+    mState.fillerModulus[timeslot] = 26;
     break;
   case IV:
   case VI:
   case V:
-    fillerModulus[timeslot] = 51;
+    mState.fillerModulus[timeslot] = 51;
     break;
     //case V: 
   case VII:
-    fillerModulus[timeslot] = 102;
+    mState.fillerModulus[timeslot] = 102;
     break;
   case XIII:
-    fillerModulus[timeslot] = 52;
+    mState.fillerModulus[timeslot] = 52;
     break;
   default:
     break;
@@ -206,7 +225,7 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime)
   unsigned burstTN = currTime.TN();
   unsigned burstFN = currTime.FN();
 
-  switch (mChanType[burstTN]) {
+  switch (mState.chanType[burstTN]) {
   case NONE:
     return OFF;
     break;
@@ -275,10 +294,10 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
 				      int &RSSI,
 				      int &timingOffset)
 {
-  bool needDFE = false;
-  bool success = false;
-  complex amplitude = 0.0;
+  bool needDFE = false, success = false, estimateChannel = false;
+  complex amp = 0.0;
   float TOA = 0.0, avg = 0.0;
+  signalVector *chanResponse;
 
   radioVector *rxBurst = (radioVector *) mReceiveFIFO->get();
 
@@ -304,52 +323,55 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
   // run the proper correlator
   if (corrType==TSC) {
     LOG(DEBUG) << "looking for TSC at time: " << rxBurst->getTime();
-    signalVector *channelResp;
-    double framesElapsed = rxBurst->getTime()-channelEstimateTime[timeslot];
-    bool estimateChannel = false;
-    if ((framesElapsed > 50) || (channelResponse[timeslot]==NULL)) {
-	if (channelResponse[timeslot]) delete channelResponse[timeslot];
-        if (DFEForward[timeslot]) delete DFEForward[timeslot];
-        if (DFEFeedback[timeslot]) delete DFEFeedback[timeslot];
-        channelResponse[timeslot] = NULL;
-        DFEForward[timeslot] = NULL;
-        DFEFeedback[timeslot] = NULL;
-	estimateChannel = true;
+    double framesElapsed = rxBurst->getTime() - mState.chanEstimateTime[timeslot];
+    if ((framesElapsed > 50) || (!mState.chanResponse[timeslot])) {
+      delete mState.chanResponse[timeslot];
+      delete mState.DFEForward[timeslot];
+      delete mState.DFEFeedback[timeslot];
+
+      mState.chanResponse[timeslot] = NULL;
+      mState.DFEForward[timeslot] = NULL;
+      mState.DFEFeedback[timeslot] = NULL;
+
+      if (needDFE)
+        estimateChannel = true;
     }
-    if (!needDFE) estimateChannel = false;
+
     float chanOffset;
     success = analyzeTrafficBurst(*vectorBurst,
 				  mTSC,
 				  5.0,
 				  mSPSRx,
-				  &amplitude,
+				  &amp,
 				  &TOA,
 				  mMaxExpectedDelay, 
 				  estimateChannel,
-				  &channelResp,
+				  &chanResponse,
 				  &chanOffset);
     if (success) {
-      SNRestimate[timeslot] = amplitude.norm2()/(mNoiseLev*mNoiseLev+1.0); // this is not highly accurate
+      mState.SNRestimate[timeslot] = amp.norm2() / (mNoiseLev * mNoiseLev+1.0);
       if (estimateChannel) {
-         LOG(DEBUG) << "estimating channel...";
-         channelResponse[timeslot] = channelResp;
-       	 chanRespOffset[timeslot] = chanOffset;
-         chanRespAmplitude[timeslot] = amplitude;
-	 scaleVector(*channelResp, complex(1.0,0.0)/amplitude);
-         designDFE(*channelResp, SNRestimate[timeslot], 7, &DFEForward[timeslot], &DFEFeedback[timeslot]);
-         channelEstimateTime[timeslot] = rxBurst->getTime();  
-         LOG(DEBUG) << "SNR: " << SNRestimate[timeslot] << ", DFE forward: " << *DFEForward[timeslot] << ", DFE backward: " << *DFEFeedback[timeslot];
+         mState.chanResponse[timeslot] = chanResponse;
+       	 mState.chanRespOffset[timeslot] = chanOffset;
+         mState.chanRespAmplitude[timeslot] = amp;
+	 scaleVector(*chanResponse, complex(1.0,0.0) / amp);
+
+         designDFE(*chanResponse, mState.SNRestimate[timeslot], 7,
+                   &mState.DFEForward[timeslot],
+                   &mState.DFEFeedback[timeslot]);
+
+         mState.chanEstimateTime[timeslot] = rxBurst->getTime();
       }
     }
     else {
-      channelResponse[timeslot] = NULL;
+      mState.chanResponse[timeslot] = NULL;
       mNoises.insert(avg);
     }
   }
   else {
     // RACH burst
-    if (success = detectRACHBurst(*vectorBurst, 6.0, mSPSRx, &amplitude, &TOA))
-      channelResponse[timeslot] = NULL;
+    if (success = detectRACHBurst(*vectorBurst, 6.0, mSPSRx, &amp, &TOA))
+      mState.chanResponse[timeslot] = NULL;
     else
       mNoises.insert(avg);
   }
@@ -358,14 +380,14 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime,
   SoftVector *burst = NULL;
   if ((rxBurst) && (success)) {
     if ((corrType==RACH) || (!needDFE)) {
-      burst = demodulateBurst(*vectorBurst, mSPSRx, amplitude, TOA);
+      burst = demodulateBurst(*vectorBurst, mSPSRx, amp, TOA);
     } else {
-      scaleVector(*vectorBurst,complex(1.0,0.0)/amplitude);
+      scaleVector(*vectorBurst,complex(1.0,0.0) / amp);
       burst = equalizeBurst(*vectorBurst,
-			    TOA-chanRespOffset[timeslot],
-			    mSPSRx,
-			    *DFEForward[timeslot],
-			    *DFEFeedback[timeslot]);
+                            TOA - mState.chanRespOffset[timeslot],
+                            mSPSRx,
+                            *mState.DFEForward[timeslot],
+                            *mState.DFEFeedback[timeslot]);
     }
     wTime = rxBurst->getTime();
     RSSI = (int) floor(20.0*log10(rxFullScale/avg));
@@ -542,7 +564,7 @@ void Transceiver::driveControl()
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
       return;
     }     
-    mChanType[timeslot] = (ChannelCombination) corrCode;
+    mState.chanType[timeslot] = corrCode;
     setModulus(timeslot);
     sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
 

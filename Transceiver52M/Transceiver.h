@@ -30,6 +30,54 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+class Transceiver;
+
+/** Channel descriptor for transceiver object and channel number pair */
+struct TransceiverChannel {
+  TransceiverChannel(Transceiver *trx, int num)
+  {
+    this->trx = trx;
+    this->num = num;
+  }
+
+  ~TransceiverChannel()
+  {
+  }
+
+  Transceiver *trx;
+  size_t num;
+};
+
+/** Internal transceiver state variables */
+struct TransceiverState {
+  TransceiverState();
+  ~TransceiverState();
+
+  /* Initialize a multiframe slot in the filler table */
+  void init(size_t slot, signalVector *burst);
+
+  int chanType[8];
+
+  /* Last timestamp of each timeslot's channel estimate */
+  GSM::Time chanEstimateTime[8];
+
+  /* The filler table */
+  signalVector *fillerTable[102][8];
+  int fillerModulus[8];
+
+  /* Most recent channel estimate of all timeslots */
+  signalVector *chanResponse[8];
+
+  /* Most recent DFE feedback filter of all timeslots */
+  signalVector *DFEForward[8];
+  signalVector *DFEFeedback[8];
+
+  /* Most recent SNR, timing, and channel amplitude estimates */
+  float SNRestimate[8];
+  float chanRespOffset[8];
+  complex chanRespAmplitude[8];
+};
+
 /** The Transceiver class, responsible for physical layer of basestation */
 class Transceiver {
 private:
@@ -66,27 +114,6 @@ private:
     IDLE	       ///< timeslot is an idle (or dummy) burst
   } CorrType;
 
-
-  /** Codes for channel combinations */
-  typedef enum {
-    FILL,               ///< Channel is transmitted, but unused
-    I,                  ///< TCH/FS
-    II,                 ///< TCH/HS, idle every other slot
-    III,                ///< TCH/HS
-    IV,                 ///< FCCH+SCH+CCCH+BCCH, uplink RACH
-    V,                  ///< FCCH+SCH+CCCH+BCCH+SDCCH/4+SACCH/4, uplink RACH+SDCCH/4
-    VI,                 ///< CCCH+BCCH, uplink RACH
-    VII,                ///< SDCCH/8 + SACCH/8
-    VIII,               ///< TCH/F + FACCH/F + SACCH/M
-    IX,                 ///< TCH/F + SACCH/M
-    X,                  ///< TCH/FD + SACCH/MD
-    XI,                 ///< PBCCH+PCCCH+PDTCH+PACCH+PTCCH
-    XII,                ///< PCCCH+PDTCH+PACCH+PTCCH
-    XIII,               ///< PDTCH+PACCH+PTCCH
-    NONE,               ///< Channel is inactive, default
-    LOOPBACK            ///< similar go VII, used in loopback testing
-  } ChannelCombination;
-
   float mNoiseLev;      ///< Average noise level
   noiseVector mNoises;  ///< Vector holding running noise measurements
 
@@ -116,22 +143,13 @@ private:
   int mSPSRx;                          ///< number of samples per Rx symbol
 
   bool mOn;			       ///< flag to indicate that transceiver is powered on
-  ChannelCombination mChanType[8];     ///< channel types for all timeslots
   double mTxFreq;                      ///< the transmit frequency
   double mRxFreq;                      ///< the receive frequency
   int mPower;                          ///< the transmit power in dB
   unsigned mTSC;                       ///< the midamble sequence code
-  int fillerModulus[8];                ///< modulus values of all timeslots, in frames
-  signalVector *fillerTable[102][8];   ///< table of modulated filler waveforms for all timeslots
   unsigned mMaxExpectedDelay;            ///< maximum expected time-of-arrival offset in GSM symbols
 
-  GSM::Time    channelEstimateTime[8]; ///< last timestamp of each timeslot's channel estimate
-  signalVector *channelResponse[8];    ///< most recent channel estimate of all timeslots
-  float        SNRestimate[8];         ///< most recent SNR estimate of all timeslots
-  signalVector *DFEForward[8];         ///< most recent DFE feedforward filter of all timeslots
-  signalVector *DFEFeedback[8];        ///< most recent DFE feedback filter of all timeslots
-  float        chanRespOffset[8];      ///< most recent timing offset, e.g. TOA, of all timeslots
-  complex      chanRespAmplitude[8];   ///< most recent channel amplitude of all timeslots
+  TransceiverState mState;
 
 public:
 
@@ -160,6 +178,26 @@ public:
 
   /** attach the radioInterface transmit FIFO */
   void transmitFIFO(VectorFIFO *wFIFO) { mTransmitFIFO = wFIFO;}
+
+  /** Codes for channel combinations */
+  typedef enum {
+    FILL,               ///< Channel is transmitted, but unused
+    I,                  ///< TCH/FS
+    II,                 ///< TCH/HS, idle every other slot
+    III,                ///< TCH/HS
+    IV,                 ///< FCCH+SCH+CCCH+BCCH, uplink RACH
+    V,                  ///< FCCH+SCH+CCCH+BCCH+SDCCH/4+SACCH/4, uplink RACH+SDCCH/4
+    VI,                 ///< CCCH+BCCH, uplink RACH
+    VII,                ///< SDCCH/8 + SACCH/8
+    VIII,               ///< TCH/F + FACCH/F + SACCH/M
+    IX,                 ///< TCH/F + SACCH/M
+    X,                  ///< TCH/FD + SACCH/MD
+    XI,                 ///< PBCCH+PCCCH+PDTCH+PACCH+PTCCH
+    XII,                ///< PCCCH+PDTCH+PACCH+PTCCH
+    XIII,               ///< PDTCH+PACCH+PTCCH
+    NONE,               ///< Channel is inactive, default
+    LOOPBACK            ///< similar go VII, used in loopback testing
+  } ChannelCombination;
 
 protected:
 
