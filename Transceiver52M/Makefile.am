@@ -24,9 +24,13 @@ include $(top_srcdir)/Makefile.common
 AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES) -I./common
 AM_CXXFLAGS = -ldl -lpthread
 
-SUBDIRS = x86
+SUBDIRS = arm x86
 
+if ARCH_ARM
+ARCH_LA = arm/libarch.la
+else
 ARCH_LA = x86/libarch.la
+endif
 
 if USRP1 
 AM_CPPFLAGS += $(USRP_CFLAGS)
@@ -72,7 +76,8 @@ noinst_HEADERS = \
 	USRPDevice.h \
 	Resampler.h \
 	common/convolve.h \
-	common/convert.h
+	common/convert.h \
+	common/scale.h
 
 transceiver_SOURCES = runTransceiver.cpp
 transceiver_LDADD = \

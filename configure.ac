@@ -68,6 +68,25 @@ AC_ARG_WITH(singledb, [
         [enable single daughterboard use on USRP1])
 ])
 
+AC_ARG_WITH(neon, [
+    AS_HELP_STRING([--with-neon],
+        [enable ARM NEON support])
+])
+
+AC_ARG_WITH(neon-vfpv4, [
+    AS_HELP_STRING([--with-neon-vfpv4],
+        [enable ARM NEON FMA support])
+])
+
+AS_IF([test "x$with_neon" = "xyes"], [
+    AC_DEFINE(HAVE_NEON, 1, Support ARM NEON)
+])
+
+AS_IF([test "x$with_neon_vfpv4" = "xyes"], [
+    AC_DEFINE(HAVE_NEON, 1, Support ARM NEON)
+    AC_DEFINE(HAVE_NEON_FMA, 1, Support ARM NEON with FMA)
+])
+
 AS_IF([test "x$with_usrp1" = "xyes"], [
     PKG_CHECK_MODULES(USRP, usrp >= 3.3)
 ])
@@ -85,6 +104,8 @@ AS_IF([test "x$with_singledb" = "xyes"], [
 AX_EXT
 
 AM_CONDITIONAL(USRP1, [test "x$with_usrp1" = "xyes"])
+AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4" = "xyes"])
+AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
 
 PKG_CHECK_MODULES(LIBUSB, libusb-1.0)
 
@@ -94,8 +115,9 @@ AC_CONFIG_FILES([\
     CommonLibs/Makefile \
     GSM/Makefile \
     Transceiver52M/Makefile \
+    Transceiver52M/arm/Makefile \
     Transceiver52M/x86/Makefile \
     sqlite3/Makefile \
-]) 
+])
 
 AC_OUTPUT

@@ -22,14 +22,19 @@
 
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "sigProcLib.h"
 #include "GSMCommon.h"
 
-using namespace GSM;
-
 extern "C" {
 #include "convolve.h"
+#include "scale.h"
 }
+
+using namespace GSM;
 
 #define TABLESIZE 1024
 
@@ -958,6 +963,13 @@ complex peakDetect(const signalVector &rxBurst,
 void scaleVector(signalVector &x,
 		 complex scale)
 {
+#ifdef HAVE_NEON
+  int len = x.size();
+
+  scale_complex((float *) x.begin(),
+                (float *) x.begin(),
+                (float *) &scale, len);
+#else
   signalVector::iterator xP = x.begin();
   signalVector::iterator xPEnd = x.end();
   if (!x.isRealOnly()) {
@@ -972,6 +984,7 @@ void scaleVector(signalVector &x,
       xP++;
     }
   }
+#endif
 }
 
 /** in-place conjugation */
