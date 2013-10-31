@@ -101,6 +101,7 @@ AC_CONFIG_FILES([\
     CommonLibs/Makefile \
     GSM/Makefile \
     Transceiver52M/Makefile \
+    Transceiver52M/x86/Makefile \
     sqlite3/Makefile \
 ]) 
 

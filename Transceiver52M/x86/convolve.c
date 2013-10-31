@@ -20,10 +20,27 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdio.h>
+#include "convolve.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+/* Forward declarations from base implementation */
+int _base_convolve_real(float *x, int x_len,
+			float *h, int h_len,
+			float *y, int y_len,
+			int start, int len,
+			int step, int offset);
+
+int _base_convolve_complex(float *x, int x_len,
+			   float *h, int h_len,
+			   float *y, int y_len,
+			   int start, int len,
+			   int step, int offset);
+
+int bounds_check(int x_len, int h_len, int y_len,
+		 int start, int len, int step);
 
 #ifdef HAVE_SSE3
 #include <xmmintrin.h>
@@ -493,90 +510,6 @@ static void sse_conv_cmplx_8n(float *x, float *h, float *y, int h_len, int len)
 }
 #endif
 
-/* Base multiply and accumulate complex-real */
-static void mac_real(float *x, float *h, float *y)
-{
-	y[0] += x[0] * h[0];
-	y[1] += x[1] * h[0];
-}
-
-/* Base multiply and accumulate complex-complex */
-static void mac_cmplx(float *x, float *h, float *y)
-{
-	y[0] += x[0] * h[0] - x[1] * h[1];
-	y[1] += x[0] * h[1] + x[1] * h[0];
-}
-
-/* Base vector complex-complex multiply and accumulate */
-static void mac_real_vec_n(float *x, float *h, float *y,
-			   int len, int step, int offset)
-{
-	for (int i = offset; i < len; i += step)
-		mac_real(&x[2 * i], &h[2 * i], y);
-}
-
-/* Base vector complex-complex multiply and accumulate */
-static void mac_cmplx_vec_n(float *x, float *h, float *y,
-			    int len, int step, int offset)
-{
-	for (int i = offset; i < len; i += step)
-		mac_cmplx(&x[2 * i], &h[2 * i], y);
-}
-
-/* Base complex-real convolution */
-static int _base_convolve_real(float *x, int x_len,
-			       float *h, int h_len,
-			       float *y, int y_len,
-			       int start, int len,
-			       int step, int offset)
-{
-	for (int i = 0; i < len; i++) {
-		mac_real_vec_n(&x[2 * (i - (h_len - 1) + start)],
-			       h,
-			       &y[2 * i], h_len,
-			       step, offset);
-	}
-
-	return len;
-}
-
-/* Base complex-complex convolution */
-static int _base_convolve_complex(float *x, int x_len,
-				  float *h, int h_len,
-				  float *y, int y_len,
-				  int start, int len,
-				  int step, int offset)
-{
-	for (int i = 0; i < len; i++) {
-		mac_cmplx_vec_n(&x[2 * (i - (h_len - 1) + start)],
-				h,
-				&y[2 * i],
-				h_len, step, offset);
-	}
-
-	return len;
-}
-
-/* Buffer validity checks */
-static int bounds_check(int x_len, int h_len, int y_len,
-			int start, int len, int step)
-{
-	if ((x_len < 1) || (h_len < 1) ||
-	    (y_len < 1) || (len < 1) || (step < 1)) {
-		fprintf(stderr, "Convolve: Invalid input\n");
-		return -1;
-	}
-
-	if ((start + len > x_len) || (len > y_len) || (x_len < h_len)) {
-		fprintf(stderr, "Convolve: Boundary exception\n");
-		fprintf(stderr, "start: %i, len: %i, x: %i, h: %i, y: %i\n",
-				start, len, x_len, h_len, y_len);
-		return -1;
-	}
-
-	return 0;
-}
-
 /* API: Aligned complex-real */
 int convolve_real(float *x, int x_len,
 		  float *h, int h_len,
@@ -665,50 +598,4 @@ int convolve_complex(float *x, int x_len,
 	}
 
 	return len;
-}
-
-/* API: Non-aligned (no SSE) complex-real */
-int base_convolve_real(float *x, int x_len,
-		       float *h, int h_len,
-		       float *y, int y_len,
-		       int start, int len,
-		       int step, int offset)
-{
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
-		return -1;
-
-	memset(y, 0, len * 2 * sizeof(float));
-
-	return _base_convolve_real(x, x_len,
-				   h, h_len,
-				   y, y_len,
-				   start, len, step, offset);
-}
-
-/* API: Non-aligned (no SSE) complex-complex */
-int base_convolve_complex(float *x, int x_len,
-			  float *h, int h_len,
-			  float *y, int y_len,
-			  int start, int len,
-			  int step, int offset)
-{
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
-		return -1;
-
-	memset(y, 0, len * 2 * sizeof(float));
-
-	return _base_convolve_complex(x, x_len,
-				      h, h_len,
-				      y, y_len,
-				      start, len, step, offset);
-}
-
-/* Aligned filter tap allocation */
-void *convolve_h_alloc(int len)
-{
-#ifdef HAVE_SSE3
-	return memalign(16, len * 2 * sizeof(float));
-#else
-	return malloc(len * 2 * sizeof(float));
-#endif
 }

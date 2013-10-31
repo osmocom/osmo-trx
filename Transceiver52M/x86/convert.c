@@ -19,6 +19,7 @@
 
 #include <malloc.h>
 #include <string.h>
+#include "convert.h"
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -164,7 +165,7 @@ static void convert_scale_ps_si16(short *out, float *in, float scale, int len)
 }
 #endif
 
-#ifndef HAVE_SSE_4_1
+#ifndef HAVE_SSE3
 static void convert_si16_ps(float *out, short *in, int len)
 {
 	for (int i = 0; i < len; i++)

@@ -21,9 +21,12 @@
 
 include $(top_srcdir)/Makefile.common
 
-AM_CFLAGS = $(STD_DEFINES_AND_INCLUDES) -std=gnu99 -march=native
-AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
+AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES) -I./common
 AM_CXXFLAGS = -ldl -lpthread
+
+SUBDIRS = x86
+
+ARCH_LA = x86/libarch.la
 
 #UHD wins if both are defined
 if UHD
@@ -52,9 +55,7 @@ COMMON_SOURCES = \
 	radioClock.cpp \
 	sigProcLib.cpp \
 	Transceiver.cpp \
-	DummyLoad.cpp \
-	convolve.c \
-	convert.c
+	DummyLoad.cpp
 
 libtransceiver_la_SOURCES = \
 	$(COMMON_SOURCES) \
@@ -79,8 +80,8 @@ noinst_HEADERS = \
 	rcvLPF_651.h \
 	sendLPF_961.h \
 	Resampler.h \
-	convolve.h \
-	convert.h
+	common/convolve.h \
+	common/convert.h
 
 USRPping_SOURCES = USRPping.cpp
 USRPping_LDADD = \
@@ -90,12 +91,14 @@ USRPping_LDADD = \
 transceiver_SOURCES = runTransceiver.cpp
 transceiver_LDADD = \
 	libtransceiver.la \
+	$(ARCH_LA) \
 	$(GSM_LA) \
 	$(COMMON_LA) $(SQLITE_LA)
 
 sigProcLibTest_SOURCES = sigProcLibTest.cpp
 sigProcLibTest_LDADD = \
 	libtransceiver.la \
+	$(ARCH_LA) \
 	$(GSM_LA) \
 	$(COMMON_LA) $(SQLITE_LA)
 
