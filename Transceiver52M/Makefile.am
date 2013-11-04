@@ -28,13 +28,10 @@ SUBDIRS = x86
 
 ARCH_LA = x86/libarch.la
 
-#UHD wins if both are defined
-if UHD
-AM_CPPFLAGS += $(UHD_CFLAGS)
-else
-if USRP1
+if USRP1 
 AM_CPPFLAGS += $(USRP_CFLAGS)
-endif
+else
+AM_CPPFLAGS += $(UHD_CFLAGS)
 endif
 
 rev2dir = $(datadir)/usrp/rev2
@@ -102,29 +99,14 @@ sigProcLibTest_LDADD = \
 	$(GSM_LA) \
 	$(COMMON_LA) $(SQLITE_LA)
 
-#uhd wins
-if UHD
-libtransceiver_la_SOURCES += UHDDevice.cpp
-transceiver_LDADD += $(UHD_LIBS)
-USRPping_LDADD += $(UHD_LIBS)
-sigProcLibTest_LDADD += $(UHD_LIBS)
-else
-if USRP1
+if USRP1 
 libtransceiver_la_SOURCES += USRPDevice.cpp
 transceiver_LDADD += $(USRP_LIBS)
 USRPping_LDADD += $(USRP_LIBS)
 sigProcLibTest_LDADD += $(USRP_LIBS)
 else
-#we should never be here, as one of the above mustbe defined for us to build
+libtransceiver_la_SOURCES += UHDDevice.cpp
+transceiver_LDADD += $(UHD_LIBS)
+USRPping_LDADD += $(UHD_LIBS)
+sigProcLibTest_LDADD += $(UHD_LIBS)
 endif
-endif
-
-
-MOSTLYCLEANFILES +=
-
-#radioInterface.cpp
-#ComplexTest.cpp
-#sigProcLibTest.cpp
-#sweepGenerator.cpp
-#testRadio.cpp
-
