@@ -235,7 +235,7 @@ protected:
   void reset();
 
   /** set priority on current thread */
-  void setPriority() { mRadioInterface->setPriority(); }
+  void setPriority(float prio = 0.5) { mRadioInterface->setPriority(prio); }
 
 };
 

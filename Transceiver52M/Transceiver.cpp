@@ -800,6 +800,8 @@ void *RxUpperLoopAdapter(TransceiverChannel *chan)
 
   delete chan;
 
+  trx->setPriority(0.42);
+
   while (1) {
     trx->driveReceiveFIFO(num);
     pthread_testcancel();
@@ -809,7 +811,7 @@ void *RxUpperLoopAdapter(TransceiverChannel *chan)
 
 void *RxLowerLoopAdapter(Transceiver *transceiver)
 {
-  transceiver->setPriority();
+  transceiver->setPriority(0.45);
 
   while (1) {
     transceiver->driveReceiveRadio();
@@ -820,6 +822,8 @@ void *RxLowerLoopAdapter(Transceiver *transceiver)
 
 void *TxLowerLoopAdapter(Transceiver *transceiver)
 {
+  transceiver->setPriority(0.44);
+
   while (1) {
     transceiver->driveTxFIFO();
     pthread_testcancel();

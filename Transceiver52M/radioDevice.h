@@ -52,7 +52,7 @@ class RadioDevice {
   virtual enum TxWindowType getWindowType()=0;
 
   /** Enable thread priority */
-  virtual void setPriority()=0;
+  virtual void setPriority(float prio = 0.5) = 0;
 
   /**
 	Read samples from the radio.

@@ -218,7 +218,7 @@ public:
 	bool start();
 	bool stop();
 	void restart(uhd::time_spec_t ts);
-	void setPriority();
+	void setPriority(float prio);
 	enum TxWindowType getWindowType() { return tx_window; }
 
 	int readSamples(std::vector<short *> &bufs, int len, bool *overrun,
@@ -308,6 +308,8 @@ private:
 
 void *async_event_loop(uhd_device *dev)
 {
+	dev->setPriority(0.43);
+
 	while (1) {
 		dev->recv_async_msg();
 		pthread_testcancel();
@@ -673,8 +675,6 @@ bool uhd_device::start()
 		return false;
 	}
 
-	setPriority();
-
 	// Register msg handler
 	uhd::msg::register_handler(&uhd_msg_handler);
 
@@ -703,9 +703,9 @@ bool uhd_device::stop()
 	return true;
 }
 
-void uhd_device::setPriority()
+void uhd_device::setPriority(float prio)
 {
-	uhd::set_thread_priority_safe();
+	uhd::set_thread_priority_safe(prio);
 	return;
 }
 
