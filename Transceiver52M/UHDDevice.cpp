@@ -515,26 +515,32 @@ bool uhd_device::parse_dev_type()
 
 	if (b100_str != std::string::npos) {
 		tx_window = TX_WINDOW_USRP1;
-		LOG(INFO) << "Using USRP1 type transmit window for "
-			  << dev_str << " " << mboard_str;
 		dev_type = B100;
-		return true;
 	} else if (b200_str != std::string::npos) {
+		tx_window = TX_WINDOW_USRP1;
 		dev_type = B2XX;
 	} else if (b210_str != std::string::npos) {
+		tx_window = TX_WINDOW_USRP1;
 		dev_type = B2XX;
 	} else if (usrp2_str != std::string::npos) {
+		tx_window = TX_WINDOW_FIXED;
 		dev_type = USRP2;
 	} else if (umtrx_str != std::string::npos) {
+		tx_window = TX_WINDOW_FIXED;
 		dev_type = UMTRX;
 	} else {
 		LOG(ALERT) << "Unknown UHD device type " << dev_str;
 		return false;
 	}
 
-	tx_window = TX_WINDOW_FIXED;
-	LOG(INFO) << "Using fixed transmit window for "
-		  << dev_str << " " << mboard_str;
+	if (tx_window == TX_WINDOW_USRP1) {
+		LOG(INFO) << "Using USRP1 type transmit window for "
+			  << dev_str << " " << mboard_str;
+	} else {
+		LOG(INFO) << "Using fixed transmit window for "
+			  << dev_str << " " << mboard_str;
+	}
+
 	return true;
 }
 
