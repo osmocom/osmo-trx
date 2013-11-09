@@ -77,7 +77,8 @@ noinst_HEADERS = \
 	Resampler.h \
 	common/convolve.h \
 	common/convert.h \
-	common/scale.h
+	common/scale.h \
+	common/mult.h
 
 transceiver_SOURCES = runTransceiver.cpp
 transceiver_LDADD = \

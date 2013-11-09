@@ -17,5 +17,7 @@ libarch_la_SOURCES = \
 	convolve.c \
 	convolve_neon.S \
 	scale.c \
-	scale_neon.S
+	scale_neon.S \
+	mult.c \
+	mult_neon.S
 endif

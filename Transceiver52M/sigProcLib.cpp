@@ -32,6 +32,7 @@
 extern "C" {
 #include "convolve.h"
 #include "scale.h"
+#include "mult.h"
 }
 
 using namespace GSM;
@@ -287,6 +288,26 @@ void initGMSKRotationTables(int sps)
 
 static void GMSKRotate(signalVector &x, int sps)
 {
+#if HAVE_NEON
+  size_t len;
+  signalVector *a, *b, *out;
+
+  a = &x;
+  out = &x;
+  len = out->size();
+
+  if (len == 157)
+    len--;
+
+  if (sps == 1)
+    b = GMSKRotation1;
+  else
+    b = GMSKRotationN;
+
+  mul_complex((float *) out->begin(),
+              (float *) a->begin(),
+              (float *) b->begin(), len);
+#else
   signalVector::iterator rotPtr, xPtr = x.begin();
 
   if (sps == 1)
@@ -306,6 +327,7 @@ static void GMSKRotate(signalVector &x, int sps)
       xPtr++;
     }
   }
+#endif
 }
 
 static void GMSKReverseRotate(signalVector &x, int sps)
