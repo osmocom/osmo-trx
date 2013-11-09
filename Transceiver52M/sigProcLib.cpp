@@ -315,7 +315,7 @@ static void GMSKRotate(signalVector &x, int sps)
   else
     rotPtr = GMSKRotationN->begin();
 
-  if (x.isRealOnly()) {
+  if (x.isReal()) {
     while (xPtr < x.end()) {
       *xPtr = *rotPtr++ * (xPtr->real());
       xPtr++;
@@ -339,7 +339,7 @@ static void GMSKReverseRotate(signalVector &x, int sps)
   else
     rotPtr = GMSKReverseRotationN->begin();
 
-  if (x.isRealOnly()) {
+  if (x.isReal()) {
     while (xPtr < x.end()) {
       *xPtr = *rotPtr++ * (xPtr->real());
       xPtr++;
@@ -372,7 +372,7 @@ signalVector *convolve(const signalVector *x,
     head = h->size() - 1;
     len = x->size();
 
-    if (x->getStartIndex() < head)
+    if (x->getStart() < head)
       append = true;
     break;
   case NO_DELAY:
@@ -420,22 +420,22 @@ signalVector *convolve(const signalVector *x,
    *   3. Complex-Real (!aligned)
    *   4. Complex-Complex (!aligned)
    */
-  if (h->isRealOnly() && h->isAligned()) {
+  if (h->isReal() && h->isAligned()) {
     rc = convolve_real((float *) _x->begin(), _x->size(),
                        (float *) h->begin(), h->size(),
                        (float *) y->begin(), y->size(),
                        start, len, step, offset);
-  } else if (!h->isRealOnly() && h->isAligned()) {
+  } else if (!h->isReal() && h->isAligned()) {
     rc = convolve_complex((float *) _x->begin(), _x->size(),
                           (float *) h->begin(), h->size(),
                           (float *) y->begin(), y->size(),
                           start, len, step, offset);
-  } else if (h->isRealOnly() && !h->isAligned()) {
+  } else if (h->isReal() && !h->isAligned()) {
     rc = base_convolve_real((float *) _x->begin(), _x->size(),
                             (float *) h->begin(), h->size(),
                             (float *) y->begin(), y->size(),
                             start, len, step, offset);
-  } else if (!h->isRealOnly() && !h->isAligned()) {
+  } else if (!h->isReal() && !h->isAligned()) {
     rc = base_convolve_complex((float *) _x->begin(), _x->size(),
                                (float *) h->begin(), h->size(),
                                (float *) y->begin(), y->size(),
@@ -474,7 +474,7 @@ static bool generateC1Pulse(int sps, PulseSequence *pulse)
   pulse->c1_buffer = convolve_h_alloc(len);
   pulse->c1 = new signalVector((complex *)
                                   pulse->c1_buffer, 0, len);
-  pulse->c1->isRealOnly(true);
+  pulse->c1->isReal(true);
 
   /* Enable alignment for SSE usage */
   pulse->c1->setAligned(true);
@@ -506,7 +506,7 @@ static PulseSequence *generateGSMPulse(int sps, int symbolLength)
   /* Store a single tap filter used for correlation sequence generation */
   pulse = new PulseSequence();
   pulse->empty = new signalVector(1);
-  pulse->empty->isRealOnly(true);
+  pulse->empty->isReal(true);
   *(pulse->empty->begin()) = 1.0f;
 
   /*
@@ -527,7 +527,7 @@ static PulseSequence *generateGSMPulse(int sps, int symbolLength)
 
   pulse->c0_buffer = convolve_h_alloc(len);
   pulse->c0 = new signalVector((complex *) pulse->c0_buffer, 0, len);
-  pulse->c0->isRealOnly(true);
+  pulse->c0->isReal(true);
 
   /* Enable alingnment for SSE usage */
   pulse->c0->setAligned(true);
@@ -582,7 +582,7 @@ signalVector* frequencyShift(signalVector *y,
  
   if (y==NULL) {
     y = new signalVector(x->size());
-    y->isRealOnly(x->isRealOnly());
+    y->isReal(x->isReal());
     if (y==NULL) return NULL;
   }
 
@@ -593,7 +593,7 @@ signalVector* frequencyShift(signalVector *y,
   signalVector::iterator xPEnd = x->end();
   signalVector::iterator xP = x->begin();
 
-  if (x->isRealOnly()) {
+  if (x->isReal()) {
     while (xP < xPEnd) {
       (*yP++) = expjLookup(phase)*( (xP++)->real() );
       phase += freq;
@@ -615,11 +615,11 @@ signalVector* frequencyShift(signalVector *y,
 signalVector* reverseConjugate(signalVector *b)
 {
     signalVector *tmp = new signalVector(b->size());
-    tmp->isRealOnly(b->isRealOnly());
+    tmp->isReal(b->isReal());
     signalVector::iterator bP = b->begin();
     signalVector::iterator bPEnd = b->end();
     signalVector::iterator tmpP = tmp->end()-1;
-    if (!b->isRealOnly()) {
+    if (!b->isReal()) {
       while (bP < bPEnd) {
         *tmpP-- = bP->conj();
         bP++;
@@ -668,7 +668,7 @@ static signalVector *rotateBurst(const BitVector &wBurst,
   }
 
   GMSKRotate(rotated, sps);
-  rotated.isRealOnly(false);
+  rotated.isReal(false);
 
   /* Dummy filter operation */
   shaped = convolve(&rotated, pulse, NULL, START_ONLY);
@@ -700,11 +700,11 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   burst_len = sps * (bits.size() + guard_len);
 
   c0_burst = new signalVector(burst_len, c0_pulse->size());
-  c0_burst->isRealOnly(true);
+  c0_burst->isReal(true);
   c0_itr = c0_burst->begin();
 
   c1_burst = new signalVector(burst_len, c1_pulse->size());
-  c1_burst->isRealOnly(true);
+  c1_burst->isReal(true);
   c1_itr = c1_burst->begin();
 
   /* Padded differential start bits */
@@ -722,7 +722,7 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
 
   /* Generate C0 phase coefficients */
   GMSKRotate(*c0_burst, sps);
-  c0_burst->isRealOnly(false);
+  c0_burst->isReal(false);
 
   c0_itr = c0_burst->begin();
   c0_itr += sps * 2;
@@ -780,7 +780,7 @@ static signalVector *modulateBurstBasic(const BitVector &bits,
   burst_len = sps * (bits.size() + guard_len);
 
   burst = new signalVector(burst_len, pulse->size());
-  burst->isRealOnly(true);
+  burst->isReal(true);
   burst_itr = burst->begin();
 
   /* Raw bits are not differentially encoded */
@@ -790,7 +790,7 @@ static signalVector *modulateBurstBasic(const BitVector &bits,
   }
 
   GMSKRotate(*burst, sps);
-  burst->isRealOnly(false);
+  burst->isReal(false);
 
   /* Single Gaussian pulse approximation shaping */
   shaped = convolve(burst, pulse, NULL, START_ONLY);
@@ -834,7 +834,7 @@ bool delayVector(signalVector &wBurst, float delay)
     data = (complex *) convolve_h_alloc(h_len);
     h = new signalVector(data, 0, h_len);
     h->setAligned(true);
-    h->isRealOnly(true);
+    h->isReal(true);
 
     itr = h->end();
     for (int i = 0; i < h_len; i++)
@@ -906,7 +906,7 @@ complex interpolatePoint(const signalVector &inSig,
   if ((unsigned) end > inSig.size()-1) end = inSig.size()-1;
   
   complex pVal = 0.0;
-  if (!inSig.isRealOnly()) {
+  if (!inSig.isReal()) {
     for (int i = start; i < end; i++) 
       pVal += inSig[i] * sinc(M_PI_F*(i-ix));
   }
@@ -1001,7 +1001,7 @@ void scaleVector(signalVector &x,
 #else
   signalVector::iterator xP = x.begin();
   signalVector::iterator xPEnd = x.end();
-  if (!x.isRealOnly()) {
+  if (!x.isReal()) {
     while (xP < xPEnd) {
       *xP = *xP * scale;
       xP++;
@@ -1019,7 +1019,7 @@ void scaleVector(signalVector &x,
 /** in-place conjugation */
 void conjugateVector(signalVector &x)
 {
-  if (x.isRealOnly()) return;
+  if (x.isReal()) return;
   signalVector::iterator xP = x.begin();
   signalVector::iterator xPEnd = x.end();
   while (xP < xPEnd) {
@@ -1065,7 +1065,7 @@ void offsetVector(signalVector &x,
 {
   signalVector::iterator xP = x.begin();
   signalVector::iterator xPEnd = x.end();
-  if (!x.isRealOnly()) {
+  if (!x.isReal()) {
     while (xP < xPEnd) {
       *xP += offset;
       xP++;
@@ -1432,7 +1432,7 @@ signalVector *decimateVector(signalVector &wVector,
   if (decimationFactor <= 1) return NULL;
 
   signalVector *decVector = new signalVector(wVector.size()/decimationFactor);
-  decVector->isRealOnly(wVector.isRealOnly());
+  decVector->isReal(wVector.isReal());
 
   signalVector::iterator vecItr = decVector->begin();
   for (unsigned int i = 0; i < wVector.size();i+=decimationFactor) 

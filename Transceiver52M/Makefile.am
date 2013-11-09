@@ -55,6 +55,7 @@ COMMON_SOURCES = \
 	radioVector.cpp \
 	radioClock.cpp \
 	sigProcLib.cpp \
+	signalVector.cpp \
 	Transceiver.cpp
 
 libtransceiver_la_SOURCES = \
@@ -72,6 +73,7 @@ noinst_HEADERS = \
 	radioClock.h \
 	radioDevice.h \
 	sigProcLib.h \
+	signalVector.h \
 	Transceiver.h \
 	USRPDevice.h \
 	Resampler.h \

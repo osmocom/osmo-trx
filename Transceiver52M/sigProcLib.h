@@ -18,12 +18,7 @@
 #include "Vector.h"
 #include "Complex.h"
 #include "BitVector.h"
-
-/** Indicated signalVector symmetry */
-enum Symmetry {
-  NONE = 0,
-  ABSSYM = 1
-};
+#include "signalVector.h"
 
 /** Convolution type indicator */
 enum ConvType {
@@ -31,84 +26,6 @@ enum ConvType {
   NO_DELAY,
   CUSTOM,
   UNDEFINED,
-};
-
-/** the core data structure of the Transceiver */
-class signalVector: public Vector<complex> 
-{
-
- private:
-  
-  Symmetry symmetry;   ///< the symmetry of the vector
-  bool realOnly;       ///< true if vector is real-valued, not complex-valued
-  bool aligned;
- 
- public:
-  
-  /** Constructors */
-  signalVector(int dSize=0, Symmetry wSymmetry = NONE):
-    Vector<complex>(dSize),
-    realOnly(false), aligned(false)
-    { 
-      symmetry = wSymmetry; 
-    };
-    
-  signalVector(complex* wData, size_t start, 
-	       size_t span, Symmetry wSymmetry = NONE):
-    Vector<complex>(NULL,wData+start,wData+start+span),
-    realOnly(false), aligned(false)
-    { 
-      symmetry = wSymmetry; 
-    };
-      
-  signalVector(const signalVector &vec1, const signalVector &vec2):
-    Vector<complex>(vec1,vec2),
-    realOnly(false), aligned(false)
-    { 
-      symmetry = vec1.symmetry; 
-    };
-	
-  signalVector(const signalVector &wVector):
-    Vector<complex>(wVector.size()),
-    realOnly(false), aligned(false)
-    {
-      wVector.copyTo(*this); 
-      symmetry = wVector.getSymmetry();
-    };
-
-  signalVector(size_t size, size_t start):
-    Vector<complex>(size + start),
-    realOnly(false), aligned(false)
-    {
-      mStart = mData + start;
-      symmetry = NONE;
-    };
-
-  signalVector(const signalVector &wVector, size_t start, size_t tail = 0):
-    Vector<complex>(start + wVector.size() + tail),
-    realOnly(false), aligned(false)
-    {
-      mStart = mData + start;
-      wVector.copyTo(*this);
-      memset(mData, 0, start * sizeof(complex));
-      memset(mStart + wVector.size(), 0, tail * sizeof(complex));
-      symmetry = NONE;
-    };
-
-  /** start index */
-  int getStartIndex() const { return mStart - mData; };
-
-  /** symmetry operators */
-  Symmetry getSymmetry() const { return symmetry;};
-  void setSymmetry(Symmetry wSymmetry) { symmetry = wSymmetry;}; 
-
-  /** real-valued operators */
-  bool isRealOnly() const { return realOnly;};
-  void isRealOnly(bool wOnly) { realOnly = wOnly;};
-
-  /** alignment markers */
-  bool isAligned() const { return aligned; };
-  void setAligned(bool aligned) { this->aligned = aligned; };
 };
 
 /** Convert a linear number to a dB value */
