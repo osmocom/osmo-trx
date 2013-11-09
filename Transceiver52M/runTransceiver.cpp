@@ -23,7 +23,9 @@
 
 */
 
-
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "Transceiver.h"
 #include "radioDevice.h"
@@ -42,9 +44,14 @@
  *     1 - Uses minimized modulator (less computation, more distortion)
  *
  *     Other values are invalid. Receive path (uplink) is always
- *     downsampled to 1 sps
+ *     downsampled to 1 sps. Default to 4 sps for all cases except for
+ *     ARM and non-SIMD enabled architectures.
  */
-#define SPS                 4
+#if defined(HAVE_NEON) || !defined(HAVE_SSE3)
+#define SPS		1
+#else
+#define SPS		4
+#endif
 
 ConfigurationTable gConfig(CONFIGDB);
 
