@@ -234,36 +234,33 @@ bool RadioInterface::driveReceiveRadio()
   GSM::Time rcvClock = mClock.get();
   rcvClock.decTN(receiveOffset);
   unsigned tN = rcvClock.TN();
-  int rcvSz = recvCursor;
+  int recvSz = recvCursor;
   int readSz = 0;
   const int symbolsPerSlot = gSlotLen + 8;
+  int burstSize = (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx;
 
   // while there's enough data in receive buffer, form received 
   //    GSM bursts and pass up to Transceiver
   // Using the 157-156-156-156 symbols per timeslot format.
-  while (rcvSz > (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx) {
-    GSM::Time tmpTime = rcvClock;
-
+  while (recvSz > burstSize) {
     for (size_t i = 0; i < mChans; i++) {
-      signalVector rxVector((symbolsPerSlot + (tN % 4 == 0)) * mSPSRx);
-      unRadioifyVector((float *) (recvBuffer[i]->begin() + readSz), rxVector);
+      burst = new radioVector(burstSize, rcvClock);
 
-      if (rcvClock.FN() >= 0)
-        burst = new radioVector(rxVector, tmpTime);
-
-      if (burst && (mReceiveFIFO[i].size() < 32))
+      unRadioifyVector((float *) (recvBuffer[i]->begin() + readSz), *burst);
+      if (mReceiveFIFO[i].size() < 32)
         mReceiveFIFO[i].write(burst);
-      else {
+      else
         delete burst;
-      }
     }
 
     mClock.incTN();
     rcvClock.incTN();
-    readSz += (symbolsPerSlot+(tN % 4 == 0)) * mSPSRx;
-    rcvSz -= (symbolsPerSlot+(tN % 4 == 0)) * mSPSRx;
+    readSz += burstSize;
+    recvSz -= burstSize;
 
     tN = rcvClock.TN();
+
+    burstSize = (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx;
   }
 
   if (readSz > 0) {
