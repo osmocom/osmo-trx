@@ -95,6 +95,9 @@ class signalVector: public Vector<complex>
       symmetry = NONE;
     };
 
+  /** start index */
+  int getStartIndex() const { return mStart - mData; };
+
   /** symmetry operators */
   Symmetry getSymmetry() const { return symmetry;};
   void setSymmetry(Symmetry wSymmetry) { symmetry = wSymmetry;}; 

@@ -369,9 +369,11 @@ signalVector *convolve(const signalVector *x,
   switch (spanType) {
   case START_ONLY:
     start = 0;
-    head = h->size();
+    head = h->size() - 1;
     len = x->size();
-    append = true;
+
+    if (x->getStartIndex() < head)
+      append = true;
     break;
   case NO_DELAY:
     start = h->size() / 2;
@@ -681,7 +683,8 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
 {
   int burst_len;
   float phase;
-  signalVector *c0_pulse, *c1_pulse, c0_burst, c1_burst, *c0_shaped, *c1_shaped;
+  signalVector *c0_pulse, *c1_pulse, *c0_burst;
+  signalVector *c1_burst, *c0_shaped, *c1_shaped;
   signalVector::iterator c0_itr, c1_itr;
 
   /*
@@ -696,13 +699,13 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
 
   burst_len = sps * (bits.size() + guard_len);
 
-  c0_burst = signalVector(burst_len);
-  c0_burst.isRealOnly(true);
-  c0_itr = c0_burst.begin();
+  c0_burst = new signalVector(burst_len, c0_pulse->size());
+  c0_burst->isRealOnly(true);
+  c0_itr = c0_burst->begin();
 
-  c1_burst = signalVector(burst_len);
-  c1_burst.isRealOnly(true);
-  c1_itr = c1_burst.begin();
+  c1_burst = new signalVector(burst_len, c1_pulse->size());
+  c1_burst->isRealOnly(true);
+  c1_itr = c1_burst->begin();
 
   /* Padded differential start bits */
   *c0_itr = 2.0 * (0x00 & 0x01) - 1.0;
@@ -718,10 +721,10 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   *c0_itr = 2.0 * (0x01 & 0x01) - 1.0;
 
   /* Generate C0 phase coefficients */
-  GMSKRotate(c0_burst, sps);
-  c0_burst.isRealOnly(false);
+  GMSKRotate(*c0_burst, sps);
+  c0_burst->isRealOnly(false);
 
-  c0_itr = c0_burst.begin();
+  c0_itr = c0_burst->begin();
   c0_itr += sps * 2;
   c1_itr += sps * 2;
 
@@ -746,8 +749,8 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   *c1_itr = *c0_itr * Complex<float>(0, phase);
 
   /* Primary (C0) and secondary (C1) pulse shaping */
-  c0_shaped = convolve(&c0_burst, c0_pulse, NULL, START_ONLY);
-  c1_shaped = convolve(&c1_burst, c1_pulse, NULL, START_ONLY);
+  c0_shaped = convolve(c0_burst, c0_pulse, NULL, START_ONLY);
+  c1_shaped = convolve(c1_burst, c1_pulse, NULL, START_ONLY);
 
   /* Sum shaped outputs into C0 */
   c0_itr = c0_shaped->begin();
@@ -755,6 +758,8 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   for (unsigned i = 0; i < c0_shaped->size(); i++ )
     *c0_itr++ += *c1_itr++;
 
+  delete c0_burst;
+  delete c1_burst;
   delete c1_shaped;
 
   return c0_shaped;
@@ -764,7 +769,7 @@ static signalVector *modulateBurstBasic(const BitVector &bits,
 					int guard_len, int sps)
 {
   int burst_len;
-  signalVector *pulse, burst, *shaped;
+  signalVector *pulse, *burst, *shaped;
   signalVector::iterator burst_itr;
 
   if (sps == 1)
@@ -774,9 +779,9 @@ static signalVector *modulateBurstBasic(const BitVector &bits,
 
   burst_len = sps * (bits.size() + guard_len);
 
-  burst = signalVector(burst_len);
-  burst.isRealOnly(true);
-  burst_itr = burst.begin();
+  burst = new signalVector(burst_len, pulse->size());
+  burst->isRealOnly(true);
+  burst_itr = burst->begin();
 
   /* Raw bits are not differentially encoded */
   for (unsigned i = 0; i < bits.size(); i++) {
@@ -784,11 +789,13 @@ static signalVector *modulateBurstBasic(const BitVector &bits,
     burst_itr += sps;
   }
 
-  GMSKRotate(burst, sps);
-  burst.isRealOnly(false);
+  GMSKRotate(*burst, sps);
+  burst->isRealOnly(false);
 
   /* Single Gaussian pulse approximation shaping */
-  shaped = convolve(&burst, pulse, NULL, START_ONLY);
+  shaped = convolve(burst, pulse, NULL, START_ONLY);
+
+  delete burst;
 
   return shaped;
 }
