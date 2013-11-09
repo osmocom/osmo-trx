@@ -37,7 +37,8 @@ extern "C" {
 
 using namespace GSM;
 
-#define TABLESIZE 1024
+#define TABLESIZE		1024
+#define DELAYFILTS		64
 
 /** Lookup tables for trigonometric approximation */
 float cosTable[TABLESIZE+1]; // add 1 element for wrap around
@@ -53,6 +54,9 @@ static signalVector *GMSKRotationN = NULL;
 static signalVector *GMSKReverseRotationN = NULL;
 static signalVector *GMSKRotation1 = NULL;
 static signalVector *GMSKReverseRotation1 = NULL;
+
+/* Precomputed fractional delay filters */
+static signalVector *delayFilters[DELAYFILTS];
 
 /*
  * RACH and midamble correlation waveforms. Store the buffer separately
@@ -114,6 +118,11 @@ void sigProcLibDestroy()
   for (int i = 0; i < 8; i++) {
     delete gMidambles[i];
     gMidambles[i] = NULL;
+  }
+
+  for (int i = 0; i < DELAYFILTS; i++) {
+    delete delayFilters[i];
+    delayFilters[i] = NULL;
   }
 
   delete GMSKRotationN;
@@ -818,33 +827,67 @@ float sinc(float x)
   return 1.0F;
 }
 
+/*
+ * Create fractional delay filterbank with Blackman-harris windowed
+ * sinc function generator. The number of filters generated is specified
+ * by the DELAYFILTS value.
+ */
+void generateDelayFilters()
+{
+  int h_len = 20;
+  complex *data;
+  signalVector *h;
+  signalVector::iterator itr;
+
+  float k, sum;
+  float a0 = 0.35875;
+  float a1 = 0.48829;
+  float a2 = 0.14128;
+  float a3 = 0.01168;
+
+  for (int i = 0; i < DELAYFILTS; i++) {
+    data = (complex *) convolve_h_alloc(h_len);
+    h = new signalVector(data, 0, h_len);
+    h->setAligned(true);
+    h->isReal(true);
+
+    sum = 0.0;
+    itr = h->end();
+    for (int n = 0; n < h_len; n++) {
+      k = (float) n;
+      *--itr = (complex) sinc(M_PI_F *
+                         (k - (float) h_len / 2.0 - (float) i / DELAYFILTS));
+      *itr *= a0 -
+        a1 * cos(2 * M_PI * n / (h_len - 1)) +
+        a2 * cos(4 * M_PI * n / (h_len - 1)) -
+        a3 * cos(6 * M_PI * n / (h_len - 1));
+
+      sum += itr->real();
+    }
+
+    itr = h->begin();
+    for (int n = 0; n < h_len; n++)
+      *itr++ /= sum;
+
+    delayFilters[i] = h;
+  }
+}
+
 bool delayVector(signalVector &wBurst, float delay)
 {
-  int whole, h_len = 20;
+  int whole, index;
   float frac;
-  complex *data;
   signalVector *h, *shift;
-  signalVector::iterator itr;
 
   whole = floor(delay);
   frac = delay - whole;
 
   /* Sinc interpolated fractional shift (if allowable) */
   if (fabs(frac) > 1e-2) {
-    data = (complex *) convolve_h_alloc(h_len);
-    h = new signalVector(data, 0, h_len);
-    h->setAligned(true);
-    h->isReal(true);
-
-    itr = h->end();
-    for (int i = 0; i < h_len; i++)
-      *--itr = (complex) sinc(M_PI_F * (i - h_len / 2 - frac));
+    index = floorf(frac * (float) DELAYFILTS);
+    h = delayFilters[index];
 
     shift = convolve(&wBurst, h, NULL, NO_DELAY);
-
-    delete h;
-    free(data);
-
     if (!shift)
       return false;
 
@@ -1652,6 +1695,8 @@ bool sigProcLibSetup(int sps)
     sigProcLibDestroy();
     return false;
   }
+
+  generateDelayFilters();
 
   return true;
 }
