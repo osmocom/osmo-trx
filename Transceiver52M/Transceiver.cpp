@@ -852,6 +852,8 @@ void *TxUpperLoopAdapter(TransceiverChannel *chan)
 
   delete chan;
 
+  trx->setPriority(0.40);
+
   while (1) {
     bool stale = false;
     // Flush the UDP packets until a successful transfer.
