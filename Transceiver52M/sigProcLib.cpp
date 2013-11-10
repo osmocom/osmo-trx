@@ -1401,7 +1401,7 @@ int detectRACHBurst(signalVector &rxBurst,
   int rc, start, target, head, tail, len;
   float _toa;
   complex _amp;
-  signalVector corr;
+  signalVector *corr;
   CorrelationSequence *sync;
 
   if ((sps != 1) && (sps != 4))
@@ -1414,10 +1414,12 @@ int detectRACHBurst(signalVector &rxBurst,
   start = (target - head) * sps - 1;
   len = (head + tail) * sps;
   sync = gRACHSequence;
-  corr = signalVector(len);
+  corr = new signalVector(len);
 
-  rc = detectBurst(rxBurst, corr, sync,
+  rc = detectBurst(rxBurst, *corr, sync,
                    thresh, sps, &_amp, &_toa, start, len);
+  delete corr;
+
   if (rc < 0) {
     return -1;
   } else if (!rc) {
@@ -1452,7 +1454,7 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
   int rc, start, target, head, tail, len;
   complex _amp;
   float _toa;
-  signalVector corr;
+  signalVector *corr;
   CorrelationSequence *sync;
 
   if ((tsc < 0) || (tsc > 7) || ((sps != 1) && (sps != 4)))
@@ -1465,10 +1467,12 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
   start = (target - head) * sps - 1;
   len = (head + tail) * sps;
   sync = gMidambles[tsc];
-  corr = signalVector(len);
+  corr = new signalVector(len);
 
-  rc = detectBurst(rxBurst, corr, sync,
+  rc = detectBurst(rxBurst, *corr, sync,
                    thresh, sps, &_amp, &_toa, start, len);
+  delete corr;
+
   if (rc < 0) {
     return -1;
   } else if (!rc) {
