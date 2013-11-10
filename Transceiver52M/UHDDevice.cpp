@@ -725,7 +725,6 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 		switch (md.error_code) {
 		case uhd::rx_metadata_t::ERROR_CODE_TIMEOUT:
 			LOG(ALERT) << "UHD: Receive timed out";
-			return ERROR_UNRECOVERABLE;
 		case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
 		case uhd::rx_metadata_t::ERROR_CODE_LATE_COMMAND:
 		case uhd::rx_metadata_t::ERROR_CODE_BROKEN_CHAIN:
@@ -887,9 +886,6 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 	size_t num_smpls = tx_stream->send(bufs, len, metadata);
 	if (num_smpls != (unsigned) len) {
 		LOG(ALERT) << "UHD: Device send timed out";
-		LOG(ALERT) << "UHD: Version " << uhd::get_version_string();
-		LOG(ALERT) << "UHD: Unrecoverable error, exiting...";
-		exit(-1);
 	}
 
 	return num_smpls;

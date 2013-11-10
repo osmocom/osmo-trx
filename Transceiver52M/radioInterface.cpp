@@ -362,10 +362,6 @@ void RadioInterface::pushBuffer()
                                   sendCursor,
                                   &underrun,
                                   writeTimestamp);
-  if (num_sent != sendCursor) {
-          LOG(ALERT) << "Transmit error " << num_sent;
-  }
-
   writeTimestamp += num_sent;
   sendCursor = 0;
 }
