@@ -893,11 +893,11 @@ void generateDelayFilters()
   }
 }
 
-bool delayVector(signalVector &wBurst, float delay)
+signalVector *delayVector(signalVector *in, signalVector *out, float delay)
 {
   int whole, index;
   float frac;
-  signalVector *h, *shift;
+  signalVector *h, *shift, *fshift = NULL;
 
   whole = floor(delay);
   frac = delay - whole;
@@ -907,35 +907,44 @@ bool delayVector(signalVector &wBurst, float delay)
     index = floorf(frac * (float) DELAYFILTS);
     h = delayFilters[index];
 
-    shift = convolve(&wBurst, h, NULL, NO_DELAY);
-    if (!shift)
-      return false;
-
-    wBurst.clone(*shift);
-    delete shift;
+    fshift = convolve(in, h, NULL, NO_DELAY);
+    if (!fshift)
+      return NULL;
   }
+
+  if (!fshift)
+    shift = new signalVector(*in);
+  else
+    shift = fshift;
 
   /* Integer sample shift */
   if (whole < 0) {
     whole = -whole;
-    signalVector::iterator wBurstItr = wBurst.begin();
-    signalVector::iterator shiftedItr = wBurst.begin() + whole;
+    signalVector::iterator wBurstItr = shift->begin();
+    signalVector::iterator shiftedItr = shift->begin() + whole;
 
-    while (shiftedItr < wBurst.end())
+    while (shiftedItr < shift->end())
       *wBurstItr++ = *shiftedItr++;
-    while (wBurstItr < wBurst.end())
-      *wBurstItr++ = 0.0;
-  } else {
-    signalVector::iterator wBurstItr = wBurst.end() - 1;
-    signalVector::iterator shiftedItr = wBurst.end() - 1 - whole;
 
-    while (shiftedItr >= wBurst.begin())
+    while (wBurstItr < shift->end())
+      *wBurstItr++ = 0.0;
+  } else if (whole >= 0) {
+    signalVector::iterator wBurstItr = shift->end() - 1;
+    signalVector::iterator shiftedItr = shift->end() - 1 - whole;
+
+    while (shiftedItr >= shift->begin())
       *wBurstItr-- = *shiftedItr--;
-    while (wBurstItr >= wBurst.begin())
+
+    while (wBurstItr >= shift->begin())
       *wBurstItr-- = 0.0;
   }
 
-  return true;
+  if (!out)
+    return shift;
+
+  out->clone(*shift);
+  delete shift;
+  return out;
 }
 
 signalVector *gaussianNoise(int length, 
@@ -1488,57 +1497,59 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
   return 1;
 }
 
-signalVector *decimateVector(signalVector &wVector,
-			     int decimationFactor) 
+signalVector *decimateVector(signalVector &wVector, size_t factor)
 {
-  
-  if (decimationFactor <= 1) return NULL;
+  signalVector *dec;
 
-  signalVector *decVector = new signalVector(wVector.size()/decimationFactor);
-  decVector->isReal(wVector.isReal());
+  if (factor <= 1)
+    return NULL;
 
-  signalVector::iterator vecItr = decVector->begin();
-  for (unsigned int i = 0; i < wVector.size();i+=decimationFactor) 
-    *vecItr++ = wVector[i];
+  dec = new signalVector(wVector.size() / factor);
+  dec->isReal(wVector.isReal());
 
-  return decVector;
+  signalVector::iterator itr = dec->begin();
+  for (size_t i = 0; i < wVector.size(); i += factor)
+    *itr++ = wVector[i];
+
+  return dec;
 }
-
 
 SoftVector *demodulateBurst(signalVector &rxBurst, int sps,
-                            complex channel, float TOA) 
+                            complex channel, float TOA)
 {
-  scaleVector(rxBurst,((complex) 1.0)/channel);
-  delayVector(rxBurst,-TOA);
+  signalVector *delay, *dec = NULL;
+  SoftVector *bits;
 
-  signalVector *shapedBurst = &rxBurst;
+  scaleVector(rxBurst, ((complex) 1.0) / channel);
+  delay = delayVector(&rxBurst, NULL, -TOA);
 
-  // shift up by a quarter of a frequency
-  // ignore starting phase, since spec allows for discontinuous phase
-  GMSKReverseRotate(*shapedBurst, sps);
+  /* Shift up by a quarter of a frequency */
+  GMSKReverseRotate(*delay, sps);
 
-  // run through slicer
+  /* Decimate and slice */
   if (sps > 1) {
-     signalVector *decShapedBurst = decimateVector(*shapedBurst, sps);
-     shapedBurst = decShapedBurst;
+     dec = decimateVector(*delay, sps);
+     delete delay;
+     delay = NULL;
+  } else {
+     dec = delay;
   }
 
-  vectorSlicer(shapedBurst);
+  vectorSlicer(dec);
 
-  SoftVector *burstBits = new SoftVector(shapedBurst->size());
+  bits = new SoftVector(dec->size());
 
-  SoftVector::iterator burstItr = burstBits->begin();
-  signalVector::iterator shapedItr = shapedBurst->begin();
-  for (; shapedItr < shapedBurst->end(); shapedItr++) 
-    *burstItr++ = shapedItr->real();
+  SoftVector::iterator bit_itr = bits->begin();
+  signalVector::iterator burst_itr = dec->begin();
 
-  if (sps > 1)
-    delete shapedBurst;
+  for (; burst_itr < dec->end(); burst_itr++)
+    *bit_itr++ = burst_itr->real();
 
-  return burstBits;
+  delete dec;
 
+  return bits;
 }
-    
+
 // Assumes symbol-spaced sampling!!!
 // Based upon paper by Al-Dhahir and Cioffi
 bool designDFE(signalVector &channelResponse,
@@ -1586,7 +1597,7 @@ bool designDFE(signalVector &channelResponse,
       signalVector G1new = G0;
       scaleVector(G1new,k*(-1.0));
       addVector(G1new,G1);
-      delayVector(G1new,-1.0);
+      delayVector(&G1new, &G1new, -1.0);
 
       scaleVector(G0new,1.0/sqrtf(1.0+k.norm2()));
       scaleVector(G1new,1.0/sqrtf(1.0+k.norm2()));
@@ -1644,7 +1655,7 @@ SoftVector *equalizeBurst(signalVector &rxBurst,
 {
   signalVector *postForwardFull;
 
-  if (!delayVector(rxBurst, -TOA))
+  if (!delayVector(&rxBurst, &rxBurst, -TOA))
     return NULL;
 
   postForwardFull = convolve(&rxBurst, &w, NULL,

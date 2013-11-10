@@ -103,7 +103,7 @@ signalVector *modulateBurst(const BitVector &wBurst,
 float sinc(float x);
 
 /** Delay a vector */
-bool delayVector(signalVector &wBurst, float delay);
+signalVector *delayVector(signalVector *in, signalVector *out, float delay);
 
 /** Add two vectors in-place */
 bool addVector(signalVector &x,
@@ -226,11 +226,10 @@ int analyzeTrafficBurst(signalVector &rxBurst,
 /**
 	Decimate a vector.
         @param wVector The vector of interest.
-        @param decimationFactor The amount of decimation, i.e. the decimation factor.
+        @param factor Decimation factor.
         @return The decimated signal vector.
 */
-signalVector *decimateVector(signalVector &wVector,
-			     int decimationFactor);
+signalVector *decimateVector(signalVector &wVector, size_t factor);
 
 /**
         Demodulates a received burst using a soft-slicer.
