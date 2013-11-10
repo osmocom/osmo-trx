@@ -43,6 +43,7 @@ using namespace GSM;
 /** Lookup tables for trigonometric approximation */
 float cosTable[TABLESIZE+1]; // add 1 element for wrap around
 float sinTable[TABLESIZE+1];
+float sincTable[TABLESIZE+1];
 
 /** Constants */
 static const float M_PI_F = (float)M_PI;
@@ -821,10 +822,29 @@ signalVector *modulateBurst(const BitVector &wBurst, int guardPeriodLength,
     return modulateBurstBasic(wBurst, guardPeriodLength, sps);
 }
 
+void generateSincTable()
+{
+  float x;
+
+  for (int i = 0; i < TABLESIZE; i++) {
+    x = (float) i / TABLESIZE * 8 * M_PI;
+    if (fabs(x) < 0.01) {
+      sincTable[i] = 1.0f;
+      continue;
+    }
+
+    sincTable[i] = sinf(x) / x;
+  }
+}
+
 float sinc(float x)
 {
-  if ((x >= 0.01F) || (x <= -0.01F)) return (sinLookup(x)/x);
-  return 1.0F;
+  if (fabs(x) >= 8 * M_PI)
+    return 0.0;
+
+  int index = (int) floorf(fabs(x) / (8 * M_PI) * TABLESIZE);
+
+  return sincTable[index];
 }
 
 /*
@@ -1685,6 +1705,7 @@ bool sigProcLibSetup(int sps)
     return false;
 
   initTrigTables();
+  generateSincTable();
   initGMSKRotationTables(sps);
 
   GSMPulse1 = generateGSMPulse(1, 2);
