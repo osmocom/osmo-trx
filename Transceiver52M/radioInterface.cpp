@@ -239,12 +239,19 @@ bool RadioInterface::driveReceiveRadio()
   const int symbolsPerSlot = gSlotLen + 8;
   int burstSize = (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx;
 
-  // while there's enough data in receive buffer, form received 
-  //    GSM bursts and pass up to Transceiver
-  // Using the 157-156-156-156 symbols per timeslot format.
+  /* 
+   * Pre-allocate head room for the largest correlation size
+   * so we can later avoid a re-allocation and copy
+   * */
+  size_t head = GSM::gRACHSynchSequence.size();
+
+  /*
+   * Form receive bursts and pass up to transceiver. Use repeating
+   * pattern of 157-156-156-156 symbols per timeslot
+   */
   while (recvSz > burstSize) {
     for (size_t i = 0; i < mChans; i++) {
-      burst = new radioVector(burstSize, rcvClock);
+      burst = new radioVector(burstSize, head, rcvClock);
 
       unRadioifyVector((float *) (recvBuffer[i]->begin() + readSz), *burst);
       if (mReceiveFIFO[i].size() < 32)

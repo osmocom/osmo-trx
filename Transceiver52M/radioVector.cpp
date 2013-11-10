@@ -31,6 +31,11 @@ radioVector::radioVector(size_t size, GSM::Time& wTime)
 {
 }
 
+radioVector::radioVector(size_t size, size_t start, GSM::Time& wTime)
+	: signalVector(size, start), mTime(wTime)
+{
+}
+
 GSM::Time radioVector::getTime() const
 {
 	return mTime;
