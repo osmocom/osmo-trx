@@ -113,6 +113,7 @@ Transceiver::~Transceiver()
 
 bool Transceiver::init()
 {
+  int d_srcport, d_dstport, c_srcport, c_dstport;
   signalVector *burst;
 
   if (!mChans) {
@@ -139,10 +140,13 @@ bool Transceiver::init()
   mClockSocket = new UDPSocket(mBasePort, mAddr.c_str(), mBasePort + 100);
 
   for (size_t i = 0; i < mChans; i++) {
-    mDataSockets[i] = new UDPSocket(mBasePort + 2 * i + 2, mAddr.c_str(),
-                                    mBasePort + 2 * i + 102);
-    mCtrlSockets[i] = new UDPSocket(mBasePort + 2 * i + 1, mAddr.c_str(),
-                                    mBasePort + 2 * i + 101);
+    c_srcport = mBasePort + 2 * i + 1;
+    c_dstport = mBasePort + 2 * i + 101;
+    d_srcport = mBasePort + 2 * i + 2;
+    d_dstport = mBasePort + 2 * i + 102;
+
+    mCtrlSockets[i] = new UDPSocket(c_srcport, mAddr.c_str(), c_dstport);
+    mDataSockets[i] = new UDPSocket(d_srcport, mAddr.c_str(), d_dstport);
   }
 
   for (size_t i = 0; i < mChans; i++) {
