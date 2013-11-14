@@ -26,16 +26,23 @@
 #include "GSMCommon.h"
 #include "Interthread.h"
 
-class radioVector : public signalVector {
+class radioVector {
 public:
-	radioVector(const signalVector& wVector, GSM::Time& wTime);
-	radioVector(size_t size, GSM::Time& wTime);
-	radioVector(size_t size, size_t start, GSM::Time& wTime);
+	radioVector(GSM::Time& wTime, size_t size = 0,
+		    size_t start = 0, size_t chans = 1);
+
+	radioVector(GSM::Time& wTime, signalVector *vector);
+	~radioVector();
+
 	GSM::Time getTime() const;
 	void setTime(const GSM::Time& wTime);
 	bool operator>(const radioVector& other) const;
 
+	signalVector *getVector(size_t chan = 0);
+	bool setVector(signalVector *vector, size_t chan = 0);
+	size_t chans() const { return vectors.size(); }
 private:
+	std::vector<signalVector *> vectors;
 	GSM::Time mTime;
 };
 

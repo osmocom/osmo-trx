@@ -21,19 +21,24 @@
 
 #include "radioVector.h"
 
-radioVector::radioVector(const signalVector& wVector, GSM::Time& wTime)
-	: signalVector(wVector), mTime(wTime)
+radioVector::radioVector(GSM::Time &time, size_t size,
+			 size_t start, size_t chans)
+	: vectors(chans), mTime(time)
 {
+	for (size_t i = 0; i < vectors.size(); i++)
+		vectors[i] = new signalVector(size, start);
 }
 
-radioVector::radioVector(size_t size, GSM::Time& wTime)
-	: signalVector(size), mTime(wTime)
+radioVector::radioVector(GSM::Time& wTime, signalVector *vector)
+	: vectors(1), mTime(wTime)
 {
+	vectors[0] = vector;
 }
 
-radioVector::radioVector(size_t size, size_t start, GSM::Time& wTime)
-	: signalVector(size, start), mTime(wTime)
+radioVector::~radioVector()
 {
+	for (size_t i = 0; i < vectors.size(); i++)
+		delete vectors[i];
 }
 
 GSM::Time radioVector::getTime() const
@@ -49,6 +54,24 @@ void radioVector::setTime(const GSM::Time& wTime)
 bool radioVector::operator>(const radioVector& other) const
 {
 	return mTime > other.mTime;
+}
+
+signalVector *radioVector::getVector(size_t chan)
+{
+	if (chan >= vectors.size())
+		return NULL;
+
+	return vectors[chan];
+}
+
+bool radioVector::setVector(signalVector *vector, size_t chan)
+{
+	if (chan >= vectors.size())
+		return false;
+
+	vectors[chan] = vector;
+
+	return true;
 }
 
 noiseVector::noiseVector(size_t n)

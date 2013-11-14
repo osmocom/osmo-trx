@@ -165,23 +165,23 @@ bool Transceiver::init()
   return true;
 }
 
-void Transceiver::addRadioVector(size_t chan, BitVector &burst,
+void Transceiver::addRadioVector(size_t chan, BitVector &bits,
                                  int RSSI, GSM::Time &wTime)
 {
+  signalVector *burst;
+  radioVector *radio_burst;
+
   if (chan >= mTxPriorityQueues.size()) {
     LOG(ALERT) << "Invalid channel " << chan;
     return;
   }
 
-  // modulate and stick into queue 
-  signalVector* modBurst = modulateBurst(burst,
-					 8 + (wTime.TN() % 4 == 0),
-					 mSPSTx);
-  scaleVector(*modBurst,txFullScale * pow(10,-RSSI/10));
-  radioVector *newVec = new radioVector(*modBurst,wTime);
-  mTxPriorityQueues[chan].write(newVec);
+  burst = modulateBurst(bits, 8 + (wTime.TN() % 4 == 0), mSPSTx);
+  scaleVector(*burst, txFullScale * pow(10, -RSSI / 10));
 
-  delete modBurst;
+  radio_burst = new radioVector(wTime, burst);
+
+  mTxPriorityQueues[chan].write(radio_burst);
 }
 
 void Transceiver::pushRadioVector(GSM::Time &nowTime)
@@ -202,7 +202,9 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
       modFN = burst->getTime().FN() % state->fillerModulus[TN];
 
       delete state->fillerTable[modFN][TN];
-      state->fillerTable[modFN][TN] = burst;
+      state->fillerTable[modFN][TN] = burst->getVector();
+      burst->setVector(NULL);
+      delete burst;
     }
 
     TN = nowTime.TN();
@@ -213,8 +215,10 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
 
     if ((burst = mTxPriorityQueues[i].getCurrentBurst(nowTime))) {
       delete state->fillerTable[modFN][TN];
-      state->fillerTable[modFN][TN] = burst;
-      bursts[i] = burst;
+      state->fillerTable[modFN][TN] = burst->getVector();
+      bursts[i] = burst->getVector();
+      burst->setVector(NULL);
+      delete burst;
     }
   }
 
@@ -346,7 +350,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
     return NULL;
   }
 
-  signalVector *vectorBurst = rxBurst;
+  signalVector *vectorBurst = rxBurst->getVector();
 
   energyDetect(*vectorBurst, 20 * mSPSRx, 0.0, &avg);
 

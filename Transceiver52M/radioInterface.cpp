@@ -251,9 +251,11 @@ bool RadioInterface::driveReceiveRadio()
    */
   while (recvSz > burstSize) {
     for (size_t i = 0; i < mChans; i++) {
-      burst = new radioVector(burstSize, head, rcvClock);
+      burst = new radioVector(rcvClock, burstSize, head);
 
-      unRadioifyVector((float *) (recvBuffer[i]->begin() + readSz), *burst);
+      unRadioifyVector((float *) (recvBuffer[i]->begin() + readSz),
+                       *burst->getVector());
+
       if (mReceiveFIFO[i].size() < 32)
         mReceiveFIFO[i].write(burst);
       else

@@ -118,7 +118,7 @@ private:
   noiseVector mNoises;  ///< Vector holding running noise measurements
 
   /** modulate and add a burst to the transmit queue */
-  void addRadioVector(size_t chan, BitVector &burst,
+  void addRadioVector(size_t chan, BitVector &bits,
                       int RSSI, GSM::Time &wTime);
 
   /** Push modulated burst into transmit FIFO corresponding to a particular timestamp */
