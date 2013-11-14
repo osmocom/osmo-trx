@@ -52,6 +52,7 @@ struct uhd_dev_offset {
 	enum uhd_dev_type type;
 	int sps;
 	double offset;
+	const std::string desc;
 };
 
 /*
@@ -65,16 +66,16 @@ struct uhd_dev_offset {
  *   USRP1 with timestamps is not supported by UHD.
  */
 static struct uhd_dev_offset uhd_offsets[NUM_USRP_TYPES * 2] = {
-	{ USRP1, 1, 0.0 },
-	{ USRP1, 4, 0.0 },
-	{ USRP2, 1, 1.2184e-4 },
-	{ USRP2, 4, 8.0230e-5 },
-	{ B100,  1, 1.2104e-4 },
-	{ B100,  4, 7.9307e-5 },
-	{ B2XX,  1, 9.9692e-5 },
-	{ B2XX,  4, 6.9248e-5 },
-	{ UMTRX, 1, 9.9692e-5 },
-	{ UMTRX, 4, 7.3846e-5 },
+	{ USRP1, 1,       0.0, "USRP1 not supported" },
+	{ USRP1, 4,       0.0, "USRP1 not supported"},
+	{ USRP2, 1, 1.2184e-4, "N2XX 1 SPS" },
+	{ USRP2, 4, 8.0230e-5, "N2XX 4 SPS" },
+	{ B100,  1, 1.2104e-4, "B100 1 SPS" },
+	{ B100,  4, 7.9307e-5, "B100 4 SPS" },
+	{ B2XX,  1, 9.9692e-5, "B2XX 1 SPS" },
+	{ B2XX,  4, 6.9248e-5, "B2XX 4 SPS" },
+	{ UMTRX, 1, 9.9692e-5, "UmTRX 1 SPS" },
+	{ UMTRX, 4, 7.3846e-5, "UmTRX 4 SPS" },
 };
 
 static double get_dev_offset(enum uhd_dev_type type, int sps)
