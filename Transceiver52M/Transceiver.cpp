@@ -429,7 +429,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   float toa, pow, max = -1.0, avg = 0.0;
   int max_i = -1;
   signalVector *burst;
-  SoftVector *bits;
+  SoftVector *bits = NULL;
 
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
@@ -463,9 +463,8 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
 
   /* Average noise on diversity paths and update global levels */
   burst = radio_burst->getVector(max_i);
-  avg = avg / radio_burst->chans();
+  avg = sqrt(avg / radio_burst->chans());
   mNoiseLev = mNoises.avg();
-  avg = sqrt(avg);
 
   /* Detect normal or RACH bursts */
   if (type == TSC)
@@ -483,7 +482,9 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   if (equalize && (type != TSC))
     equalize = false;
 
-  bits = demodulate(&mStates[chan], *burst, amp, toa, time.TN(), equalize);
+  if (avg - mNoiseLev > 0.0)
+    bits = demodulate(&mStates[chan], *burst, amp, toa, time.TN(), equalize);
+
   wTime = time;
   RSSI = (int) floor(20.0 * log10(rxFullScale / avg));
   timingOffset = (int) round(toa * 256.0 / mSPSRx);
