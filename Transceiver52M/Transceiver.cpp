@@ -176,6 +176,11 @@ void Transceiver::addRadioVector(size_t chan, BitVector &bits,
     return;
   }
 
+  if (wTime.TN() > 7) {
+    LOG(ALERT) << "Received burst with invalid slot " << wTime.TN();
+    return;
+  }
+
   burst = modulateBurst(bits, 8 + (wTime.TN() % 4 == 0), mSPSTx);
   scaleVector(*burst, txFullScale * pow(10, -RSSI / 10));
 
