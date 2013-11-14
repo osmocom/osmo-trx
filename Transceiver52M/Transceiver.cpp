@@ -43,6 +43,7 @@ using namespace GSM;
 #define NOISE_CNT			20
 
 TransceiverState::TransceiverState()
+  : mNoiseLev(0.0), mNoises(NOISE_CNT)
 {
   for (int i = 0; i < 8; i++) {
     chanType[i] = Transceiver::NONE;
@@ -80,8 +81,8 @@ Transceiver::Transceiver(int wBasePort,
 			 GSM::Time wTransmitLatency,
 			 RadioInterface *wRadioInterface)
   : mBasePort(wBasePort), mAddr(TRXAddress),
-    mTransmitLatency(wTransmitLatency), mClockSocket(NULL), mRadioInterface(wRadioInterface),
-    mNoiseLev(0.0), mNoises(NOISE_CNT), mSPSTx(wSPS), mSPSRx(1), mChans(wChans),
+    mTransmitLatency(wTransmitLatency), mClockSocket(NULL),
+    mRadioInterface(wRadioInterface), mSPSTx(wSPS), mSPSRx(1), mChans(wChans),
     mOn(false), mTxFreq(0.0), mRxFreq(0.0), mPower(-10), mMaxExpectedDelay(0)
 {
   GSM::Time startTime(random() % gHyperframe,0);
@@ -351,13 +352,12 @@ bool Transceiver::detectRACH(TransceiverState *state,
  * state information and channel estimate if necessary. Equalization
  * is currently disabled.
  */
-bool Transceiver::detectTSC(TransceiverState *state,
-			    signalVector &burst,
+bool Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
                             complex &amp, float &toa, GSM::Time &time)
 {
   int tn = time.TN();
   float chanOffset, threshold = 5.0;
-  bool needDFE = false, estimateChan = false;
+  bool noise, needDFE = false, estimateChan = false;
   double elapsed = time - state->chanEstimateTime[tn];
   signalVector *chanResp;
 
@@ -378,7 +378,8 @@ bool Transceiver::detectTSC(TransceiverState *state,
     return false;
   }
 
-  state->SNRestimate[tn] = amp.norm2() / (mNoiseLev * mNoiseLev + 1.0);
+  noise = state->mNoiseLev;
+  state->SNRestimate[tn] = amp.norm2() / (noise * noise + 1.0);
 
   /* Set equalizer if unabled */
   if (needDFE && estimateChan) {
@@ -430,6 +431,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   int max_i = -1;
   signalVector *burst;
   SoftVector *bits = NULL;
+  TransceiverState *state = &mStates[chan];
 
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
@@ -464,16 +466,16 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   /* Average noise on diversity paths and update global levels */
   burst = radio_burst->getVector(max_i);
   avg = sqrt(avg / radio_burst->chans());
-  mNoiseLev = mNoises.avg();
+  state->mNoiseLev = state->mNoises.avg();
 
   /* Detect normal or RACH bursts */
   if (type == TSC)
-    success = detectTSC(&mStates[chan], *burst, amp, toa, time);
+    success = detectTSC(state, *burst, amp, toa, time);
   else
-    success = detectRACH(&mStates[chan], *burst, amp, toa);
+    success = detectRACH(state, *burst, amp, toa);
 
   if (!success) {
-    mNoises.insert(avg);
+    state->mNoises.insert(avg);
     delete radio_burst;
     return NULL;
   }
@@ -482,8 +484,8 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   if (equalize && (type != TSC))
     equalize = false;
 
-  if (avg - mNoiseLev > 0.0)
-    bits = demodulate(&mStates[chan], *burst, amp, toa, time.TN(), equalize);
+  if (avg - state->mNoiseLev > 0.0)
+    bits = demodulate(state, *burst, amp, toa, time.TN(), equalize);
 
   wTime = time;
   RSSI = (int) floor(20.0 * log10(rxFullScale / avg));
@@ -594,8 +596,9 @@ void Transceiver::driveControl(size_t chan)
   }
   else if (strcmp(command,"NOISELEV")==0) {
     if (mOn) {
+      float lev = mStates[chan].mNoiseLev;
       sprintf(response,"RSP NOISELEV 0 %d",
-              (int) round(20.0*log10(rxFullScale/mNoiseLev)));
+              (int) round(20.0 * log10(rxFullScale / lev)));
     }
     else {
       sprintf(response,"RSP NOISELEV 1  0");

@@ -48,12 +48,12 @@ private:
 
 class noiseVector : std::vector<float> {
 public:
-	noiseVector(size_t len = 0);
+	noiseVector(size_t size = 0);
 	bool insert(float val);
 	float avg();
 
 private:
-	std::vector<float>::iterator it;
+	size_t itr;
 };
 
 class VectorFIFO : public InterthreadQueue<radioVector> { };

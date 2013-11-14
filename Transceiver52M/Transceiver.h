@@ -76,6 +76,10 @@ struct TransceiverState {
   float SNRestimate[8];
   float chanRespOffset[8];
   complex chanRespAmplitude[8];
+
+  /* Received noise energy levels */
+  float mNoiseLev;
+  noiseVector mNoises;
 };
 
 /** The Transceiver class, responsible for physical layer of basestation */
@@ -113,9 +117,6 @@ private:
     RACH,	       ///< timeslot should contain an access burst
     IDLE	       ///< timeslot is an idle (or dummy) burst
   } CorrType;
-
-  float mNoiseLev;      ///< Average noise level
-  noiseVector mNoises;  ///< Vector holding running noise measurements
 
   /** modulate and add a burst to the transmit queue */
   void addRadioVector(size_t chan, BitVector &bits,
