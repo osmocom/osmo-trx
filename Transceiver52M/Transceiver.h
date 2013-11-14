@@ -137,6 +137,22 @@ private:
   /** send messages over the clock socket */
   void writeClockInterface(void);
 
+  /** Detect RACH bursts */
+  bool detectRACH(TransceiverState *state,
+                  signalVector &burst,
+                  complex &amp, float &toa);
+
+  /** Detect normal bursts */
+  bool detectTSC(TransceiverState *state,
+                 signalVector &burst,
+                 complex &amp, float &toa, GSM::Time &time);
+
+  /** Demodulat burst and output soft bits */
+  SoftVector *demodulate(TransceiverState *state,
+                         signalVector &burst, complex amp,
+                         float toa, size_t tn, bool equalize);
+
+
   int mSPSTx;                          ///< number of samples per Tx symbol
   int mSPSRx;                          ///< number of samples per Rx symbol
   size_t mChans;

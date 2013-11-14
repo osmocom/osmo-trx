@@ -328,117 +328,147 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   }
 }
 
+/* 
+ * Detect RACH synchronization sequence within a burst. No equalization
+ * is used or available on the RACH channel.
+ */
+bool Transceiver::detectRACH(TransceiverState *state,
+                             signalVector &burst,
+                             complex &amp, float &toa)
+{
+  float threshold = 6.0;
+
+  return detectRACHBurst(burst, threshold, mSPSRx, &amp, &toa);
+}
+
+/*
+ * Detect normal burst training sequence midamble. Update equalization
+ * state information and channel estimate if necessary. Equalization
+ * is currently disabled.
+ */
+bool Transceiver::detectTSC(TransceiverState *state,
+			    signalVector &burst,
+                            complex &amp, float &toa, GSM::Time &time)
+{
+  int tn = time.TN();
+  float chanOffset, threshold = 5.0;
+  bool needDFE = false, estimateChan = false;
+  double elapsed = time - state->chanEstimateTime[tn];
+  signalVector *chanResp;
+
+  /* Check equalization update state */
+  if ((elapsed > 50) || (!state->chanResponse[tn])) {
+    delete state->DFEForward[tn];
+    delete state->DFEFeedback[tn];
+    state->DFEForward[tn] = NULL;
+    state->DFEFeedback[tn] = NULL;
+
+    estimateChan = true;
+  }
+
+  /* Detect normal burst midambles */
+  if (!analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx, &amp,
+                           &toa, mMaxExpectedDelay, estimateChan,
+                           &chanResp, &chanOffset)) {
+    return false;
+  }
+
+  state->SNRestimate[tn] = amp.norm2() / (mNoiseLev * mNoiseLev + 1.0);
+
+  /* Set equalizer if unabled */
+  if (needDFE && estimateChan) {
+     state->chanResponse[tn] = chanResp;
+     state->chanRespOffset[tn] = chanOffset;
+     state->chanRespAmplitude[tn] = amp;
+
+     scaleVector(*chanResp, complex(1.0, 0.0) / amp);
+
+     designDFE(*chanResp, state->SNRestimate[tn],
+               7, &state->DFEForward[tn], &state->DFEFeedback[tn]);
+
+     state->chanEstimateTime[tn] = time;
+  }
+
+  return true;;
+}
+
+/*
+ * Demodulate GMSK burst using equalization if requested. Otherwise
+ * demodulate by direct rotation and soft slicing.
+ */
+SoftVector *Transceiver::demodulate(TransceiverState *state,
+                                    signalVector &burst, complex amp,
+                                    float toa, size_t tn, bool equalize)
+{
+  if (equalize) {
+    scaleVector(burst, complex(1.0, 0.0) / amp);
+    return equalizeBurst(burst,
+                         toa - state->chanRespOffset[tn],
+                         mSPSRx,
+                         *state->DFEForward[tn],
+                         *state->DFEFeedback[tn]);
+  }
+
+  return demodulateBurst(burst, mSPSRx, amp, toa);
+}
+
+/*
+ * Pull bursts from the FIFO and handle according to the slot
+ * and burst correlation type. Equalzation is currently disabled. 
+ */
 SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
                                          int &timingOffset, size_t chan)
 {
-  bool needDFE = false;
-  bool success = false;
-  complex amp = 0.0;
-  float TOA = 0.0, avg = 0.0;
-  TransceiverState *state = &mStates[chan];
+  bool success, equalize = false;
+  complex amp;
+  float toa, pow, max = -1.0, avg = 0.0;
+  signalVector *burst;
+  SoftVector *bits;
 
-  radioVector *rxBurst = (radioVector *) mReceiveFIFO[chan]->read();
+  /* Blocking FIFO read */
+  radioVector *radio_burst = mReceiveFIFO[chan]->read();
+  if (!radio_burst)
+    return NULL;
 
-  if (!rxBurst) return NULL;
+  /* Set time and determine correlation type */
+  GSM::Time time = radio_burst->getTime();
+  CorrType type = expectedCorrType(time, chan);
 
-  int timeslot = rxBurst->getTime().TN();
-
-  CorrType corrType = expectedCorrType(rxBurst->getTime(), chan);
-
-  if ((corrType==OFF) || (corrType==IDLE)) {
-    delete rxBurst;
+  if ((type == OFF) || (type == IDLE)) {
+    delete radio_burst;
     return NULL;
   }
 
-  signalVector *vectorBurst = rxBurst->getVector();
-
-  energyDetect(*vectorBurst, 20 * mSPSRx, 0.0, &avg);
-
-  // Update noise level
+  /* Average noise on diversity paths and update global levels */
+  burst = radio_burst->getVector();
+  avg = avg / radio_burst->chans();
   mNoiseLev = mNoises.avg();
   avg = sqrt(avg);
 
-  // run the proper correlator
-  if (corrType==TSC) {
-    LOG(DEBUG) << "looking for TSC at time: " << rxBurst->getTime();
-    signalVector *channelResp;
-    double framesElapsed = rxBurst->getTime() - state->chanEstimateTime[timeslot];
-    bool estimateChannel = false;
-    if ((framesElapsed > 50) || (state->chanResponse[timeslot]==NULL)) {
-	if (state->chanResponse[timeslot])
-          delete state->chanResponse[timeslot];
-        if (state->DFEForward[timeslot])
-          delete state->DFEForward[timeslot];
-        if (state->DFEFeedback[timeslot])
-          delete state->DFEFeedback[timeslot];
+  /* Detect normal or RACH bursts */
+  if (type == TSC)
+    success = detectTSC(&mStates[chan], *burst, amp, toa, time);
+  else
+    success = detectRACH(&mStates[chan], *burst, amp, toa);
 
-        state->chanResponse[timeslot] = NULL;
-        state->DFEForward[timeslot] = NULL;
-        state->DFEFeedback[timeslot] = NULL;
-	estimateChannel = true;
-    }
-    if (!needDFE) estimateChannel = false;
-    float chanOffset;
-    success = analyzeTrafficBurst(*vectorBurst,
-                                  mTSC,
-                                  5.0,
-                                  mSPSRx,
-                                  &amp,
-                                  &TOA,
-                                  mMaxExpectedDelay,
-                                  estimateChannel,
-                                  &channelResp,
-                                  &chanOffset);
-    if (success) {
-      state->SNRestimate[timeslot] = amp.norm2() / (mNoiseLev * mNoiseLev + 1.0);
-
-      if (estimateChannel) {
-         state->chanResponse[timeslot] = channelResp;
-         state->chanRespOffset[timeslot] = chanOffset;
-         state->chanRespAmplitude[timeslot] = amp;
-	 scaleVector(*channelResp, complex(1.0, 0.0) / amp);
-         designDFE(*channelResp, state->SNRestimate[timeslot],
-                   7, &state->DFEForward[timeslot],
-                   &state->DFEFeedback[timeslot]);
-
-         state->chanEstimateTime[timeslot] = rxBurst->getTime();
-      }
-    }
-    else {
-      state->chanResponse[timeslot] = NULL;
-      mNoises.insert(avg);
-    }
-  }
-  else {
-    // RACH burst
-    if ((success = detectRACHBurst(*vectorBurst, 6.0, mSPSRx, &amp, &TOA)))
-      state->chanResponse[timeslot] = NULL;
-    else
-      mNoises.insert(avg);
+  if (!success) {
+    mNoises.insert(avg);
+    delete radio_burst;
+    return NULL;
   }
 
-  // demodulate burst
-  SoftVector *burst = NULL;
-  if ((rxBurst) && (success)) {
-    if ((corrType==RACH) || (!needDFE)) {
-      burst = demodulateBurst(*vectorBurst, mSPSRx, amp, TOA);
-    } else {
-      scaleVector(*vectorBurst, complex(1.0, 0.0) / amp);
-      burst = equalizeBurst(*vectorBurst,
-			    TOA - state->chanRespOffset[timeslot],
-			    mSPSRx,
-			    *state->DFEForward[timeslot],
-			    *state->DFEFeedback[timeslot]);
-    }
-    wTime = rxBurst->getTime();
-    RSSI = (int) floor(20.0*log10(rxFullScale/avg));
-    LOG(DEBUG) << "RSSI: " << RSSI;
-    timingOffset = (int) round(TOA * 256.0 / mSPSRx);
-  }
+  /* Demodulate and set output info */
+  if (equalize && (type != TSC))
+    equalize = false;
 
-  delete rxBurst;
+  bits = demodulate(&mStates[chan], *burst, amp, toa, time.TN(), equalize);
+  wTime = time;
+  RSSI = (int) floor(20.0 * log10(rxFullScale / avg));
+  timingOffset = (int) round(toa * 256.0 / mSPSRx);
 
-  return burst;
+  delete radio_burst;
+
+  return bits;
 }
 
 void Transceiver::start()
