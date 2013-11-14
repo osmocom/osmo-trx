@@ -34,10 +34,9 @@ extern "C" {
 #define NUMCHUNKS	4
 
 RadioInterface::RadioInterface(RadioDevice *wRadio,
-			       int wReceiveOffset,
-			       size_t sps, size_t chans,
-			       GSM::Time wStartTime)
-  : mRadio(wRadio), mSPSTx(sps), mSPSRx(1), mChans(chans),
+                               size_t sps, size_t chans, size_t diversity,
+                               int wReceiveOffset, GSM::Time wStartTime)
+  : mRadio(wRadio), mSPSTx(sps), mSPSRx(1), mChans(chans), mMIMO(diversity),
     sendCursor(0), recvCursor(0), underrun(false), overrun(false),
     receiveOffset(wReceiveOffset), mOn(false), powerScaling(1.0),
     loadTest(false)
@@ -52,11 +51,8 @@ RadioInterface::~RadioInterface(void)
 
 bool RadioInterface::init(int type)
 {
-  if (type != RadioDevice::NORMAL)
-    return false;
-
-  if (!mChans) {
-    LOG(ALERT) << "Invalid number of channels " << mChans;
+  if ((type != RadioDevice::NORMAL) || (mMIMO > 1) || !mChans) {
+    LOG(ALERT) << "Invalid configuration";
     return false;
   }
 
@@ -251,10 +247,14 @@ bool RadioInterface::driveReceiveRadio()
    */
   while (recvSz > burstSize) {
     for (size_t i = 0; i < mChans; i++) {
-      burst = new radioVector(rcvClock, burstSize, head);
+      burst = new radioVector(rcvClock, burstSize, head, mMIMO);
 
-      unRadioifyVector((float *) (recvBuffer[i]->begin() + readSz),
-                       *burst->getVector());
+      for (size_t n = 0; n < mMIMO; n++) {
+        unRadioifyVector((float *)
+                         (recvBuffer[mMIMO * i + n]->begin() + readSz),
+                         *burst->getVector(n));
+      }
+
 
       if (mReceiveFIFO[i].size() < 32)
         mReceiveFIFO[i].write(burst);

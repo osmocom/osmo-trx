@@ -114,7 +114,7 @@ int testConfig(const char *filename)
 
 int main(int argc, char *argv[])
 {
-  int trxPort, radioType, chans = 1, extref = 0, fail = 0;
+  int trxPort, radioType, chans = 1, extref = 0, fail = 0, diversity = 0;
   std::string logLevel, trxAddr, deviceArgs = "";
   RadioDevice *usrp = NULL;
   RadioInterface *radio = NULL;
@@ -162,7 +162,10 @@ int main(int argc, char *argv[])
 
   srandom(time(NULL));
 
-  usrp = RadioDevice::make(SPS, chans);
+  if (diversity)
+    chans = 2;
+
+  usrp = RadioDevice::make(SPS, chans, diversity);
   radioType = usrp->open(deviceArgs, extref);
   if (radioType < 0) {
     LOG(ALERT) << "Transceiver exiting..." << std::endl;
@@ -171,11 +174,14 @@ int main(int argc, char *argv[])
 
   switch (radioType) {
   case RadioDevice::NORMAL:
-    radio = new RadioInterface(usrp, 3, SPS, chans);
+    radio = new RadioInterface(usrp, SPS, chans);
     break;
   case RadioDevice::RESAMP_64M:
   case RadioDevice::RESAMP_100M:
-    radio = new RadioInterfaceResamp(usrp, 3, SPS, chans);
+    radio = new RadioInterfaceResamp(usrp, SPS, chans);
+    break;
+  case RadioDevice::DIVERSITY:
+    radio = new RadioInterfaceDiversity(usrp, SPS, chans);
     break;
   default:
     LOG(ALERT) << "Unsupported configuration";

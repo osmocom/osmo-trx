@@ -78,17 +78,46 @@ static struct uhd_dev_offset uhd_offsets[NUM_USRP_TYPES * 2] = {
 	{ UMTRX, 4, 7.3846e-5, "UmTRX 4 SPS" },
 };
 
-static double get_dev_offset(enum uhd_dev_type type, int sps)
+/*
+ * Offset handling for special cases. Currently used for UmTRX dual channel
+ * diversity receiver only.
+ */
+static struct uhd_dev_offset special_offsets[] = {
+	{ UMTRX, 1, 8.0875e-5, "UmTRX diversity, 1 SPS" },
+	{ UMTRX, 4, 5.2103e-5, "UmTRX diversity, 4 SPS" },
+};
+
+static double get_dev_offset(enum uhd_dev_type type,
+			     int sps, bool diversity = false)
 {
+	/* Reject USRP1 */
 	if (type == USRP1) {
 		LOG(ERR) << "Invalid device type";
 		return 0.0;
 	}
 
+	/* Special cases (e.g. diversity receiver) */
+	if (diversity) {
+		if (type != UMTRX) {
+			LOG(ALERT) << "Diversity on UmTRX only";
+			return 0.0;
+		}
+
+		switch (sps) {
+		case 1:
+			return special_offsets[0].offset;
+		case 4:
+		default:
+			return special_offsets[1].offset;
+		}
+	}
+
+	/* Normal operation */
 	switch (sps) {
 	case 1:
 		return uhd_offsets[2 * type + 0].offset;
 	case 4:
+	default:
 		return uhd_offsets[2 * type + 1].offset;
 	}
 
@@ -101,8 +130,15 @@ static double get_dev_offset(enum uhd_dev_type type, int sps)
  * The base rate is either GSM symbol rate, 270.833 kHz, or the minimum
  * usable channel spacing of 400 kHz.
  */
-static double select_rate(uhd_dev_type type, int sps)
+static double select_rate(uhd_dev_type type, int sps, bool diversity = false)
 {
+	if (diversity && (type == UMTRX)) {
+		return GSMRATE * 4;
+	} else if (diversity) {
+		LOG(ALERT) << "Diversity supported on UmTRX only";
+		return -9999.99;
+	}
+
 	if ((sps != 4) && (sps != 1))
 		return -9999.99;
 
@@ -212,7 +248,7 @@ private:
 */
 class uhd_device : public RadioDevice {
 public:
-	uhd_device(size_t sps, size_t chans);
+	uhd_device(size_t sps, size_t chans, bool diversity);
 	~uhd_device();
 
 	int open(const std::string &args, bool extref);
@@ -305,6 +341,7 @@ private:
 	std::string str_code(uhd::async_metadata_t metadata);
 
 	Thread async_event_thrd;
+	bool diversity;
 };
 
 void *async_event_loop(uhd_device *dev)
@@ -339,7 +376,7 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 	}
 }
 
-uhd_device::uhd_device(size_t sps, size_t chans)
+uhd_device::uhd_device(size_t sps, size_t chans, bool diversity)
 	: tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),
@@ -348,6 +385,7 @@ uhd_device::uhd_device(size_t sps, size_t chans)
 {
 	this->sps = sps;
 	this->chans = chans;
+	this->diversity = diversity;
 }
 
 uhd_device::~uhd_device()
@@ -600,8 +638,13 @@ int uhd_device::open(const std::string &args, bool extref)
 	rx_spp = rx_stream->get_max_num_samps();
 
 	// Set rates
+	double _rx_rate;
 	double _tx_rate = select_rate(dev_type, sps);
-	double _rx_rate = _tx_rate / sps;
+	if (diversity)
+		_rx_rate = select_rate(dev_type, 1, true);
+	else
+		_rx_rate = _tx_rate / sps;
+
 	if ((_tx_rate > 0.0) && (set_rates(_tx_rate, _rx_rate) < 0))
 		return -1;
 
@@ -611,7 +654,7 @@ int uhd_device::open(const std::string &args, bool extref)
 		rx_buffers[i] = new smpl_buf(buf_len, rx_rate);
 
 	// Set receive chain sample offset 
-	double offset = get_dev_offset(dev_type, sps);
+	double offset = get_dev_offset(dev_type, sps, diversity);
 	if (offset == 0.0) {
 		LOG(ERR) << "Unsupported configuration, no correction applied";
 		ts_offset = 0;
@@ -625,11 +668,16 @@ int uhd_device::open(const std::string &args, bool extref)
 	// Print configuration
 	LOG(INFO) << "\n" << usrp_dev->get_pp_string();
 
+	if (diversity)
+		return DIVERSITY;
+
 	switch (dev_type) {
 	case B100:
 		return RESAMP_64M;
 	case USRP2:
 		return RESAMP_100M;
+	default:
+		break;
 	}
 
 	return NORMAL;
@@ -1173,7 +1221,7 @@ std::string smpl_buf::str_code(ssize_t code)
 	}
 }
 
-RadioDevice *RadioDevice::make(size_t sps, size_t chans)
+RadioDevice *RadioDevice::make(size_t sps, size_t chans, bool diversity)
 {
-	return new uhd_device(sps, chans);
+	return new uhd_device(sps, chans, diversity);
 }

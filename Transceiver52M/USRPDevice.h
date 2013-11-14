@@ -96,7 +96,7 @@ private:
  public:
 
   /** Object constructor */
-  USRPDevice(size_t sps, size_t chans = 1);
+  USRPDevice(size_t sps, size_t chans = 1, bool diversity = false);
 
   /** Instantiate the USRP */
   int open(const std::string &, bool);

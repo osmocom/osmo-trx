@@ -422,6 +422,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   bool success, equalize = false;
   complex amp;
   float toa, pow, max = -1.0, avg = 0.0;
+  int max_i = -1;
   signalVector *burst;
   SoftVector *bits;
 
@@ -439,8 +440,24 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
     return NULL;
   }
 
+  /* Select the diversity channel with highest energy */
+  for (size_t i = 0; i < radio_burst->chans(); i++) {
+    energyDetect(*radio_burst->getVector(i), 20 * mSPSRx, 0.0, &pow);
+    if (pow > max) {
+      max = pow;
+      max_i = i;
+    }
+    avg += pow;
+  }
+
+  if (max_i < 0) {
+    LOG(ALERT) << "Received empty burst";
+    delete radio_burst;
+    return NULL;
+  }
+
   /* Average noise on diversity paths and update global levels */
-  burst = radio_burst->getVector();
+  burst = radio_burst->getVector(max_i);
   avg = avg / radio_burst->chans();
   mNoiseLev = mNoises.avg();
   avg = sqrt(avg);

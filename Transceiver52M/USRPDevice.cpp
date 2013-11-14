@@ -59,8 +59,7 @@ const dboardConfigType dboardConfig = TXA_RXB;
 
 const double USRPDevice::masterClockRate = 52.0e6;
 
-USRPDevice::USRPDevice(size_t sps, size_t)
-  : skipRx(skipRx)
+USRPDevice::USRPDevice(size_t sps, size_t, bool)
 {
   LOG(INFO) << "creating USRP device...";
 
@@ -601,7 +600,7 @@ bool USRPDevice::setTxFreq(double wFreq) { return true;};
 bool USRPDevice::setRxFreq(double wFreq) { return true;};
 #endif
 
-RadioDevice *RadioDevice::make(size_t sps, size_t chans)
+RadioDevice *RadioDevice::make(size_t sps, size_t chans, bool diversity)
 {
-	return new USRPDevice(sps, chans);
+	return new USRPDevice(sps, chans, diversity);
 }

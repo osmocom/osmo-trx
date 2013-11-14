@@ -20,6 +20,7 @@
 #include "radioDevice.h"
 #include "radioVector.h"
 #include "radioClock.h"
+#include "Resampler.h"
 
 static const unsigned gSlotLen = 148;      ///< number of symbols per slot, not counting guard periods
 
@@ -37,6 +38,8 @@ protected:
   size_t mSPSTx;
   size_t mSPSRx;
   size_t mChans;
+  size_t mMIMO;
+
   std::vector<signalVector *> sendBuffer;
   std::vector<signalVector *> recvBuffer;
   unsigned sendCursor;
@@ -89,9 +92,8 @@ public:
 
   /** constructor */
   RadioInterface(RadioDevice* wRadio = NULL,
-		 int receiveOffset = 3,
-		 size_t sps = 4, size_t chans = 1,
-		 GSM::Time wStartTime = GSM::Time(0));
+                 size_t sps = 4, size_t chans = 1, size_t diversity = 1,
+                 int receiveOffset = 3, GSM::Time wStartTime = GSM::Time(0));
 
   /** destructor */
   virtual ~RadioInterface();
@@ -109,7 +111,7 @@ public:
   bool tuneTx(double freq, size_t chan = 0);
 
   /** set receive frequency */
-  bool tuneRx(double freq, size_t chan = 0);
+  virtual bool tuneRx(double freq, size_t chan = 0);
 
   /** set receive gain */
   double setRxGain(double dB, size_t chan = 0);
@@ -166,13 +168,33 @@ private:
 
 public:
 
-  RadioInterfaceResamp(RadioDevice* wRadio = NULL,
-		       int receiveOffset = 3,
-		       size_t wSPS = 4, size_t chans = 1,
-		       GSM::Time wStartTime = GSM::Time(0));
+  RadioInterfaceResamp(RadioDevice* wRadio, size_t wSPS = 4, size_t chans = 1);
 
   ~RadioInterfaceResamp();
 
   bool init(int type);
   void close();
+};
+
+class RadioInterfaceDiversity : public RadioInterface {
+public:
+  RadioInterfaceDiversity(RadioDevice* wRadio,
+                          size_t sps = 4, size_t chans = 2);
+
+  ~RadioInterfaceDiversity();
+
+  bool init(int type);
+  void close();
+  bool tuneRx(double freq, size_t chan);
+
+private:
+  std::vector<Resampler *> dnsamplers;
+  std::vector<float> phases;
+  signalVector *outerRecvBuffer;
+
+  bool mDiversity;
+  double mFreqSpacing;
+
+  bool setupDiversityChannels();
+  void pullBuffer();
 };

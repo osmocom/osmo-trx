@@ -35,9 +35,10 @@ class RadioDevice {
   enum TxWindowType { TX_WINDOW_USRP1, TX_WINDOW_FIXED };
 
   /* Radio interface types */
-  enum RadioInterfaceType { NORMAL, RESAMP_64M, RESAMP_100M };
+  enum RadioInterfaceType { NORMAL, RESAMP_64M, RESAMP_100M, DIVERSITY };
 
-  static RadioDevice *make(size_t sps, size_t chans = 1);
+  static RadioDevice *make(size_t sps, size_t chans = 1,
+                           bool diversity = false);
 
   /** Initialize the USRP */
   virtual int open(const std::string &args = "", bool extref = false)=0;

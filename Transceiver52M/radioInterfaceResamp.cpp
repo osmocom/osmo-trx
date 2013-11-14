@@ -50,16 +50,14 @@ extern "C" {
 
 static Resampler *upsampler = NULL;
 static Resampler *dnsampler = NULL;
-static int resamp_inrate = 0;
-static int resamp_inchunk = 0;
-static int resamp_outrate = 0;
-static int resamp_outchunk = 0;
+static size_t resamp_inrate = 0;
+static size_t resamp_inchunk = 0;
+static size_t resamp_outrate = 0;
+static size_t resamp_outchunk = 0;
 
 RadioInterfaceResamp::RadioInterfaceResamp(RadioDevice *wRadio,
-					   int wReceiveOffset,
-					   size_t sps, size_t chan,
-					   GSM::Time wStartTime)
-	: RadioInterface(wRadio, wReceiveOffset, sps, chan, wStartTime),
+					   size_t sps, size_t chans)
+	: RadioInterface(wRadio, sps, chans),
 	  innerSendBuffer(NULL), outerSendBuffer(NULL),
 	  innerRecvBuffer(NULL), outerRecvBuffer(NULL)
 {
@@ -191,7 +189,7 @@ void RadioInterfaceResamp::pullBuffer()
 				       &overrun,
 				       readTimestamp,
 				       &local_underrun);
-	if (num_recv != resamp_outchunk) {
+	if (num_recv != (int) resamp_outchunk) {
 		LOG(ALERT) << "Receive error " << num_recv;
 		return;
 	}

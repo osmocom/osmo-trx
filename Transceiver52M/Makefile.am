@@ -61,7 +61,8 @@ COMMON_SOURCES = \
 libtransceiver_la_SOURCES = \
 	$(COMMON_SOURCES) \
 	Resampler.cpp \
-	radioInterfaceResamp.cpp
+	radioInterfaceResamp.cpp \
+	radioInterfaceDiversity.cpp
 
 noinst_PROGRAMS = \
 	transceiver
