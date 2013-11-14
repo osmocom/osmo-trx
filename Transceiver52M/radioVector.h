@@ -38,7 +38,7 @@ public:
 	void setTime(const GSM::Time& wTime);
 	bool operator>(const radioVector& other) const;
 
-	signalVector *getVector(size_t chan = 0);
+	signalVector *getVector(size_t chan = 0) const;
 	bool setVector(signalVector *vector, size_t chan = 0);
 	size_t chans() const { return vectors.size(); }
 private:
@@ -50,7 +50,7 @@ class noiseVector : std::vector<float> {
 public:
 	noiseVector(size_t size = 0);
 	bool insert(float val);
-	float avg();
+	float avg() const;
 
 private:
 	size_t itr;

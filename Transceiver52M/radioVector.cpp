@@ -56,7 +56,7 @@ bool radioVector::operator>(const radioVector& other) const
 	return mTime > other.mTime;
 }
 
-signalVector *radioVector::getVector(size_t chan)
+signalVector *radioVector::getVector(size_t chan) const
 {
 	if (chan >= vectors.size())
 		return NULL;
@@ -79,7 +79,7 @@ noiseVector::noiseVector(size_t size)
 {
 }
 
-float noiseVector::avg()
+float noiseVector::avg() const
 {
 	float val = 0.0;
 
