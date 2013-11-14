@@ -613,6 +613,10 @@ signalVector* frequencyShift(signalVector *y,
     while (xP < xPEnd) {
       (*yP++) = (*xP++)*expjLookup(phase);
       phase += freq;
+      if (phase > 2 * M_PI)
+        phase -= 2 * M_PI;
+      else if (phase < -2 * M_PI)
+        phase += 2 * M_PI;
     }
   }
 
