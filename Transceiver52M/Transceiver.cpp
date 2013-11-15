@@ -654,12 +654,14 @@ void Transceiver::driveControl(size_t chan)
     else
        sprintf(response,"RSP TXTUNE 0 %d",freqKhz);
   }
-  else if (strcmp(command,"SETTSC")==0) {
+  else if (!strcmp(command,"SETTSC")) {
     // set TSC
     int TSC;
-    sscanf(buffer,"%3s %s %d",cmdcheck,command,&TSC);
+    sscanf(buffer, "%3s %s %d", cmdcheck, command, &TSC);
     if (mOn)
-      sprintf(response,"RSP SETTSC 1 %d",TSC);
+      sprintf(response, "RSP SETTSC 1 %d", TSC);
+    else if (chan && (TSC != mTSC))
+      sprintf(response, "RSP SETTSC 1 %d", TSC);
     else {
       mTSC = TSC;
       generateMidamble(mSPSRx, TSC);
