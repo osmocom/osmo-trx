@@ -238,7 +238,7 @@ void RadioInterfaceResamp::pushBuffer()
 
 	convert_float_short(convertSendBuffer[0],
 			    (float *) outerSendBuffer->begin(),
-			    powerScaling, 2 * outer_len);
+			    powerScaling[0], 2 * outer_len);
 
 	num_sent = mRadio->writeSamples(convertSendBuffer,
 					outer_len,

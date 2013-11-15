@@ -47,7 +47,7 @@ protected:
 
   std::vector<short *> convertRecvBuffer;
   std::vector<short *> convertSendBuffer;
-
+  std::vector<float> powerScaling;
   bool underrun;			      ///< indicates writes to USRP are too slow
   bool overrun;				      ///< indicates reads from USRP are too slow
   TIMESTAMP writeTimestamp;		      ///< sample timestamp of next packet written to USRP
@@ -58,8 +58,6 @@ protected:
   int receiveOffset;                          ///< offset b/w transmit and receive GSM timestamps, in timeslots
 
   bool mOn;				      ///< indicates radio is on
-
-  double powerScaling;
 
   bool loadTest;
   int mNumARFCNs;

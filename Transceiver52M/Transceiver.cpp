@@ -603,28 +603,29 @@ void Transceiver::driveControl(size_t chan)
     else {
       sprintf(response,"RSP NOISELEV 1  0");
     }
-  }   
-  else if (strcmp(command,"SETPOWER")==0) {
+  }
+  else if (!strcmp(command, "SETPOWER")) {
     // set output power in dB
     int dbPwr;
-    sscanf(buffer,"%3s %s %d",cmdcheck,command,&dbPwr);
-    if (!mOn) 
-      sprintf(response,"RSP SETPOWER 1 %d",dbPwr);
+    sscanf(buffer, "%3s %s %d", cmdcheck, command, &dbPwr);
+    if (!mOn)
+      sprintf(response, "RSP SETPOWER 1 %d", dbPwr);
     else {
       mPower = dbPwr;
-      mRadioInterface->setPowerAttenuation(dbPwr, chan);
-      sprintf(response,"RSP SETPOWER 0 %d",dbPwr);
+      mRadioInterface->setPowerAttenuation(mPower, chan);
+      sprintf(response, "RSP SETPOWER 0 %d", dbPwr);
     }
   }
-  else if (strcmp(command,"ADJPOWER")==0) {
+  else if (!strcmp(command,"ADJPOWER")) {
     // adjust power in dB steps
     int dbStep;
-    sscanf(buffer,"%3s %s %d",cmdcheck,command,&dbStep);
-    if (!mOn) 
-      sprintf(response,"RSP ADJPOWER 1 %d",mPower);
+    sscanf(buffer, "%3s %s %d", cmdcheck, command, &dbStep);
+    if (!mOn)
+      sprintf(response, "RSP ADJPOWER 1 %d", mPower);
     else {
       mPower += dbStep;
-      sprintf(response,"RSP ADJPOWER 0 %d",mPower);
+      mRadioInterface->setPowerAttenuation(mPower, chan);
+      sprintf(response, "RSP ADJPOWER 0 %d", mPower);
     }
   }
 #define FREQOFFSET 0//11.2e3

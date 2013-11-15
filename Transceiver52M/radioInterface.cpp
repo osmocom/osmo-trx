@@ -38,8 +38,7 @@ RadioInterface::RadioInterface(RadioDevice *wRadio,
                                int wReceiveOffset, GSM::Time wStartTime)
   : mRadio(wRadio), mSPSTx(sps), mSPSRx(1), mChans(chans), mMIMO(diversity),
     sendCursor(0), recvCursor(0), underrun(false), overrun(false),
-    receiveOffset(wReceiveOffset), mOn(false), powerScaling(1.0),
-    loadTest(false)
+    receiveOffset(wReceiveOffset), mOn(false), loadTest(false)
 {
   mClock.set(wStartTime);
 }
@@ -63,6 +62,7 @@ bool RadioInterface::init(int type)
   convertSendBuffer.resize(mChans);
   convertRecvBuffer.resize(mChans);
   mReceiveFIFO.resize(mChans);
+  powerScaling.resize(mChans);
 
   for (size_t i = 0; i < mChans; i++) {
     sendBuffer[i] = new signalVector(CHUNK * mSPSTx);
@@ -120,9 +120,9 @@ void RadioInterface::setPowerAttenuation(double atten, size_t chan)
   digAtten = atten - mRadio->maxTxGain() + rfGain;
 
   if (digAtten < 1.0)
-    powerScaling = 1.0;
+    powerScaling[chan] = 1.0;
   else
-    powerScaling = 1.0/sqrt(pow(10, (digAtten/10.0)));
+    powerScaling[chan] = 1.0 / sqrt(pow(10, digAtten / 10.0));
 }
 
 int RadioInterface::radioifyVector(signalVector &wVector,
@@ -255,7 +255,6 @@ bool RadioInterface::driveReceiveRadio()
                          *burst->getVector(n));
       }
 
-
       if (mReceiveFIFO[i].size() < 32)
         mReceiveFIFO[i].write(burst);
       else
@@ -363,7 +362,7 @@ void RadioInterface::pushBuffer()
   for (size_t i = 0; i < mChans; i++) {
     convert_float_short(convertSendBuffer[i],
                         (float *) sendBuffer[i]->begin(),
-                        powerScaling, 2 * sendCursor);
+                        powerScaling[i], 2 * sendCursor);
   }
 
   /* Send the all samples in the send buffer */ 
