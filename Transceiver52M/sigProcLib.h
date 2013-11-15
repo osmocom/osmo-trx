@@ -146,14 +146,6 @@ complex peakDetect(const signalVector &rxBurst,
 void scaleVector(signalVector &x,
 		 complex scale);
 
-/**      
-        Add a constant offset to a vecotr.
-        @param x The vector of interest.
-        @param offset The offset.
-*/
-void offsetVector(signalVector &x,
-		  complex offset);
-
 /**
         Generate a modulated GSM midamble, stored within the library.
         @param gsmPulse The GSM pulse used for modulation.

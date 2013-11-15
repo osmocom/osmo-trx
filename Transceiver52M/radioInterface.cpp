@@ -38,7 +38,7 @@ RadioInterface::RadioInterface(RadioDevice *wRadio,
                                int wReceiveOffset, GSM::Time wStartTime)
   : mRadio(wRadio), mSPSTx(sps), mSPSRx(1), mChans(chans), mMIMO(diversity),
     sendCursor(0), recvCursor(0), underrun(false), overrun(false),
-    receiveOffset(wReceiveOffset), mOn(false), loadTest(false)
+    receiveOffset(wReceiveOffset), mOn(false)
 {
   mClock.set(wStartTime);
 }

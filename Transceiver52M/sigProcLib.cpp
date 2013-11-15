@@ -1135,26 +1135,6 @@ bool multVector(signalVector &x,
   return true;
 }
 
-
-void offsetVector(signalVector &x,
-		  complex offset)
-{
-  signalVector::iterator xP = x.begin();
-  signalVector::iterator xPEnd = x.end();
-  if (!x.isReal()) {
-    while (xP < xPEnd) {
-      *xP += offset;
-      xP++;
-    }
-  }
-  else {
-    while (xP < xPEnd) {
-      *xP = xP->real() + offset;
-      xP++;
-    }      
-  }
-}
-
 bool generateMidamble(int sps, int tsc)
 {
   bool status = true;

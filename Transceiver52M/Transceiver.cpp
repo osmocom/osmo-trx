@@ -628,12 +628,11 @@ void Transceiver::driveControl(size_t chan)
       sprintf(response, "RSP ADJPOWER 0 %d", mPower);
     }
   }
-#define FREQOFFSET 0//11.2e3
   else if (strcmp(command,"RXTUNE")==0) {
     // tune receiver
     int freqKhz;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&freqKhz);
-    mRxFreq = freqKhz*1.0e3+FREQOFFSET;
+    mRxFreq = freqKhz * 1e3;
     if (!mRadioInterface->tuneRx(mRxFreq, chan)) {
        LOG(ALERT) << "RX failed to tune";
        sprintf(response,"RSP RXTUNE 1 %d",freqKhz);
@@ -645,8 +644,7 @@ void Transceiver::driveControl(size_t chan)
     // tune txmtr
     int freqKhz;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&freqKhz);
-    //freqKhz = 890e3;
-    mTxFreq = freqKhz*1.0e3+FREQOFFSET;
+    mTxFreq = freqKhz * 1e3;
     if (!mRadioInterface->tuneTx(mTxFreq, chan)) {
        LOG(ALERT) << "TX failed to tune";
        sprintf(response,"RSP TXTUNE 1 %d",freqKhz);
@@ -706,23 +704,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   uint64_t frameNum = 0;
   for (int i = 0; i < 4; i++)
     frameNum = (frameNum << 8) | (0x0ff & buffer[i+1]);
-  
-  /*
-  if (GSM::Time(frameNum,timeSlot) >  mTransmitDeadlineClock + GSM::Time(51,0)) {
-    // stale burst
-    //LOG(DEBUG) << "FAST! "<< GSM::Time(frameNum,timeSlot);
-    //writeClockInterface();
-    }*/
 
-/*
-  DAB -- Just let these go through the demod.
-  if (GSM::Time(frameNum,timeSlot) < mTransmitDeadlineClock) {
-    // stale burst from GSM core
-    LOG(NOTICE) << "STALE packet on GSM->TRX interface at time "<< GSM::Time(frameNum,timeSlot);
-    return false;
-  }
-*/
-  
   // periodically update GSM core clock
   LOG(DEBUG) << "mTransmitDeadlineClock " << mTransmitDeadlineClock
 		<< " mLastClockUpdateTime " << mLastClockUpdateTime;

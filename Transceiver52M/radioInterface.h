@@ -59,10 +59,6 @@ protected:
 
   bool mOn;				      ///< indicates radio is on
 
-  bool loadTest;
-  int mNumARFCNs;
-  signalVector *finalVec, *finalVec9;
-
 private:
 
   /** format samples to USRP */ 
