@@ -352,6 +352,8 @@ void *async_event_loop(uhd_device *dev)
 		dev->recv_async_msg();
 		pthread_testcancel();
 	}
+
+	return NULL;
 }
 
 /* 

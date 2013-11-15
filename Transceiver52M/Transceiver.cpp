@@ -654,7 +654,7 @@ void Transceiver::driveControl(size_t chan)
   }
   else if (!strcmp(command,"SETTSC")) {
     // set TSC
-    int TSC;
+    unsigned TSC;
     sscanf(buffer, "%3s %s %d", cmdcheck, command, &TSC);
     if (mOn)
       sprintf(response, "RSP SETTSC 1 %d", TSC);

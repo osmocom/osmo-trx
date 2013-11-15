@@ -83,7 +83,7 @@ float noiseVector::avg() const
 {
 	float val = 0.0;
 
-	for (int i = 0; i < size(); i++)
+	for (size_t i = 0; i < size(); i++)
 		val += (*this)[i];
 
 	return val / (float) size();

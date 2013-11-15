@@ -366,10 +366,11 @@ static void GMSKReverseRotate(signalVector &x, int sps)
 signalVector *convolve(const signalVector *x,
                         const signalVector *h,
                         signalVector *y,
-                        ConvType spanType, int start,
-                        unsigned len, unsigned step, int offset)
+                        ConvType spanType, size_t start,
+                        size_t len, size_t step, int offset)
 {
-  int rc, head = 0, tail = 0;
+  int rc;
+  size_t head = 0, tail = 0;
   bool alloc = false, append = false;
   const signalVector *_x = NULL;
 
@@ -1000,7 +1001,7 @@ static complex fastPeakDetect(const signalVector &rxBurst, float *index)
   complex amp;
   int _index = -1;
 
-  for (int i = 0; i < rxBurst.size(); i++) {
+  for (size_t i = 0; i < rxBurst.size(); i++) {
     val = rxBurst[i].norm2();
     if (val > max) {
       max = val;
@@ -1563,7 +1564,7 @@ bool designDFE(signalVector &channelResponse,
 
   signalVector *L[Nf];
   signalVector::iterator Lptr;
-  float d;
+  float d = 1.0;
   for(int i = 0; i < Nf; i++) {
     d = G0.begin()->norm2() + G1.begin()->norm2();
     L[i] = new signalVector(Nf+nu);

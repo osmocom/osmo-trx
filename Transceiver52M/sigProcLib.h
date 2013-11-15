@@ -53,13 +53,10 @@ void sigProcLibDestroy(void);
 	@param spanType The type/span of the convolution.
 	@return The convolution result or NULL on error.
 */
-signalVector *convolve(const signalVector *a,
-                       const signalVector *b,
-                       signalVector *c,
-                       ConvType spanType,
-                       int start = 0,
-                       unsigned len = 0,
-                       unsigned step = 1, int offset = 0);
+signalVector *convolve(const signalVector *a, const signalVector *b,
+                       signalVector *c, ConvType spanType,
+                       size_t start = 0, size_t len = 0,
+                       size_t step = 1, int offset = 0);
 
 /** 
         Frequency shift a vector.

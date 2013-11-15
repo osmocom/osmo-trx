@@ -149,7 +149,7 @@ int RadioInterface::unRadioifyVector(float *floatVector,
     return -1;
   }
 
-  for (int i = 0; i < newVector.size(); i++) {
+  for (size_t i = 0; i < newVector.size(); i++) {
     *itr++ = Complex<float>(floatVector[2 * i + 0],
 			    floatVector[2 * i + 1]);
   }

@@ -43,9 +43,9 @@ public:
 	void setAligned(bool aligned);
 
 private:
-	Symmetry symmetry;
 	bool real;
 	bool aligned;
+	Symmetry symmetry;
 };
 
 #endif /* _SIGNALVECTOR_H_ */
