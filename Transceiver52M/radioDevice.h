@@ -43,6 +43,8 @@ class RadioDevice {
   /** Initialize the USRP */
   virtual int open(const std::string &args = "", bool extref = false)=0;
 
+  virtual ~RadioDevice() { }
+
   /** Start the USRP */
   virtual bool start()=0;
 
