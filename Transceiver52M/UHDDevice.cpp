@@ -90,6 +90,8 @@ static struct uhd_dev_offset special_offsets[] = {
 static double get_dev_offset(enum uhd_dev_type type,
 			     int sps, bool diversity = false)
 {
+	struct uhd_dev_offset *offset;
+
 	/* Reject USRP1 */
 	if (type == USRP1) {
 		LOG(ERR) << "Invalid device type";
@@ -105,24 +107,27 @@ static double get_dev_offset(enum uhd_dev_type type,
 
 		switch (sps) {
 		case 1:
-			return special_offsets[0].offset;
+			offset = &special_offsets[0];
+			break;
 		case 4:
 		default:
-			return special_offsets[1].offset;
+			offset = &special_offsets[1];
+		}
+	} else {
+		/* Normal operation */
+		switch (sps) {
+		case 1:
+			offset = &uhd_offsets[2 * type + 0];
+			break;
+		case 4:
+		default:
+			offset = &uhd_offsets[2 * type + 1];
 		}
 	}
 
-	/* Normal operation */
-	switch (sps) {
-	case 1:
-		return uhd_offsets[2 * type + 0].offset;
-	case 4:
-	default:
-		return uhd_offsets[2 * type + 1].offset;
-	}
+	std::cout << "-- Setting " << offset->desc << std::endl;
 
-	LOG(ERR) << "Unsupported samples-per-symbols: " << sps;
-	return 0.0;
+	return offset->offset;
 }
 
 /*
