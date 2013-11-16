@@ -362,7 +362,7 @@ bool Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
   signalVector *chanResp;
 
   /* Check equalization update state */
-  if ((elapsed > 50) || (!state->chanResponse[tn])) {
+  if (needDFE && ((elapsed > 50) || (!state->chanResponse[tn]))) {
     delete state->DFEForward[tn];
     delete state->DFEFeedback[tn];
     state->DFEForward[tn] = NULL;
