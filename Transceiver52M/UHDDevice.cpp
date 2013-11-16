@@ -756,7 +756,10 @@ bool uhd_device::start()
 
 bool uhd_device::stop()
 {
-	uhd::stream_cmd_t stream_cmd = 
+	if (!started)
+		return false;
+
+	uhd::stream_cmd_t stream_cmd =
 		uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
 
 	usrp_dev->issue_stream_cmd(stream_cmd);
