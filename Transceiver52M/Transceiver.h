@@ -199,6 +199,9 @@ public:
     return true;
   }
 
+  /** accessor for number of channels */
+  size_t numChans() const { return mChans; };
+
   /** Codes for channel combinations */
   typedef enum {
     FILL,               ///< Channel is transmitted, but unused

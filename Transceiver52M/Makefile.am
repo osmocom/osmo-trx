@@ -64,8 +64,7 @@ libtransceiver_la_SOURCES = \
 	radioInterfaceResamp.cpp \
 	radioInterfaceDiversity.cpp
 
-noinst_PROGRAMS = \
-	transceiver
+bin_PROGRAMS = osmo-trx
 
 noinst_HEADERS = \
 	Complex.h \
@@ -83,8 +82,8 @@ noinst_HEADERS = \
 	common/scale.h \
 	common/mult.h
 
-transceiver_SOURCES = runTransceiver.cpp
-transceiver_LDADD = \
+osmo_trx_SOURCES = osmo-trx.cpp
+osmo_trx_LDADD = \
 	libtransceiver.la \
 	$(ARCH_LA) \
 	$(GSM_LA) \
@@ -92,8 +91,8 @@ transceiver_LDADD = \
 
 if USRP1 
 libtransceiver_la_SOURCES += USRPDevice.cpp
-transceiver_LDADD += $(USRP_LIBS)
+osmo_trx_LDADD += $(USRP_LIBS)
 else
 libtransceiver_la_SOURCES += UHDDevice.cpp
-transceiver_LDADD += $(UHD_LIBS)
+osmo_trx_LDADD += $(UHD_LIBS)
 endif
