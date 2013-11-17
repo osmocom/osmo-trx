@@ -32,8 +32,6 @@
 #include <Logger.h>
 #include <Configuration.h>
 
-#define CONFIGDB	"/etc/OpenBTS/OpenBTS.db"
-
 /* Samples-per-symbol for downlink path
  *     4 - Uses precision modulator (more computation, less distortion)
  *     1 - Uses minimized modulator (less computation, more distortion)
@@ -71,44 +69,20 @@ struct trx_config {
 	bool diversity;
 };
 
-ConfigurationTable gConfig(CONFIGDB);
+ConfigurationTable gConfig;
 
 volatile bool gshutdown = false;
 
 /* Run sanity check on configuration table
  *     The global table constructor cannot provide notification in the
- *     event of failure. Make sure that we can open the database file,
+ *     event of failure. Make sure that we can access the database,
  *     write to it, and that it contains the bare minimum required keys.
  */
-bool testConfig(const char *filename)
+bool testConfig()
 {
-	int rc, val = 9999;
-	sqlite3 *db;
+	int val = 9999;
 	std::string test = "asldfkjsaldkf";
 	const char *key = "Log.Level";
-
-	/* Try to open the database  */
-	rc = sqlite3_open(filename, &db);
-	if (rc || !db) {
-		std::cerr << std::endl;
-		std::cerr << "Config: Database could not be opened - "
-			  << "check that database exists with read access"
-			  << std::endl;
-		return false;
-	} else {
-		sqlite3_close(db);
-	}
-
-	/* Attempt to set a test value in the global config */
-	if (!gConfig.set(test, val)) {
-		std::cerr << std::endl;
-		std::cerr << "Config: Failed to set test key - "
-			  << "permission to write to database directory?"
-			  << std::endl;
-		return false;
-	} else {
-		gConfig.remove(test);
-	}
 
 	/* Attempt to query */
 	try {
@@ -120,22 +94,31 @@ bool testConfig(const char *filename)
 		return false;
 	}
 
+	/* Attempt to set a test value in the global config */
+	if (!gConfig.set(test, val)) {
+		std::cerr << std::endl;
+		std::cerr << "Config: Failed to set test key" << std::endl;
+		return false;
+	} else {
+		gConfig.remove(test);
+	}
+
 	return true;
 }
+
 
 /* Setup configuration values
  *     Don't query the existence of the Log.Level because it's a
  *     mandatory value. That is, if it doesn't exist, the configuration
- *     table will crash or will have already crashed. So we check for
- *     it in the initial database sanity check. Everything else we can
- *     survive without and use default values if the database entries
+ *     table will crash or will have already crashed. Everything else we
+ *     can survive without and use default values if the database entries
  *     are empty.
  */
 bool trx_setup_config(struct trx_config *config)
 {
 	std::string refstr, divstr;
 
-	if (!testConfig(CONFIGDB))
+	if (!testConfig())
 		return false;
 
 	if (config->log_level == "")
