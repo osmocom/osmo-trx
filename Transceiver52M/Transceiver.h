@@ -54,7 +54,7 @@ struct TransceiverState {
   ~TransceiverState();
 
   /* Initialize a multiframe slot in the filler table */
-  void init(size_t slot, signalVector *burst);
+  void init(size_t slot, signalVector *burst, bool fill);
 
   int chanType[8];
 
@@ -64,6 +64,7 @@ struct TransceiverState {
   /* The filler table */
   signalVector *fillerTable[102][8];
   int fillerModulus[8];
+  bool mRetrans;
 
   /* Most recent channel estimate of all timeslots */
   signalVector *chanResponse[8];
@@ -121,6 +122,9 @@ private:
   /** modulate and add a burst to the transmit queue */
   void addRadioVector(size_t chan, BitVector &bits,
                       int RSSI, GSM::Time &wTime);
+
+  /** Update filler table */
+  void updateFillerTable(size_t chan, radioVector *burst);
 
   /** Push modulated burst into transmit FIFO corresponding to a particular timestamp */
   void pushRadioVector(GSM::Time &nowTime);
@@ -187,7 +191,7 @@ public:
 
   /** start the Transceiver */
   void start();
-  bool init();
+  bool init(bool filler);
 
   /** attach the radioInterface receive FIFO */
   bool receiveFIFO(VectorFIFO *wFIFO, size_t chan)

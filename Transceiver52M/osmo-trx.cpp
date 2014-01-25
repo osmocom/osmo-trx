@@ -66,6 +66,7 @@ struct trx_config {
 	unsigned sps;
 	unsigned chans;
 	bool extref;
+	bool filler;
 	bool diversity;
 };
 
@@ -116,7 +117,7 @@ bool testConfig()
  */
 bool trx_setup_config(struct trx_config *config)
 {
-	std::string refstr, divstr;
+	std::string refstr, fillstr, divstr;
 
 	if (!testConfig())
 		return false;
@@ -163,6 +164,7 @@ bool trx_setup_config(struct trx_config *config)
 		config->chans = 2;
 
 	refstr = config->extref ? "Enabled" : "Disabled";
+	fillstr = config->filler ? "Enabled" : "Disabled";
 	divstr = config->diversity ? "Enabled" : "Disabled";
 
 	std::ostringstream ost("");
@@ -174,6 +176,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   Channels................ " << config->chans << std::endl;
 	ost << "   Samples-per-Symbol...... " << config->sps << std::endl;
 	ost << "   External Reference...... " << refstr << std::endl;
+	ost << "   C0 Filler Table......... " << fillstr << std::endl;
 	ost << "   Diversity............... " << divstr << std::endl;
 	std::cout << ost << std::endl;
 
@@ -231,7 +234,7 @@ Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
 
 	trx = new Transceiver(config->port, config->addr.c_str(), config->sps,
 			      config->chans, GSM::Time(3,0), radio);
-	if (!trx->init()) {
+	if (!trx->init(config->filler)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
 		delete trx;
 		return NULL;
@@ -279,7 +282,8 @@ static void print_help()
 		"  -d    Enable dual channel diversity receiver\n"
 		"  -x    Enable external 10 MHz reference\n"
 		"  -s    Samples-per-symbol (1 or 4)\n"
-		"  -c    Number of ARFCN channels (default=1)\n",
+		"  -c    Number of ARFCN channels (default=1)\n"
+		"  -f    Enable C0 filler table\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
 }
 
@@ -291,9 +295,10 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->sps = 0;
 	config->chans = 0;
 	config->extref = false;
+	config->filler = false;
 	config->diversity = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxs:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfs:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -319,6 +324,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'x':
 			config->extref = true;
+			break;
+		case 'f':
+			config->filler = true;
 			break;
 		case 's':
 			config->sps = atoi(optarg);

@@ -43,7 +43,7 @@ using namespace GSM;
 #define NOISE_CNT			20
 
 TransceiverState::TransceiverState()
-  : mNoiseLev(0.0), mNoises(NOISE_CNT)
+  : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT)
 {
   for (int i = 0; i < 8; i++) {
     chanType[i] = Transceiver::NONE;
@@ -69,10 +69,18 @@ TransceiverState::~TransceiverState()
   }
 }
 
-void TransceiverState::init(size_t slot, signalVector *burst)
+void TransceiverState::init(size_t slot, signalVector *burst, bool fill)
 {
-  for (int i = 0; i < 102; i++)
-    fillerTable[i][slot] = new signalVector(*burst);
+  signalVector *filler;
+
+  for (int i = 0; i < 102; i++) {
+    if (fill)
+      filler = new signalVector(*burst);
+    else
+      filler = new signalVector(burst->size());
+
+    fillerTable[i][slot] = filler;
+  }
 }
 
 Transceiver::Transceiver(int wBasePort,
@@ -112,7 +120,7 @@ Transceiver::~Transceiver()
   }
 }
 
-bool Transceiver::init()
+bool Transceiver::init(bool filler)
 {
   int d_srcport, d_dstport, c_srcport, c_dstport;
   signalVector *burst;
@@ -158,7 +166,7 @@ bool Transceiver::init()
     for (size_t n = 0; n < 8; n++) {
       burst = modulateBurst(gDummyBurst, 8 + (n % 4 == 0), mSPSTx);
       scaleVector(*burst, txFullScale);
-      mStates[i].init(n, burst);
+      mStates[i].init(n, burst, filler && !i);
       delete burst;
     }
   }
@@ -190,6 +198,19 @@ void Transceiver::addRadioVector(size_t chan, BitVector &bits,
   mTxPriorityQueues[chan].write(radio_burst);
 }
 
+void Transceiver::updateFillerTable(size_t chan, radioVector *burst)
+{
+  int TN, modFN;
+  TransceiverState *state = &mStates[chan];
+
+  TN = burst->getTime().TN();
+  modFN = burst->getTime().FN() % state->fillerModulus[TN];
+
+  delete state->fillerTable[modFN][TN];
+  state->fillerTable[modFN][TN] = burst->getVector();
+  burst->setVector(NULL);
+}
+
 void Transceiver::pushRadioVector(GSM::Time &nowTime)
 {
   int TN, modFN;
@@ -197,19 +218,15 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
   TransceiverState *state;
   std::vector<signalVector *> bursts(mChans);
   std::vector<bool> zeros(mChans);
+  std::vector<bool> filler(mChans, true);
 
   for (size_t i = 0; i < mChans; i ++) {
     state = &mStates[i];
 
     while ((burst = mTxPriorityQueues[i].getStaleBurst(nowTime))) {
       LOG(NOTICE) << "dumping STALE burst in TRX->USRP interface";
-
-      TN = burst->getTime().TN();
-      modFN = burst->getTime().FN() % state->fillerModulus[TN];
-
-      delete state->fillerTable[modFN][TN];
-      state->fillerTable[modFN][TN] = burst->getVector();
-      burst->setVector(NULL);
+      if (state->mRetrans)
+        updateFillerTable(i, burst);
       delete burst;
     }
 
@@ -220,17 +237,25 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     zeros[i] = state->chanType[TN] == NONE;
 
     if ((burst = mTxPriorityQueues[i].getCurrentBurst(nowTime))) {
-      delete state->fillerTable[modFN][TN];
-      state->fillerTable[modFN][TN] = burst->getVector();
       bursts[i] = burst->getVector();
-      burst->setVector(NULL);
+
+      if (state->mRetrans) {
+        updateFillerTable(i, burst);
+      } else {
+        burst->setVector(NULL);
+        filler[i] = false;
+      }
+
       delete burst;
     }
   }
 
   mRadioInterface->driveTransmitRadio(bursts, zeros);
 
-  return;
+  for (size_t i = 0; i < mChans; i++) {
+    if (!filler[i])
+      delete bursts[i];
+  }
 }
 
 void Transceiver::setModulus(size_t timeslot, size_t chan)
