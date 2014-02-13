@@ -170,20 +170,20 @@ bool RadioInterface::tuneRx(double freq, size_t chan)
 
 void RadioInterface::start()
 {
-  LOG(INFO) << "starting radio interface...";
+  LOG(INFO) << "Starting radio";
 #ifdef USRP1
   mAlignRadioServiceLoopThread.start((void * (*)(void*))AlignRadioServiceLoopAdapter,
                                      (void*)this);
 #endif
+  mRadio->start();
   writeTimestamp = mRadio->initialWriteTimestamp();
   readTimestamp = mRadio->initialReadTimestamp();
-  mRadio->start(); 
-  LOG(DEBUG) << "Radio started";
-  mRadio->updateAlignment(writeTimestamp-10000); 
+
+  mRadio->updateAlignment(writeTimestamp-10000);
   mRadio->updateAlignment(writeTimestamp-10000);
 
   mOn = true;
-
+  LOG(INFO) << "Radio started";
 }
 
 #ifdef USRP1

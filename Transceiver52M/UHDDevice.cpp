@@ -278,8 +278,8 @@ public:
 	bool setTxFreq(double wFreq, size_t chan);
 	bool setRxFreq(double wFreq, size_t chan);
 
-	inline TIMESTAMP initialWriteTimestamp() { return 0; }
-	inline TIMESTAMP initialReadTimestamp() { return 0; }
+	inline TIMESTAMP initialWriteTimestamp() { return ts_initial * sps; }
+	inline TIMESTAMP initialReadTimestamp() { return ts_initial; }
 
 	inline double fullScaleInputValue() { return 32000 * TX_AMPL; }
 	inline double fullScaleOutputValue() { return 32000; }
@@ -336,7 +336,7 @@ private:
 	size_t drop_cnt;
 	uhd::time_spec_t prev_ts;
 
-	TIMESTAMP ts_offset;
+	TIMESTAMP ts_initial, ts_offset;
 	std::vector<smpl_buf *> rx_buffers;
 
 	void init_gains();
@@ -392,7 +392,7 @@ uhd_device::uhd_device(size_t sps, size_t chans, bool diversity)
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),
 	  started(false), aligned(false), rx_pkt_cnt(0), drop_cnt(0),
-	  prev_ts(0,0), ts_offset(0)
+	  prev_ts(0,0), ts_initial(0), ts_offset(0)
 {
 	this->sps = sps;
 	this->chans = chans;
@@ -700,38 +700,45 @@ bool uhd_device::flush_recv(size_t num_pkts)
 {
 	uhd::rx_metadata_t md;
 	size_t num_smpls;
-	uint32_t buff[rx_spp];
-	float timeout;
+	float timeout = 0.1f;
 
-	// Use .01 sec instead of the default .1 sec
-	timeout = .01;
+	std::vector<std::vector<short> >
+		pkt_bufs(chans, std::vector<short>(2 * rx_spp));
 
-	for (size_t i = 0; i < num_pkts; i++) {
-		num_smpls = rx_stream->recv(buff, rx_spp, md,
+	std::vector<short *> pkt_ptrs;
+	for (size_t i = 0; i < pkt_bufs.size(); i++)
+		pkt_ptrs.push_back(&pkt_bufs[i].front());
+
+	ts_initial = 0;
+	while (!ts_initial || (num_pkts-- > 0)) {
+		num_smpls = rx_stream->recv(pkt_ptrs, rx_spp, md,
 					    timeout, true);
 		if (!num_smpls) {
 			switch (md.error_code) {
 			case uhd::rx_metadata_t::ERROR_CODE_TIMEOUT:
-				return true;
 			default:
 				continue;
 			}
 		}
+
+		ts_initial = convert_time(md.time_spec, rx_rate);
 	}
+
+	LOG(INFO) << "Initial timestamp " << ts_initial << std::endl;
 
 	return true;
 }
 
-void uhd_device::restart(uhd::time_spec_t ts)
+void uhd_device::restart(uhd::time_spec_t)
 {
-	usrp_dev->set_time_now(ts);
 	aligned = false;
 
 	uhd::stream_cmd_t cmd = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
-	cmd.time_spec = uhd::time_spec_t(0.1);
-	cmd.stream_now = false;
+	cmd.stream_now = true;
 
 	usrp_dev->issue_stream_cmd(cmd);
+
+	flush_recv(1);
 }
 
 bool uhd_device::start()
@@ -1139,7 +1146,7 @@ ssize_t smpl_buf::read(void *buf, size_t len, TIMESTAMP timestamp)
 		num_smpls = len;
 
 	// Starting index
-	size_t read_start = data_start + (timestamp - time_start);
+	size_t read_start = (data_start + (timestamp - time_start)) % buf_len;
 
 	// Read it
 	if (read_start + num_smpls < buf_len) {
@@ -1194,6 +1201,9 @@ ssize_t smpl_buf::write(void *buf, size_t len, TIMESTAMP timestamp)
 
 	data_end = (write_start + len) % buf_len;
 	time_end = timestamp + len;
+
+	if (!data_start)
+		data_start = write_start;
 
 	if (((write_start + len) > buf_len) && (data_end > data_start))
 		return ERROR_OVERFLOW;
