@@ -43,7 +43,8 @@ enum uhd_dev_type {
 	USRP1,
 	USRP2,
 	B100,
-	B2XX,
+	B200,
+	B210,
 	UMTRX,
 	NUM_USRP_TYPES,
 };
@@ -72,8 +73,10 @@ static struct uhd_dev_offset uhd_offsets[NUM_USRP_TYPES * 2] = {
 	{ USRP2, 4, 8.0230e-5, "N2XX 4 SPS" },
 	{ B100,  1, 1.2104e-4, "B100 1 SPS" },
 	{ B100,  4, 7.9307e-5, "B100 4 SPS" },
-	{ B2XX,  1, 9.9692e-5, "B2XX 1 SPS" },
-	{ B2XX,  4, 6.9248e-5, "B2XX 4 SPS" },
+	{ B200,  1, 9.9692e-5, "B200 1 SPS" },
+	{ B200,  4, 6.9248e-5, "B200 4 SPS" },
+	{ B210,  1, 9.9692e-5, "B210 1 SPS" },
+	{ B210,  4, 6.9248e-5, "B210 4 SPS" },
 	{ UMTRX, 1, 9.9692e-5, "UmTRX 1 SPS" },
 	{ UMTRX, 4, 7.3846e-5, "UmTRX 4 SPS" },
 };
@@ -152,7 +155,8 @@ static double select_rate(uhd_dev_type type, int sps, bool diversity = false)
 		return USRP2_BASE_RT * sps;
 	case B100:
 		return B100_BASE_RT * sps;
-	case B2XX:
+	case B200:
+	case B210:
 	case UMTRX:
 		return GSMRATE * sps;
 	default:
@@ -460,7 +464,7 @@ int uhd_device::set_rates(double tx_rate, double rx_rate)
 	double tx_offset, rx_offset;
 
 	// B2XX is the only device where we set FPGA clocking
-	if (dev_type == B2XX) {
+	if ((dev_type == B200) || (dev_type == B210)) {
 		if (set_master_clk(B2XX_CLK_RT) < 0)
 			return -1;
 	}
@@ -564,10 +568,10 @@ bool uhd_device::parse_dev_type()
 		dev_type = B100;
 	} else if (b200_str != std::string::npos) {
 		tx_window = TX_WINDOW_USRP1;
-		dev_type = B2XX;
+		dev_type = B200;
 	} else if (b210_str != std::string::npos) {
 		tx_window = TX_WINDOW_USRP1;
-		dev_type = B2XX;
+		dev_type = B210;
 	} else if (usrp2_str != std::string::npos) {
 		tx_window = TX_WINDOW_FIXED;
 		dev_type = USRP2;
@@ -683,6 +687,8 @@ int uhd_device::open(const std::string &args, bool extref)
 		return RESAMP_64M;
 	case USRP2:
 		return RESAMP_100M;
+	case B200:
+	case B210:
 	default:
 		break;
 	}
