@@ -349,6 +349,9 @@ private:
 	std::string str_code(uhd::rx_metadata_t metadata);
 	std::string str_code(uhd::async_metadata_t metadata);
 
+	uhd::tune_request_t select_freq(double wFreq, size_t chan, bool tx);
+	bool set_freq(double freq, size_t chan, bool tx);
+
 	Thread async_event_thrd;
 	bool diversity;
 };
@@ -618,7 +621,8 @@ int uhd_device::open(const std::string &args, bool extref)
 		return -1;
 
 	// Verify and set channels
-	if ((dev_type == UMTRX) && (chans == 2)) {
+	if ((dev_type == B210) && (chans == 2)) {
+	} else if ((dev_type == UMTRX) && (chans == 2)) {
 		uhd::usrp::subdev_spec_t subdev_spec("A:0 B:0");
 		usrp_dev->set_tx_subdev_spec(subdev_spec);
 		usrp_dev->set_rx_subdev_spec(subdev_spec);
@@ -656,7 +660,9 @@ int uhd_device::open(const std::string &args, bool extref)
 	else
 		_rx_rate = _tx_rate / sps;
 
-	if ((_tx_rate > 0.0) && (set_rates(_tx_rate, _rx_rate) < 0))
+	if ((_tx_rate < 0.0) || (_rx_rate < 0.0))
+		return -1;
+	if (set_rates(_tx_rate, _rx_rate) < 0)
 		return -1;
 
 	// Create receive buffer
@@ -968,6 +974,82 @@ bool uhd_device::updateAlignment(TIMESTAMP timestamp)
 	return true;
 }
 
+uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
+{
+	double rf_spread, rf_freq;
+	std::vector<double> freqs;
+	uhd::tune_request_t treq(freq);
+
+	if (chans == 1)
+		return treq;
+	else if ((dev_type == UMTRX) && (chans == 2))
+		return treq;
+	else if ((dev_type != B210) || (chans > 2) || (chan > 1)) {
+		LOG(ALERT) << chans << " channels unsupported";
+		return treq;
+	}
+
+	if (tx)
+		freqs = tx_freqs;
+	else
+		freqs = rx_freqs;
+
+	/* Tune directly if other channel isn't tuned */
+	if (freqs[!chan] < 10.0)
+		return treq;
+
+	/* Find center frequency between channels */
+	rf_spread = fabs(freqs[!chan] - freq);
+	if (rf_spread > B2XX_CLK_RT) {
+		LOG(ALERT) << rf_spread << "Hz tuning spread not supported\n";
+		return treq;
+	}
+
+	rf_freq = (freqs[!chan] + freq) / 2.0f;
+
+	treq.rf_freq_policy = uhd::tune_request_t::POLICY_MANUAL;
+	treq.target_freq = freq;
+	treq.rf_freq = rf_freq;
+
+	return treq;
+}
+
+bool uhd_device::set_freq(double freq, size_t chan, bool tx)
+{
+	std::vector<double> freqs;
+	uhd::tune_result_t tres;
+	uhd::tune_request_t treq = select_freq(freq, chan, tx);
+
+	if (tx) {
+		tres = usrp_dev->set_tx_freq(treq, chan);
+		tx_freqs[chan] = usrp_dev->get_tx_freq(chan);
+	} else {
+		tres = usrp_dev->set_rx_freq(treq, chan);
+		rx_freqs[chan] = usrp_dev->get_rx_freq(chan);
+	}
+	LOG(INFO) << "\n" << tres.to_pp_string() << std::endl;
+
+	/* Manual RF policy means we intentionally tuned with a baseband
+	 * offset for dual-channel purposes. Now retune the other channel
+	 * with the opposite corresponding frequency offset
+	 */
+	if (treq.rf_freq_policy == uhd::tune_request_t::POLICY_MANUAL) {
+		if (tx) {
+			treq = select_freq(tx_freqs[!chan], !chan, true);
+			tres = usrp_dev->set_tx_freq(treq, !chan);
+			tx_freqs[!chan] = usrp_dev->get_tx_freq(!chan);
+		} else {
+			treq = select_freq(rx_freqs[!chan], !chan, false);
+			tres = usrp_dev->set_rx_freq(treq, !chan);
+			rx_freqs[!chan] = usrp_dev->get_rx_freq(!chan);
+
+		}
+		LOG(INFO) << "\n" << tres.to_pp_string() << std::endl;
+	}
+
+	return true;
+}
+
 bool uhd_device::setTxFreq(double wFreq, size_t chan)
 {
 	if (chan >= tx_freqs.size()) {
@@ -975,11 +1057,7 @@ bool uhd_device::setTxFreq(double wFreq, size_t chan)
 		return false;
 	}
 
-	uhd::tune_result_t tr = usrp_dev->set_tx_freq(wFreq, chan);
-	LOG(INFO) << "\n" << tr.to_pp_string();
-	tx_freqs[chan] = usrp_dev->get_tx_freq(chan);
-
-	return true;
+	return set_freq(wFreq, chan, true);
 }
 
 bool uhd_device::setRxFreq(double wFreq, size_t chan)
@@ -989,11 +1067,7 @@ bool uhd_device::setRxFreq(double wFreq, size_t chan)
 		return false;
 	}
 
-	uhd::tune_result_t tr = usrp_dev->set_rx_freq(wFreq, chan);
-	LOG(INFO) << "\n" << tr.to_pp_string();
-	rx_freqs[chan] = usrp_dev->get_rx_freq(chan);
-
-	return true;
+	return set_freq(wFreq, chan, false);
 }
 
 double uhd_device::getTxFreq(size_t chan)
@@ -1054,6 +1128,9 @@ std::string uhd_device::str_code(uhd::rx_metadata_t metadata)
 		break;
 	case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
 		ost << "An internal receive buffer has filled";
+		break;
+	case uhd::rx_metadata_t::ERROR_CODE_ALIGNMENT:
+		ost << "Multi-channel alignment failed";
 		break;
 	case uhd::rx_metadata_t::ERROR_CODE_BAD_PACKET:
 		ost << "The packet could not be parsed";
