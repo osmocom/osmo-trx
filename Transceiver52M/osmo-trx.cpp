@@ -68,6 +68,7 @@ struct trx_config {
 	bool extref;
 	bool filler;
 	bool diversity;
+	double offset;
 };
 
 ConfigurationTable gConfig;
@@ -178,6 +179,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   External Reference...... " << refstr << std::endl;
 	ost << "   C0 Filler Table......... " << fillstr << std::endl;
 	ost << "   Diversity............... " << divstr << std::endl;
+	ost << "   Tuning offset........... " << config->offset << std::endl;
 	std::cout << ost << std::endl;
 
 	return true;
@@ -283,7 +285,8 @@ static void print_help()
 		"  -x    Enable external 10 MHz reference\n"
 		"  -s    Samples-per-symbol (1 or 4)\n"
 		"  -c    Number of ARFCN channels (default=1)\n"
-		"  -f    Enable C0 filler table\n",
+		"  -f    Enable C0 filler table\n"
+		"  -o    Set baseband frequency offset (default=auto)\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
 }
 
@@ -297,8 +300,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->extref = false;
 	config->filler = false;
 	config->diversity = false;
+	config->offset = 0.0;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfs:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -327,6 +331,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'f':
 			config->filler = true;
+			break;
+		case 'o':
+			config->offset = atof(optarg);
 			break;
 		case 's':
 			config->sps = atoi(optarg);
@@ -366,7 +373,8 @@ int main(int argc, char *argv[])
 	srandom(time(NULL));
 
 	/* Create the low level device object */
-	usrp = RadioDevice::make(config.sps, config.chans, config.diversity);
+	usrp = RadioDevice::make(config.sps, config.chans,
+				 config.diversity, config.offset);
 	type = usrp->open(config.dev_args, config.extref);
 	if (type < 0) {
 		LOG(ALERT) << "Failed to create radio device" << std::endl;

@@ -257,7 +257,7 @@ private:
 */
 class uhd_device : public RadioDevice {
 public:
-	uhd_device(size_t sps, size_t chans, bool diversity);
+	uhd_device(size_t sps, size_t chans, bool diversity, double offset);
 	~uhd_device();
 
 	int open(const std::string &args, bool extref);
@@ -324,6 +324,7 @@ private:
 
 	double tx_gain_min, tx_gain_max;
 	double rx_gain_min, rx_gain_max;
+	double offset;
 
 	std::vector<double> tx_gains, rx_gains;
 	std::vector<double> tx_freqs, rx_freqs;
@@ -390,7 +391,7 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 	}
 }
 
-uhd_device::uhd_device(size_t sps, size_t chans, bool diversity)
+uhd_device::uhd_device(size_t sps, size_t chans, bool diversity, double offset)
 	: tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),
@@ -399,6 +400,7 @@ uhd_device::uhd_device(size_t sps, size_t chans, bool diversity)
 {
 	this->sps = sps;
 	this->chans = chans;
+	this->offset = offset;
 	this->diversity = diversity;
 }
 
@@ -980,11 +982,12 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 	std::vector<double> freqs;
 	uhd::tune_request_t treq(freq);
 
-	if (chans == 1)
-		return treq;
-	else if ((dev_type == UMTRX) && (chans == 2))
-		return treq;
-	else if ((dev_type != B210) || (chans > 2) || (chan > 1)) {
+	if ((chans == 1) || ((chans == 2) && dev_type == UMTRX)) {
+		if (offset == 0.0)
+			return treq;
+
+		return uhd::tune_request_t(freq, offset);
+	} else if ((dev_type != B210) || (chans > 2) || (chan > 1)) {
 		LOG(ALERT) << chans << " channels unsupported";
 		return treq;
 	}
@@ -1028,6 +1031,9 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 		rx_freqs[chan] = usrp_dev->get_rx_freq(chan);
 	}
 	LOG(INFO) << "\n" << tres.to_pp_string() << std::endl;
+
+	if ((chans == 1) || ((chans == 2) && dev_type == UMTRX))
+		return true;
 
 	/* Manual RF policy means we intentionally tuned with a baseband
 	 * offset for dual-channel purposes. Now retune the other channel
@@ -1324,7 +1330,8 @@ std::string smpl_buf::str_code(ssize_t code)
 	}
 }
 
-RadioDevice *RadioDevice::make(size_t sps, size_t chans, bool diversity)
+RadioDevice *RadioDevice::make(size_t sps, size_t chans,
+			       bool diversity, double offset)
 {
-	return new uhd_device(sps, chans, diversity);
+	return new uhd_device(sps, chans, diversity, offset);
 }

@@ -38,7 +38,7 @@ class RadioDevice {
   enum RadioInterfaceType { NORMAL, RESAMP_64M, RESAMP_100M, DIVERSITY };
 
   static RadioDevice *make(size_t sps, size_t chans = 1,
-                           bool diversity = false);
+                           bool diversity = false, double offset = 0.0);
 
   /** Initialize the USRP */
   virtual int open(const std::string &args = "", bool extref = false)=0;
