@@ -1,0 +1,5 @@
+osmo-trx (0.1.0) precise; urgency=low
+
+     * Initial release (Closes: #nnnn) <nnnn is the bug number of your ITP
+
+ -- Ivan Klyuchnikov <Ivan.Kluchnikov@fairwaves.ru>  Sun, 9 Mar 2014 14:10:10 +0400
