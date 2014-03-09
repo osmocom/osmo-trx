@@ -1,0 +1,11 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_HARDENING=1
+
+
+%:
+	dh $@ --with autoreconf
+
+# ugly hack to workaround broken library paths in uhd packages
+override_dh_shlibdeps:
+	dh_shlibdeps -- --ignore-missing-info
