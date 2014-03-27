@@ -642,18 +642,6 @@ int uhd_device::open(const std::string &args, bool extref)
 	if (extref)
 		usrp_dev->set_clock_source("external");
 
-	// Create TX and RX streamers
-	uhd::stream_args_t stream_args("sc16");
-	for (size_t i = 0; i < chans; i++)
-		stream_args.channels.push_back(i);
-
-	tx_stream = usrp_dev->get_tx_stream(stream_args);
-	rx_stream = usrp_dev->get_rx_stream(stream_args);
-
-	// Number of samples per over-the-wire packet
-	tx_spp = tx_stream->get_max_num_samps();
-	rx_spp = rx_stream->get_max_num_samps();
-
 	// Set rates
 	double _rx_rate;
 	double _tx_rate = select_rate(dev_type, sps);
@@ -666,6 +654,18 @@ int uhd_device::open(const std::string &args, bool extref)
 		return -1;
 	if (set_rates(_tx_rate, _rx_rate) < 0)
 		return -1;
+
+	/* Create TX and RX streamers */
+	uhd::stream_args_t stream_args("sc16");
+	for (size_t i = 0; i < chans; i++)
+		stream_args.channels.push_back(i);
+
+	tx_stream = usrp_dev->get_tx_stream(stream_args);
+	rx_stream = usrp_dev->get_rx_stream(stream_args);
+
+	/* Number of samples per over-the-wire packet */
+	tx_spp = tx_stream->get_max_num_samps();
+	rx_spp = rx_stream->get_max_num_samps();
 
 	// Create receive buffer
 	size_t buf_len = SAMPLE_BUF_SZ / sizeof(uint32_t);
