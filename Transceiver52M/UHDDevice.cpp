@@ -263,7 +263,7 @@ public:
 	int open(const std::string &args, bool extref);
 	bool start();
 	bool stop();
-	void restart(uhd::time_spec_t ts);
+	void restart();
 	void setPriority(float prio);
 	enum TxWindowType getWindowType() { return tx_window; }
 
@@ -737,12 +737,18 @@ bool uhd_device::flush_recv(size_t num_pkts)
 	return true;
 }
 
-void uhd_device::restart(uhd::time_spec_t)
+void uhd_device::restart()
 {
+	/* Allow 100 ms delay to align multi-channel streams */
+	double delay = 0.1;
+
 	aligned = false;
 
+	uhd::time_spec_t current = usrp_dev->get_time_now();
+
 	uhd::stream_cmd_t cmd = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
-	cmd.stream_now = true;
+	cmd.stream_now = false;
+	cmd.time_spec = uhd::time_spec_t(current.get_real_secs() + delay);
 
 	usrp_dev->issue_stream_cmd(cmd);
 
@@ -765,7 +771,7 @@ bool uhd_device::start()
 	async_event_thrd.start((void * (*)(void*))async_event_loop, (void*)this);
 
 	// Start streaming
-	restart(uhd::time_spec_t(0.0));
+	restart();
 
 	// Display usrp time
 	double time_now = usrp_dev->get_time_now().get_real_secs();
@@ -886,7 +892,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 			LOG(ALERT) << "UHD: Unrecoverable error, exiting...";
 			exit(-1);
 		case ERROR_TIMING:
-			restart(prev_ts);
+			restart();
 		case ERROR_UNHANDLED:
 			continue;
 		}
