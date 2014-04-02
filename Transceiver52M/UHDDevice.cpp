@@ -33,6 +33,7 @@
 #endif
 
 #define B2XX_CLK_RT      26e6
+#define E1XX_CLK_RT      52e6
 #define B2XX_BASE_RT     GSMRATE
 #define B100_BASE_RT     400000
 #define USRP2_BASE_RT    390625
@@ -45,6 +46,7 @@ enum uhd_dev_type {
 	B100,
 	B200,
 	B210,
+	E1XX,
 	UMTRX,
 	NUM_USRP_TYPES,
 };
@@ -77,6 +79,8 @@ static struct uhd_dev_offset uhd_offsets[NUM_USRP_TYPES * 2] = {
 	{ B200,  4, 6.9248e-5, "B200 4 SPS" },
 	{ B210,  1, 9.9692e-5, "B210 1 SPS" },
 	{ B210,  4, 6.9248e-5, "B210 4 SPS" },
+	{ E1XX,  1, 9.5192e-5, "E1XX 1 SPS" },
+	{ E1XX,  4, 6.5571e-5, "E1XX 4 SPS" },
 	{ UMTRX, 1, 9.9692e-5, "UmTRX 1 SPS" },
 	{ UMTRX, 4, 7.3846e-5, "UmTRX 4 SPS" },
 };
@@ -157,6 +161,7 @@ static double select_rate(uhd_dev_type type, int sps, bool diversity = false)
 		return B100_BASE_RT * sps;
 	case B200:
 	case B210:
+	case E1XX:
 	case UMTRX:
 		return GSMRATE * sps;
 	default:
@@ -468,9 +473,13 @@ int uhd_device::set_rates(double tx_rate, double rx_rate)
 	double offset_limit = 1.0;
 	double tx_offset, rx_offset;
 
-	// B2XX is the only device where we set FPGA clocking
+	/* B2XX and E1xx are the only device where we set FPGA clocking */
 	if ((dev_type == B200) || (dev_type == B210)) {
 		if (set_master_clk(B2XX_CLK_RT) < 0)
+			return -1;
+	}
+	else if (dev_type == E1XX) {
+		if (set_master_clk(E1XX_CLK_RT) < 0)
 			return -1;
 	}
 
@@ -548,7 +557,8 @@ bool uhd_device::parse_dev_type()
 {
 	std::string mboard_str, dev_str;
 	uhd::property_tree::sptr prop_tree;
-	size_t usrp1_str, usrp2_str, b100_str, b200_str, b210_str, umtrx_str;
+	size_t usrp1_str, usrp2_str, e100_str, e110_str,
+	       b100_str, b200_str, b210_str, umtrx_str;
 
 	prop_tree = usrp_dev->get_device()->get_tree();
 	dev_str = prop_tree->access<std::string>("/name").get();
@@ -559,6 +569,8 @@ bool uhd_device::parse_dev_type()
 	b100_str = mboard_str.find("B100");
 	b200_str = mboard_str.find("B200");
 	b210_str = mboard_str.find("B210");
+	e100_str = mboard_str.find("E100");
+	e110_str = mboard_str.find("E110");
 	umtrx_str = dev_str.find("UmTRX");
 
 	if (usrp1_str != std::string::npos) {
@@ -577,6 +589,12 @@ bool uhd_device::parse_dev_type()
 	} else if (b210_str != std::string::npos) {
 		tx_window = TX_WINDOW_USRP1;
 		dev_type = B210;
+	} else if (e100_str != std::string::npos) {
+		tx_window = TX_WINDOW_FIXED;
+		dev_type = E1XX;
+	} else if (e110_str != std::string::npos) {
+		tx_window = TX_WINDOW_FIXED;
+		dev_type = E1XX;
 	} else if (usrp2_str != std::string::npos) {
 		tx_window = TX_WINDOW_FIXED;
 		dev_type = USRP2;
@@ -697,6 +715,7 @@ int uhd_device::open(const std::string &args, bool extref)
 		return RESAMP_100M;
 	case B200:
 	case B210:
+	case E1XX:
 	default:
 		break;
 	}
