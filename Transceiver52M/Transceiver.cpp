@@ -146,6 +146,10 @@ bool Transceiver::init(bool filler)
   mReceiveFIFO.resize(mChans);
   mStates.resize(mChans);
 
+  /* Filler table retransmissions - support only on channel 0 */
+  if (filler)
+    mStates[0].mRetrans = true;
+
   mClockSocket = new UDPSocket(mBasePort, mAddr.c_str(), mBasePort + 100);
 
   for (size_t i = 0; i < mChans; i++) {
