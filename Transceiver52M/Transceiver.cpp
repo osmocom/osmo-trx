@@ -376,6 +376,31 @@ bool Transceiver::detectRACH(TransceiverState *state,
   return detectRACHBurst(burst, threshold, mSPSRx, &amp, &toa);
 }
 
+/* Detect SCH synchronization sequence within a burst */
+bool Transceiver::detectSCH(TransceiverState *state,
+                            signalVector &burst,
+                            complex &amp, float &toa)
+{
+  int shift;
+  float mag, threshold = 7.0;
+
+  if (!detectSCHBurst(burst, threshold, mSPSRx, &amp, &toa))
+    return false;
+
+  std::cout << "SCH : Timing offset     " << toa << " symbols" << std::endl;
+
+  mag = fabsf(toa);
+  if (mag < 1.0f)
+    return true;
+
+  shift = (int) (mag / 2.0f);
+  if (!shift)
+    shift++;
+
+  mRadioInterface->applyOffset(toa > 0 ? shift : -shift);
+  return false;
+}
+
 /*
  * Detect normal burst training sequence midamble. Update equalization
  * state information and channel estimate if necessary. Equalization

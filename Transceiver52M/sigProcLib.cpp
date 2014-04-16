@@ -78,6 +78,7 @@ struct CorrelationSequence {
 
   signalVector *sequence;
   void         *buffer;
+  void         *history;
   float        toa;
   complex      gain;
 };
@@ -111,6 +112,7 @@ struct PulseSequence {
 
 CorrelationSequence *gMidambles[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 CorrelationSequence *gRACHSequence = NULL;
+CorrelationSequence *gSCHSequence = NULL;
 PulseSequence *GSMPulse = NULL;
 PulseSequence *GSMPulse1 = NULL;
 
@@ -131,6 +133,7 @@ void sigProcLibDestroy()
   delete GMSKRotation1;
   delete GMSKReverseRotation1;
   delete gRACHSequence;
+  delete gSCHSequence;
   delete GSMPulse;
   delete GSMPulse1;
 
@@ -139,6 +142,7 @@ void sigProcLibDestroy()
   GMSKReverseRotationN = NULL;
   GMSKReverseRotation1 = NULL;
   gRACHSequence = NULL;
+  gSCHSequence = NULL;
   GSMPulse = NULL;
   GSMPulse1 = NULL;
 }
@@ -395,8 +399,10 @@ signalVector *convolve(const signalVector *x,
     break;
   case CUSTOM:
     if (start < h->size() - 1) {
-      head = h->size() - start;
-      append = true;
+      if (x->getStart() < h->size() - 1) {
+        head = h->size() - start;
+        append = true;
+      }
     }
     if (start + len > x->size()) {
       tail = start + len - x->size();
@@ -1274,6 +1280,69 @@ release:
   return status;
 }
 
+bool generateSCHSequence(int sps)
+{
+  bool status = true;
+  float toa;
+  complex *data = NULL;
+  signalVector *autocorr = NULL;
+  signalVector *seq0 = NULL, *seq1 = NULL, *_seq1 = NULL;
+
+  delete gSCHSequence;
+
+  seq0 = modulateBurst(gSCHSynchSequence, 0, sps, false);
+  if (!seq0)
+    return false;
+
+  seq1 = modulateBurst(gSCHSynchSequence, 0, sps, true);
+  if (!seq1) {
+    status = false;
+    goto release;
+  }
+
+  conjugateVector(*seq1);
+
+  /* For SSE alignment, reallocate the midamble sequence on 16-byte boundary */
+  data = (complex *) convolve_h_alloc(seq1->size());
+  _seq1 = new signalVector(data, 0, seq1->size());
+  _seq1->setAligned(true);
+  memcpy(_seq1->begin(), seq1->begin(), seq1->size() * sizeof(complex));
+
+  autocorr = convolve(seq0, _seq1, autocorr, NO_DELAY);
+  if (!autocorr) {
+    status = false;
+    goto release;
+  }
+
+  gSCHSequence = new CorrelationSequence;
+  gSCHSequence->sequence = _seq1;
+  gSCHSequence->buffer = data;
+  gSCHSequence->gain = peakDetect(*autocorr, &toa, NULL);
+  gSCHSequence->history = new complex[_seq1->size()];
+
+  /* For 1 sps only
+   *     (Half of correlation length - 1) + midpoint of pulse shaping filer
+   *     20.5 = (64 / 2 - 1) + 1.5
+   */
+  if (sps == 1)
+    gSCHSequence->toa = toa - 32.5;
+  else
+    gSCHSequence->toa = 0.0;
+
+release:
+  delete autocorr;
+  delete seq0;
+  delete seq1;
+
+  if (!status) {
+    delete _seq1;
+    free(data);
+    gSCHSequence = NULL;
+  }
+
+  return status;
+}
+
 static float computePeakRatio(signalVector *corr,
                               int sps, float toa, complex amp)
 {
@@ -1402,6 +1471,62 @@ int detectRACHBurst(signalVector &rxBurst,
   corr = new signalVector(len);
 
   rc = detectBurst(rxBurst, *corr, sync,
+                   thresh, sps, &_amp, &_toa, start, len);
+  delete corr;
+
+  if (rc < 0) {
+    return -1;
+  } else if (!rc) {
+    if (amp)
+      *amp = 0.0f;
+    if (toa)
+      *toa = 0.0f;
+    return 0;
+  }
+
+  /* Subtract forward search bits from delay */
+  if (toa)
+    *toa = _toa - head * sps;
+  if (amp)
+    *amp = _amp;
+
+  return 1;
+}
+
+int detectSCHBurst(signalVector &burst,
+		    float thresh,
+		    int sps,
+		    complex *amp,
+		    float *toa)
+{
+  int rc, start, target, head, tail, len;
+  float _toa;
+  complex _amp;
+  signalVector *corr, *_burst;
+  CorrelationSequence *sync;
+
+  if ((sps != 1) && (sps != 4))
+    return -1;
+
+  /* Search full length */
+  target = 3 + 39 + 64;
+  head = target - 1;
+  tail = 39 + 3 + 9;
+
+  start = (target - head) * sps - 1;
+  len = (head + tail) * sps;
+  sync = gSCHSequence;
+  corr = new signalVector(len);
+
+  _burst = new signalVector(burst, sync->sequence->size(), 5);
+
+  memcpy(_burst->begin() - sync->sequence->size(), sync->history,
+         sync->sequence->size() * sizeof(complex));
+
+  memcpy(sync->history, &burst.begin()[burst.size() - sync->sequence->size()],
+         sync->sequence->size() * sizeof(complex));
+
+  rc = detectBurst(*_burst, *corr, sync,
                    thresh, sps, &_amp, &_toa, start, len);
   delete corr;
 
@@ -1713,6 +1838,11 @@ bool sigProcLibSetup(int sps)
     GSMPulse = generateGSMPulse(sps, 2);
 
   if (!generateRACHSequence(1)) {
+    sigProcLibDestroy();
+    return false;
+  }
+
+  if (!generateSCHSequence(1)) {
     sigProcLibDestroy();
     return false;
   }

@@ -38,7 +38,7 @@ RadioInterface::RadioInterface(RadioDevice *wRadio,
                                int wReceiveOffset, GSM::Time wStartTime)
   : mRadio(wRadio), mSPSTx(sps), mSPSRx(1), mChans(chans), mMIMO(diversity),
     sendCursor(0), recvCursor(0), underrun(false), overrun(false),
-    receiveOffset(wReceiveOffset), mOn(false)
+    receiveOffset(wReceiveOffset), shiftOffset(0), mOn(false)
 {
   mClock.set(wStartTime);
 }
@@ -330,7 +330,7 @@ void RadioInterface::pullBuffer()
   num_recv = mRadio->readSamples(convertRecvBuffer,
                                  CHUNK,
                                  &overrun,
-                                 readTimestamp,
+                                 readTimestamp + shiftOffset,
                                  &local_underrun);
   if (num_recv != CHUNK) {
           LOG(ALERT) << "Receive error " << num_recv;

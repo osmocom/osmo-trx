@@ -189,7 +189,7 @@ void RadioInterfaceDiversity::pullBuffer()
 	num = mRadio->readSamples(convertRecvBuffer,
 				  resamp_outchunk,
 				  &overrun,
-				  readTimestamp,
+				  readTimestamp + shiftOffset,
 				  &local_underrun);
 	if ((size_t) num != resamp_outchunk) {
 		LOG(ALERT) << "Receive error " << num;
