@@ -45,10 +45,11 @@ using namespace GSM;
 
 /* Number of running values use in noise average */
 #define NOISE_CNT			20
+#define FREQ_CNT			20
 
 TransceiverState::TransceiverState()
-  : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT),
-    mode(Transceiver::TRX_MODE_OFF)
+  : mRetrans(false), mNoiseLev(0.0),
+    mNoises(NOISE_CNT), mFreqOffsets(FREQ_CNT), mode(Transceiver::TRX_MODE_OFF)
 {
   for (int i = 0; i < 8; i++) {
     chanType[i] = Transceiver::NONE;
@@ -56,6 +57,7 @@ TransceiverState::TransceiverState()
     chanResponse[i] = NULL;
     DFEForward[i] = NULL;
     DFEFeedback[i] = NULL;
+    prevFrame[i] = NULL;
 
     for (int n = 0; n < 102; n++)
       fillerTable[n][i] = NULL;
@@ -452,6 +454,34 @@ bool Transceiver::decodeSCH(SoftVector *burst, GSM::Time *time)
   return true;
 }
 
+#define FCCH_OFFSET_LIMIT	2e3
+#define FCCH_ADJUST_LIMIT	20.0
+
+/* Apply FCCH frequency correction */
+bool Transceiver::correctFCCH(TransceiverState *state, signalVector *burst)
+{
+  double offset, avg;
+
+  if (!burst)
+    return false;
+
+  offset = gsm_fcch_offset((float *) burst->begin(), burst->size());
+  if (offset > FCCH_OFFSET_LIMIT)
+    return false;
+
+  state->mFreqOffsets.insert(offset);
+  avg = state->mFreqOffsets.avg();
+
+  if (state->mFreqOffsets.full())
+    std::cout << "FCCH: Frequency offset  " << avg << " Hz" << std::endl;
+
+  if (state->mFreqOffsets.full() && (fabs(avg) > FCCH_ADJUST_LIMIT)) {
+    mRadioInterface->tuneRxOffset(-avg);
+    state->mFreqOffsets.reset();
+  }
+
+  return true;
+}
 
 /*
  * Detect normal burst training sequence midamble. Update equalization
@@ -614,6 +644,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   /* MS: Decode SCH and adjust GSM clock */
   if ((state->mode == TRX_MODE_MS_ACQUIRE) ||
       (state->mode == TRX_MODE_MS_TRACK)) {
+    correctFCCH(state, state->prevFrame[burst_time.TN()]->getVector());
 
     if (decodeSCH(bits, &sch_time)) {
       if (state->mode == TRX_MODE_MS_ACQUIRE) {
@@ -635,11 +666,14 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   RSSI = (int) floor(20.0 * log10(rxFullScale / avg));
   timingOffset = (int) round(toa * 256.0 / mSPSRx);
 
-  delete radio_burst;
+  delete state->prevFrame[burst_time.TN()];
+  state->prevFrame[burst_time.TN()] = radio_burst;
 
   return bits;
 
 release:
+  delete state->prevFrame[burst_time.TN()];
+  state->prevFrame[burst_time.TN()] = radio_burst;
   delete bits;
   return NULL;
 }

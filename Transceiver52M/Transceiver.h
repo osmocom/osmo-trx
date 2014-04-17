@@ -80,7 +80,11 @@ struct TransceiverState {
 
   /* Received noise energy levels */
   float mNoiseLev;
-  noiseVector mNoises;
+  avgVector mNoises;
+  avgVector mFreqOffsets;
+
+  /* Store pointers to previous frame */
+  radioVector *prevFrame[8];
 
   /* Transceiver mode */
   int mode;
@@ -156,6 +160,7 @@ private:
                   complex &amp, float &toa);
 
   bool decodeSCH(SoftVector *burst, GSM::Time *time);
+  bool correctFCCH(TransceiverState *state, signalVector *burst);
 
   /** Detect normal bursts */
   bool detectTSC(TransceiverState *state,

@@ -19,6 +19,8 @@ int gsm_sch_parse(const uint8_t *sb_info, struct sch_info *desc);
 int gsm_sch_to_fn(struct sch_info *sch);
 int gsm_sch_check_fn(int fn);
 
+double gsm_fcch_offset(float *burst, int len);
+
 int float_to_sbit(const float *in, sbit_t *out, float scale, int len);
 
 #endif /* _SCH_H_ */

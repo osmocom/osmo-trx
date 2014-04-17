@@ -62,6 +62,9 @@ const struct osmo_crc16gen_code gsm0503_sch_crc10 = {
 #define GSM_MAX_BURST_LEN	157
 #define GSM_SYM_RATE		(1625e3 / 6)
 
+/* Pre-generated FCCH measurement tone */
+static complex float fcch_ref[GSM_MAX_BURST_LEN];
+
 int float_to_sbit(const float *in, sbit_t *out, float scale, int len)
 {
 	int i;
@@ -153,4 +156,64 @@ int gsm_sch_decode(uint8_t *info, sbit_t *data)
 	memcpy(info, uncoded, GSM_SCH_INFO_LEN * sizeof(ubit_t));
 
 	return 0;
+}
+
+#define FCCH_TAIL_BITS_LEN	3
+#define FCCH_DATA_LEN		142
+
+/* Compute FCCH frequency offset */
+double gsm_fcch_offset(float *burst, int len)
+{
+	int i, start, end;
+	float a, b, c, d, ang, avg = 0.0f;
+	double freq;
+
+	if (len > GSM_MAX_BURST_LEN)
+		len = GSM_MAX_BURST_LEN;
+
+	for (i = 0; i < len; i++) {
+		a = burst[2 * i + 0];
+		b = burst[2 * i + 1];
+		c = crealf(fcch_ref[i]);
+		d = cimagf(fcch_ref[i]);
+
+		burst[2 * i + 0] = a * c - b * d;
+		burst[2 * i + 1] = a * d + b * c;
+	}
+
+	start = FCCH_TAIL_BITS_LEN;
+	end = start + FCCH_DATA_LEN;
+
+	for (i = start; i < end; i++) {
+		a = cargf(burst[2 * (i - 1) + 0] +
+			  burst[2 * (i - 1) + 1] * I);
+		b = cargf(burst[2 * i + 0] +
+			  burst[2 * i + 1] * I);
+
+		ang = b - a;
+
+		if (ang > M_PI)
+			ang -= 2 * M_PI;
+		else if (ang < -M_PI)
+			ang += 2 * M_PI;
+
+		avg += ang;
+	}
+
+	avg /= (float) (end - start);
+	freq = avg / (2 * M_PI) * GSM_SYM_RATE;
+
+	return freq;
+}
+
+/* Generate FCCH measurement tone */
+static __attribute__((constructor)) void init()
+{
+	int i;
+	double freq = 0.25;
+
+	for (i = 0; i < GSM_MAX_BURST_LEN; i++) {
+		fcch_ref[i] = sin(2 * M_PI * freq * (double) i) +
+			      cos(2 * M_PI * freq * (double) i) * I;
+	}
 }

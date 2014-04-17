@@ -74,14 +74,18 @@ bool radioVector::setVector(signalVector *vector, size_t chan)
 	return true;
 }
 
-noiseVector::noiseVector(size_t size)
-	: std::vector<float>(size), itr(0)
+avgVector::avgVector(size_t max)
+	: std::vector<float>(0), itr(0)
 {
+	this->max = max;
 }
 
-float noiseVector::avg() const
+float avgVector::avg() const
 {
 	float val = 0.0;
+
+	if (!size())
+		return 0.0f;
 
 	for (size_t i = 0; i < size(); i++)
 		val += (*this)[i];
@@ -89,10 +93,12 @@ float noiseVector::avg() const
 	return val / (float) size();
 }
 
-bool noiseVector::insert(float val)
+bool avgVector::insert(float val)
 {
-	if (!size())
-		return false;
+	if (size() < max) {
+		push_back(val);
+		return true;
+	}
 
 	if (itr >= this->size())
 		itr = 0;
@@ -100,6 +106,16 @@ bool noiseVector::insert(float val)
 	(*this)[itr++] = val;
 
 	return true;
+}
+
+bool avgVector::full() const
+{
+	return size() >= max;
+}
+
+void avgVector::reset()
+{
+	resize(0);
 }
 
 GSM::Time VectorQueue::nextTime() const

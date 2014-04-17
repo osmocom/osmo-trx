@@ -172,6 +172,10 @@ bool RadioInterface::tuneRx(double freq, size_t chan)
   return mRadio->setRxFreq(freq, chan);
 }
 
+bool RadioInterface::tuneRxOffset(double offset, size_t chan)
+{
+  return mRadio->setRxOffset(offset, chan);
+}
 
 void RadioInterface::start()
 {

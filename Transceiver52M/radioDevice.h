@@ -91,6 +91,9 @@ class RadioDevice {
   /** Set the receiver frequency */
   virtual bool setRxFreq(double wFreq, size_t chan = 0) = 0;
 
+  /** Adjust the receiver offset */
+  virtual bool setRxOffset(double wOffset, size_t chan = 0) = 0;
+
   /** Returns the starting write Timestamp*/
   virtual TIMESTAMP initialWriteTimestamp(void)=0;
 

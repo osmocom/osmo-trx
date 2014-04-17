@@ -46,14 +46,17 @@ private:
 	GSM::Time mTime;
 };
 
-class noiseVector : std::vector<float> {
+class avgVector : std::vector<float> {
 public:
-	noiseVector(size_t size = 0);
+	avgVector(size_t size = 0);
 	bool insert(float val);
+	bool full() const;
 	float avg() const;
+	void reset();
 
 private:
 	size_t itr;
+	size_t max;
 };
 
 class VectorFIFO : public InterthreadQueue<radioVector> { };

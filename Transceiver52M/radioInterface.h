@@ -111,6 +111,9 @@ public:
   /** set receive frequency */
   virtual bool tuneRx(double freq, size_t chan = 0);
 
+  /** set frequency correction */
+  virtual bool tuneRxOffset(double offset, size_t chan = 0);
+
   /** set receive gain */
   double setRxGain(double dB, size_t chan = 0);
 
