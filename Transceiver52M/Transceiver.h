@@ -81,6 +81,9 @@ struct TransceiverState {
   /* Received noise energy levels */
   float mNoiseLev;
   noiseVector mNoises;
+
+  /* Transceiver mode */
+  int mode;
 };
 
 /** The Transceiver class, responsible for physical layer of basestation */
@@ -230,6 +233,12 @@ public:
     NONE,               ///< Channel is inactive, default
     LOOPBACK            ///< similar go VII, used in loopback testing
   } ChannelCombination;
+
+  enum {
+    TRX_MODE_OFF,
+    TRX_MODE_BTS,
+    TRX_MODE_MS_ACQUIRE,
+  };
 
 protected:
   /** drive lower receive I/O and burst generation */

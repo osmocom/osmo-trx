@@ -43,7 +43,8 @@ using namespace GSM;
 #define NOISE_CNT			20
 
 TransceiverState::TransceiverState()
-  : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT)
+  : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT),
+    mode(Transceiver::TRX_MODE_OFF)
 {
   for (int i = 0; i < 8; i++) {
     chanType[i] = Transceiver::NONE;
@@ -193,6 +194,9 @@ void Transceiver::addRadioVector(size_t chan, BitVector &bits,
     LOG(ALERT) << "Received burst with invalid slot " << wTime.TN();
     return;
   }
+
+  if (mStates[0].mode != TRX_MODE_BTS)
+    return;
 
   burst = modulateBurst(bits, 8 + (wTime.TN() % 4 == 0), mSPSTx);
   scaleVector(*burst, txFullScale * pow(10, -RSSI / 10));
@@ -496,9 +500,16 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   GSM::Time time = radio_burst->getTime();
   CorrType type = expectedCorrType(time, chan);
 
-  if ((type == OFF) || (type == IDLE)) {
-    delete radio_burst;
-    return NULL;
+  switch (state->mode) {
+  case TRX_MODE_MS_ACQUIRE:
+    type = SCH;
+    break;
+  case TRX_MODE_BTS:
+    if ((type == TSC) || (type == RACH))
+      break;
+  case TRX_MODE_OFF:
+  default:
+    goto release;
   }
 
   /* Select the diversity channel with highest energy */
@@ -513,8 +524,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
 
   if (max_i < 0) {
     LOG(ALERT) << "Received empty burst";
-    delete radio_burst;
-    return NULL;
+    goto release;
   }
 
   /* Average noise on diversity paths and update global levels */
@@ -525,13 +535,16 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   /* Detect normal or RACH bursts */
   if (type == TSC)
     success = detectTSC(state, *burst, amp, toa, time);
-  else
+  else if (type == RACH)
     success = detectRACH(state, *burst, amp, toa);
+  else if (type == SCH)
+    success = detectSCH(state, *burst, amp, toa);
+  else
+    success = false;
 
   if (!success) {
     state->mNoises.insert(avg);
-    delete radio_burst;
-    return NULL;
+    goto release;
   }
 
   /* Demodulate and set output info */
@@ -548,6 +561,10 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   delete radio_burst;
 
   return bits;
+
+release:
+  delete bits;
+  return NULL;
 }
 
 void Transceiver::start()
@@ -733,7 +750,10 @@ void Transceiver::driveControl(size_t chan)
     mStates[chan].chanType[timeslot] = (ChannelCombination) corrCode;
     setModulus(timeslot, chan);
     sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
-
+  }
+  else if (!strcmp(command, "SYNC")) {
+    mStates[0].mode = TRX_MODE_MS_ACQUIRE;
+    sprintf(response,"RSP SYNC 0");
   }
   else {
     LOG(WARNING) << "bogus command " << command << " on control interface.";
@@ -872,7 +892,9 @@ void Transceiver::driveTxFIFO()
         }
       }
       // time to push burst to transmit FIFO
-      pushRadioVector(mTransmitDeadlineClock);
+      if (mStates[0].mode == TRX_MODE_BTS)
+        pushRadioVector(mTransmitDeadlineClock);
+
       mTransmitDeadlineClock.incTN();
     }
   }
