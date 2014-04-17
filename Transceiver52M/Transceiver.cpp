@@ -391,10 +391,13 @@ bool Transceiver::detectSCH(TransceiverState *state,
                             signalVector &burst,
                             complex &amp, float &toa)
 {
-  int shift;
+  int shift, full;;
   float mag, threshold = 7.0;
 
-  if (!detectSCHBurst(burst, threshold, mSPSRx, &amp, &toa))
+  full = (state->mode == TRX_MODE_MS_TRACK) ?
+	 SCH_DETECT_NARROW : SCH_DETECT_FULL;
+
+  if (!detectSCHBurst(burst, threshold, mSPSRx, &amp, &toa, full))
     return false;
 
   std::cout << "SCH : Timing offset     " << toa << " symbols" << std::endl;

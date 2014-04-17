@@ -1497,7 +1497,7 @@ int detectSCHBurst(signalVector &burst,
 		    float thresh,
 		    int sps,
 		    complex *amp,
-		    float *toa)
+		    float *toa, int state)
 {
   int rc, start, target, head, tail, len;
   float _toa;
@@ -1508,10 +1508,19 @@ int detectSCHBurst(signalVector &burst,
   if ((sps != 1) && (sps != 4))
     return -1;
 
-  /* Search full length */
   target = 3 + 39 + 64;
-  head = target - 1;
-  tail = 39 + 3 + 9;
+
+  switch (state) {
+  case SCH_DETECT_NARROW:
+    head = 4;
+    tail = 4;
+    break;
+  case SCH_DETECT_FULL:
+  default:
+    head = target - 1;
+    tail = 39 + 3 + 9;
+    break;
+  }
 
   start = (target - head) * sps - 1;
   len = (head + tail) * sps;

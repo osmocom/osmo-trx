@@ -188,11 +188,16 @@ int detectRACHBurst(signalVector &rxBurst,
                     complex *amplitude,
                     float* TOA);
 
+enum {
+	SCH_DETECT_FULL,
+	SCH_DETECT_NARROW,
+};
+
 int detectSCHBurst(signalVector &rxBurst,
                     float detectThreshold,
                     int sps,
                     complex *amplitude,
-                    float* TOA);
+                    float* TOA, int state);
 
 /**
         Normal burst correlator, detector, channel estimator.
