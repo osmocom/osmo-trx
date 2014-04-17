@@ -102,6 +102,9 @@ public:
   /** return the basestation clock */
   RadioClock* getClock(void) { return &mClock;};
 
+  /** apply an offset to the main clock */
+  void adjustClock(GSM::Time &offset);
+
   /** set transmit frequency */
   bool tuneTx(double freq, size_t chan = 0);
 

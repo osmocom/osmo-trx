@@ -25,6 +25,10 @@
 #include "Transceiver.h"
 #include <Logger.h>
 
+extern "C" {
+#include "sch.h"
+}
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -405,6 +409,50 @@ bool Transceiver::detectSCH(TransceiverState *state,
   return false;
 }
 
+#define SCH_BIT_SCALE	64
+
+/* Decode SCH burst */
+bool Transceiver::decodeSCH(SoftVector *burst, GSM::Time *time)
+{
+  int fn;
+  struct sch_info sch;
+  ubit_t info[GSM_SCH_INFO_LEN];
+  sbit_t data[GSM_SCH_CODED_LEN];
+
+  if (burst->size() < 156) {
+    std::cout << "Invalid SCH burst length" << std::endl;
+    return false;
+  }
+
+  float_to_sbit(&(*burst)[3], &data[0], SCH_BIT_SCALE, 39);
+  float_to_sbit(&(*burst)[106], &data[39], SCH_BIT_SCALE, 39);
+
+  if (!gsm_sch_decode(info, data)) {
+    gsm_sch_parse(info, &sch);
+
+    std::cout << "SCH : Decoded values" << std::endl;
+    std::cout << "    BSIC: " << sch.bsic << std::endl;
+    std::cout << "    T1  : " << sch.t1 << std::endl;
+    std::cout << "    T2  : " << sch.t2 << std::endl;
+    std::cout << "    T3p : " << sch.t3p << std::endl;
+    std::cout << "    FN  : " << gsm_sch_to_fn(&sch) << std::endl;
+
+    fn = gsm_sch_to_fn(&sch);
+    if (fn < 0) {
+      std::cout << "SCH : Failed to convert FN " << std::endl;
+      return false;
+    }
+
+    time->FN(fn);
+    time->TN(0);
+  } else {
+    return false;
+  }
+
+  return true;
+}
+
+
 /*
  * Detect normal burst training sequence midamble. Update equalization
  * state information and channel estimate if necessary. Equalization
@@ -491,17 +539,24 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   SoftVector *bits = NULL;
   TransceiverState *state = &mStates[chan];
 
+  GSM::Time sch_time, burst_time, diff_time;
+
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
   if (!radio_burst)
     return NULL;
 
   /* Set time and determine correlation type */
-  GSM::Time time = radio_burst->getTime();
-  CorrType type = expectedCorrType(time, chan);
+  burst_time = radio_burst->getTime();
+  CorrType type = expectedCorrType(burst_time, chan);
 
   switch (state->mode) {
   case TRX_MODE_MS_ACQUIRE:
+    type = SCH;
+    break;
+  case TRX_MODE_MS_TRACK:
+    if (!gsm_sch_check_fn(burst_time.FN()))
+      goto release;
     type = SCH;
     break;
   case TRX_MODE_BTS:
@@ -534,7 +589,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
 
   /* Detect normal or RACH bursts */
   if (type == TSC)
-    success = detectTSC(state, *burst, amp, toa, time);
+    success = detectTSC(state, *burst, amp, toa, burst_time);
   else if (type == RACH)
     success = detectRACH(state, *burst, amp, toa);
   else if (type == SCH)
@@ -551,10 +606,32 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   if (equalize && (type != TSC))
     equalize = false;
 
-  if (avg - state->mNoiseLev > 0.0)
-    bits = demodulate(state, *burst, amp, toa, time.TN(), equalize);
+  /* Ignore noise threshold on MS mode for now */
+  if ((type == SCH) || (avg - state->mNoiseLev > 0.0))
+    bits = demodulate(state, *burst, amp, toa,
+		      burst_time.TN(), equalize);
 
-  wTime = time;
+  /* MS: Decode SCH and adjust GSM clock */
+  if ((state->mode == TRX_MODE_MS_ACQUIRE) ||
+      (state->mode == TRX_MODE_MS_TRACK)) {
+
+    if (decodeSCH(bits, &sch_time)) {
+      if (state->mode == TRX_MODE_MS_ACQUIRE) {
+          diff_time = GSM::Time(sch_time.FN() - burst_time.FN(),
+                                -burst_time.TN());
+          mRadioInterface->adjustClock(diff_time);
+          state->mode = TRX_MODE_MS_TRACK;
+
+          std::cout << "SCH : Locking GSM clock " << std::endl;
+      } else {
+        std::cout << "SCH : Read SCH at FN " << burst_time.FN()
+                  << " FN51 " << burst_time.FN() % 51 << std::endl;
+      }
+    }
+    goto release;
+  }
+
+  wTime = burst_time;
   RSSI = (int) floor(20.0 * log10(rxFullScale / avg));
   timingOffset = (int) round(toa * 256.0 / mSPSRx);
 

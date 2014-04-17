@@ -155,6 +155,8 @@ private:
                   signalVector &burst,
                   complex &amp, float &toa);
 
+  bool decodeSCH(SoftVector *burst, GSM::Time *time);
+
   /** Detect normal bursts */
   bool detectTSC(TransceiverState *state,
                  signalVector &burst,
@@ -238,6 +240,7 @@ public:
     TRX_MODE_OFF,
     TRX_MODE_BTS,
     TRX_MODE_MS_ACQUIRE,
+    TRX_MODE_MS_TRACK,
   };
 
 protected:

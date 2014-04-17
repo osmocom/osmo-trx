@@ -886,7 +886,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	if (rc < 0) {
 		LOG(ERR) << rx_buffers[0]->str_code(rc);
 		LOG(ERR) << rx_buffers[0]->str_status();
-		return 0;
+		return len;
 	}
 
 	// Create vector buffer

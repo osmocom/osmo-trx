@@ -157,6 +157,11 @@ int RadioInterface::unRadioifyVector(float *floatVector,
   return newVector.size();
 }
 
+void RadioInterface::adjustClock(GSM::Time &offset)
+{
+  mClock.adjust(offset);
+}
+
 bool RadioInterface::tuneTx(double freq, size_t chan)
 {
   return mRadio->setTxFreq(freq, chan);

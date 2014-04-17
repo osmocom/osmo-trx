@@ -58,6 +58,9 @@ AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AC_C_BIGENDIAN
 
+dnl checks for libraries
+PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore  >= 0.3.9)
+
 AC_ARG_WITH(usrp1, [
     AS_HELP_STRING([--with-usrp1],
         [enable USRP1 gnuradio based transceiver])
