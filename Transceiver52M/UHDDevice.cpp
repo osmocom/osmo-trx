@@ -40,6 +40,8 @@
 #define TX_AMPL          0.3
 #define SAMPLE_BUF_SZ    (1 << 20)
 
+#define UMTRX_VGA1_DEF   -18
+
 enum uhd_dev_type {
 	USRP1,
 	USRP2,
@@ -421,9 +423,23 @@ void uhd_device::init_gains()
 {
 	uhd::gain_range_t range;
 
-	range = usrp_dev->get_tx_gain_range();
-	tx_gain_min = range.start();
-	tx_gain_max = range.stop();
+	if (dev_type == UMTRX) {
+		std::vector<std::string> gain_stages = usrp_dev->get_tx_gain_names(0);
+		if (gain_stages[0] == "VGA") {
+			LOG(WARNING) << "Update your UHD version for a proper Tx gain support";
+			range = usrp_dev->get_tx_gain_range();
+			tx_gain_min = range.start();
+			tx_gain_max = range.stop();
+		} else {
+			range = usrp_dev->get_tx_gain_range("VGA2");
+			tx_gain_min = UMTRX_VGA1_DEF + range.start();
+			tx_gain_max = UMTRX_VGA1_DEF + range.stop();
+		}
+	} else {
+		range = usrp_dev->get_tx_gain_range();
+		tx_gain_min = range.start();
+		tx_gain_max = range.stop();
+	}
 
 	range = usrp_dev->get_rx_gain_range();
 	rx_gain_min = range.start();
@@ -514,8 +530,26 @@ double uhd_device::setTxGain(double db, size_t chan)
 		return 0.0f;
 	}
 
-	usrp_dev->set_tx_gain(db, chan);
-	tx_gains[chan] = usrp_dev->get_tx_gain(chan);
+	if (dev_type == UMTRX) {
+		std::vector<std::string> gain_stages = usrp_dev->get_tx_gain_names(0);
+		if (gain_stages[0] == "VGA") {
+			LOG(WARNING) << "Update your UHD version for a proper Tx gain support";
+			usrp_dev->set_tx_gain(db, chan);
+			tx_gains[chan] = usrp_dev->get_tx_gain(chan);
+		} else {
+			// New UHD versions support split configuration of
+			// Tx gain stages. We utilize this to set the gain
+			// configuration, optimal for the Tx signal quality.
+			// From our measurements, VGA1 must be 18dB plus-minus
+			// one and VGA2 is the best when 23dB or lower.
+			usrp_dev->set_tx_gain(UMTRX_VGA1_DEF, "VGA1", chan);
+			usrp_dev->set_tx_gain(db-UMTRX_VGA1_DEF, "VGA2", chan);
+			tx_gains[chan] = usrp_dev->get_tx_gain(chan);
+		}
+	} else {
+		usrp_dev->set_tx_gain(db, chan);
+		tx_gains[chan] = usrp_dev->get_tx_gain(chan);
+	}
 
 	LOG(INFO) << "Set TX gain to " << tx_gains[chan] << "dB";
 
