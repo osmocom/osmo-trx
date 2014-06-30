@@ -823,6 +823,7 @@ void uhd_device::setPriority(float prio)
 int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 {
 	uhd::time_spec_t ts;
+	static int err_count = 0;
 
 	if (!num_smpls) {
 		LOG(ERR) << str_code(md);
@@ -830,6 +831,11 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 		switch (md.error_code) {
 		case uhd::rx_metadata_t::ERROR_CODE_TIMEOUT:
 			LOG(ALERT) << "UHD: Receive timed out";
+			if (err_count > 100) {
+				err_count = 0;
+				return ERROR_UNRECOVERABLE;
+			}
+			err_count++;
 		case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
 		case uhd::rx_metadata_t::ERROR_CODE_LATE_COMMAND:
 		case uhd::rx_metadata_t::ERROR_CODE_BROKEN_CHAIN:
