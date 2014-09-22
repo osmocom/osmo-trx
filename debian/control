@@ -3,7 +3,7 @@ Maintainer: Ivan Klyuchnikov <ivan.kluchnikov@fairwaves.ru>
 Section: net
 Priority: optional
 Standards-Version: 3.9.3
-Build-Depends: debhelper (>= 9), autotools-dev, libdbd-sqlite3, pkg-config, dh-autoreconf, libuhd-dev, libusb-1.0-0-dev, libboost1.48-all-dev
+Build-Depends: debhelper (>= 9), autotools-dev, libdbd-sqlite3, pkg-config, dh-autoreconf, libuhd-dev (>= 3.5.7), libusb-1.0-0-dev, libboost-all-dev
 Homepage: http://openbsc.osmocom.org/trac/wiki/OsmoTRX
 Vcs-Git: git://git.osmocom.org/osmo-trx
 Vcs-Browser: http://cgit.osmocom.org/osmo-trx
@@ -12,4 +12,13 @@ Package: osmo-trx
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libdbd-sqlite3
 Description: OsmoTRX is a software-defined radio transceiver that implements the Layer 1 physical layer of a BTS
+
+Package: osmo-trx-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends: osmo-trx (= ${binary:Version}), ${misc:Depends}
+Description: Debug symbols for the osmo-trx
+ Make debugging possible
+
 
