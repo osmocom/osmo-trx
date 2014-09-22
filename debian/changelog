@@ -1,4 +1,4 @@
-osmo-trx (0.1.0) precise; urgency=low
+osmo-trx (0.1.8) precise; urgency=low
 
      * Initial release (Closes: #nnnn) <nnnn is the bug number of your ITP
 
