@@ -41,6 +41,7 @@
 #define SAMPLE_BUF_SZ    (1 << 20)
 
 #define UMTRX_VGA1_DEF   -18
+#define UMTRX_VGA2_DEF   23
 
 enum uhd_dev_type {
 	USRP1,
@@ -423,23 +424,9 @@ void uhd_device::init_gains()
 {
 	uhd::gain_range_t range;
 
-	if (dev_type == UMTRX) {
-		std::vector<std::string> gain_stages = usrp_dev->get_tx_gain_names(0);
-		if (gain_stages[0] == "VGA") {
-			LOG(WARNING) << "Update your UHD version for a proper Tx gain support";
-			range = usrp_dev->get_tx_gain_range();
-			tx_gain_min = range.start();
-			tx_gain_max = range.stop();
-		} else {
-			range = usrp_dev->get_tx_gain_range("VGA2");
-			tx_gain_min = UMTRX_VGA1_DEF + range.start();
-			tx_gain_max = UMTRX_VGA1_DEF + range.stop();
-		}
-	} else {
-		range = usrp_dev->get_tx_gain_range();
-		tx_gain_min = range.start();
-		tx_gain_max = range.stop();
-	}
+	range = usrp_dev->get_tx_gain_range();
+	tx_gain_min = range.start();
+	tx_gain_max = range.stop();
 
 	range = usrp_dev->get_rx_gain_range();
 	rx_gain_min = range.start();
@@ -531,8 +518,7 @@ double uhd_device::setTxGain(double db, size_t chan)
 	}
 
 	if (dev_type == UMTRX) {
-		std::vector<std::string> gain_stages = usrp_dev->get_tx_gain_names(0);
-		if (gain_stages[0] == "VGA") {
+		if (!usrp_dev->get_device()->get_tree()->exists("/mboards/0/dboards/A/tx_frontends/0/internal_gains/VGA1")) {
 			LOG(WARNING) << "Update your UHD version for a proper Tx gain support";
 			usrp_dev->set_tx_gain(db, chan);
 			tx_gains[chan] = usrp_dev->get_tx_gain(chan);
@@ -542,9 +528,13 @@ double uhd_device::setTxGain(double db, size_t chan)
 			// configuration, optimal for the Tx signal quality.
 			// From our measurements, VGA1 must be 18dB plus-minus
 			// one and VGA2 is the best when 23dB or lower.
-			usrp_dev->set_tx_gain(UMTRX_VGA1_DEF, "VGA1", chan);
-			usrp_dev->set_tx_gain(db-UMTRX_VGA1_DEF, "VGA2", chan);
-			tx_gains[chan] = usrp_dev->get_tx_gain(chan);
+			std::string chan_name = "A";
+			if (chan == 1) chan_name = "B";
+			std::string tx_vga1_gain_path = "/mboards/0/dboards/" + chan_name + "/tx_frontends/0/internal_gains/VGA1/value";
+			std::string tx_vga2_gain_path = "/mboards/0/dboards/" + chan_name + "/tx_frontends/0/internal_gains/VGA2/value";
+			usrp_dev->get_device()->get_tree()->access<double>(tx_vga1_gain_path).set(UMTRX_VGA1_DEF);
+			usrp_dev->get_device()->get_tree()->access<double>(tx_vga2_gain_path).set(UMTRX_VGA2_DEF);
+			tx_gains[chan] = db;
 		}
 	} else {
 		usrp_dev->set_tx_gain(db, chan);
