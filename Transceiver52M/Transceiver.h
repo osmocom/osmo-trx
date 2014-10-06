@@ -182,7 +182,8 @@ private:
   double mRxFreq;                      ///< the receive frequency
   int mPower;                          ///< the transmit power in dB
   unsigned mTSC;                       ///< the midamble sequence code
-  unsigned mMaxExpectedDelay;            ///< maximum expected time-of-arrival offset in GSM symbols
+  unsigned mMaxExpectedDelay;          ///< maximum TOA offset in GSM symbols
+  unsigned long long mRxSlotMask[8];   ///< MS - enabled multiframe slot mask
   int mBSIC;                           ///< MS - detected BSIC
 
   std::vector<TransceiverState> mStates;

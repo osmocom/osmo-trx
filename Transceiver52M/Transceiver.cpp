@@ -113,6 +113,9 @@ Transceiver::Transceiver(int wBasePort,
 
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
+
+  for (int i = 0; i < 8; i++)
+    mRxSlotMask[i] = 0;
 }
 
 Transceiver::~Transceiver()
@@ -309,6 +312,18 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   TransceiverState *state = &mStates[chan];
   unsigned burstTN = currTime.TN();
   unsigned burstFN = currTime.FN();
+
+  if (state->mode == TRX_MODE_MS_TRACK) {
+    /* 102 modulus case currently unhandled */
+    if (state->fillerModulus[burstTN] > 52)
+      return OFF;
+
+    int modFN = burstFN % state->fillerModulus[burstTN];
+    if ((1 << modFN) & mRxSlotMask[burstTN])
+      return TSC;
+    else
+      return OFF;
+  }
 
   switch (state->chanType[burstTN]) {
   case NONE:
@@ -873,6 +888,17 @@ void Transceiver::driveControl(size_t chan)
     mStates[chan].chanType[timeslot] = (ChannelCombination) corrCode;
     setModulus(timeslot, chan);
     sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
+  }
+  else if (!strcmp(command,"SETRXMASK")) {
+    int slot;
+    unsigned long long mask;
+    sscanf(buffer,"%3s %s %d %llu", cmdcheck, command, &slot, &mask);
+    if ((slot < 0) || (slot > 7)) {
+      sprintf(response, "RSP SETRXMASK 1");
+    } else {
+      mRxSlotMask[slot] = mask;
+      sprintf(response, "RSP SETRXMASK 0 %d %llu", slot, mask);
+    }
   }
   else if (!strcmp(command, "SYNC")) {
     mStates[0].mode = TRX_MODE_MS_ACQUIRE;
