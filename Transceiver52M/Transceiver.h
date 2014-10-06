@@ -183,6 +183,7 @@ private:
   int mPower;                          ///< the transmit power in dB
   unsigned mTSC;                       ///< the midamble sequence code
   unsigned mMaxExpectedDelay;            ///< maximum expected time-of-arrival offset in GSM symbols
+  int mBSIC;                           ///< MS - detected BSIC
 
   std::vector<TransceiverState> mStates;
 

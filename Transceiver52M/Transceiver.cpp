@@ -98,7 +98,8 @@ Transceiver::Transceiver(int wBasePort,
   : mBasePort(wBasePort), mAddr(TRXAddress),
     mTransmitLatency(wTransmitLatency), mClockSocket(NULL),
     mRadioInterface(wRadioInterface), mSPSTx(wSPS), mSPSRx(1), mChans(wChans),
-    mOn(false), mTxFreq(0.0), mRxFreq(0.0), mPower(-10), mMaxExpectedDelay(0)
+    mOn(false), mTxFreq(0.0), mRxFreq(0.0), mPower(-10), mMaxExpectedDelay(0),
+    mBSIC(-1)
 {
   GSM::Time startTime(random() % gHyperframe,0);
 
@@ -434,6 +435,8 @@ bool Transceiver::decodeSCH(SoftVector *burst, GSM::Time *time)
 
   if (!gsm_sch_decode(info, data)) {
     gsm_sch_parse(info, &sch);
+
+    mBSIC = sch.bsic;
 
     std::cout << "SCH : Decoded values" << std::endl;
     std::cout << "    BSIC: " << sch.bsic << std::endl;
@@ -850,6 +853,12 @@ void Transceiver::driveControl(size_t chan)
       generateMidamble(mSPSRx, TSC);
       sprintf(response,"RSP SETTSC 0 %d", TSC);
     }
+  }
+  else if (!strcmp(command,"GETBSIC")) {
+    if (mBSIC < 0)
+      sprintf(response, "RSP GETBSIC 1");
+    else
+      sprintf(response, "RSP GETBSIC 0 %d", mBSIC);
   }
   else if (strcmp(command,"SETSLOT")==0) {
     // set TSC 
