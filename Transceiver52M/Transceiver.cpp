@@ -103,8 +103,7 @@ Transceiver::Transceiver(int wBasePort,
 {
   GSM::Time startTime(random() % gHyperframe,0);
 
-  mRxLowerLoopThread = new Thread(32768);
-  mTxLowerLoopThread = new Thread(32768);
+  mLowerLoopThread = new Thread(32768);
 
   mTransmitDeadlineClock = startTime;
   mLastClockUpdateTime = startTime;
@@ -235,7 +234,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
   radioVector *burst;
   TransceiverState *state;
   std::vector<signalVector *> bursts(mChans);
-  std::vector<bool> zeros(mChans);
+  std::vector<bool> zeros(mChans, false);
   std::vector<bool> filler(mChans, true);
 
   for (size_t i = 0; i < mChans; i ++) {
@@ -252,7 +251,8 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     modFN = nowTime.FN() % state->fillerModulus[TN];
 
     bursts[i] = state->fillerTable[modFN][TN];
-    zeros[i] = state->chanType[TN] == NONE;
+    if (state->mode == TRX_MODE_BTS)
+      zeros[i] = state->chanType[TN] == NONE;
 
     if ((burst = mTxPriorityQueues[i].getCurrentBurst(nowTime))) {
       bursts[i] = burst->getVector();
@@ -672,6 +672,9 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
           diff_time = GSM::Time(sch_time.FN() - burst_time.FN(),
                                 -burst_time.TN());
           mRadioInterface->adjustClock(diff_time);
+          mTransmitDeadlineClock = RadioClock::adjust(
+					mTransmitDeadlineClock,
+					diff_time);
           state->mode = TRX_MODE_MS_TRACK;
 
           std::cout << "SCH : Locking GSM clock " << std::endl;
@@ -763,10 +766,8 @@ void Transceiver::driveControl(size_t chan)
         mRadioInterface->start();
 
         // Start radio interface threads.
-        mTxLowerLoopThread->start((void * (*)(void*))
-                                  TxLowerLoopAdapter,(void*) this);
-        mRxLowerLoopThread->start((void * (*)(void*))
-                                  RxLowerLoopAdapter,(void*) this);
+        mLowerLoopThread->start((void * (*)(void*))
+                                LowerLoopAdapter,(void*) this);
 
         for (size_t i = 0; i < mChans; i++) {
           TransceiverChannel *chan = new TransceiverChannel(this, i);
@@ -1041,8 +1042,7 @@ void Transceiver::driveTxFIFO()
         }
       }
       // time to push burst to transmit FIFO
-      if (mStates[0].mode == TRX_MODE_BTS)
-        pushRadioVector(mTransmitDeadlineClock);
+      pushRadioVector(mTransmitDeadlineClock);
 
       mTransmitDeadlineClock.incTN();
     }
@@ -1083,22 +1083,12 @@ void *RxUpperLoopAdapter(TransceiverChannel *chan)
   return NULL;
 }
 
-void *RxLowerLoopAdapter(Transceiver *transceiver)
+void *LowerLoopAdapter(Transceiver *transceiver)
 {
   transceiver->setPriority(0.45);
 
   while (1) {
     transceiver->driveReceiveRadio();
-    pthread_testcancel();
-  }
-  return NULL;
-}
-
-void *TxLowerLoopAdapter(Transceiver *transceiver)
-{
-  transceiver->setPriority(0.44);
-
-  while (1) {
     transceiver->driveTxFIFO();
     pthread_testcancel();
   }

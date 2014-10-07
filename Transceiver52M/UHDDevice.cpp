@@ -1002,8 +1002,10 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 	return num_smpls;
 }
 
-bool uhd_device::updateAlignment(TIMESTAMP timestamp)
+bool uhd_device::updateAlignment(TIMESTAMP)
 {
+	aligned = false;
+
 	return true;
 }
 

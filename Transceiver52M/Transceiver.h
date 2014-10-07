@@ -106,8 +106,7 @@ private:
   std::vector<VectorFIFO *>  mReceiveFIFO;      ///< radioInterface FIFO of receive bursts
 
   std::vector<Thread *> mRxServiceLoopThreads;  ///< thread to pull bursts into receive FIFO
-  Thread *mRxLowerLoopThread;                   ///< thread to pull bursts into receive FIFO
-  Thread *mTxLowerLoopThread;                   ///< thread to push bursts into transmit FIFO
+  Thread *mLowerLoopThread;                   ///< thread to pull bursts into receive FIFO
   std::vector<Thread *> mControlServiceLoopThreads;         ///< thread to process control messages from GSM core
   std::vector<Thread *> mTxPriorityQueueServiceLoopThreads; ///< thread to process transmit bursts from GSM core
 
@@ -273,9 +272,7 @@ protected:
 
   friend void *TxUpperLoopAdapter(TransceiverChannel *);
 
-  friend void *RxLowerLoopAdapter(Transceiver *);
-
-  friend void *TxLowerLoopAdapter(Transceiver *);
+  friend void *LowerLoopAdapter(Transceiver *);
 
   friend void *ControlServiceLoopAdapter(TransceiverChannel *);
 
@@ -290,8 +287,7 @@ protected:
 void *RxUpperLoopAdapter(TransceiverChannel *);
 
 /** Main drive threads */
-void *RxLowerLoopAdapter(Transceiver *);
-void *TxLowerLoopAdapter(Transceiver *);
+void *LowerLoopAdapter(Transceiver *);
 
 /** control message handler thread loop */
 void *ControlServiceLoopAdapter(TransceiverChannel *);

@@ -29,14 +29,12 @@ void RadioClock::set(const GSM::Time& wTime)
 	mLock.unlock();
 }
 
-void RadioClock::adjust(GSM::Time& wOffset)
+GSM::Time RadioClock::adjust(GSM::Time &wBase, GSM::Time &wOffset)
 {
 	int tn_diff, fn_diff = 0;
 
-	mLock.lock();
-
 	/* Modulo TN adustment */
-	tn_diff = mClock.TN() + wOffset.TN();
+	tn_diff = wBase.TN() + wOffset.TN();
 	if (tn_diff < 0) {
 		tn_diff += 8;
 		fn_diff--;
@@ -46,13 +44,20 @@ void RadioClock::adjust(GSM::Time& wOffset)
 	}
 
 	/* Modulo FN adjustment */
-	fn_diff += mClock.FN() + wOffset.FN();
+	fn_diff += wBase.FN() + wOffset.FN();
 	if (fn_diff < 0)
 		fn_diff += GSM::gHyperframe;
 	else if ((unsigned) fn_diff >= GSM::gHyperframe)
 		fn_diff = fn_diff - GSM::gHyperframe;
 
-	mClock = GSM::Time(fn_diff, tn_diff);
+	return GSM::Time(fn_diff, tn_diff);
+}
+
+void RadioClock::adjust(GSM::Time& wOffset)
+{
+	mLock.lock();
+
+	mClock = adjust(mClock, wOffset); 
 	updateSignal.signal();
 
 	mLock.unlock();

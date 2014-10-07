@@ -26,6 +26,8 @@
 
 class RadioClock {
 public:
+	static GSM::Time adjust(GSM::Time &base, GSM::Time &offset);
+
 	void set(const GSM::Time& wTime);
 	void adjust(GSM::Time &wOffset);
 	void incTN();

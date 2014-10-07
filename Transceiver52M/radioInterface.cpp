@@ -38,7 +38,8 @@ RadioInterface::RadioInterface(RadioDevice *wRadio,
                                int wReceiveOffset, GSM::Time wStartTime)
   : mRadio(wRadio), mSPSTx(sps), mSPSRx(1), mChans(chans), mMIMO(diversity),
     sendCursor(0), recvCursor(0), underrun(false), overrun(false),
-    receiveOffset(wReceiveOffset), shiftOffset(0), mOn(false)
+    receiveOffset(wReceiveOffset), shiftOffset(0), shiftUpdate(false),
+    mOn(false)
 {
   mClock.set(wStartTime);
 }
@@ -301,6 +302,12 @@ bool RadioInterface::isUnderrun()
   return retVal;
 }
 
+void RadioInterface::applyOffset(int offset)
+{
+  shiftOffset += offset;
+  shiftUpdate = true;
+}
+
 VectorFIFO* RadioInterface::receiveFIFO(size_t chan)
 {
   if (chan >= mReceiveFIFO.size())
@@ -374,11 +381,16 @@ void RadioInterface::pushBuffer()
                         powerScaling[i], 2 * sendCursor);
   }
 
+  if (shiftUpdate) {
+    mRadio->updateAlignment(0);
+    shiftUpdate = false;
+  }
+
   /* Send the all samples in the send buffer */ 
   num_sent = mRadio->writeSamples(convertSendBuffer,
                                   sendCursor,
                                   &underrun,
-                                  writeTimestamp);
+                                  writeTimestamp + mSPSTx * shiftOffset);
   writeTimestamp += num_sent;
   sendCursor = 0;
 }
