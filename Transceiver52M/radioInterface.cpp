@@ -238,7 +238,11 @@ bool RadioInterface::driveReceiveRadio()
   pullBuffer();
 
   GSM::Time rcvClock = mClock.get();
-  rcvClock.decTN(receiveOffset);
+  if (receiveOffset < 0)
+    rcvClock.incTN(-receiveOffset);
+  else
+    rcvClock.decTN(receiveOffset);
+
   unsigned tN = rcvClock.TN();
   int recvSz = recvCursor;
   int readSz = 0;

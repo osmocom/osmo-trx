@@ -68,6 +68,7 @@ struct trx_config {
 	bool extref;
 	bool filler;
 	bool diversity;
+	bool ms;
 	double offset;
 };
 
@@ -118,7 +119,7 @@ bool testConfig()
  */
 bool trx_setup_config(struct trx_config *config)
 {
-	std::string refstr, fillstr, divstr;
+	std::string refstr, fillstr, divstr, msstr;
 
 	if (!testConfig())
 		return false;
@@ -167,6 +168,7 @@ bool trx_setup_config(struct trx_config *config)
 	refstr = config->extref ? "Enabled" : "Disabled";
 	fillstr = config->filler ? "Enabled" : "Disabled";
 	divstr = config->diversity ? "Enabled" : "Disabled";
+	msstr = config->ms ? "Enabled" : "Disabled";
 
 	std::ostringstream ost("");
 	ost << "Config Settings" << std::endl;
@@ -179,6 +181,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   External Reference...... " << refstr << std::endl;
 	ost << "   C0 Filler Table......... " << fillstr << std::endl;
 	ost << "   Diversity............... " << divstr << std::endl;
+	ost << "   MS Mode................. " << msstr << std::endl;
 	ost << "   Tuning offset........... " << config->offset << std::endl;
 	std::cout << ost << std::endl;
 
@@ -196,10 +199,22 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
                                    RadioDevice *usrp, int type)
 {
 	RadioInterface *radio = NULL;
+	size_t div = 1;
+	int offset = 3;
+
+	if (config->ms) {
+		if (type != RadioDevice::NORMAL) {
+			LOG(ALERT) << "Unsupported configuration";
+			return NULL;
+		}
+
+		offset *= -1;
+	}
 
 	switch (type) {
 	case RadioDevice::NORMAL:
-		radio = new RadioInterface(usrp, config->sps, config->chans);
+		radio = new RadioInterface(usrp, config->sps,
+					   config->chans, div, offset);
 		break;
 	case RadioDevice::RESAMP_64M:
 	case RadioDevice::RESAMP_100M:
@@ -286,6 +301,7 @@ static void print_help()
 		"  -s    Samples-per-symbol (1 or 4)\n"
 		"  -c    Number of ARFCN channels (default=1)\n"
 		"  -f    Enable C0 filler table\n"
+		"  -m    Enable MS mode\n"
 		"  -o    Set baseband frequency offset (default=auto)\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
 }
@@ -300,9 +316,10 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->extref = false;
 	config->filler = false;
 	config->diversity = false;
+	config->ms = false;
 	config->offset = 0.0;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:ms:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -334,6 +351,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'o':
 			config->offset = atof(optarg);
+			break;
+		case 'm':
+			config->ms = true;
 			break;
 		case 's':
 			config->sps = atoi(optarg);
