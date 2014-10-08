@@ -319,7 +319,8 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
       return OFF;
 
     int modFN = burstFN % state->fillerModulus[burstTN];
-    if ((1 << modFN) & mRxSlotMask[burstTN])
+    unsigned long long reg = (unsigned long long) 1 << modFN;
+    if (reg & mRxSlotMask[burstTN])
       return TSC;
     else
       return OFF;
@@ -606,9 +607,10 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
     type = SCH;
     break;
   case TRX_MODE_MS_TRACK:
-    if (!gsm_sch_check_fn(burst_time.FN()))
-      goto release;
-    type = SCH;
+    if (gsm_sch_check_fn(burst_time.FN()))
+      type = SCH;
+    else if (type == OFF)
+      goto release; 
     break;
   case TRX_MODE_BTS:
     if ((type == TSC) || (type == RACH))
@@ -893,12 +895,12 @@ void Transceiver::driveControl(size_t chan)
   else if (!strcmp(command,"SETRXMASK")) {
     int slot;
     unsigned long long mask;
-    sscanf(buffer,"%3s %s %d %llu", cmdcheck, command, &slot, &mask);
+    sscanf(buffer,"%3s %s %d 0x%llx", cmdcheck, command, &slot, &mask);
     if ((slot < 0) || (slot > 7)) {
       sprintf(response, "RSP SETRXMASK 1");
     } else {
       mRxSlotMask[slot] = mask;
-      sprintf(response, "RSP SETRXMASK 0 %d %llu", slot, mask);
+      sprintf(response, "RSP SETRXMASK 0 %d 0x%llx", slot, mask);
     }
   }
   else if (!strcmp(command, "SYNC")) {
