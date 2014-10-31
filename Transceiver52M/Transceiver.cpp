@@ -43,6 +43,9 @@ using namespace GSM;
 #  define USB_LATENCY_MIN		1,1
 #endif
 
+/* Clock indication interval in frames */
+#define CLK_IND_INTERVAL		100
+
 /* Number of running values use in noise average */
 #define NOISE_CNT			20
 #define FREQ_CNT			20
@@ -931,15 +934,6 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   for (int i = 0; i < 4; i++)
     frameNum = (frameNum << 8) | (0x0ff & buffer[i+1]);
 
-  // periodically update GSM core clock
-  LOG(DEBUG) << "mTransmitDeadlineClock " << mTransmitDeadlineClock
-		<< " mLastClockUpdateTime " << mLastClockUpdateTime;
-
-  if (!chan) {
-    if (mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0))
-      writeClockInterface();
-  }
-
   LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(frameNum,timeSlot);
   
   int RSSI = (int) buffer[5];
@@ -1047,6 +1041,11 @@ void Transceiver::driveTxFIFO()
       pushRadioVector(mTransmitDeadlineClock);
 
       mTransmitDeadlineClock.incTN();
+
+      if (!mTransmitDeadlineClock.TN() &&
+          !(mTransmitDeadlineClock.FN() % CLK_IND_INTERVAL)) {
+        writeClockInterface();
+      }
     }
   }
 
