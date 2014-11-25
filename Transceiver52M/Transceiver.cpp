@@ -43,7 +43,7 @@ using namespace GSM;
 #define NOISE_CNT			20
 
 TransceiverState::TransceiverState()
-  : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT)
+  : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT), mPower(0.0)
 {
   for (int i = 0; i < 8; i++) {
     chanType[i] = Transceiver::NONE;
@@ -91,7 +91,7 @@ Transceiver::Transceiver(int wBasePort,
   : mBasePort(wBasePort), mAddr(TRXAddress),
     mTransmitLatency(wTransmitLatency), mClockSocket(NULL),
     mRadioInterface(wRadioInterface), mSPSTx(wSPS), mSPSRx(1), mChans(wChans),
-    mOn(false), mTxFreq(0.0), mRxFreq(0.0), mPower(-10), mMaxExpectedDelay(0)
+    mOn(false), mTxFreq(0.0), mRxFreq(0.0), mMaxExpectedDelay(0)
 {
   GSM::Time startTime(random() % gHyperframe,0);
 
@@ -585,7 +585,6 @@ void Transceiver::driveControl(size_t chan)
       sprintf(response,"RSP POWERON 0");
       if (!chan && !mOn) {
         // Prepare for thread start
-        mPower = -20;
         mRadioInterface->start();
 
         // Start radio interface threads.
@@ -634,28 +633,19 @@ void Transceiver::driveControl(size_t chan)
     }
   }
   else if (!strcmp(command, "SETPOWER")) {
-    // set output power in dB
-    int dbPwr;
-    sscanf(buffer, "%3s %s %d", cmdcheck, command, &dbPwr);
-    if (!mOn)
-      sprintf(response, "RSP SETPOWER 1 %d", dbPwr);
-    else {
-      mPower = dbPwr;
-      mRadioInterface->setPowerAttenuation(mPower, chan);
-      sprintf(response, "RSP SETPOWER 0 %d", dbPwr);
-    }
+    int power;
+    sscanf(buffer, "%3s %s %d", cmdcheck, command, &power);
+    power = mRadioInterface->setPowerAttenuation(power, chan);
+    mStates[chan].mPower = power;
+    sprintf(response, "RSP SETPOWER 0 %d", power);
   }
   else if (!strcmp(command,"ADJPOWER")) {
-    // adjust power in dB steps
-    int dbStep;
-    sscanf(buffer, "%3s %s %d", cmdcheck, command, &dbStep);
-    if (!mOn)
-      sprintf(response, "RSP ADJPOWER 1 %d", mPower);
-    else {
-      mPower += dbStep;
-      mRadioInterface->setPowerAttenuation(mPower, chan);
-      sprintf(response, "RSP ADJPOWER 0 %d", mPower);
-    }
+    int power, step;
+    sscanf(buffer, "%3s %s %d", cmdcheck, command, &step);
+    power = mStates[chan].mPower + step;
+    power = mRadioInterface->setPowerAttenuation(power, chan);
+    mStates[chan].mPower = power;
+    sprintf(response, "RSP ADJPOWER 0 %d", power);
   }
   else if (strcmp(command,"RXTUNE")==0) {
     // tune receiver

@@ -81,6 +81,9 @@ struct TransceiverState {
   /* Received noise energy levels */
   float mNoiseLev;
   noiseVector mNoises;
+
+  /* Shadowed downlink attenuation */
+  int mPower;
 };
 
 /** The Transceiver class, responsible for physical layer of basestation */
@@ -165,7 +168,6 @@ private:
   bool mOn;			       ///< flag to indicate that transceiver is powered on
   double mTxFreq;                      ///< the transmit frequency
   double mRxFreq;                      ///< the receive frequency
-  int mPower;                          ///< the transmit power in dB
   unsigned mTSC;                       ///< the midamble sequence code
   unsigned mMaxExpectedDelay;            ///< maximum expected time-of-arrival offset in GSM symbols
 

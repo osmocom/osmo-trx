@@ -106,23 +106,27 @@ double RadioInterface::fullScaleOutputValue(void) {
   return mRadio->fullScaleOutputValue();
 }
 
-
-void RadioInterface::setPowerAttenuation(double atten, size_t chan)
+int RadioInterface::setPowerAttenuation(int atten, size_t chan)
 {
   double rfGain, digAtten;
 
   if (chan >= mChans) {
     LOG(ALERT) << "Invalid channel requested";
-    return;
+    return -1;
   }
 
-  rfGain = mRadio->setTxGain(mRadio->maxTxGain() - atten, chan);
-  digAtten = atten - mRadio->maxTxGain() + rfGain;
+  if (atten < 0.0)
+    atten = 0.0;
+
+  rfGain = mRadio->setTxGain(mRadio->maxTxGain() - (double) atten, chan);
+  digAtten = (double) atten - mRadio->maxTxGain() + rfGain;
 
   if (digAtten < 1.0)
     powerScaling[chan] = 1.0;
   else
     powerScaling[chan] = 1.0 / sqrt(pow(10, digAtten / 10.0));
+
+  return atten;
 }
 
 int RadioInterface::radioifyVector(signalVector &wVector,

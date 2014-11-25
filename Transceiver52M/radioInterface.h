@@ -120,7 +120,7 @@ public:
   /** drive reception of GSM bursts */
   bool driveReceiveRadio();
 
-  void setPowerAttenuation(double atten, size_t chan = 0);
+  int setPowerAttenuation(int atten, size_t chan = 0);
 
   /** returns the full-scale transmit amplitude **/
   double fullScaleInputValue();
