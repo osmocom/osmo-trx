@@ -78,7 +78,8 @@ private:
 public:
 
   /** start the interface */
-  void start();
+  bool start();
+  bool stop();
 
   /** intialization */
   virtual bool init(int type);

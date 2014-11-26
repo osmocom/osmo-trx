@@ -171,15 +171,20 @@ bool RadioInterface::tuneRx(double freq, size_t chan)
   return mRadio->setRxFreq(freq, chan);
 }
 
-
-void RadioInterface::start()
+bool RadioInterface::start()
 {
-  LOG(INFO) << "Starting radio";
+  if (mOn)
+    return true;
+
+  LOG(INFO) << "Starting radio device";
 #ifdef USRP1
   mAlignRadioServiceLoopThread.start((void * (*)(void*))AlignRadioServiceLoopAdapter,
                                      (void*)this);
 #endif
-  mRadio->start();
+
+  if (!mRadio->start())
+    return false;
+
   writeTimestamp = mRadio->initialWriteTimestamp();
   readTimestamp = mRadio->initialReadTimestamp();
 
@@ -188,6 +193,23 @@ void RadioInterface::start()
 
   mOn = true;
   LOG(INFO) << "Radio started";
+  return true;
+}
+
+/*
+ * Stop the radio device
+ *
+ * This is a pass-through call to the device interface. Because the underlying
+ * stop command issuance generally doesn't return confirmation on device status,
+ * this call will only return false if the device is already stopped.
+ */
+bool RadioInterface::stop()
+{
+  if (!mOn || !mRadio->stop())
+    return false;
+
+  mOn = false;
+  return true;
 }
 
 #ifdef USRP1

@@ -23,32 +23,27 @@
 
 void RadioClock::set(const GSM::Time& wTime)
 {
-	mLock.lock();
+	ScopedLock lock(mLock);
 	mClock = wTime;
 	updateSignal.signal();
-	mLock.unlock();
 }
 
 void RadioClock::incTN()
 {
-	mLock.lock();
+	ScopedLock lock(mLock);
 	mClock.incTN();
 	updateSignal.signal();
-	mLock.unlock();
 }
 
 GSM::Time RadioClock::get()
 {
-	mLock.lock();
+	ScopedLock lock(mLock);
 	GSM::Time retVal = mClock;
-	mLock.unlock();
-
 	return retVal;
 }
 
 void RadioClock::wait()
 {
-	mLock.lock();
+	ScopedLock lock(mLock);
 	updateSignal.wait(mLock,1);
-	mLock.unlock();
 }

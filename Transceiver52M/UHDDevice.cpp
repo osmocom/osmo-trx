@@ -40,6 +40,14 @@
 #define TX_AMPL          0.3
 #define SAMPLE_BUF_SZ    (1 << 20)
 
+/*
+ * UHD timeout value on streaming (re)start
+ *
+ * Allow some time for streaming to commence after the start command is issued,
+ * but consider a wait beyond one second to be a definite error condition.
+ */
+#define UHD_RESTART_TIMEOUT     1.0
+
 enum uhd_dev_type {
 	USRP1,
 	USRP2,
@@ -268,7 +276,7 @@ public:
 	int open(const std::string &args, bool extref);
 	bool start();
 	bool stop();
-	void restart();
+	bool restart();
 	void setPriority(float prio);
 	enum TxWindowType getWindowType() { return tx_window; }
 
@@ -313,8 +321,9 @@ public:
 
 	enum err_code {
 		ERROR_TIMING = -1,
-		ERROR_UNRECOVERABLE = -2,
-		ERROR_UNHANDLED = -3,
+		ERROR_TIMEOUT = -2,
+		ERROR_UNRECOVERABLE = -3,
+		ERROR_UNHANDLED = -4,
 	};
 
 private:
@@ -358,7 +367,7 @@ private:
 	uhd::tune_request_t select_freq(double wFreq, size_t chan, bool tx);
 	bool set_freq(double freq, size_t chan, bool tx);
 
-	Thread async_event_thrd;
+	Thread *async_event_thrd;
 	bool diversity;
 };
 
@@ -394,6 +403,12 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 	case uhd::msg::fastpath:
 		break;
 	}
+}
+
+static void thread_enable_cancel(bool cancel)
+{
+	cancel ? pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL) :
+		 pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 }
 
 uhd_device::uhd_device(size_t sps, size_t chans, bool diversity, double offset)
@@ -727,7 +742,7 @@ bool uhd_device::flush_recv(size_t num_pkts)
 {
 	uhd::rx_metadata_t md;
 	size_t num_smpls;
-	float timeout = 0.1f;
+	float timeout = UHD_RESTART_TIMEOUT;
 
 	std::vector<std::vector<short> >
 		pkt_bufs(chans, std::vector<short>(2 * rx_spp));
@@ -743,6 +758,8 @@ bool uhd_device::flush_recv(size_t num_pkts)
 		if (!num_smpls) {
 			switch (md.error_code) {
 			case uhd::rx_metadata_t::ERROR_CODE_TIMEOUT:
+				LOG(ALERT) << "Device timed out";
+				return false;
 			default:
 				continue;
 			}
@@ -756,7 +773,7 @@ bool uhd_device::flush_recv(size_t num_pkts)
 	return true;
 }
 
-void uhd_device::restart()
+bool uhd_device::restart()
 {
 	/* Allow 100 ms delay to align multi-channel streams */
 	double delay = 0.1;
@@ -771,7 +788,7 @@ void uhd_device::restart()
 
 	usrp_dev->issue_stream_cmd(cmd);
 
-	flush_recv(1);
+	return flush_recv(10);
 }
 
 bool uhd_device::start()
@@ -787,10 +804,12 @@ bool uhd_device::start()
 	uhd::msg::register_handler(&uhd_msg_handler);
 
 	// Start asynchronous event (underrun check) loop
-	async_event_thrd.start((void * (*)(void*))async_event_loop, (void*)this);
+	async_event_thrd = new Thread();
+	async_event_thrd->start((void * (*)(void*))async_event_loop, (void*)this);
 
 	// Start streaming
-	restart();
+	if (!restart())
+		return false;
 
 	// Display usrp time
 	double time_now = usrp_dev->get_time_now().get_real_secs();
@@ -809,6 +828,10 @@ bool uhd_device::stop()
 		uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS;
 
 	usrp_dev->issue_stream_cmd(stream_cmd);
+
+	async_event_thrd->cancel();
+	async_event_thrd->join();
+	delete async_event_thrd;
 
 	started = false;
 	return true;
@@ -830,6 +853,7 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 		switch (md.error_code) {
 		case uhd::rx_metadata_t::ERROR_CODE_TIMEOUT:
 			LOG(ALERT) << "UHD: Receive timed out";
+			return ERROR_TIMEOUT;
 		case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
 		case uhd::rx_metadata_t::ERROR_CODE_LATE_COMMAND:
 		case uhd::rx_metadata_t::ERROR_CODE_BROKEN_CHAIN:
@@ -899,8 +923,11 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 
 	// Receive samples from the usrp until we have enough
 	while (rx_buffers[0]->avail_smpls(timestamp) < len) {
+		thread_enable_cancel(false);
 		size_t num_smpls = rx_stream->recv(pkt_ptrs, rx_spp,
 						   metadata, 0.1, true);
+		thread_enable_cancel(true);
+
 		rx_pkt_cnt++;
 
 		// Check for errors 
@@ -910,6 +937,9 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 			LOG(ALERT) << "UHD: Version " << uhd::get_version_string();
 			LOG(ALERT) << "UHD: Unrecoverable error, exiting...";
 			exit(-1);
+		case ERROR_TIMEOUT:
+			// Assume stopping condition
+			return 0;
 		case ERROR_TIMING:
 			restart();
 		case ERROR_UNHANDLED:
@@ -988,7 +1018,10 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 		}
 	}
 
+	thread_enable_cancel(false);
 	size_t num_smpls = tx_stream->send(bufs, len, metadata);
+	thread_enable_cancel(true);
+
 	if (num_smpls != (unsigned) len) {
 		LOG(ALERT) << "UHD: Device send timed out";
 	}
@@ -1124,7 +1157,11 @@ double uhd_device::getRxFreq(size_t chan)
 bool uhd_device::recv_async_msg()
 {
 	uhd::async_metadata_t md;
-	if (!usrp_dev->get_device()->recv_async_msg(md))
+
+	thread_enable_cancel(false);
+	bool rc = usrp_dev->get_device()->recv_async_msg(md);
+	thread_enable_cancel(true);
+	if (!rc)
 		return false;
 
 	// Assume that any error requires resynchronization

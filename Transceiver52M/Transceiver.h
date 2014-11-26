@@ -91,12 +91,10 @@ class Transceiver {
 private:
   int mBasePort;
   std::string mAddr;
-  GSM::Time mTransmitLatency;     ///< latency between basestation clock and transmit deadline clock
-  GSM::Time mLatencyUpdateTime;   ///< last time latency was updated
 
   std::vector<UDPSocket *> mDataSockets;  ///< socket for writing to/reading from GSM core
   std::vector<UDPSocket *> mCtrlSockets;  ///< socket for writing/reading control commands from GSM core
-  UDPSocket *mClockSocket;                ///< socket for writing clock updates to GSM core
+  UDPSocket mClockSocket;                 ///< socket for writing clock updates to GSM core
 
   std::vector<VectorQueue> mTxPriorityQueues;   ///< priority queue of transmit bursts received from GSM core
   std::vector<VectorFIFO *>  mReceiveFIFO;      ///< radioInterface FIFO of receive bursts
@@ -107,6 +105,8 @@ private:
   std::vector<Thread *> mControlServiceLoopThreads;         ///< thread to process control messages from GSM core
   std::vector<Thread *> mTxPriorityQueueServiceLoopThreads; ///< thread to process transmit bursts from GSM core
 
+  GSM::Time mTransmitLatency;             ///< latency between basestation clock and transmit deadline clock
+  GSM::Time mLatencyUpdateTime;           ///< last time latency was updated
   GSM::Time mTransmitDeadlineClock;       ///< deadline for pushing bursts into transmit FIFO 
   GSM::Time mLastClockUpdateTime;         ///< last time clock update was sent up to core
 
@@ -173,6 +173,13 @@ private:
 
   std::vector<TransceiverState> mStates;
 
+  /** Start and stop I/O threads through the control socket API */
+  bool start();
+  void stop();
+
+  /** Protect destructor accessable stop call */
+  Mutex mLock;
+
 public:
 
   /** Transceiver constructor 
@@ -191,8 +198,7 @@ public:
   /** Destructor */
   ~Transceiver();
 
-  /** start the Transceiver */
-  void start();
+  /** Start the control loop */
   bool init(bool filler);
 
   /** attach the radioInterface receive FIFO */

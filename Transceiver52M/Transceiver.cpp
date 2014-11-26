@@ -84,42 +84,46 @@ void TransceiverState::init(size_t slot, signalVector *burst, bool fill)
 }
 
 Transceiver::Transceiver(int wBasePort,
-			 const char *TRXAddress,
+			 const char *wTRXAddress,
 			 size_t wSPS, size_t wChans,
 			 GSM::Time wTransmitLatency,
 			 RadioInterface *wRadioInterface)
-  : mBasePort(wBasePort), mAddr(TRXAddress),
-    mTransmitLatency(wTransmitLatency), mClockSocket(NULL),
-    mRadioInterface(wRadioInterface), mSPSTx(wSPS), mSPSRx(1), mChans(wChans),
-    mOn(false), mTxFreq(0.0), mRxFreq(0.0), mMaxExpectedDelay(0)
+  : mBasePort(wBasePort), mAddr(wTRXAddress),
+    mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
+    mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
+    mSPSTx(wSPS), mSPSRx(1), mChans(wChans), mOn(false),
+    mTxFreq(0.0), mRxFreq(0.0), mMaxExpectedDelay(0)
 {
-  GSM::Time startTime(random() % gHyperframe,0);
-
-  mRxLowerLoopThread = new Thread(32768);
-  mTxLowerLoopThread = new Thread(32768);
-
-  mTransmitDeadlineClock = startTime;
-  mLastClockUpdateTime = startTime;
-  mLatencyUpdateTime = startTime;
-  mRadioInterface->getClock()->set(startTime);
-
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
 }
 
 Transceiver::~Transceiver()
 {
+  stop();
+
   sigProcLibDestroy();
 
-  delete mClockSocket;
-
   for (size_t i = 0; i < mChans; i++) {
+    mControlServiceLoopThreads[i]->cancel();
+    mControlServiceLoopThreads[i]->join();
+    delete mControlServiceLoopThreads[i];
+
     mTxPriorityQueues[i].clear();
     delete mCtrlSockets[i];
     delete mDataSockets[i];
   }
 }
 
+/*
+ * Initialize transceiver
+ *
+ * Start or restart the control loop. Any further control is handled through the
+ * socket API. Randomize the central radio clock set the downlink burst
+ * counters. Note that the clock will not update until the radio starts, but we
+ * are still expected to report clock indications through control channel
+ * activity.
+ */
 bool Transceiver::init(bool filler)
 {
   int d_srcport, d_dstport, c_srcport, c_dstport;
@@ -150,8 +154,7 @@ bool Transceiver::init(bool filler)
   if (filler)
     mStates[0].mRetrans = true;
 
-  mClockSocket = new UDPSocket(mBasePort, mAddr.c_str(), mBasePort + 100);
-
+  /* Setup sockets */
   for (size_t i = 0; i < mChans; i++) {
     c_srcport = mBasePort + 2 * i + 1;
     c_dstport = mBasePort + 2 * i + 101;
@@ -162,10 +165,19 @@ bool Transceiver::init(bool filler)
     mDataSockets[i] = new UDPSocket(d_srcport, mAddr.c_str(), d_dstport);
   }
 
+  /* Randomize the central clock */
+  GSM::Time startTime(random() % gHyperframe, 0);
+  mRadioInterface->getClock()->set(startTime);
+  mTransmitDeadlineClock = startTime;
+  mLastClockUpdateTime = startTime;
+  mLatencyUpdateTime = startTime;
+
+  /* Start control threads */
   for (size_t i = 0; i < mChans; i++) {
+    TransceiverChannel *chan = new TransceiverChannel(this, i);
     mControlServiceLoopThreads[i] = new Thread(32768);
-    mTxPriorityQueueServiceLoopThreads[i] = new Thread(32768);
-    mRxServiceLoopThreads[i] = new Thread(32768);
+    mControlServiceLoopThreads[i]->start((void * (*)(void*))
+                                 ControlServiceLoopAdapter, (void*) chan);
 
     for (size_t n = 0; n < 8; n++) {
       burst = modulateBurst(gDummyBurst, 8 + (n % 4 == 0), mSPSTx);
@@ -176,6 +188,106 @@ bool Transceiver::init(bool filler)
   }
 
   return true;
+}
+
+/*
+ * Start the transceiver
+ *
+ * Submit command(s) to the radio device to commence streaming samples and
+ * launch threads to handle sample I/O. Re-synchronize the transmit burst
+ * counters to the central radio clock here as well.
+ */
+bool Transceiver::start()
+{
+  ScopedLock lock(mLock);
+
+  if (mOn) {
+    LOG(ERR) << "Transceiver already running";
+    return false;
+  }
+
+  LOG(NOTICE) << "Starting the transceiver";
+
+  GSM::Time time = mRadioInterface->getClock()->get();
+  mTransmitDeadlineClock = time;
+  mLastClockUpdateTime = time;
+  mLatencyUpdateTime = time;
+
+  if (!mRadioInterface->start()) {
+    LOG(ALERT) << "Device failed to start";
+    return false;
+  }
+
+  /* Device is running - launch I/O threads */
+  mRxLowerLoopThread = new Thread(32768);
+  mTxLowerLoopThread = new Thread(32768);
+  mTxLowerLoopThread->start((void * (*)(void*))
+                            TxLowerLoopAdapter,(void*) this);
+  mRxLowerLoopThread->start((void * (*)(void*))
+                            RxLowerLoopAdapter,(void*) this);
+
+  /* Launch uplink and downlink burst processing threads */
+  for (size_t i = 0; i < mChans; i++) {
+    TransceiverChannel *chan = new TransceiverChannel(this, i);
+    mRxServiceLoopThreads[i] = new Thread(32768);
+    mRxServiceLoopThreads[i]->start((void * (*)(void*))
+                            RxUpperLoopAdapter, (void*) chan);
+
+    chan = new TransceiverChannel(this, i);
+    mTxPriorityQueueServiceLoopThreads[i] = new Thread(32768);
+    mTxPriorityQueueServiceLoopThreads[i]->start((void * (*)(void*))
+                            TxUpperLoopAdapter, (void*) chan);
+  }
+
+  writeClockInterface();
+  mOn = true;
+  return true;
+}
+
+/*
+ * Stop the transceiver
+ *
+ * Perform stopping by disabling receive streaming and issuing cancellation
+ * requests to running threads. Most threads will timeout and terminate once
+ * device is disabled, but the transmit loop may block waiting on the central
+ * UMTS clock. Explicitly signal the clock to make sure that the transmit loop
+ * makes it to the thread cancellation point.
+ */
+void Transceiver::stop()
+{
+  ScopedLock lock(mLock);
+
+  if (!mOn)
+    return;
+
+  LOG(NOTICE) << "Stopping the transceiver";
+  mTxLowerLoopThread->cancel();
+  mRxLowerLoopThread->cancel();
+
+  for (size_t i = 0; i < mChans; i++) {
+    mRxServiceLoopThreads[i]->cancel();
+    mTxPriorityQueueServiceLoopThreads[i]->cancel();
+  }
+
+  LOG(INFO) << "Stopping the device";
+  mRadioInterface->stop();
+
+  for (size_t i = 0; i < mChans; i++) {
+    mRxServiceLoopThreads[i]->join();
+    mTxPriorityQueueServiceLoopThreads[i]->join();
+    delete mRxServiceLoopThreads[i];
+    delete mTxPriorityQueueServiceLoopThreads[i];
+
+    mTxPriorityQueues[i].clear();
+  }
+
+  mTxLowerLoopThread->join();
+  mRxLowerLoopThread->join();
+  delete mTxLowerLoopThread;
+  delete mRxLowerLoopThread;
+
+  mOn = false;
+  LOG(NOTICE) << "Transceiver stopped";
 }
 
 void Transceiver::addRadioVector(size_t chan, BitVector &bits,
@@ -525,17 +637,6 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   return bits;
 }
 
-void Transceiver::start()
-{
-  TransceiverChannel *chan;
-
-  for (size_t i = 0; i < mControlServiceLoopThreads.size(); i++) {
-    chan = new TransceiverChannel(this, i);
-    mControlServiceLoopThreads[i]->start((void * (*)(void*))
-                                 ControlServiceLoopAdapter, (void*) chan);
-  }
-}
-
 void Transceiver::reset()
 {
   for (size_t i = 0; i < mTxPriorityQueues.size(); i++)
@@ -574,39 +675,14 @@ void Transceiver::driveControl(size_t chan)
   LOG(INFO) << "command is " << buffer;
 
   if (strcmp(command,"POWEROFF")==0) {
-    // turn off transmitter/demod
-    sprintf(response,"RSP POWEROFF 0"); 
+    stop();
+    sprintf(response,"RSP POWEROFF 0");
   }
   else if (strcmp(command,"POWERON")==0) {
-    // turn on transmitter/demod
-    if (!mTxFreq || !mRxFreq) 
+    if (!start())
       sprintf(response,"RSP POWERON 1");
-    else {
+    else
       sprintf(response,"RSP POWERON 0");
-      if (!chan && !mOn) {
-        // Prepare for thread start
-        mRadioInterface->start();
-
-        // Start radio interface threads.
-        mTxLowerLoopThread->start((void * (*)(void*))
-                                  TxLowerLoopAdapter,(void*) this);
-        mRxLowerLoopThread->start((void * (*)(void*))
-                                  RxLowerLoopAdapter,(void*) this);
-
-        for (size_t i = 0; i < mChans; i++) {
-          TransceiverChannel *chan = new TransceiverChannel(this, i);
-          mRxServiceLoopThreads[i]->start((void * (*)(void*))
-                                  RxUpperLoopAdapter, (void*) chan);
-
-          chan = new TransceiverChannel(this, i);
-          mTxPriorityQueueServiceLoopThreads[i]->start((void * (*)(void*))
-                                  TxUpperLoopAdapter, (void*) chan);
-        }
-
-        writeClockInterface();
-        mOn = true;
-      }
-    }
   }
   else if (strcmp(command,"SETMAXDLY")==0) {
     //set expected maximum time-of-arrival
@@ -855,7 +931,7 @@ void Transceiver::writeClockInterface()
 
   LOG(INFO) << "ClockInterface: sending " << command;
 
-  mClockSocket->write(command, strlen(command) + 1);
+  mClockSocket.write(command, strlen(command) + 1);
 
   mLastClockUpdateTime = mTransmitDeadlineClock;
 
@@ -923,15 +999,7 @@ void *TxUpperLoopAdapter(TransceiverChannel *chan)
   trx->setPriority(0.40);
 
   while (1) {
-    bool stale = false;
-    // Flush the UDP packets until a successful transfer.
-    while (!trx->driveTxPriorityQueue(num)) {
-      stale = true;
-    }
-    if (!num && stale) {
-      // If a packet was stale, remind the GSM stack of the clock.
-      trx->writeClockInterface();
-    }
+    trx->driveTxPriorityQueue(num);
     pthread_testcancel();
   }
   return NULL;

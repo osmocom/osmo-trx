@@ -391,8 +391,6 @@ int main(int argc, char *argv[])
 	if (!trx)
 		goto shutdown;
 
-	trx->start();
-
 	chans = trx->numChans();
 	std::cout << "-- Transceiver active with "
 		  << chans << " channel(s)" << std::endl;
