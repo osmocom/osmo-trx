@@ -34,7 +34,6 @@
 
 #define B2XX_CLK_RT      26e6
 #define E1XX_CLK_RT      52e6
-#define B2XX_BASE_RT     GSMRATE
 #define B100_BASE_RT     400000
 #define USRP2_BASE_RT    390625
 #define TX_AMPL          0.3
@@ -55,6 +54,8 @@ enum uhd_dev_type {
 	B200,
 	B210,
 	E1XX,
+	E3XX,
+	X3XX,
 	UMTRX,
 	NUM_USRP_TYPES,
 };
@@ -89,6 +90,10 @@ static struct uhd_dev_offset uhd_offsets[NUM_USRP_TYPES * 2] = {
 	{ B210,  4, 6.9248e-5, "B210 4 SPS" },
 	{ E1XX,  1, 9.5192e-5, "E1XX 1 SPS" },
 	{ E1XX,  4, 6.5571e-5, "E1XX 4 SPS" },
+	{ E3XX,  1, 1.5000e-4, "E3XX 1 SPS" },
+	{ E3XX,  4, 1.2740e-4, "E3XX 4 SPS" },
+	{ X3XX,  1, 1.5360e-4, "X3XX 1 SPS"},
+	{ X3XX,  4, 1.1264e-4, "X3XX 4 SPS"},
 	{ UMTRX, 1, 9.9692e-5, "UmTRX 1 SPS" },
 	{ UMTRX, 4, 7.3846e-5, "UmTRX 4 SPS" },
 };
@@ -105,7 +110,7 @@ static struct uhd_dev_offset special_offsets[] = {
 static double get_dev_offset(enum uhd_dev_type type,
 			     int sps, bool diversity = false)
 {
-	struct uhd_dev_offset *offset;
+	struct uhd_dev_offset *offset = NULL;
 
 	/* Reject USRP1 */
 	if (type == USRP1) {
@@ -129,15 +134,19 @@ static double get_dev_offset(enum uhd_dev_type type,
 			offset = &special_offsets[1];
 		}
 	} else {
-		/* Normal operation */
-		switch (sps) {
-		case 1:
-			offset = &uhd_offsets[2 * type + 0];
-			break;
-		case 4:
-		default:
-			offset = &uhd_offsets[2 * type + 1];
+		/* Search for matching offset value */
+		for (int i = 0; i < NUM_USRP_TYPES * 2; i++) {
+			if ((type == uhd_offsets[i].type) &&
+                            (sps == uhd_offsets[i].sps)) {
+				offset = &uhd_offsets[i];
+				break;
+			}
 		}
+	}
+
+	if (!offset) {
+		LOG(ERR) << "Invalid device configuration";
+		return 0.0;
 	}
 
 	std::cout << "-- Setting " << offset->desc << std::endl;
@@ -164,12 +173,14 @@ static double select_rate(uhd_dev_type type, int sps, bool diversity = false)
 
 	switch (type) {
 	case USRP2:
+	case X3XX:
 		return USRP2_BASE_RT * sps;
 	case B100:
 		return B100_BASE_RT * sps;
 	case B200:
 	case B210:
 	case E1XX:
+	case E3XX:
 	case UMTRX:
 		return GSMRATE * sps;
 	default:
@@ -489,7 +500,7 @@ int uhd_device::set_rates(double tx_rate, double rx_rate)
 	double tx_offset, rx_offset;
 
 	/* B2XX and E1xx are the only device where we set FPGA clocking */
-	if ((dev_type == B200) || (dev_type == B210)) {
+	if ((dev_type == B200) || (dev_type == B210) || (dev_type == E3XX)) {
 		if (set_master_clk(B2XX_CLK_RT) < 0)
 			return -1;
 	}
@@ -572,8 +583,8 @@ bool uhd_device::parse_dev_type()
 {
 	std::string mboard_str, dev_str;
 	uhd::property_tree::sptr prop_tree;
-	size_t usrp1_str, usrp2_str, e100_str, e110_str,
-	       b100_str, b200_str, b210_str, umtrx_str;
+	size_t usrp1_str, usrp2_str, e100_str, e110_str, e310_str,
+	       b100_str, b200_str, b210_str, x300_str, x310_str, umtrx_str;
 
 	prop_tree = usrp_dev->get_device()->get_tree();
 	dev_str = prop_tree->access<std::string>("/name").get();
@@ -586,6 +597,9 @@ bool uhd_device::parse_dev_type()
 	b210_str = mboard_str.find("B210");
 	e100_str = mboard_str.find("E100");
 	e110_str = mboard_str.find("E110");
+	e310_str = mboard_str.find("E310");
+	x300_str = mboard_str.find("X300");
+	x310_str = mboard_str.find("X310");
 	umtrx_str = dev_str.find("UmTRX");
 
 	if (usrp1_str != std::string::npos) {
@@ -613,6 +627,15 @@ bool uhd_device::parse_dev_type()
 	} else if (usrp2_str != std::string::npos) {
 		tx_window = TX_WINDOW_FIXED;
 		dev_type = USRP2;
+	} else if (e310_str != std::string::npos) {
+		tx_window = TX_WINDOW_FIXED;
+		dev_type = E3XX;
+	} else if (x300_str != std::string::npos) {
+		tx_window = TX_WINDOW_FIXED;
+		dev_type = X3XX;
+	} else if (x310_str != std::string::npos) {
+		tx_window = TX_WINDOW_FIXED;
+		dev_type = X3XX;
 	} else if (umtrx_str != std::string::npos) {
 		tx_window = TX_WINDOW_FIXED;
 		dev_type = UMTRX;
@@ -727,10 +750,12 @@ int uhd_device::open(const std::string &args, bool extref)
 	case B100:
 		return RESAMP_64M;
 	case USRP2:
+	case X3XX:
 		return RESAMP_100M;
 	case B200:
 	case B210:
 	case E1XX:
+	case E3XX:
 	default:
 		break;
 	}
