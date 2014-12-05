@@ -225,7 +225,7 @@ public:
 	/** Buffer status string
 	    @return a formatted string describing internal buffer state
 	*/
-	std::string str_status() const;
+	std::string str_status(size_t ts) const;
 
 	/** Formatted error string 
 	    @param code an error code
@@ -885,7 +885,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	rc = rx_buffers[0]->avail_smpls(timestamp);
 	if (rc < 0) {
 		LOG(ERR) << rx_buffers[0]->str_code(rc);
-		LOG(ERR) << rx_buffers[0]->str_status();
+		LOG(ERR) << rx_buffers[0]->str_status(timestamp);
 		return 0;
 	}
 
@@ -927,7 +927,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 			// Continue on local overrun, exit on other errors
 			if ((rc < 0)) {
 				LOG(ERR) << rx_buffers[i]->str_code(rc);
-				LOG(ERR) << rx_buffers[i]->str_status();
+				LOG(ERR) << rx_buffers[i]->str_status(timestamp);
 				if (rc != smpl_buf::ERROR_OVERFLOW)
 					return 0;
 			}
@@ -939,7 +939,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 		rc = rx_buffers[i]->read(bufs[i], len, timestamp);
 		if ((rc < 0) || (rc != len)) {
 			LOG(ERR) << rx_buffers[i]->str_code(rc);
-			LOG(ERR) << rx_buffers[i]->str_status();
+			LOG(ERR) << rx_buffers[i]->str_status(timestamp);
 			return 0;
 		}
 	}
@@ -1326,11 +1326,12 @@ ssize_t smpl_buf::write(void *buf, size_t len, uhd::time_spec_t ts)
 	return write(buf, len, convert_time(ts, clk_rt));
 }
 
-std::string smpl_buf::str_status() const
+std::string smpl_buf::str_status(size_t ts) const
 {
 	std::ostringstream ost("Sample buffer: ");
 
-	ost << "length = " << buf_len;
+	ost << "timestamp = " << ts;
+	ost << ", length = " << buf_len;
 	ost << ", time_start = " << time_start;
 	ost << ", time_end = " << time_end;
 	ost << ", data_start = " << data_start;
