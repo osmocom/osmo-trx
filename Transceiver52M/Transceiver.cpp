@@ -105,6 +105,12 @@ Transceiver::Transceiver(int wBasePort,
 
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
+
+  for (int i = 0; i < 8; i++) {
+    for (int j = 0; j < 8; j++)
+      mHandover[i][j] = false;
+  }
+
 }
 
 Transceiver::~Transceiver()
@@ -296,6 +302,12 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
                                                     size_t chan)
 {
   TransceiverState *state = &mStates[chan];
+  static int tchh_subslot[26] = { 0,1,0,1,0,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,0,1,0,1,1 };
+  static int sdcch4_subslot[102] = { 3,3,3,3,0,0,2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,2,2,2,2,
+                                     3,3,3,3,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,2,2,2,2 };
+  static int sdcch8_subslot[102] = { 5,5,5,5,6,6,6,6,7,7,7,7,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,0,0,0,0,
+                                     1,1,1,1,2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,4,4,4,4 };
+ 
   unsigned burstTN = currTime.TN();
   unsigned burstFN = currTime.FN();
 
@@ -307,6 +319,8 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
     return IDLE;
     break;
   case I:
+    if (mHandover[burstTN][0])
+      return RACH;
     return TSC;
     /*if (burstFN % 26 == 25) 
       return IDLE;
@@ -317,6 +331,8 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
     return TSC;
     break;
   case III:
+    if (mHandover[burstTN][tchh_subslot[burstFN % 26]])
+      return RACH;
     return TSC;
     break;
   case IV:
@@ -331,6 +347,8 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
       return RACH;
     else if ((mod51 == 45) || (mod51 == 46))
       return RACH;
+    else if (mHandover[burstTN][sdcch4_subslot[burstFN % 102]])
+      return RACH;
     else
       return TSC;
     break;
@@ -338,6 +356,8 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   case VII:
     if ((burstFN % 51 <= 14) && (burstFN % 51 >= 12))
       return IDLE;
+    else if (mHandover[burstTN][sdcch8_subslot[burstFN % 102]])
+      return RACH;
     else
       return TSC;
     break;
@@ -583,6 +603,10 @@ void Transceiver::driveControl(size_t chan)
       sprintf(response,"RSP POWERON 1");
     else {
       sprintf(response,"RSP POWERON 0");
+      for (int i = 0; i < 8; i++) {
+       for (int j = 0; j < 8; j++)
+         mHandover[i][j] = false;
+      }
       if (!chan && !mOn) {
         // Prepare for thread start
         mPower = -20;
@@ -608,6 +632,20 @@ void Transceiver::driveControl(size_t chan)
         mOn = true;
       }
     }
+  }
+  else if  (strcmp(command,"HANDOVER")==0){
+    int ts=0,ss=0;
+    sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&ts,&ss);
+    mHandover[ts][ss] = true;
+    LOG(WARNING) << "HANDOVER RACH at timeslot " << ts << " subslot " << ss;
+    sprintf(response,"RSP HANDOVER 0 %d %d",ts,ss);
+  }
+  else if  (strcmp(command,"NOHANDOVER")==0){
+    int ts=0,ss=0;
+    sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&ts,&ss);
+    mHandover[ts][ss] = false;
+    LOG(WARNING) << "NOHANDOVER at timeslot " << ts << " subslot " << ss;
+    sprintf(response,"RSP NOHANDOVER 0 %d %d",ts,ss);
   }
   else if (strcmp(command,"SETMAXDLY")==0) {
     //set expected maximum time-of-arrival

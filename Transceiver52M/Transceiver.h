@@ -163,6 +163,7 @@ private:
   size_t mChans;
 
   bool mOn;			       ///< flag to indicate that transceiver is powered on
+  bool mHandover[8][8];                ///< expect handover to the timeslot/subslot
   double mTxFreq;                      ///< the transmit frequency
   double mRxFreq;                      ///< the receive frequency
   int mPower;                          ///< the transmit power in dB
