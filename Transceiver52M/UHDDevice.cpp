@@ -380,6 +380,7 @@ private:
 
 	Thread *async_event_thrd;
 	bool diversity;
+	Mutex tune_lock;
 };
 
 void *async_event_loop(uhd_device *dev)
@@ -1145,6 +1146,7 @@ bool uhd_device::setTxFreq(double wFreq, size_t chan)
 		LOG(ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
+	ScopedLock lock(tune_lock);
 
 	return set_freq(wFreq, chan, true);
 }
@@ -1155,6 +1157,7 @@ bool uhd_device::setRxFreq(double wFreq, size_t chan)
 		LOG(ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
+	ScopedLock lock(tune_lock);
 
 	return set_freq(wFreq, chan, false);
 }
