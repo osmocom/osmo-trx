@@ -28,6 +28,14 @@ enum ConvType {
   UNDEFINED,
 };
 
+enum signalError {
+  SIGERR_NONE,
+  SIGERR_BOUNDS,
+  SIGERR_CLIP,
+  SIGERR_UNSUPPORTED,
+  SIGERR_INTERNAL,
+};
+
 /** Convert a linear number to a dB value */
 float dB(float x);
 

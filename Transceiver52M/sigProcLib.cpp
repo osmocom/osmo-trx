@@ -34,6 +34,8 @@ extern "C" {
 #include "scale.h"
 #include "mult.h"
 }
+/* Clipping detection threshold */
+#define CLIP_THRESH     30000.0f
 
 using namespace GSM;
 
@@ -1340,7 +1342,7 @@ static int detectBurst(signalVector &burst,
   /* Correlate */
   if (!convolve(&burst, sync->sequence, &corr,
                 CUSTOM, start, len, sps, 0)) {
-    return -1;
+    return -SIGERR_INTERNAL;
   }
 
   /* Peak detection - place restrictions at correlation edges */
@@ -1369,6 +1371,18 @@ static int detectBurst(signalVector &burst,
   return 1;
 }
 
+static int detectClipping(signalVector &burst, float thresh)
+{
+	for (size_t i = 0; i < burst.size(); i++) {
+		if (fabs(burst[i].real()) > thresh)
+			return 1;
+		if (fabs(burst[i].imag()) > thresh)
+			return 1;
+	}
+
+	return 0;
+}
+
 /* 
  * RACH burst detection
  *
@@ -1390,7 +1404,10 @@ int detectRACHBurst(signalVector &rxBurst,
   CorrelationSequence *sync;
 
   if ((sps != 1) && (sps != 4))
-    return -1;
+    return -SIGERR_UNSUPPORTED;
+
+  if (detectClipping(rxBurst, CLIP_THRESH))
+    return -SIGERR_CLIP;
 
   target = 8 + 40;
   head = 4;
@@ -1443,7 +1460,7 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
   CorrelationSequence *sync;
 
   if ((tsc < 0) || (tsc > 7) || ((sps != 1) && (sps != 4)))
-    return -1;
+    return -SIGERR_UNSUPPORTED;
 
   target = 3 + 58 + 16 + 5;
   head = 4;
@@ -1459,7 +1476,7 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
   delete corr;
 
   if (rc < 0) {
-    return -1;
+    return -SIGERR_INTERNAL;
   } else if (!rc) {
     if (amp)
       *amp = 0.0f;
