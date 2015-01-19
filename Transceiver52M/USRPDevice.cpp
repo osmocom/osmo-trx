@@ -600,7 +600,7 @@ bool USRPDevice::setTxFreq(double wFreq) { return true;};
 bool USRPDevice::setRxFreq(double wFreq) { return true;};
 #endif
 
-RadioDevice *RadioDevice::make(size_t sps, size_t chans, bool diversity)
+RadioDevice *RadioDevice::make(size_t sps, size_t chans, bool diversity, double)
 {
 	return new USRPDevice(sps, chans, diversity);
 }
