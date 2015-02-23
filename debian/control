@@ -3,7 +3,7 @@ Maintainer: Ivan Klyuchnikov <ivan.kluchnikov@fairwaves.ru>
 Section: net
 Priority: optional
 Standards-Version: 3.9.3
-Build-Depends: debhelper (>= 9), autotools-dev, libdbd-sqlite3, pkg-config, dh-autoreconf, libuhd-dev (>= 3.5.7), libusb-1.0-0-dev, libboost-all-dev
+Build-Depends: debhelper (>= 9), autotools-dev, libdbd-sqlite3, pkg-config, dh-autoreconf, uhd, umtrx-uhd, libusb-1.0-0-dev, libboost-all-dev
 Homepage: http://openbsc.osmocom.org/trac/wiki/OsmoTRX
 Vcs-Git: git://git.osmocom.org/osmo-trx
 Vcs-Browser: http://cgit.osmocom.org/osmo-trx
