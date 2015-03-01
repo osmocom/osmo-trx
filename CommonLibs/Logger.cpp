@@ -192,7 +192,7 @@ Log::~Log()
 	if (mDummyInit) return;
 	// Anything at or above LOG_CRIT is an "alarm".
 	// Save alarms in the local list and echo them to stderr.
-	if (mPriority <= LOG_CRIT) {
+	if (mPriority <= LOG_ERR) {
 		if (sLoggerInited) addAlarm(mStream.str().c_str());
 		cerr << mStream.str() << endl;
 	}
