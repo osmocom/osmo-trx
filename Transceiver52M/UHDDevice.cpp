@@ -37,7 +37,8 @@
 #define B2XX_BASE_RT     GSMRATE
 #define B100_BASE_RT     400000
 #define USRP2_BASE_RT    390625
-#define TX_AMPL          0.3
+#define USRP_TX_AMPL     0.3
+#define UMTRX_TX_AMPL    0.7
 #define SAMPLE_BUF_SZ    (1 << 20)
 
 #define UMTRX_VGA1_DEF   -18
@@ -289,7 +290,7 @@ public:
 	inline TIMESTAMP initialWriteTimestamp() { return ts_initial * sps; }
 	inline TIMESTAMP initialReadTimestamp() { return ts_initial; }
 
-	inline double fullScaleInputValue() { return 32000 * TX_AMPL; }
+	inline double fullScaleInputValue() { return (dev_type==UMTRX) ? (32000 * UMTRX_TX_AMPL) : (32000 * USRP_TX_AMPL); }
 	inline double fullScaleOutputValue() { return 32000; }
 
 	double setRxGain(double db, size_t chan);
