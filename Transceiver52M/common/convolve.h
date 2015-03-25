@@ -3,26 +3,26 @@
 
 void *convolve_h_alloc(int num);
 
-int convolve_real(float *x, int x_len,
-		  float *h, int h_len,
+int convolve_real(const float *x, int x_len,
+		  const float *h, int h_len,
 		  float *y, int y_len,
 		  int start, int len,
 		  int step, int offset);
 
-int convolve_complex(float *x, int x_len,
-		     float *h, int h_len,
+int convolve_complex(const float *x, int x_len,
+		     const float *h, int h_len,
 		     float *y, int y_len,
 		     int start, int len,
 		     int step, int offset);
 
-int base_convolve_real(float *x, int x_len,
-		       float *h, int h_len,
+int base_convolve_real(const float *x, int x_len,
+		       const float *h, int h_len,
 		       float *y, int y_len,
 		       int start, int len,
 		       int step, int offset);
 
-int base_convolve_complex(float *x, int x_len,
-			  float *h, int h_len,
+int base_convolve_complex(const float *x, int x_len,
+			  const float *h, int h_len,
 			  float *y, int y_len,
 			  int start, int len,
 			  int step, int offset);

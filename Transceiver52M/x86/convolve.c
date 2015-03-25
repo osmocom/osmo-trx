@@ -27,14 +27,14 @@
 #endif
 
 /* Forward declarations from base implementation */
-int _base_convolve_real(float *x, int x_len,
-			float *h, int h_len,
+int _base_convolve_real(const float *x, int x_len,
+			const float *h, int h_len,
 			float *y, int y_len,
 			int start, int len,
 			int step, int offset);
 
-int _base_convolve_complex(float *x, int x_len,
-			   float *h, int h_len,
+int _base_convolve_complex(const float *x, int x_len,
+			   const float *h, int h_len,
 			   float *y, int y_len,
 			   int start, int len,
 			   int step, int offset);
@@ -47,8 +47,8 @@ int bounds_check(int x_len, int h_len, int y_len,
 #include <pmmintrin.h>
 
 /* 4-tap SSE complex-real convolution */
-static void sse_conv_real4(float *restrict x,
-			   float *restrict h,
+static void sse_conv_real4(const float *restrict x,
+			   const float *restrict h,
 			   float *restrict y,
 			   int len)
 {
@@ -81,8 +81,8 @@ static void sse_conv_real4(float *restrict x,
 }
 
 /* 8-tap SSE complex-real convolution */
-static void sse_conv_real8(float *restrict x,
-			   float *restrict h,
+static void sse_conv_real8(const float *restrict x,
+			   const float *restrict h,
 			   float *restrict y,
 			   int len)
 {
@@ -128,8 +128,8 @@ static void sse_conv_real8(float *restrict x,
 }
 
 /* 12-tap SSE complex-real convolution */
-static void sse_conv_real12(float *restrict x,
-			    float *restrict h,
+static void sse_conv_real12(const float *restrict x,
+			    const float *restrict h,
 			    float *restrict y,
 			    int len)
 {
@@ -190,8 +190,8 @@ static void sse_conv_real12(float *restrict x,
 }
 
 /* 16-tap SSE complex-real convolution */
-static void sse_conv_real16(float *restrict x,
-			    float *restrict h,
+static void sse_conv_real16(const float *restrict x,
+			    const float *restrict h,
 			    float *restrict y,
 			    int len)
 {
@@ -265,8 +265,8 @@ static void sse_conv_real16(float *restrict x,
 }
 
 /* 20-tap SSE complex-real convolution */
-static void sse_conv_real20(float *restrict x,
-			    float *restrict h,
+static void sse_conv_real20(const float *restrict x,
+			    const float *restrict h,
 			    float *restrict y,
 			    int len)
 {
@@ -351,7 +351,10 @@ static void sse_conv_real20(float *restrict x,
 }
 
 /* 4*N-tap SSE complex-real convolution */
-static void sse_conv_real4n(float *x, float *h, float *y, int h_len, int len)
+static void sse_conv_real4n(const float *x,
+			    const float *h,
+			    float *y,
+			    int h_len, int len)
 {
 	__m128 m0, m1, m2, m4, m5, m6, m7;
 
@@ -391,7 +394,10 @@ static void sse_conv_real4n(float *x, float *h, float *y, int h_len, int len)
 }
 
 /* 4*N-tap SSE complex-complex convolution */
-static void sse_conv_cmplx_4n(float *x, float *h, float *y, int h_len, int len)
+static void sse_conv_cmplx_4n(const float *x,
+			      const float *h,
+			      float *y,
+			      int h_len, int len)
 {
 	__m128 m0, m1, m2, m3, m4, m5, m6, m7;
 
@@ -439,7 +445,10 @@ static void sse_conv_cmplx_4n(float *x, float *h, float *y, int h_len, int len)
 }
 
 /* 8*N-tap SSE complex-complex convolution */
-static void sse_conv_cmplx_8n(float *x, float *h, float *y, int h_len, int len)
+static void sse_conv_cmplx_8n(const float *x,
+			      const float *h,
+			      float *y,
+			      int h_len, int len)
 {
 	__m128 m0, m1, m2, m3, m4, m5, m6, m7;
 	__m128 m8, m9, m10, m11, m12, m13, m14, m15;
@@ -511,14 +520,16 @@ static void sse_conv_cmplx_8n(float *x, float *h, float *y, int h_len, int len)
 #endif
 
 /* API: Aligned complex-real */
-int convolve_real(float *x, int x_len,
-		  float *h, int h_len,
+int convolve_real(const float *x, int x_len,
+		  const float *h, int h_len,
 		  float *y, int y_len,
 		  int start, int len,
 		  int step, int offset)
 {
-	void (*conv_func)(float *, float *, float *, int) = NULL;
-	void (*conv_func_n)(float *, float *, float *, int, int) = NULL;
+	void (*conv_func)(const float *, const float *,
+			  float *, int) = NULL;
+	void (*conv_func_n)(const float *, const float *,
+			    float *, int, int) = NULL;
 
 	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
 		return -1;
@@ -566,13 +577,14 @@ int convolve_real(float *x, int x_len,
 }
 
 /* API: Aligned complex-complex */
-int convolve_complex(float *x, int x_len,
-		     float *h, int h_len,
+int convolve_complex(const float *x, int x_len,
+		     const float *h, int h_len,
 		     float *y, int y_len,
 		     int start, int len,
 		     int step, int offset)
 {
-	void (*conv_func)(float *, float *, float *, int, int) = NULL;
+	void (*conv_func)(const float *, const float *,
+			  float *, int, int) = NULL;
 
 	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
 		return -1;

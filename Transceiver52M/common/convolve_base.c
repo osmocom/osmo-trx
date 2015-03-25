@@ -26,21 +26,21 @@
 #endif
 
 /* Base multiply and accumulate complex-real */
-static void mac_real(float *x, float *h, float *y)
+static void mac_real(const float *x, const float *h, float *y)
 {
 	y[0] += x[0] * h[0];
 	y[1] += x[1] * h[0];
 }
 
 /* Base multiply and accumulate complex-complex */
-static void mac_cmplx(float *x, float *h, float *y)
+static void mac_cmplx(const float *x, const float *h, float *y)
 {
 	y[0] += x[0] * h[0] - x[1] * h[1];
 	y[1] += x[0] * h[1] + x[1] * h[0];
 }
 
 /* Base vector complex-complex multiply and accumulate */
-static void mac_real_vec_n(float *x, float *h, float *y,
+static void mac_real_vec_n(const float *x, const float *h, float *y,
 			   int len, int step, int offset)
 {
 	for (int i = offset; i < len; i += step)
@@ -48,7 +48,7 @@ static void mac_real_vec_n(float *x, float *h, float *y,
 }
 
 /* Base vector complex-complex multiply and accumulate */
-static void mac_cmplx_vec_n(float *x, float *h, float *y,
+static void mac_cmplx_vec_n(const float *x, const float *h, float *y,
 			    int len, int step, int offset)
 {
 	for (int i = offset; i < len; i += step)
@@ -56,8 +56,8 @@ static void mac_cmplx_vec_n(float *x, float *h, float *y,
 }
 
 /* Base complex-real convolution */
-int _base_convolve_real(float *x, int x_len,
-			float *h, int h_len,
+int _base_convolve_real(const float *x, int x_len,
+			const float *h, int h_len,
 			float *y, int y_len,
 			int start, int len,
 			int step, int offset)
@@ -73,8 +73,8 @@ int _base_convolve_real(float *x, int x_len,
 }
 
 /* Base complex-complex convolution */
-int _base_convolve_complex(float *x, int x_len,
-			   float *h, int h_len,
+int _base_convolve_complex(const float *x, int x_len,
+			   const float *h, int h_len,
 			   float *y, int y_len,
 			   int start, int len,
 			   int step, int offset)
@@ -110,8 +110,8 @@ int bounds_check(int x_len, int h_len, int y_len,
 }
 
 /* API: Non-aligned (no SSE) complex-real */
-int base_convolve_real(float *x, int x_len,
-		       float *h, int h_len,
+int base_convolve_real(const float *x, int x_len,
+		       const float *h, int h_len,
 		       float *y, int y_len,
 		       int start, int len,
 		       int step, int offset)
@@ -128,8 +128,8 @@ int base_convolve_real(float *x, int x_len,
 }
 
 /* API: Non-aligned (no SSE) complex-complex */
-int base_convolve_complex(float *x, int x_len,
-			  float *h, int h_len,
+int base_convolve_complex(const float *x, int x_len,
+			  const float *h, int h_len,
 			  float *y, int y_len,
 			  int start, int len,
 			  int step, int offset)
