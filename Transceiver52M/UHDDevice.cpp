@@ -1114,7 +1114,19 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 	std::vector<double> freqs;
 	uhd::tune_request_t treq(freq);
 
-	if ((chans == 1) || ((chans == 2) && dev_type == UMTRX)) {
+	if (dev_type == UMTRX) {
+		if (offset > 0.0)
+			return uhd::tune_request_t(freq, offset);
+
+		// Don't use DSP tuning, because LMS6002D PLL steps are small enough.
+		// We end up with DSP tuning just for 2-3Hz, which is meaningless and
+		// only distort the signal (because cordic is not ideal).
+		treq.target_freq = freq;
+		treq.rf_freq_policy = uhd::tune_request_t::POLICY_MANUAL;
+		treq.rf_freq = freq;
+		treq.dsp_freq_policy = uhd::tune_request_t::POLICY_MANUAL;
+		treq.dsp_freq = 0.0;
+	} else if (chans == 1) {
 		if (offset == 0.0)
 			return treq;
 
