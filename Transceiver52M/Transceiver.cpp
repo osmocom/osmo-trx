@@ -255,7 +255,7 @@ bool Transceiver::start()
 
   if (mOn) {
     LOG(ERR) << "Transceiver already running";
-    return false;
+    return true;
   }
 
   LOG(NOTICE) << "Starting the transceiver";
