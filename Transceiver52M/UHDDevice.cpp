@@ -666,7 +666,7 @@ int uhd_device::open(const std::string &args, bool extref)
 	// Use the first found device
 	LOG(INFO) << "Using discovered UHD device " << dev_addrs[0].to_string();
 	try {
-		usrp_dev = uhd::usrp::multi_usrp::make(dev_addrs[0]);
+		usrp_dev = uhd::usrp::multi_usrp::make(addr);
 	} catch(...) {
 		LOG(ALERT) << "UHD make failed, device " << dev_addrs[0].to_string();
 		return -1;
