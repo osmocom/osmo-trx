@@ -6,5 +6,8 @@ export DEB_BUILD_HARDENING=1
 %:
 	dh $@ --with autoreconf
 
+override_dh_shlibdeps:
+    dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+
 override_dh_strip:
     dh_strip --dbg-package=osmo-trx-dbg
