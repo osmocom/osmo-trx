@@ -750,6 +750,16 @@ int uhd_device::open(const std::string &args, bool extref)
 	if (set_rates(_tx_rate, _rx_rate) < 0)
 		return -1;
 
+	// Set RF frontend bandwidth
+	if (dev_type == UMTRX) {
+		// Setting LMS6002D LPF to 500kHz gives us the best signal quality
+		for (size_t i = 0; i < chans; i++) {
+			usrp_dev->set_tx_bandwidth(500*1000*2, i);
+			if (!diversity)
+				usrp_dev->set_rx_bandwidth(500*1000*2, i);
+		}
+	}
+
 	/* Create TX and RX streamers */
 	uhd::stream_args_t stream_args("sc16");
 	for (size_t i = 0; i < chans; i++)
