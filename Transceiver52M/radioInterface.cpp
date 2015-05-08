@@ -185,6 +185,9 @@ bool RadioInterface::start()
   if (!mRadio->start())
     return false;
 
+  recvCursor = 0;
+  sendCursor = 0;
+
   writeTimestamp = mRadio->initialWriteTimestamp();
   readTimestamp = mRadio->initialReadTimestamp();
 
