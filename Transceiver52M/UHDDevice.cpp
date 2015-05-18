@@ -472,18 +472,24 @@ void uhd_device::init_gains()
 		tx_gain_min = range.start();
 		tx_gain_max = range.stop();
 	}
+	LOG(INFO) << "Supported Tx gain range [" << tx_gain_min << "; " << tx_gain_max << "]";
 
 	range = usrp_dev->get_rx_gain_range();
 	rx_gain_min = range.start();
 	rx_gain_max = range.stop();
+	LOG(INFO) << "Supported Rx gain range [" << rx_gain_min << "; " << rx_gain_max << "]";
 
 	for (size_t i = 0; i < tx_gains.size(); i++) {
-		usrp_dev->set_tx_gain((tx_gain_min + tx_gain_max) / 2, i);
+		double gain = (tx_gain_min + tx_gain_max) / 2;
+		LOG(INFO) << "Default setting Tx gain for channel " << i << " to " << gain;
+		usrp_dev->set_tx_gain(gain, i);
 		tx_gains[i] = usrp_dev->get_tx_gain(i);
 	}
 
 	for (size_t i = 0; i < rx_gains.size(); i++) {
-		usrp_dev->set_rx_gain((rx_gain_min + rx_gain_max) / 2, i);
+		double gain = (rx_gain_min + rx_gain_max) / 2;
+		LOG(INFO) << "Default setting Rx gain for channel " << i << " to " << gain;
+		usrp_dev->set_rx_gain(gain, i);
 		rx_gains[i] = usrp_dev->get_rx_gain(i);
 	}
 
@@ -581,7 +587,7 @@ double uhd_device::setTxGain(double db, size_t chan)
 
 	tx_gains[chan] = usrp_dev->get_tx_gain(chan);
 
-	LOG(INFO) << "Set TX gain to " << tx_gains[chan] << "dB";
+	LOG(INFO) << "Set TX gain to " << tx_gains[chan] << "dB (asked for " << db << "dB)";
 
 	return tx_gains[chan];
 }
@@ -596,7 +602,7 @@ double uhd_device::setRxGain(double db, size_t chan)
 	usrp_dev->set_rx_gain(db, chan);
 	rx_gains[chan] = usrp_dev->get_rx_gain(chan);
 
-	LOG(INFO) << "Set RX gain to " << rx_gains[chan] << "dB";
+	LOG(INFO) << "Set RX gain to " << rx_gains[chan] << "dB (asked for " << db << "dB)";
 
 	return rx_gains[chan];
 }
