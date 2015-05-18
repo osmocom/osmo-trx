@@ -615,8 +615,16 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
   else
     success = detectRACH(state, *burst, amp, toa);
 
-  if (!success) {
-    state->mNoises.insert(avg);
+  /* Update noise average if no bust detected or alert on error */
+  if (success <= 0) {
+    if (!success) {
+      state->mNoises.insert(avg);
+    } else if (success == -SIGERR_CLIP) {
+      LOG(ALERT) << "Clipping detected on RACH input";
+    } else if (success < 0) {
+      LOG(ALERT) << "Unhandled RACH error";
+    }
+
     delete radio_burst;
     return NULL;
   }
