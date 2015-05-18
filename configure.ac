@@ -78,6 +78,11 @@ AC_ARG_WITH(neon-vfpv4, [
         [enable ARM NEON FMA support])
 ])
 
+AC_ARG_WITH(sse, [
+    AS_HELP_STRING([--with-sse],
+        [enable x86 SSE support (default)])
+])
+
 AS_IF([test "x$with_neon" = "xyes"], [
     AC_DEFINE(HAVE_NEON, 1, Support ARM NEON)
 ])
@@ -101,7 +106,9 @@ AS_IF([test "x$with_singledb" = "xyes"], [
 ])
 
 # Find and define supported SIMD extensions
-AX_EXT
+AS_IF([test "x$with_sse" != "xno"], [
+    AX_EXT
+])
 
 AM_CONDITIONAL(USRP1, [test "x$with_usrp1" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4" = "xyes"])
