@@ -44,6 +44,9 @@ using namespace GSM;
 /* Clipping detection threshold */
 #define CLIP_THRESH		30000.0f
 
+/* GSM 4 sps burst length */
+#define GSM_BURST_LEN_4SPS	625
+
 /** Lookup tables for trigonometric approximation */
 float cosTable[TABLESIZE+1]; // add 1 element for wrap around
 float sinTable[TABLESIZE+1];
@@ -697,26 +700,21 @@ static signalVector *rotateBurst(const BitVector &wBurst,
   return shaped;
 }
 
-static signalVector *modulateBurstLaurent(const BitVector &bits,
-					  int guard_len, int sps)
+/*
+ * Laurent decomposition based GMSK modulator - 4 SPS only
+ */
+static signalVector *modulateBurstLaurent(const BitVector &bits)
 {
-  int burst_len;
+  const int burst_len = GSM_BURST_LEN_4SPS;
+  const int sps = 4;
+
   float phase;
   signalVector *c0_pulse, *c1_pulse, *c0_burst;
   signalVector *c1_burst, *c0_shaped, *c1_shaped;
   signalVector::iterator c0_itr, c1_itr;
 
-  /*
-   * Apply before and after bits to reduce phase error at burst edges.
-   * Make sure there is enough room in the burst to accomodate all bits.
-   */
-  if (guard_len < 4)
-    guard_len = 4;
-
   c0_pulse = GSMPulse->c0;
   c1_pulse = GSMPulse->c1;
-
-  burst_len = sps * (bits.size() + guard_len);
 
   c0_burst = new signalVector(burst_len, c0_pulse->size());
   c0_burst->isReal(true);
@@ -826,7 +824,7 @@ signalVector *modulateBurst(const BitVector &wBurst, int guardPeriodLength,
   if (emptyPulse)
     return rotateBurst(wBurst, guardPeriodLength, sps);
   else if (sps == 4)
-    return modulateBurstLaurent(wBurst, guardPeriodLength, sps);
+    return modulateBurstLaurent(wBurst);
   else
     return modulateBurstBasic(wBurst, guardPeriodLength, sps);
 }
