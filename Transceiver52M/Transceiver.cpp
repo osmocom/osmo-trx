@@ -91,7 +91,8 @@ Transceiver::Transceiver(int wBasePort,
   : mBasePort(wBasePort), mAddr(TRXAddress),
     mTransmitLatency(wTransmitLatency), mClockSocket(NULL),
     mRadioInterface(wRadioInterface), mSPSTx(wSPS), mSPSRx(1), mChans(wChans),
-    mOn(false), mTxFreq(0.0), mRxFreq(0.0), mPower(-10), mMaxExpectedDelay(0)
+    mOn(false), mTxFreq(0.0), mRxFreq(0.0), mPower(-10), mMaxExpectedDelay(0),
+    mTSC(0)
 {
   GSM::Time startTime(random() % gHyperframe,0);
 
@@ -731,7 +732,7 @@ void Transceiver::driveControl(size_t chan)
     // set TSC
     unsigned TSC;
     sscanf(buffer, "%3s %s %d", cmdcheck, command, &TSC);
-    if (mOn)
+    if (mOn || (TSC<0) || (TSC>7))
       sprintf(response, "RSP SETTSC 1 %d", TSC);
     else if (chan && (TSC != mTSC))
       sprintf(response, "RSP SETTSC 1 %d", TSC);
@@ -742,7 +743,7 @@ void Transceiver::driveControl(size_t chan)
     }
   }
   else if (strcmp(command,"SETSLOT")==0) {
-    // set TSC 
+    // set slot type
     int  corrCode;
     int  timeslot;
     sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&timeslot,&corrCode);
