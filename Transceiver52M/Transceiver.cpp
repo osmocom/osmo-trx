@@ -148,7 +148,7 @@ Transceiver::Transceiver(int wBasePort,
     mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     mSPSTx(wSPS), mSPSRx(1), mChans(wChans), mOn(false),
-    mTxFreq(0.0), mRxFreq(0.0), mMaxExpectedDelay(0)
+    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelay(0)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
@@ -811,7 +811,7 @@ void Transceiver::driveControl(size_t chan)
     // set TSC
     unsigned TSC;
     sscanf(buffer, "%3s %s %d", cmdcheck, command, &TSC);
-    if (mOn)
+    if (mOn || (TSC < 0) || (TSC > 7))
       sprintf(response, "RSP SETTSC 1 %d", TSC);
     else if (chan && (TSC != mTSC))
       sprintf(response, "RSP SETTSC 1 %d", TSC);
@@ -822,7 +822,7 @@ void Transceiver::driveControl(size_t chan)
     }
   }
   else if (strcmp(command,"SETSLOT")==0) {
-    // set TSC 
+    // set slot type
     int  corrCode;
     int  timeslot;
     sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&timeslot,&corrCode);
