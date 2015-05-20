@@ -54,7 +54,7 @@ struct TransceiverState {
   ~TransceiverState();
 
   /* Initialize a multiframe slot in the filler table */
-  void init(size_t slot, signalVector *burst, bool fill);
+  bool init(int filler, size_t sps, float scale, size_t rtsc);
 
   int chanType[8];
 
@@ -88,6 +88,73 @@ struct TransceiverState {
 
 /** The Transceiver class, responsible for physical layer of basestation */
 class Transceiver {
+public:
+  /** Transceiver constructor 
+      @param wBasePort base port number of UDP sockets
+      @param TRXAddress IP address of the TRX manager, as a string
+      @param wSPS number of samples per GSM symbol
+      @param wTransmitLatency initial setting of transmit latency
+      @param radioInterface associated radioInterface object
+  */
+  Transceiver(int wBasePort,
+	      const char *TRXAddress,
+	      size_t wSPS, size_t chans,
+	      GSM::Time wTransmitLatency,
+	      RadioInterface *wRadioInterface);
+
+  /** Destructor */
+  ~Transceiver();
+
+  /** Start the control loop */
+  bool init(int filler, size_t rtsc);
+
+  /** attach the radioInterface receive FIFO */
+  bool receiveFIFO(VectorFIFO *wFIFO, size_t chan)
+  {
+    if (chan >= mReceiveFIFO.size())
+      return false;
+
+    mReceiveFIFO[chan] = wFIFO;
+    return true;
+  }
+
+  /** accessor for number of channels */
+  size_t numChans() const { return mChans; };
+
+  /** Codes for channel combinations */
+  typedef enum {
+    FILL,               ///< Channel is transmitted, but unused
+    I,                  ///< TCH/FS
+    II,                 ///< TCH/HS, idle every other slot
+    III,                ///< TCH/HS
+    IV,                 ///< FCCH+SCH+CCCH+BCCH, uplink RACH
+    V,                  ///< FCCH+SCH+CCCH+BCCH+SDCCH/4+SACCH/4, uplink RACH+SDCCH/4
+    VI,                 ///< CCCH+BCCH, uplink RACH
+    VII,                ///< SDCCH/8 + SACCH/8
+    VIII,               ///< TCH/F + FACCH/F + SACCH/M
+    IX,                 ///< TCH/F + SACCH/M
+    X,                  ///< TCH/FD + SACCH/MD
+    XI,                 ///< PBCCH+PCCCH+PDTCH+PACCH+PTCCH
+    XII,                ///< PCCCH+PDTCH+PACCH+PTCCH
+    XIII,               ///< PDTCH+PACCH+PTCCH
+    NONE,               ///< Channel is inactive, default
+    LOOPBACK            ///< similar go VII, used in loopback testing
+  } ChannelCombination;
+
+  /** Codes for burst types of received bursts*/
+  typedef enum {
+    OFF,               ///< timeslot is off
+    TSC,	       ///< timeslot should contain a normal burst
+    RACH,	       ///< timeslot should contain an access burst
+    IDLE	       ///< timeslot is an idle (or dummy) burst
+  } CorrType;
+
+  enum {
+    FILLER_DUMMY,
+    FILLER_ZERO,
+    FILLER_RAND,
+  };
+
 private:
   int mBasePort;
   std::string mAddr;
@@ -113,14 +180,6 @@ private:
   RadioInterface *mRadioInterface;	  ///< associated radioInterface object
   double txFullScale;                     ///< full scale input to radio
   double rxFullScale;                     ///< full scale output to radio
-
-  /** Codes for burst types of received bursts*/
-  typedef enum {
-    OFF,               ///< timeslot is off
-    TSC,	       ///< timeslot should contain a normal burst
-    RACH,	       ///< timeslot should contain an access burst
-    IDLE	       ///< timeslot is an idle (or dummy) burst
-  } CorrType;
 
   /** modulate and add a burst to the transmit queue */
   void addRadioVector(size_t chan, BitVector &bits,
@@ -160,7 +219,6 @@ private:
                          signalVector &burst, complex amp,
                          float toa, size_t tn, bool equalize);
 
-
   int mSPSTx;                          ///< number of samples per Tx symbol
   int mSPSRx;                          ///< number of samples per Rx symbol
   size_t mChans;
@@ -179,60 +237,6 @@ private:
 
   /** Protect destructor accessable stop call */
   Mutex mLock;
-
-public:
-
-  /** Transceiver constructor 
-      @param wBasePort base port number of UDP sockets
-      @param TRXAddress IP address of the TRX manager, as a string
-      @param wSPS number of samples per GSM symbol
-      @param wTransmitLatency initial setting of transmit latency
-      @param radioInterface associated radioInterface object
-  */
-  Transceiver(int wBasePort,
-	      const char *TRXAddress,
-	      size_t wSPS, size_t chans,
-	      GSM::Time wTransmitLatency,
-	      RadioInterface *wRadioInterface);
-
-  /** Destructor */
-  ~Transceiver();
-
-  /** Start the control loop */
-  bool init(bool filler);
-
-  /** attach the radioInterface receive FIFO */
-  bool receiveFIFO(VectorFIFO *wFIFO, size_t chan)
-  {
-    if (chan >= mReceiveFIFO.size())
-      return false;
-
-    mReceiveFIFO[chan] = wFIFO;
-    return true;
-  }
-
-  /** accessor for number of channels */
-  size_t numChans() const { return mChans; };
-
-  /** Codes for channel combinations */
-  typedef enum {
-    FILL,               ///< Channel is transmitted, but unused
-    I,                  ///< TCH/FS
-    II,                 ///< TCH/HS, idle every other slot
-    III,                ///< TCH/HS
-    IV,                 ///< FCCH+SCH+CCCH+BCCH, uplink RACH
-    V,                  ///< FCCH+SCH+CCCH+BCCH+SDCCH/4+SACCH/4, uplink RACH+SDCCH/4
-    VI,                 ///< CCCH+BCCH, uplink RACH
-    VII,                ///< SDCCH/8 + SACCH/8
-    VIII,               ///< TCH/F + FACCH/F + SACCH/M
-    IX,                 ///< TCH/F + SACCH/M
-    X,                  ///< TCH/FD + SACCH/MD
-    XI,                 ///< PBCCH+PCCCH+PDTCH+PACCH+PTCCH
-    XII,                ///< PCCCH+PDTCH+PACCH+PTCCH
-    XIII,               ///< PDTCH+PACCH+PTCCH
-    NONE,               ///< Channel is inactive, default
-    LOOPBACK            ///< similar go VII, used in loopback testing
-  } ChannelCombination;
 
 protected:
   /** drive lower receive I/O and burst generation */

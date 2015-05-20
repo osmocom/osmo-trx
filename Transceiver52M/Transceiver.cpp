@@ -69,18 +69,74 @@ TransceiverState::~TransceiverState()
   }
 }
 
-void TransceiverState::init(size_t slot, signalVector *burst, bool fill)
+static BitVector *genRandNormalBurst(size_t tsc)
 {
-  signalVector *filler;
+  if (tsc > 7)
+    return NULL;
 
-  for (int i = 0; i < 102; i++) {
-    if (fill)
-      filler = new signalVector(*burst);
-    else
-      filler = new signalVector(burst->size());
+  BitVector *bits = new BitVector(148);
 
-    fillerTable[i][slot] = filler;
+  size_t i = 0;
+
+  /* Tail bits */
+  for (; i < 4; i++)
+    (*bits)[i] = 0;
+
+  /* Random bits */
+  for (; i < 61; i++)
+    (*bits)[i] = rand() % 2;
+
+  /* Training sequence */
+  for (; i < 87; i++)
+    (*bits)[i] = GSM::gTrainingSequence[tsc][i];
+
+  /* Random bits */
+  for (; i < 144; i++)
+    (*bits)[i] = rand() % 2;
+
+  /* Tail bits */
+  for (; i < 148; i++)
+    (*bits)[i] = 0;
+
+  return bits;
+}
+
+bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
+{
+  BitVector *bits;
+  signalVector *burst;
+
+  if ((sps != 1) && (sps != 4))
+    return false;
+
+  for (size_t n = 0; n < 8; n++) {
+    size_t guard = 8 + !(n % 4);
+    size_t len = sps == 4 ? 625 : 148 + guard;
+
+    for (size_t i = 0; i < 102; i++) {
+      switch (filler) {
+      case Transceiver::FILLER_DUMMY:
+        burst = modulateBurst(gDummyBurst, guard, sps);
+        break;
+      case Transceiver::FILLER_RAND:
+        bits = genRandNormalBurst(rtsc);
+        burst = modulateBurst(*bits, guard, sps);
+        delete bits;
+        break;
+      case Transceiver::FILLER_ZERO:
+      default:
+        burst = new signalVector(len);
+      }
+
+      scaleVector(*burst, scale);
+      fillerTable[i][n] = burst;
+    }
+
+    if (filler == Transceiver::FILLER_RAND)
+      chanType[n] = Transceiver::TSC;
   }
+
+  return false;
 }
 
 Transceiver::Transceiver(int wBasePort,
@@ -124,10 +180,9 @@ Transceiver::~Transceiver()
  * are still expected to report clock indications through control channel
  * activity.
  */
-bool Transceiver::init(bool filler)
+bool Transceiver::init(int filler, size_t rtsc)
 {
   int d_srcport, d_dstport, c_srcport, c_dstport;
-  signalVector *burst;
 
   if (!mChans) {
     LOG(ALERT) << "No channels assigned";
@@ -141,7 +196,6 @@ bool Transceiver::init(bool filler)
 
   mDataSockets.resize(mChans);
   mCtrlSockets.resize(mChans);
-
   mControlServiceLoopThreads.resize(mChans);
   mTxPriorityQueueServiceLoopThreads.resize(mChans);
   mRxServiceLoopThreads.resize(mChans);
@@ -151,7 +205,7 @@ bool Transceiver::init(bool filler)
   mStates.resize(mChans);
 
   /* Filler table retransmissions - support only on channel 0 */
-  if (filler)
+  if (filler == FILLER_DUMMY)
     mStates[0].mRetrans = true;
 
   /* Setup sockets */
@@ -179,12 +233,10 @@ bool Transceiver::init(bool filler)
     mControlServiceLoopThreads[i]->start((void * (*)(void*))
                                  ControlServiceLoopAdapter, (void*) chan);
 
-    for (size_t n = 0; n < 8; n++) {
-      burst = modulateBurst(gDummyBurst, 8 + (n % 4 == 0), mSPSTx);
-      scaleVector(*burst, txFullScale);
-      mStates[i].init(n, burst, filler && !i);
-      delete burst;
-    }
+    if (i && filler == FILLER_DUMMY)
+      filler = FILLER_ZERO;
+
+    mStates[i].init(filler, mSPSTx, txFullScale, rtsc);
   }
 
   return true;

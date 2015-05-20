@@ -65,6 +65,7 @@ struct trx_config {
 	unsigned port;
 	unsigned sps;
 	unsigned chans;
+	unsigned rtsc;
 	bool extref;
 	bool filler;
 	bool diversity;
@@ -154,12 +155,6 @@ bool trx_setup_config(struct trx_config *config)
 			config->diversity = DEFAULT_DIVERSITY;
 	}
 
-	if (!config->sps)
-		config->sps = DEFAULT_SPS;
-
-	if (!config->chans)
-		config->chans = DEFAULT_CHANS;
-
 	/* Diversity only supported on 2 channels */
 	if (config->diversity)
 		config->chans = 2;
@@ -236,7 +231,7 @@ Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
 
 	trx = new Transceiver(config->port, config->addr.c_str(), config->sps,
 			      config->chans, GSM::Time(3,0), radio);
-	if (!trx->init(config->filler)) {
+	if (!trx->init(config->filler, config->rtsc)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
 		delete trx;
 		return NULL;
@@ -286,7 +281,8 @@ static void print_help()
 		"  -s    Samples-per-symbol (1 or 4)\n"
 		"  -c    Number of ARFCN channels (default=1)\n"
 		"  -f    Enable C0 filler table\n"
-		"  -o    Set baseband frequency offset (default=auto)\n",
+		"  -o    Set baseband frequency offset (default=auto)\n"
+		"  -r    Random burst test mode with TSC\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
 }
 
@@ -295,14 +291,15 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	int option;
 
 	config->port = 0;
-	config->sps = 0;
-	config->chans = 0;
+	config->sps = DEFAULT_SPS;
+	config->chans = DEFAULT_CHANS;
+	config->rtsc = 0;
 	config->extref = false;
-	config->filler = false;
+	config->filler = Transceiver::FILLER_ZERO;
 	config->diversity = false;
 	config->offset = 0.0;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -330,23 +327,34 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			config->extref = true;
 			break;
 		case 'f':
-			config->filler = true;
+			config->filler = Transceiver::FILLER_DUMMY;
 			break;
 		case 'o':
 			config->offset = atof(optarg);
 			break;
 		case 's':
 			config->sps = atoi(optarg);
-			if ((config->sps != 1) && (config->sps != 4)) {
-				printf("Unsupported samples-per-symbol\n\n");
-				print_help();
-				exit(0);
-			}
+			break;
+		case 'r':
+			config->rtsc = atoi(optarg);
+			config->filler = Transceiver::FILLER_RAND;
 			break;
 		default:
 			print_help();
 			exit(0);
 		}
+	}
+
+	if ((config->sps != 1) && (config->sps != 4)) {
+		printf("Unsupported samples-per-symbol %i\n\n", config->sps);
+		print_help();
+		exit(0);
+	}
+
+	if (config->rtsc > 7) {
+		printf("Invalid training sequence %i\n\n", config->rtsc);
+		print_help();
+		exit(0);
 	}
 }
 
