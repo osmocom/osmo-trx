@@ -87,8 +87,8 @@ static BitVector *genRandNormalBurst(size_t tsc)
     (*bits)[i] = rand() % 2;
 
   /* Training sequence */
-  for (; i < 87; i++)
-    (*bits)[i] = GSM::gTrainingSequence[tsc][i];
+  for (int j = 0; i < 87; i++, j++)
+    (*bits)[i] = GSM::gTrainingSequence[tsc][j];
 
   /* Random bits */
   for (; i < 144; i++)
