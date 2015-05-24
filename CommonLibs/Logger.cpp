@@ -67,8 +67,8 @@ const char *levelNames[] = {
 	"EMERG", "ALERT", "CRIT", "ERR", "WARNING", "NOTICE", "INFO", "DEBUG"
 };
 int numLevels = 8;
-bool gLogToConsole = false;
-bool gLogToSyslog = true;
+bool gLogToConsole = true;
+bool gLogToSyslog = false;
 FILE *gLogToFile = NULL;
 Mutex gLogToLock;
 
