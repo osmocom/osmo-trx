@@ -116,7 +116,8 @@ class Log {
 
 	std::ostringstream& get();
 };
-extern bool gLogToConsole;	// Pat added for easy debugging.
+extern bool gLogToConsole;	// Output log messages to stdout
+extern bool gLogToSyslog;	// Output log messages to syslog
 
 
 

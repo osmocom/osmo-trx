@@ -67,7 +67,8 @@ const char *levelNames[] = {
 	"EMERG", "ALERT", "CRIT", "ERR", "WARNING", "NOTICE", "INFO", "DEBUG"
 };
 int numLevels = 8;
-bool gLogToConsole = 0;
+bool gLogToConsole = false;
+bool gLogToSyslog = true;
 FILE *gLogToFile = NULL;
 Mutex gLogToLock;
 
@@ -196,10 +197,12 @@ Log::~Log()
 		if (sLoggerInited) addAlarm(mStream.str().c_str());
 		cerr << mStream.str() << endl;
 	}
-	// Current logging level was already checked by the macro.
-	// So just log.
-	syslog(mPriority, "%s", mStream.str().c_str());
-	// pat added for easy debugging.
+	// Current logging level was already checked by the macro. So just log.
+	// Log to syslog
+	if (gLogToSyslog) {
+		syslog(mPriority, "%s", mStream.str().c_str());
+	}
+	// Log to file and console
 	if (gLogToConsole||gLogToFile) {
 		int mlen = mStream.str().size();
 		int neednl = (mlen==0 || mStream.str()[mlen-1] != '\n');
@@ -243,10 +246,9 @@ void gLogInit(const char* name, const char* level, int facility)
 		gConfig.set("Log.Level",level);
 	}
 
-	// Pat added, tired of the syslog facility.
 	// Both the transceiver and OpenBTS use this same facility, but only OpenBTS/OpenNodeB may use this log file:
 	string str = gConfig.getStr("Log.File");
-	if (gLogToFile==0 && str.length() && 0==strncmp(gCmdName,"Open",4)) {
+	if (gLogToFile==NULL && str.length() && 0==strncmp(gCmdName,"Open",4)) {
 		const char *fn = str.c_str();
 		if (fn && *fn && strlen(fn)>3) {	// strlen because a garbage char is getting in sometimes.
 			gLogToFile = fopen(fn,"w"); // New log file each time we start.
