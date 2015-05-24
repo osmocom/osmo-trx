@@ -67,7 +67,7 @@ struct trx_config {
 	unsigned chans;
 	unsigned rtsc;
 	bool extref;
-	bool filler;
+	Transceiver::FillerType filler;
 	bool diversity;
 	double offset;
 };
@@ -160,8 +160,18 @@ bool trx_setup_config(struct trx_config *config)
 		config->chans = 2;
 
 	refstr = config->extref ? "Enabled" : "Disabled";
-	fillstr = config->filler ? "Enabled" : "Disabled";
 	divstr = config->diversity ? "Enabled" : "Disabled";
+	switch (config->filler) {
+	case Transceiver::FILLER_DUMMY:
+		fillstr = "Dummy bursts";
+		break;
+	case Transceiver::FILLER_ZERO:
+		fillstr = "Disabled";
+		break;
+	case Transceiver::FILLER_RAND:
+		fillstr = "Normal busrts with random payload";
+		break;
+	}
 
 	std::ostringstream ost("");
 	ost << "Config Settings" << std::endl;

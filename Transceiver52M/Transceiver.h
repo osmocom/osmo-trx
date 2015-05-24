@@ -149,7 +149,7 @@ public:
     IDLE	       ///< timeslot is an idle (or dummy) burst
   } CorrType;
 
-  enum {
+  enum FillerType {
     FILLER_DUMMY,
     FILLER_ZERO,
     FILLER_RAND,
