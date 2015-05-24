@@ -861,15 +861,6 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   for (int i = 0; i < 4; i++)
     frameNum = (frameNum << 8) | (0x0ff & buffer[i+1]);
 
-  // periodically update GSM core clock
-  LOG(DEBUG) << "mTransmitDeadlineClock " << mTransmitDeadlineClock
-		<< " mLastClockUpdateTime " << mLastClockUpdateTime;
-
-  if (!chan) {
-    if (mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0))
-      writeClockInterface();
-  }
-
   LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(frameNum,timeSlot);
   
   int RSSI = (int) buffer[5];
@@ -890,8 +881,12 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
 
 void Transceiver::driveReceiveRadio()
 {
-  if (!mRadioInterface->driveReceiveRadio())
+  if (!mRadioInterface->driveReceiveRadio()) {
     usleep(100000);
+  } else {
+    if (mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0))
+      writeClockInterface();
+  }
 }
 
 void Transceiver::driveReceiveFIFO(size_t chan)
