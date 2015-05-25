@@ -726,7 +726,7 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   c1_itr = c1_burst->begin();
 
   /* Padded differential start bits */
-  *c0_itr = 2.0 * (0x00 & 0x01) - 1.0;
+  *c0_itr = 2.0 * (0x01 & 0x01) - 1.0;
   c0_itr += sps;
 
   /* Main burst bits */
