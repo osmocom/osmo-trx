@@ -28,6 +28,7 @@
 
 #include "sigProcLib.h"
 #include "GSMCommon.h"
+#include "Logger.h"
 
 extern "C" {
 #include "convolve.h"
@@ -1372,16 +1373,17 @@ static int detectBurst(signalVector &burst,
   return 1;
 }
 
-static int detectClipping(signalVector &burst, float thresh)
+static float maxAmplitude(signalVector &burst)
 {
-	for (size_t i = 0; i < burst.size(); i++) {
-		if (fabs(burst[i].real()) > thresh)
-			return 1;
-		if (fabs(burst[i].imag()) > thresh)
-			return 1;
-	}
+    float max = 0.0;
+    for (size_t i = 0; i < burst.size(); i++) {
+        if (fabs(burst[i].real()) > max)
+            max = fabs(burst[i].real());
+        if (fabs(burst[i].imag()) > max)
+            max = fabs(burst[i].imag());
+    }
 
-	return 0;
+    return max;
 }
 
 /* 
@@ -1399,6 +1401,7 @@ int detectRACHBurst(signalVector &rxBurst,
 		    float *toa)
 {
   int rc, start, target, head, tail, len;
+  bool clipping = false;
   float _toa;
   complex _amp;
   signalVector *corr;
@@ -1407,8 +1410,14 @@ int detectRACHBurst(signalVector &rxBurst,
   if ((sps != 1) && (sps != 4))
     return -SIGERR_UNSUPPORTED;
 
-  if (detectClipping(rxBurst, CLIP_THRESH))
-    return -SIGERR_CLIP;
+  // Detect potential clipping
+  // We still may be able to demod the burst, so we'll give it a try
+  // and only report clipping if we can't demod.
+  float maxAmpl = maxAmplitude(rxBurst);
+  if (maxAmpl > CLIP_THRESH) {
+    LOG(DEBUG) << "max burst amplitude: " << maxAmpl << " is above the clipping threshold: " << CLIP_THRESH << std::endl;
+    clipping = true;
+  }
 
   target = 8 + 40;
   head = 4;
@@ -1430,7 +1439,7 @@ int detectRACHBurst(signalVector &rxBurst,
       *amp = 0.0f;
     if (toa)
       *toa = 0.0f;
-    return 0;
+    return clipping?-SIGERR_CLIP:SIGERR_NONE;
   }
 
   /* Subtract forward search bits from delay */
@@ -1455,6 +1464,7 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
                         bool chan_req, signalVector **chan, float *chan_offset)
 {
   int rc, start, target, head, tail, len;
+  bool clipping = false;
   complex _amp;
   float _toa;
   signalVector *corr;
@@ -1463,8 +1473,14 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
   if ((tsc < 0) || (tsc > 7) || ((sps != 1) && (sps != 4)))
     return -SIGERR_UNSUPPORTED;
 
-  if (detectClipping(rxBurst, CLIP_THRESH))
-    return -SIGERR_CLIP;
+  // Detect potential clipping
+  // We still may be able to demod the burst, so we'll give it a try
+  // and only report clipping if we can't demod.
+  float maxAmpl = maxAmplitude(rxBurst);
+  if (maxAmpl > CLIP_THRESH) {
+    LOG(DEBUG) << "max burst amplitude: " << maxAmpl << " is above the clipping threshold: " << CLIP_THRESH << std::endl;
+    clipping = true;
+  }
 
   target = 3 + 58 + 16 + 5;
   head = 4;
@@ -1486,7 +1502,7 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
       *amp = 0.0f;
     if (toa)
       *toa = 0.0f;
-    return 0;
+    return clipping?-SIGERR_CLIP:SIGERR_NONE;
   }
 
   /* Subtract forward search bits from delay */

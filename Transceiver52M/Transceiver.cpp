@@ -534,9 +534,9 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
  * Detect RACH synchronization sequence within a burst. No equalization
  * is used or available on the RACH channel.
  */
-bool Transceiver::detectRACH(TransceiverState *state,
-                             signalVector &burst,
-                             complex &amp, float &toa)
+int Transceiver::detectRACH(TransceiverState *state,
+                            signalVector &burst,
+                            complex &amp, float &toa)
 {
   float threshold = 6.0;
 
@@ -548,9 +548,10 @@ bool Transceiver::detectRACH(TransceiverState *state,
  * state information and channel estimate if necessary. Equalization
  * is currently disabled.
  */
-bool Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
-                            complex &amp, float &toa, GSM::Time &time)
+int Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
+                           complex &amp, float &toa, GSM::Time &time)
 {
+  int success;
   int tn = time.TN();
   float chanOffset, threshold = 5.0;
   bool noise, needDFE = false, estimateChan = false;
@@ -568,10 +569,11 @@ bool Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
   }
 
   /* Detect normal burst midambles */
-  if (!analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx, &amp,
-                           &toa, mMaxExpectedDelay, estimateChan,
-                           &chanResp, &chanOffset)) {
-    return false;
+  success = analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx, &amp,
+                                &toa, mMaxExpectedDelay, estimateChan,
+                                &chanResp, &chanOffset);
+  if (success <= 0) {
+    return success;
   }
 
   noise = state->mNoiseLev;
@@ -591,7 +593,7 @@ bool Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
      state->chanEstimateTime[tn] = time;
   }
 
-  return true;;
+  return 1;
 }
 
 /*
@@ -622,7 +624,8 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
                                          double &timingOffset, double &noise,
                                          size_t chan)
 {
-  bool success, equalize = false;
+  int success;
+  bool equalize = false;
   complex amp;
   float toa, pow, max = -1.0, avg = 0.0;
   int max_i = -1;
@@ -673,12 +676,12 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
 
   /* Update noise average if no bust detected or alert on error */
   if (success <= 0) {
-    if (!success) {
+    if (success == SIGERR_NONE) {
       state->mNoises.insert(avg);
     } else if (success == -SIGERR_CLIP) {
-      LOG(ALERT) << "Clipping detected on RACH input";
-    } else if (success < 0) {
-      LOG(ALERT) << "Unhandled RACH error";
+      LOG(WARNING) << "Clipping detected on received RACH or Normal Burst";
+    } else {
+      LOG(WARNING) << "Unhandled RACH or Normal Burst detection error";
     }
 
     delete radio_burst;
