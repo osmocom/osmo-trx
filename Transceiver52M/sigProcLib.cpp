@@ -1285,11 +1285,11 @@ static float computePeakRatio(signalVector *corr,
   complex *peak;
   float rms, avg = 0.0;
 
-  peak = corr->begin() + (int) rint(toa);
-
   /* Check for bogus results */
   if ((toa < 0.0) || (toa > corr->size()))
     return 0.0;
+
+  peak = corr->begin() + (int) rint(toa);
 
   for (int i = 2 * sps; i <= 5 * sps; i++) {
     if (peak - i >= corr->begin()) {
