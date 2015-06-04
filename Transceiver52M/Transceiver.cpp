@@ -619,7 +619,8 @@ SoftVector *Transceiver::demodulate(TransceiverState *state,
  * and burst correlation type. Equalzation is currently disabled. 
  */
 SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
-                                         double &timingOffset, size_t chan)
+                                         double &timingOffset, double &noise,
+                                         size_t chan)
 {
   bool success, equalize = false;
   complex amp;
@@ -694,6 +695,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
   wTime = time;
   RSSI = 20.0 * log10(rxFullScale / avg);
   timingOffset = toa / mSPSRx;
+  noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
 
   delete radio_burst;
 
@@ -899,21 +901,22 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   double dBm;  // in dBm
   double TOA;  // in symbols
   int TOAint;  // in 1/256 symbols
+  double noise; // noise level in dBFS
   GSM::Time burstTime;
 
-  rxBurst = pullRadioVector(burstTime, RSSI, TOA, chan);
+  rxBurst = pullRadioVector(burstTime, RSSI, TOA, noise, chan);
 
   if (rxBurst) { 
     dBm = RSSI+rssiOffset;
     TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
 
-    LOG(DEBUG) << "burst parameters: " << std::fixed
-      << " time: " << burstTime
-      << " RSSI: " << std::setprecision(1) << RSSI
-      << " dBm: "  << std::setprecision(1) << dBm
-      << " TOA: "  << std::setprecision(2) << TOA
-      << " bits: " << *rxBurst;
-    
+    LOG(DEBUG) << std::fixed << std::right
+      << " time: "   << burstTime
+      << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -dBm << "dBm"
+      << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -(noise+rssiOffset) << "dBm"
+      << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
+      << " bits: "   << *rxBurst;
+
     char burstString[gSlotLen+10];
     burstString[0] = burstTime.TN();
     for (int i = 0; i < 4; i++)
