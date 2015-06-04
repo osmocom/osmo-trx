@@ -209,14 +209,14 @@ private:
   void writeClockInterface(void);
 
   /** Detect RACH bursts */
-  bool detectRACH(TransceiverState *state,
-                  signalVector &burst,
-                  complex &amp, float &toa);
+  int detectRACH(TransceiverState *state,
+                 signalVector &burst,
+                 complex &amp, float &toa);
 
   /** Detect normal bursts */
-  bool detectTSC(TransceiverState *state,
-                 signalVector &burst,
-                 complex &amp, float &toa, GSM::Time &time);
+  int detectTSC(TransceiverState *state,
+                signalVector &burst,
+                complex &amp, float &toa, GSM::Time &time);
 
   /** Demodulat burst and output soft bits */
   SoftVector *demodulate(TransceiverState *state,
