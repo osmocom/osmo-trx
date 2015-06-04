@@ -206,7 +206,7 @@ Log::~Log()
 	if (gLogToConsole||gLogToFile) {
 		int mlen = mStream.str().size();
 		int neednl = (mlen==0 || mStream.str()[mlen-1] != '\n');
-		gLogToLock.lock();
+		ScopedLock lock(gLogToLock);
 		if (gLogToConsole) {
 			// The COUT() macro prevents messages from stomping each other but adds uninteresting thread numbers,
 			// so just use std::cout.
@@ -218,7 +218,6 @@ Log::~Log()
 			if (neednl) {fputc('\n',gLogToFile);}
 			fflush(gLogToFile);
 		}
-		gLogToLock.unlock();
 	}
 }
 
