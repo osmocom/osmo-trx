@@ -196,7 +196,8 @@ private:
 
   /** Pull and demodulate a burst from the receive FIFO */
   SoftVector *pullRadioVector(GSM::Time &wTime, double &RSSI,
-                              double &timingOffset, size_t chan = 0);
+                              double &timingOffset, double &noise,
+                              size_t chan = 0);
 
   /** Set modulus for specific timeslot */
   void setModulus(size_t timeslot, size_t chan);
