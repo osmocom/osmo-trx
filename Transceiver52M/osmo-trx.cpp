@@ -70,6 +70,7 @@ struct trx_config {
 	Transceiver::FillerType filler;
 	bool diversity;
 	double offset;
+	double rssi_offset;
 };
 
 ConfigurationTable gConfig;
@@ -185,6 +186,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   C0 Filler Table......... " << fillstr << std::endl;
 	ost << "   Diversity............... " << divstr << std::endl;
 	ost << "   Tuning offset........... " << config->offset << std::endl;
+	ost << "   RSSI to dBm offset...... " << config->rssi_offset << std::endl;
 	std::cout << ost << std::endl;
 
 	return true;
@@ -240,7 +242,7 @@ Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
 	VectorFIFO *fifo;
 
 	trx = new Transceiver(config->port, config->addr.c_str(), config->sps,
-			      config->chans, GSM::Time(3,0), radio);
+		config->chans, GSM::Time(3,0), radio, config->rssi_offset);
 	if (!trx->init(config->filler, config->rtsc)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
 		delete trx;
@@ -292,7 +294,8 @@ static void print_help()
 		"  -c    Number of ARFCN channels (default=1)\n"
 		"  -f    Enable C0 filler table\n"
 		"  -o    Set baseband frequency offset (default=auto)\n"
-		"  -r    Random burst test mode with TSC\n",
+		"  -r    Random burst test mode with TSC\n"
+		"  -R    RSSI to dBm offset in dB (default=0)\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
 }
 
@@ -308,8 +311,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->filler = Transceiver::FILLER_ZERO;
 	config->diversity = false;
 	config->offset = 0.0;
+	config->rssi_offset = 0.0;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:R:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -348,6 +352,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		case 'r':
 			config->rtsc = atoi(optarg);
 			config->filler = Transceiver::FILLER_RAND;
+			break;
+		case 'R':
+			config->rssi_offset = atof(optarg);
 			break;
 		default:
 			print_help();

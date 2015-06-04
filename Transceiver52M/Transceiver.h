@@ -97,10 +97,11 @@ public:
       @param radioInterface associated radioInterface object
   */
   Transceiver(int wBasePort,
-	      const char *TRXAddress,
-	      size_t wSPS, size_t chans,
-	      GSM::Time wTransmitLatency,
-	      RadioInterface *wRadioInterface);
+              const char *TRXAddress,
+              size_t wSPS, size_t chans,
+              GSM::Time wTransmitLatency,
+              RadioInterface *wRadioInterface,
+              double wRssiOffset);
 
   /** Destructor */
   ~Transceiver();
@@ -181,6 +182,8 @@ private:
   double txFullScale;                     ///< full scale input to radio
   double rxFullScale;                     ///< full scale output to radio
 
+  double rssiOffset;                      ///< RSSI to dBm conversion offset
+
   /** modulate and add a burst to the transmit queue */
   void addRadioVector(size_t chan, BitVector &bits,
                       int RSSI, GSM::Time &wTime);
@@ -192,8 +195,8 @@ private:
   void pushRadioVector(GSM::Time &nowTime);
 
   /** Pull and demodulate a burst from the receive FIFO */
-  SoftVector *pullRadioVector(GSM::Time &wTime, int &RSSI,
-                              int &timingOffset, size_t chan = 0);
+  SoftVector *pullRadioVector(GSM::Time &wTime, double &RSSI,
+                              double &timingOffset, size_t chan = 0);
 
   /** Set modulus for specific timeslot */
   void setModulus(size_t timeslot, size_t chan);
