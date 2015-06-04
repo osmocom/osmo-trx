@@ -22,6 +22,7 @@
 */
 
 #include <stdio.h>
+#include <iomanip>      // std::setprecision
 #include "Transceiver.h"
 #include <Logger.h>
 
@@ -140,13 +141,15 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
 }
 
 Transceiver::Transceiver(int wBasePort,
-			 const char *wTRXAddress,
-			 size_t wSPS, size_t wChans,
-			 GSM::Time wTransmitLatency,
-			 RadioInterface *wRadioInterface)
+                         const char *wTRXAddress,
+                         size_t wSPS, size_t wChans,
+                         GSM::Time wTransmitLatency,
+                         RadioInterface *wRadioInterface,
+                         double wRssiOffset)
   : mBasePort(wBasePort), mAddr(wTRXAddress),
     mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
+    rssiOffset(wRssiOffset),
     mSPSTx(wSPS), mSPSRx(1), mChans(wChans), mOn(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelay(0)
 {
@@ -615,8 +618,8 @@ SoftVector *Transceiver::demodulate(TransceiverState *state,
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled. 
  */
-SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
-                                         int &timingOffset, size_t chan)
+SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
+                                         double &timingOffset, size_t chan)
 {
   bool success, equalize = false;
   complex amp;
@@ -689,8 +692,8 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, int &RSSI,
     bits = demodulate(state, *burst, amp, toa, time.TN(), equalize);
 
   wTime = time;
-  RSSI = (int) floor(20.0 * log10(rxFullScale / avg));
-  timingOffset = (int) round(toa * 256.0 / mSPSRx);
+  RSSI = 20.0 * log10(rxFullScale / avg);
+  timingOffset = toa / mSPSRx;
 
   delete radio_burst;
 
@@ -892,27 +895,32 @@ void Transceiver::driveReceiveRadio()
 void Transceiver::driveReceiveFIFO(size_t chan)
 {
   SoftVector *rxBurst = NULL;
-  int RSSI;
-  int TOA;  // in 1/256 of a symbol
+  double RSSI; // in dBFS
+  double dBm;  // in dBm
+  double TOA;  // in symbols
+  int TOAint;  // in 1/256 symbols
   GSM::Time burstTime;
 
   rxBurst = pullRadioVector(burstTime, RSSI, TOA, chan);
 
   if (rxBurst) { 
+    dBm = RSSI+rssiOffset;
+    TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
 
-    LOG(DEBUG) << "burst parameters: "
-	  << " time: " << burstTime
-	  << " RSSI: " << RSSI
-	  << " TOA: "  << TOA
-	  << " bits: " << *rxBurst;
+    LOG(DEBUG) << "burst parameters: " << std::fixed
+      << " time: " << burstTime
+      << " RSSI: " << std::setprecision(1) << RSSI
+      << " dBm: "  << std::setprecision(1) << dBm
+      << " TOA: "  << std::setprecision(2) << TOA
+      << " bits: " << *rxBurst;
     
     char burstString[gSlotLen+10];
     burstString[0] = burstTime.TN();
     for (int i = 0; i < 4; i++)
       burstString[1+i] = (burstTime.FN() >> ((3-i)*8)) & 0x0ff;
-    burstString[5] = RSSI;
-    burstString[6] = (TOA >> 8) & 0x0ff;
-    burstString[7] = TOA & 0x0ff;
+    burstString[5] = (int)dBm;
+    burstString[6] = (TOAint >> 8) & 0x0ff;
+    burstString[7] = TOAint & 0x0ff;
     SoftVector::iterator burstItr = rxBurst->begin();
 
     for (unsigned int i = 0; i < gSlotLen; i++) {
