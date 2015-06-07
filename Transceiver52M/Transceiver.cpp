@@ -692,8 +692,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
   if (equalize && (type != TSC))
     equalize = false;
 
-  if (avg - state->mNoiseLev > 0.0)
-    bits = demodulate(state, *burst, amp, toa, time.TN(), equalize);
+  bits = demodulate(state, *burst, amp, toa, time.TN(), equalize);
 
   wTime = time;
   RSSI = 20.0 * log10(rxFullScale / avg);
