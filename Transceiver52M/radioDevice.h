@@ -41,7 +41,7 @@ class RadioDevice {
                            bool diversity = false, double offset = 0.0);
 
   /** Initialize the USRP */
-  virtual int open(const std::string &args = "", bool extref = false)=0;
+  virtual int open(const std::string &args = "", bool extref = false, bool swap_channels = false)=0;
 
   virtual ~RadioDevice() { }
 

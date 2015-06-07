@@ -99,7 +99,7 @@ private:
   USRPDevice(size_t sps, size_t chans = 1, bool diversity = false);
 
   /** Instantiate the USRP */
-  int open(const std::string &, bool);
+  int open(const std::string &, bool, bool);
 
   /** Start the USRP */
   bool start();

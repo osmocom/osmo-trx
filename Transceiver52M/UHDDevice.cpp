@@ -290,7 +290,7 @@ public:
 	uhd_device(size_t sps, size_t chans, bool diversity, double offset);
 	~uhd_device();
 
-	int open(const std::string &args, bool extref);
+	int open(const std::string &args, bool extref, bool swap_channels);
 	bool start();
 	bool stop();
 	bool restart();
@@ -694,7 +694,7 @@ bool uhd_device::parse_dev_type()
 	return true;
 }
 
-int uhd_device::open(const std::string &args, bool extref)
+int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 {
 	// Find UHD devices
 	uhd::device_addr_t addr(args);
@@ -720,7 +720,7 @@ int uhd_device::open(const std::string &args, bool extref)
 	// Verify and set channels
 	if ((dev_type == B210) && (chans == 2)) {
 	} else if ((dev_type == UMTRX) && (chans == 2)) {
-		uhd::usrp::subdev_spec_t subdev_spec("A:0 B:0");
+		uhd::usrp::subdev_spec_t subdev_spec(swap_channels?"B:0 A:0":"A:0 B:0");
 		usrp_dev->set_tx_subdev_spec(subdev_spec);
 		usrp_dev->set_rx_subdev_spec(subdev_spec);
 	} else if (chans != 1) {

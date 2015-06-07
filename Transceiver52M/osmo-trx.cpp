@@ -71,6 +71,7 @@ struct trx_config {
 	bool diversity;
 	double offset;
 	double rssi_offset;
+	bool swap_channels;
 };
 
 ConfigurationTable gConfig;
@@ -187,6 +188,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   Diversity............... " << divstr << std::endl;
 	ost << "   Tuning offset........... " << config->offset << std::endl;
 	ost << "   RSSI to dBm offset...... " << config->rssi_offset << std::endl;
+	ost << "   Swap channels........... " << config->swap_channels << std::endl;
 	std::cout << ost << std::endl;
 
 	return true;
@@ -295,7 +297,8 @@ static void print_help()
 		"  -f    Enable C0 filler table\n"
 		"  -o    Set baseband frequency offset (default=auto)\n"
 		"  -r    Random burst test mode with TSC\n"
-		"  -R    RSSI to dBm offset in dB (default=0)\n",
+		"  -R    RSSI to dBm offset in dB (default=0)\n"
+		"  -S    Swap channels (UmTRX only)\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
 }
 
@@ -312,8 +315,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->diversity = false;
 	config->offset = 0.0;
 	config->rssi_offset = 0.0;
+	config->swap_channels = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:R:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:R:S")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -355,6 +359,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'R':
 			config->rssi_offset = atof(optarg);
+			break;
+		case 'S':
+			config->swap_channels = true;
 			break;
 		default:
 			print_help();
@@ -400,7 +407,7 @@ int main(int argc, char *argv[])
 	/* Create the low level device object */
 	usrp = RadioDevice::make(config.sps, config.chans,
 				 config.diversity, config.offset);
-	type = usrp->open(config.dev_args, config.extref);
+	type = usrp->open(config.dev_args, config.extref, config.swap_channels);
 	if (type < 0) {
 		LOG(ALERT) << "Failed to create radio device" << std::endl;
 		goto shutdown;
