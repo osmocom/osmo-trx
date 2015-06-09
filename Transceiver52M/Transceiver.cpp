@@ -148,6 +148,7 @@ Transceiver::Transceiver(int wBasePort,
                          double wRssiOffset)
   : mBasePort(wBasePort), mAddr(wTRXAddress),
     mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
+    mSendEmptyBursts(false),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
     mSPSTx(wSPS), mSPSRx(1), mChans(wChans), mOn(false),
@@ -858,6 +859,16 @@ void Transceiver::driveControl(size_t chan)
     sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
 
   }
+  else if (strcmp(command,"SENDEMPTY")==0) {
+      int  sendEmptyBursts;
+      sscanf(buffer,"%3s %s %d",cmdcheck,command,&sendEmptyBursts);
+      if (sendEmptyBursts == 0 || sendEmptyBursts == 1) {
+        mSendEmptyBursts = sendEmptyBursts;
+        sprintf(response,"RSP SENDEMPTY 0 %d",sendEmptyBursts);
+      } else {
+          sprintf(response,"RSP SENDEMPTY 1 %d",sendEmptyBursts);
+      }
+  }
   else {
     LOG(WARNING) << "bogus command " << command << " on control interface.";
     sprintf(response,"RSP ERR 1");
@@ -914,43 +925,69 @@ void Transceiver::driveReceiveRadio()
 void Transceiver::driveReceiveFIFO(size_t chan)
 {
   SoftVector *rxBurst = NULL;
-  double RSSI; // in dBFS
-  double dBm;  // in dBm
-  double TOA;  // in symbols
-  int TOAint;  // in 1/256 symbols
-  double noise; // noise level in dBFS
+  double RSSI;     // RSSI in dBFS
+  double RSSIdBm;  // RSSI in dBm
+  double TOA;      // in symbols
+  double noise;    // noise level in dBFS
+  double noisedBm; // noise level in dBm
   GSM::Time burstTime;
   bool isRssiValid; // are RSSI, noise and burstTime valid
+  char burstString[gSlotLen+10];
 
   rxBurst = pullRadioVector(burstTime, RSSI, isRssiValid, TOA, noise, chan);
 
-  if (rxBurst) { 
-    dBm = RSSI+rssiOffset;
-    TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
+  // If mSendEmptyBursts, then send burst data even if it is not demodulated
+  if ((rxBurst || mSendEmptyBursts) && isRssiValid) {
+    RSSIdBm = RSSI+rssiOffset;
+    noisedBm = noise+rssiOffset;
 
-	LOG(DEBUG) << std::fixed << std::right
-      << " time: "   << burstTime
-	  << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -dBm << "dBm"
-	  << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -(noise+rssiOffset) << "dBm"
-	  << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
-      << " bits: "   << *rxBurst;
+    if (rxBurst) {
+        LOG(DEBUG) << std::fixed << std::right
+          << " time: "   << burstTime
+          << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -RSSIdBm << "dBm"
+          << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -noisedBm << "dBm"
+          << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
+          << " bits: "   << *rxBurst;
+    } else {
+        LOG(DEBUG) << std::fixed << std::right
+          << " time: "   << burstTime
+          << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -RSSIdBm << "dBm"
+          << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -noisedBm << "dBm"
+          << " no burst decoded";
+    }
 
-    char burstString[gSlotLen+10];
+    // Burst time
     burstString[0] = burstTime.TN();
     for (int i = 0; i < 4; i++)
       burstString[1+i] = (burstTime.FN() >> ((3-i)*8)) & 0x0ff;
-    burstString[5] = (int)dBm;
-    burstString[6] = (TOAint >> 8) & 0x0ff;
-    burstString[7] = TOAint & 0x0ff;
-    SoftVector::iterator burstItr = rxBurst->begin();
 
-    for (unsigned int i = 0; i < gSlotLen; i++) {
-      burstString[8+i] =(char) round((*burstItr++)*255.0);
+    // Burst RSSI
+    burstString[5] = (int)RSSIdBm;
+
+    // Time Of Arrival and actual bits
+    if (rxBurst) {
+        // Convert TOA to 1/256 symbol parts, round to closest integer
+        int TOAint = (int) (TOA * 256.0 + 0.5);
+        burstString[6] = (TOAint >> 8) & 0x0ff;
+        burstString[7] = TOAint & 0x0ff;
+
+        SoftVector::iterator burstItr = rxBurst->begin();
+        for (unsigned int i = 0; i < gSlotLen; i++) {
+          burstString[8+i] =(char) round((*burstItr++)*255.0);
+        }
+        delete rxBurst;
+
+        // Unused, but we check for the packet length in osmo-bts,
+        // so leave it as is for now
+        burstString[gSlotLen+8] = 0;
+        burstString[gSlotLen+9] = 0;
+
+        mDataSockets[chan]->write(burstString,gSlotLen+10);
+    } else {
+        // Only header
+        mDataSockets[chan]->write(burstString,6);
     }
-    burstString[gSlotLen+9] = '\0';
-    delete rxBurst;
 
-    mDataSockets[chan]->write(burstString,gSlotLen+10);
   }
 }
 
