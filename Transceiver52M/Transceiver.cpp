@@ -620,7 +620,7 @@ SoftVector *Transceiver::demodulate(TransceiverState *state,
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled. 
  */
-SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
+SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &isRssiValid,
                                          double &timingOffset, double &noise,
                                          size_t chan)
 {
@@ -632,6 +632,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
   signalVector *burst;
   SoftVector *bits = NULL;
   TransceiverState *state = &mStates[chan];
+  isRssiValid = false;
 
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
@@ -642,7 +643,9 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
   GSM::Time time = radio_burst->getTime();
   CorrType type = expectedCorrType(time, chan);
 
-  if ((type == OFF) || (type == IDLE)) {
+  /* No processing if the timeslot is off.
+   * Not even power level or noise calculation. */
+  if (type == OFF) {
     delete radio_burst;
     return NULL;
   }
@@ -666,7 +669,25 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
   /* Average noise on diversity paths and update global levels */
   burst = radio_burst->getVector(max_i);
   avg = sqrt(avg / radio_burst->chans());
-  state->mNoiseLev = state->mNoises.avg();
+
+  wTime = time;
+  RSSI = 20.0 * log10(rxFullScale / avg);
+
+  /* RSSI estimation are valid */
+  isRssiValid = true;
+
+  if (type == IDLE) {
+    /* Update noise levels */
+    state->mNoises.insert(avg);
+    state->mNoiseLev = state->mNoises.avg();
+    noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
+
+    delete radio_burst;
+    return NULL;
+  } else {
+    /* Do not update noise levels */
+    noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
+  }
 
   /* Detect normal or RACH bursts */
   if (type == TSC)
@@ -674,13 +695,11 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
   else
     success = detectRACH(state, *burst, amp, toa);
 
-  /* Update noise average if no bust detected or alert on error */
+  /* Alert an error and exit */
   if (success <= 0) {
-    if (success == SIGERR_NONE) {
-      state->mNoises.insert(avg);
-    } else if (success == -SIGERR_CLIP) {
+    if (success == -SIGERR_CLIP) {
       LOG(WARNING) << "Clipping detected on received RACH or Normal Burst";
-    } else {
+    } else if (success != SIGERR_NONE) {
       LOG(WARNING) << "Unhandled RACH or Normal Burst detection error";
     }
 
@@ -688,19 +707,15 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI,
     return NULL;
   }
 
+  timingOffset = toa / mSPSRx;
+
   /* Demodulate and set output info */
   if (equalize && (type != TSC))
     equalize = false;
 
   bits = demodulate(state, *burst, amp, toa, time.TN(), equalize);
 
-  wTime = time;
-  RSSI = 20.0 * log10(rxFullScale / avg);
-  timingOffset = toa / mSPSRx;
-  noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
-
   delete radio_burst;
-
   return bits;
 }
 
@@ -905,8 +920,9 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   int TOAint;  // in 1/256 symbols
   double noise; // noise level in dBFS
   GSM::Time burstTime;
+  bool isRssiValid; // are RSSI, noise and burstTime valid
 
-  rxBurst = pullRadioVector(burstTime, RSSI, TOA, noise, chan);
+  rxBurst = pullRadioVector(burstTime, RSSI, isRssiValid, TOA, noise, chan);
 
   if (rxBurst) { 
     dBm = RSSI+rssiOffset;
