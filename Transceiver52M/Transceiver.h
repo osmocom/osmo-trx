@@ -195,7 +195,7 @@ private:
   void pushRadioVector(GSM::Time &nowTime);
 
   /** Pull and demodulate a burst from the receive FIFO */
-  SoftVector *pullRadioVector(GSM::Time &wTime, double &RSSI,
+  SoftVector *pullRadioVector(GSM::Time &wTime, double &RSSI, bool &isRssiValid,
                               double &timingOffset, double &noise,
                               size_t chan = 0);
 
