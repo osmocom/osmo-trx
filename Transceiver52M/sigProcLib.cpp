@@ -1386,26 +1386,25 @@ static float maxAmplitude(signalVector &burst)
     return max;
 }
 
-/* 
- * RACH burst detection
+/*
+ * RACH/Normal burst detection with clipping detection
  *
  * Correlation window parameters:
- *   target: Tail bits + RACH length (reduced from 41 to a multiple of 4)
- *   head: Search 4 symbols before target 
- *   tail: Search 10 symbols after target
+ *   target: Tail bits + burst length
+ *   head: Search symbols before target
+ *   tail: Search symbols after target
  */
-int detectRACHBurst(signalVector &rxBurst,
-		    float thresh,
-		    int sps,
-		    complex *amp,
-		    float *toa)
+int detectGeneralBurst(signalVector &rxBurst,
+                       float thresh,
+                       int sps,
+                       complex &amp,
+                       float &toa,
+                       int target, int head, int tail,
+                       CorrelationSequence *sync)
 {
-  int rc, start, target, head, tail, len;
+  int rc, start, len;
   bool clipping = false;
-  float _toa;
-  complex _amp;
   signalVector *corr;
-  CorrelationSequence *sync;
 
   if ((sps != 1) && (sps != 4))
     return -SIGERR_UNSUPPORTED;
@@ -1419,36 +1418,55 @@ int detectRACHBurst(signalVector &rxBurst,
     clipping = true;
   }
 
-  target = 8 + 40;
-  head = 4;
-  tail = 10;
-
   start = (target - head) * sps - 1;
   len = (head + tail) * sps;
-  sync = gRACHSequence;
   corr = new signalVector(len);
 
   rc = detectBurst(rxBurst, *corr, sync,
-                   thresh, sps, &_amp, &_toa, start, len);
+                   thresh, sps, &amp, &toa, start, len);
   delete corr;
 
   if (rc < 0) {
     return -SIGERR_INTERNAL;
   } else if (!rc) {
-    if (amp)
-      *amp = 0.0f;
-    if (toa)
-      *toa = 0.0f;
+    amp = 0.0f;
+    toa = 0.0f;
     return clipping?-SIGERR_CLIP:SIGERR_NONE;
   }
 
   /* Subtract forward search bits from delay */
-  if (toa)
-    *toa = _toa - head * sps;
-  if (amp)
-    *amp = _amp;
+  toa -= head * sps;
 
   return 1;
+}
+
+
+/* 
+ * RACH burst detection
+ *
+ * Correlation window parameters:
+ *   target: Tail bits + RACH length (reduced from 41 to a multiple of 4)
+ *   head: Search 4 symbols before target 
+ *   tail: Search 10 symbols after target
+ */
+int detectRACHBurst(signalVector &rxBurst,
+            float thresh,
+            int sps,
+            complex &amp,
+            float &toa)
+{
+  int rc, target, head, tail;
+  CorrelationSequence *sync;
+
+  target = 8 + 40;
+  head = 4;
+  tail = 10;
+  sync = gRACHSequence;
+
+  rc = detectGeneralBurst(rxBurst, thresh, sps, amp, toa,
+                          target, head, tail, sync);
+
+  return rc;
 }
 
 /* 
@@ -1460,67 +1478,32 @@ int detectRACHBurst(signalVector &rxBurst,
  *   tail: Search 4 symbols + maximum expected delay
  */
 int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
-                        int sps, complex *amp, float *toa, unsigned max_toa,
+                        int sps, complex &amp, float &toa, unsigned max_toa,
                         bool chan_req, signalVector **chan, float *chan_offset)
 {
-  int rc, start, target, head, tail, len;
-  bool clipping = false;
-  complex _amp;
-  float _toa;
-  signalVector *corr;
+  int rc, target, head, tail;
   CorrelationSequence *sync;
 
-  if ((tsc < 0) || (tsc > 7) || ((sps != 1) && (sps != 4)))
+  if ((tsc < 0) || (tsc > 7))
     return -SIGERR_UNSUPPORTED;
-
-  // Detect potential clipping
-  // We still may be able to demod the burst, so we'll give it a try
-  // and only report clipping if we can't demod.
-  float maxAmpl = maxAmplitude(rxBurst);
-  if (maxAmpl > CLIP_THRESH) {
-    LOG(DEBUG) << "max burst amplitude: " << maxAmpl << " is above the clipping threshold: " << CLIP_THRESH << std::endl;
-    clipping = true;
-  }
 
   target = 3 + 58 + 16 + 5;
   head = 4;
   tail = 4 + max_toa;
-
-  start = (target - head) * sps - 1;
-  len = (head + tail) * sps;
   sync = gMidambles[tsc];
-  corr = new signalVector(len);
 
-  rc = detectBurst(rxBurst, *corr, sync,
-                   thresh, sps, &_amp, &_toa, start, len);
-  delete corr;
-
-  if (rc < 0) {
-    return -SIGERR_INTERNAL;
-  } else if (!rc) {
-    if (amp)
-      *amp = 0.0f;
-    if (toa)
-      *toa = 0.0f;
-    return clipping?-SIGERR_CLIP:SIGERR_NONE;
-  }
-
-  /* Subtract forward search bits from delay */
-  _toa -= head * sps;
-  if (toa)
-    *toa = _toa;
-  if (amp)
-    *amp = _amp;
+  rc = detectGeneralBurst(rxBurst, thresh, sps, amp, toa,
+                          target, head, tail, sync);
 
   /* Equalization not currently supported */
-  if (chan_req) {
+  if (rc > 0 && chan_req) {
     *chan = new signalVector(6 * sps);
 
     if (chan_offset)
       *chan_offset = 0.0;
   }
 
-  return 1;
+  return rc;
 }
 
 signalVector *decimateVector(signalVector &wVector, size_t factor)

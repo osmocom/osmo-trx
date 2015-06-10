@@ -540,7 +540,7 @@ int Transceiver::detectRACH(TransceiverState *state,
 {
   float threshold = 6.0;
 
-  return detectRACHBurst(burst, threshold, mSPSRx, &amp, &toa);
+  return detectRACHBurst(burst, threshold, mSPSRx, amp, toa);
 }
 
 /*
@@ -569,8 +569,8 @@ int Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
   }
 
   /* Detect normal burst midambles */
-  success = analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx, &amp,
-                                &toa, mMaxExpectedDelay, estimateChan,
+  success = analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx, amp,
+                                toa, mMaxExpectedDelay, estimateChan,
                                 &chanResp, &chanOffset);
   if (success <= 0) {
     return success;
