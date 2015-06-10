@@ -192,8 +192,8 @@ bool energyDetect(signalVector &rxBurst,
 int detectRACHBurst(signalVector &rxBurst,
                     float detectThreshold,
                     int sps,
-                    complex *amplitude,
-                    float* TOA);
+                    complex &amplitude,
+                    float &TOA);
 
 /**
         Normal burst correlator, detector, channel estimator.
@@ -210,15 +210,15 @@ int detectRACHBurst(signalVector &rxBurst,
         @return positive if threshold value is reached, negative on error, zero otherwise
 */
 int analyzeTrafficBurst(signalVector &rxBurst,
-			unsigned TSC,
-			float detectThreshold,
-			int sps,
-			complex *amplitude,
-			float *TOA,
+                        unsigned TSC,
+                        float detectThreshold,
+                        int sps,
+                        complex &amplitude,
+                        float &TOA,
                         unsigned maxTOA,
                         bool requestChannel = false,
-			signalVector** channelResponse = NULL,
-			float *channelResponseOffset = NULL);
+                        signalVector** channelResponse = NULL,
+                        float *channelResponseOffset = NULL);
 
 /**
 	Decimate a vector.
