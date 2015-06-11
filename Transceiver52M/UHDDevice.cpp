@@ -210,8 +210,7 @@ uhd::time_spec_t convert_time(TIMESTAMP ticks, double rate)
 
 TIMESTAMP convert_time(uhd::time_spec_t ts, double rate)
 {
-	TIMESTAMP ticks = ts.get_full_secs() * rate;
-	return ts.get_tick_count(rate) + ticks;
+	return (TIMESTAMP)(ts.get_real_secs() * rate + 0.5);
 }
 
 /*
@@ -1429,6 +1428,19 @@ ssize_t smpl_buf::write(void *buf, size_t len, TIMESTAMP timestamp)
 		return ERROR_WRITE;
 	if ((timestamp + len) <= time_end)
 		return ERROR_TIMESTAMP;
+
+	if (timestamp < time_end) {
+		LOG(ERR) << "Overwriting old buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
+		uhd::time_spec_t ts = convert_time(timestamp, clk_rt);
+		LOG(DEBUG) << "Requested timestamp = " << timestamp << " (real_sec=" << std::fixed << ts.get_real_secs() << " = " << convert_time(ts, clk_rt) << ") rate=" << clk_rt;
+		// Do not return error here, because it's a rounding error and is not fatal
+	}
+	if (timestamp > time_end && time_end != 0) {
+		LOG(ERR) << "Skipping buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
+		uhd::time_spec_t ts = convert_time(timestamp, clk_rt);
+		LOG(DEBUG) << "Requested timestamp = " << timestamp << " (real_sec=" << std::fixed << ts.get_real_secs() << " = " << convert_time(ts, clk_rt) << ") rate=" << clk_rt;
+		// Do not return error here, because it's a rounding error and is not fatal
+	}
 
 	// Starting index
 	size_t write_start = (data_start + (timestamp - time_start)) % buf_len;
