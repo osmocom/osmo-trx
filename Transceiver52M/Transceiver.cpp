@@ -554,7 +554,7 @@ int Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
   int success;
   int tn = time.TN();
   float chanOffset, threshold = 5.0;
-  bool noise, needDFE = false, estimateChan = false;
+  bool needDFE = false, estimateChan = false;
   double elapsed = time - state->chanEstimateTime[tn];
   signalVector *chanResp;
 
@@ -576,11 +576,11 @@ int Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
     return success;
   }
 
-  noise = state->mNoiseLev;
-  state->SNRestimate[tn] = amp.norm2() / (noise * noise + 1.0);
-
   /* Set equalizer if unabled */
   if (needDFE && estimateChan) {
+     float noise = state->mNoiseLev;
+     state->SNRestimate[tn] = amp.norm2() / (noise * noise + 1.0);
+
      state->chanResponse[tn] = chanResp;
      state->chanRespOffset[tn] = chanOffset;
      state->chanRespAmplitude[tn] = amp;
