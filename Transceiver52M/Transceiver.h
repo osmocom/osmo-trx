@@ -232,6 +232,7 @@ private:
   double mRxFreq;                      ///< the receive frequency
   unsigned mTSC;                       ///< the midamble sequence code
   unsigned mMaxExpectedDelay;            ///< maximum expected time-of-arrival offset in GSM symbols
+  unsigned mWriteBurstToDiskMask;      ///< debug: bitmask to indicate which timeslots to dump to disk
 
   std::vector<TransceiverState> mStates;
 
