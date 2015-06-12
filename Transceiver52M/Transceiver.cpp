@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <iomanip>      // std::setprecision
+#include <fstream>
 #include "Transceiver.h"
 #include <Logger.h>
 
@@ -151,7 +152,7 @@ Transceiver::Transceiver(int wBasePort,
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
     mSPSTx(wSPS), mSPSRx(1), mChans(wChans), mOn(false),
-    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelay(0)
+    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelay(0), mWriteBurstToDiskMask(0)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
@@ -616,6 +617,16 @@ SoftVector *Transceiver::demodulate(TransceiverState *state,
   return demodulateBurst(burst, mSPSRx, amp, toa);
 }
 
+void writeToFile(radioVector *radio_burst, size_t chan)
+{
+  GSM::Time time = radio_burst->getTime();
+  std::ostringstream fname;
+  fname << chan << "_" << time.FN() << "_" << time.TN() << ".fc";
+  std::ofstream outfile (fname.str().c_str(), std::ofstream::binary);
+  outfile.write((char*)radio_burst->getVector()->begin(), radio_burst->getVector()->size() * 2 * sizeof(float));
+  outfile.close();
+}
+
 /*
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled. 
@@ -642,6 +653,12 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   /* Set time and determine correlation type */
   GSM::Time time = radio_burst->getTime();
   CorrType type = expectedCorrType(time, chan);
+
+  /* Debug: dump bursts to disk */
+  /* bits 0-7  - chan 0 timeslots
+   * bits 8-15 - chan 1 timeslots */
+  if (mWriteBurstToDiskMask & ((1<<time.TN()) << (8*chan)))
+    writeToFile(radio_burst, chan);
 
   /* No processing if the timeslot is off.
    * Not even power level or noise calculation. */
@@ -857,6 +874,14 @@ void Transceiver::driveControl(size_t chan)
     setModulus(timeslot, chan);
     sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
 
+  }
+  else if (strcmp(command,"_SETBURSTTODISKMASK")==0) {
+    // debug command! may change or disapear without notice
+    // set a mask which bursts to dump to disk
+    int mask;
+    sscanf(buffer,"%3s %s %d",cmdcheck,command,&mask);
+    mWriteBurstToDiskMask = mask;
+    sprintf(response,"RSP _SETBURSTTODISKMASK 0 %d",mask);
   }
   else {
     LOG(WARNING) << "bogus command " << command << " on control interface.";
