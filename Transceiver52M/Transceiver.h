@@ -227,11 +227,11 @@ private:
   int mSPSRx;                          ///< number of samples per Rx symbol
   size_t mChans;
 
-  bool mOn;			       ///< flag to indicate that transceiver is powered on
+  bool mOn;	                           ///< flag to indicate that transceiver is powered on
   double mTxFreq;                      ///< the transmit frequency
   double mRxFreq;                      ///< the receive frequency
   unsigned mTSC;                       ///< the midamble sequence code
-  unsigned mMaxExpectedDelay;            ///< maximum expected time-of-arrival offset in GSM symbols
+  unsigned mMaxExpectedDelay;          ///< maximum expected time-of-arrival offset in GSM symbols
   unsigned mWriteBurstToDiskMask;      ///< debug: bitmask to indicate which timeslots to dump to disk
 
   std::vector<TransceiverState> mStates;
