@@ -1114,7 +1114,7 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 	uhd::tune_request_t treq(freq);
 
 	if (dev_type == UMTRX) {
-		if (offset > 0.0)
+		if (offset != 0.0)
 			return uhd::tune_request_t(freq, offset);
 
 		// Don't use DSP tuning, because LMS6002D PLL steps are small enough.
@@ -1125,6 +1125,7 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 		treq.rf_freq = freq;
 		treq.dsp_freq_policy = uhd::tune_request_t::POLICY_MANUAL;
 		treq.dsp_freq = 0.0;
+		return treq;
 	} else if (chans == 1) {
 		if (offset == 0.0)
 			return treq;
