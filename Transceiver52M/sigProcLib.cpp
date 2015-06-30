@@ -831,6 +831,7 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
 
   delete c0_burst;
   delete c1_burst;
+  delete c2_burst;
   delete c0_shaped;
   delete c1_shaped;
 
