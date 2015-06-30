@@ -45,14 +45,14 @@ using namespace GSM;
 #define CLIP_THRESH		30000.0f
 
 /** Lookup tables for trigonometric approximation */
-float cosTable[TABLESIZE+1]; // add 1 element for wrap around
-float sinTable[TABLESIZE+1];
-float sincTable[TABLESIZE+1];
+double cosTable[TABLESIZE+1]; // add 1 element for wrap around
+double sinTable[TABLESIZE+1];
+double sincTable[TABLESIZE+1];
 
 /** Constants */
-static const float M_PI_F = (float)M_PI;
-static const float M_2PI_F = (float)(2.0*M_PI);
-static const float M_1_2PI_F = 1/M_2PI_F;
+static const double M_PI_F = M_PI;
+static const double M_2PI_F = (2.0 * M_PI);
+static const double M_1_2PI_F = (1.0 / M_2PI_F);
 
 /* Precomputed rotation vectors */
 static signalVector *GMSKRotationN = NULL;
@@ -270,8 +270,8 @@ complex expjLookup(float x)
 /** Library setup functions */
 void initTrigTables() {
   for (int i = 0; i < TABLESIZE+1; i++) {
-    cosTable[i] = cos(2.0*M_PI*i/TABLESIZE);
-    sinTable[i] = sin(2.0*M_PI*i/TABLESIZE);
+    cosTable[i] = cos(2.0 * M_PI * (double) i / TABLESIZE);
+    sinTable[i] = sin(2.0 * M_PI * (double) i / TABLESIZE);
   }
 }
 
@@ -281,11 +281,13 @@ void initGMSKRotationTables(int sps)
   GMSKReverseRotationN = new signalVector(157 * sps);
   signalVector::iterator rotPtr = GMSKRotationN->begin();
   signalVector::iterator revPtr = GMSKReverseRotationN->begin();
-  float phase = 0.0;
+  double phase = 0.0;
+
   while (rotPtr != GMSKRotationN->end()) {
-    *rotPtr++ = expjLookup(phase);
-    *revPtr++ = expjLookup(-phase);
-    phase += M_PI_F / 2.0F / (float) sps;
+    *rotPtr++ = complex(cos(phase), sin(phase));
+    *revPtr++ = complex(cos(-phase), sin(-phase));
+    phase += M_PI_F / 8.0;
+
   }
 
   GMSKRotation1 = new signalVector(157);
@@ -702,8 +704,8 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
 {
   int burst_len;
   float phase;
-  signalVector *c0_pulse, *c1_pulse, *c0_burst;
-  signalVector *c1_burst, *c0_shaped, *c1_shaped;
+  signalVector *c0_pulse, *c1_pulse, *c0_burst, *c2_burst;
+  signalVector *c1_burst, *c0_shaped, *c1_shaped, *c2_shaped;
   signalVector::iterator c0_itr, c1_itr;
 
   /*
@@ -716,7 +718,17 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   c0_pulse = GSMPulse->c0;
   c1_pulse = GSMPulse->c1;
 
-  burst_len = sps * (bits.size() + guard_len);
+  int i = 0, head = 4, tail = 4;
+  BitVector _bits = BitVector(148 + head + tail);
+
+  for (; i < head; i++)
+    _bits[i] = 1;
+  for (; i < 148 + head; i++)
+    _bits[i] = bits[i - head];
+  for (; i < 148 + head + tail; i++)
+    _bits[i] = 1;
+
+  burst_len = 625 + (head + tail) * sps;
 
   c0_burst = new signalVector(burst_len, c0_pulse->size());
   c0_burst->isReal(true);
@@ -726,13 +738,16 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   c1_burst->isReal(true);
   c1_itr = c1_burst->begin();
 
+  c2_burst = new signalVector(625, c0_pulse->size());
+  c2_burst->isReal(false);
+
   /* Padded differential start bits */
-  *c0_itr = 2.0 * (0x01 & 0x01) - 1.0;
+  *c0_itr = 2.0 * (0x00 & 0x01) - 1.0;
   c0_itr += sps;
 
   /* Main burst bits */
-  for (unsigned i = 0; i < bits.size(); i++) {
-    *c0_itr = 2.0 * (bits[i] & 0x01) - 1.0;
+  for (unsigned i = 0; i < _bits.size(); i++) {
+    *c0_itr = 2.0 * (_bits[i] & 0x01) - 1.0;
     c0_itr += sps;
   }
 
@@ -754,8 +769,8 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   c1_itr += sps;
 
   /* Generate C1 phase coefficients */
-  for (unsigned i = 2; i < bits.size(); i++) {
-    phase = 2.0 * ((bits[i - 1] & 0x01) ^ (bits[i - 2] & 0x01)) - 1.0;
+  for (unsigned i = 2; i < _bits.size(); i++) {
+    phase = 2.0 * ((_bits[i - 1] & 0x01) ^ (_bits[i - 2] & 0x01)) - 1.0;
     *c1_itr = *c0_itr * Complex<float>(0, phase);
 
     c0_itr += sps;
@@ -763,13 +778,14 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   }
 
   /* End magic */
-  int i = bits.size();
-  phase = 2.0 * ((bits[i-1] & 0x01) ^ (bits[i-2] & 0x01)) - 1.0;
+  i = _bits.size();
+  phase = 2.0 * ((_bits[i-1] & 0x01) ^ (_bits[i-2] & 0x01)) - 1.0;
   *c1_itr = *c0_itr * Complex<float>(0, phase);
 
   /* Primary (C0) and secondary (C1) pulse shaping */
   c0_shaped = convolve(c0_burst, c0_pulse, NULL, START_ONLY);
   c1_shaped = convolve(c1_burst, c1_pulse, NULL, START_ONLY);
+  c2_shaped = new signalVector(625);
 
   /* Sum shaped outputs into C0 */
   c0_itr = c0_shaped->begin();
@@ -777,11 +793,48 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   for (unsigned i = 0; i < c0_shaped->size(); i++ )
     *c0_itr++ += *c1_itr++;
 
+  /*
+   * Generate shaping mask with squared-cosine pulse. Only 4 samples-per-symbol
+   * is supported here so use length of 8 samples or 2 symbols.
+   */
+  int len = 8;
+  float mask[len];
+  for (i = 0; i < len; i++)
+    mask[i] = 0.5 * (1.0 - cos(M_PI * (float) i / len));
+
+  /*
+   * Ramp-up mask components:
+   *     C0 filter group delay is 7.5 samples
+   *     Subtract added head bits
+   *     Subtract length of shaping mask
+   *     Delay ramp by 1 sample
+   */
+  i = 0;
+  int start = 8 + head * sps - len + 1;
+  for (;i < len; i++)
+    c2_shaped->begin()[i] = mask[i] * c0_shaped->begin()[start + i];
+
+  for (; i < 625; i++)
+    c2_shaped->begin()[i] = c0_shaped->begin()[start + i];
+
+  /*
+   * Ramp-down mask components:
+   *     Length of ramp-up mask
+   *     148 useful bits
+   */
+  int j;
+  int end = len + 148 * sps;
+  for (i = end, j = 0; i < end + len; i++, j++)
+    c2_shaped->begin()[i] *= mask[len - j - 1];
+  for (; i < 625; i++)
+    c2_shaped->begin()[i] = 0;
+
   delete c0_burst;
   delete c1_burst;
+  delete c0_shaped;
   delete c1_shaped;
 
-  return c0_shaped;
+  return c2_shaped;
 }
 
 static signalVector *modulateBurstBasic(const BitVector &bits,
