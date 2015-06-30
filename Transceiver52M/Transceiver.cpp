@@ -79,7 +79,7 @@ static BitVector *genRandNormalBurst(size_t tsc)
   size_t i = 0;
 
   /* Tail bits */
-  for (; i < 4; i++)
+  for (; i < 3; i++)
     (*bits)[i] = 0;
 
   /* Random bits */
@@ -91,7 +91,7 @@ static BitVector *genRandNormalBurst(size_t tsc)
     (*bits)[i] = GSM::gTrainingSequence[tsc][j];
 
   /* Random bits */
-  for (; i < 144; i++)
+  for (; i < 145; i++)
     (*bits)[i] = rand() % 2;
 
   /* Tail bits */
@@ -105,6 +105,9 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
 {
   BitVector *bits;
   signalVector *burst;
+  time_t t;
+
+  srand((unsigned) time(&t));
 
   if ((sps != 1) && (sps != 4))
     return false;
