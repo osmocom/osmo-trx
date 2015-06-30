@@ -637,11 +637,11 @@ void writeToFile(signalVector *burst, const GSM::Time &time, size_t chan, const 
 SoftVector *Transceiver::demodulate(TransceiverState *state,
                                     signalVector &burst, complex amp,
                                     float toa, size_t tn, bool equalize,
-                                    GSM::Time &wTime, size_t chan)
+                                    GSM::Time &wTime, size_t chan,
+                                    Transceiver::BurstQuality *qual)
 {
   signalVector *aligned, *bit_aligned=NULL;
   SoftVector *bits;
-  bool estimateQuality = true;
 
   if (equalize) {
     scaleVector(burst, complex(1.0, 0.0) / amp);
@@ -654,7 +654,7 @@ SoftVector *Transceiver::demodulate(TransceiverState *state,
 
   aligned = alignBurst(burst, amp, toa);
 
-  if (estimateQuality) {
+  if (qual) {
     /* "aligned" burst has samples exactly between bits.
      * Delay it by 1/2 bit more to get samples aligned to bit positions. */
     bit_aligned = delayVector(aligned, NULL, 0.5);
@@ -666,9 +666,9 @@ SoftVector *Transceiver::demodulate(TransceiverState *state,
 
   bits = demodulateBurst(*aligned, mSPSRx);
 
-  if (estimateQuality) {
+  if (qual) {
     /* Estimate signal quality */
-    estimateBurstQuality(bits->segment(0, gSlotLen).sliced(), bit_aligned, wTime, chan);
+    estimateBurstQuality(bits->segment(0, gSlotLen).sliced(), bit_aligned, wTime, chan, *qual);
     delete bit_aligned;
   }
 
@@ -682,7 +682,8 @@ SoftVector *Transceiver::demodulate(TransceiverState *state,
  */
 SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &isRssiValid,
                                          double &timingOffset, double &noise,
-                                         size_t chan)
+                                         size_t chan,
+                                         Transceiver::BurstQuality *qual)
 {
   int success;
   bool equalize = false;
@@ -777,7 +778,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   if (equalize && (type != TSC))
     equalize = false;
 
-  bits = demodulate(state, *burst, amp, toa, time.TN(), equalize, time, chan);
+  bits = demodulate(state, *burst, amp, toa, time.TN(), equalize, time, chan, qual);
 
   delete radio_burst;
   return bits;
@@ -1041,13 +1042,10 @@ inline float vectorRMS(const Vector<float> &vec)
 }
 
 void Transceiver::estimateBurstQuality(const BitVector &wBits, signalVector *received,
-                                       const GSM::Time &wTime, size_t chan)
+                                       const GSM::Time &wTime, size_t chan,
+                                       Transceiver::BurstQuality &qual)
 {
   signalVector *burst;
-  Vector<float> phase_err(148); // 148 bits - burst length including guard bits
-  Vector<float> phase_err_deg(148); // 148 bits - burst length including guard bits
-  int phase_err_max;
-  float phase_err_rms;
 
   // this code supports only 4 SPS modulation
   // we also assume that received vector is 1 SPS
@@ -1065,21 +1063,17 @@ void Transceiver::estimateBurstQuality(const BitVector &wBits, signalVector *rec
   }
 
   // calculate phase error for each bit
-  for (size_t i=0; i<phase_err.size(); i++) {
+  for (size_t i=0; i<qual.phase_err.size(); i++) {
     float rx_phase = (*received)[i].arg();
     float mod_phase = (*burst)[1+(2+i)*4].arg();
-    phase_err[i] = wrapAnglePi(rx_phase - mod_phase);
-    phase_err_deg[i] = rad2deg(phase_err[i]);
+    qual.phase_err[i] = wrapAnglePi(rx_phase - mod_phase);
+    qual.phase_err_deg[i] = rad2deg(qual.phase_err[i]);
   }
 
-  phase_err_max = vectorMaxAbs(phase_err);
-  phase_err_rms = vectorRMS(phase_err);
-
-  LOG(INFO) << std::fixed << std::right << "Phase Error time: "   << wTime
-            << " peak: " << std::setw(5) << std::setprecision(1) << phase_err_deg[phase_err_max]
-            << " @bit "  << std::setw(3) << phase_err_max
-            << " RMS: "  << std::setw(5) << std::setprecision(1) << rad2deg(phase_err_rms)
-            << " bits: " << std::setw(5) << std::setprecision(1) << phase_err_deg;
+  // calculate Peak and RMS values
+  qual.phase_err_max_idx = vectorMaxAbs(qual.phase_err);
+  qual.phase_err_max = qual.phase_err[qual.phase_err_max_idx];
+  qual.phase_err_rms = vectorRMS(qual.phase_err);
 
   delete burst;
 }
@@ -1094,8 +1088,9 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   double noise; // noise level in dBFS
   GSM::Time burstTime;
   bool isRssiValid; // are RSSI, noise and burstTime valid
+  Transceiver::BurstQuality qual;
 
-  rxBurst = pullRadioVector(burstTime, RSSI, isRssiValid, TOA, noise, chan);
+  rxBurst = pullRadioVector(burstTime, RSSI, isRssiValid, TOA, noise, chan, &qual);
 
   if (rxBurst) { 
     dBm = RSSI+rssiOffset;
@@ -1106,7 +1101,11 @@ void Transceiver::driveReceiveFIFO(size_t chan)
       << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -dBm << "dBm"
       << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -(noise+rssiOffset) << "dBm"
       << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
-      << " energy: " << std::setw(5) << std::setprecision(2) << rxBurst->getEnergy()
+      << " peak: "   << std::setw(6) << std::setprecision(1) << qual.phase_err_deg[qual.phase_err_max_idx]
+//      << " @bit "    << std::setw(3) << qual.phase_err_max_idx
+      << " RMS: "    << std::setw(6) << std::setprecision(1) << rad2deg(qual.phase_err_rms)
+//      << " bits: " << std::setw(5) << std::setprecision(1) << qual.phase_err_deg
+//      << " energy: " << std::setw(5) << std::setprecision(2) << rxBurst->getEnergy()
       << " bits: "   << *rxBurst;
 
     char burstString[gSlotLen+10];

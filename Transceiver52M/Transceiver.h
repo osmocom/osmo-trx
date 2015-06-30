@@ -157,6 +157,20 @@ public:
   };
 
 private:
+
+  struct BurstQuality {
+    BurstQuality()
+      // 148 bits - burst length including guard bits
+      : phase_err(148), phase_err_deg(148)
+    {}
+
+    Vector<float> phase_err;
+    Vector<float> phase_err_deg;
+    int phase_err_max_idx;
+    float phase_err_max;
+    float phase_err_rms;
+  };
+
   int mBasePort;
   std::string mAddr;
 
@@ -197,7 +211,7 @@ private:
   /** Pull and demodulate a burst from the receive FIFO */
   SoftVector *pullRadioVector(GSM::Time &wTime, double &RSSI, bool &isRssiValid,
                               double &timingOffset, double &noise,
-                              size_t chan = 0);
+                              size_t chan = 0, BurstQuality *qual = NULL);
 
   /** Set modulus for specific timeslot */
   void setModulus(size_t timeslot, size_t chan);
@@ -222,7 +236,8 @@ private:
   SoftVector *demodulate(TransceiverState *state,
                          signalVector &burst, complex amp,
                          float toa, size_t tn, bool equalize,
-                         GSM::Time &wTime, size_t chan);
+                         GSM::Time &wTime, size_t chan,
+                         BurstQuality *qual=NULL);
 
   int mSPSTx;                          ///< number of samples per Tx symbol
   int mSPSRx;                          ///< number of samples per Rx symbol
@@ -257,7 +272,7 @@ private:
 protected:
 
   /** Estimate received burst quality and print it to debug output */
-  void estimateBurstQuality(const BitVector &wBits, signalVector *received, const GSM::Time &wTime, size_t chan);
+  void estimateBurstQuality(const BitVector &wBits, signalVector *received, const GSM::Time &wTime, size_t chan, BurstQuality &qual);
 
   /** drive lower receive I/O and burst generation */
   void driveReceiveRadio();
