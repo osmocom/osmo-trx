@@ -221,7 +221,8 @@ private:
   /** Demodulat burst and output soft bits */
   SoftVector *demodulate(TransceiverState *state,
                          signalVector &burst, complex amp,
-                         float toa, size_t tn, bool equalize);
+                         float toa, size_t tn, bool equalize,
+                         GSM::Time &wTime, size_t chan);
 
   int mSPSTx;                          ///< number of samples per Tx symbol
   int mSPSRx;                          ///< number of samples per Rx symbol
@@ -235,6 +236,15 @@ private:
   unsigned mMaxExpectedDelay;          ///< maximum expected time-of-arrival offset in GSM symbols
   unsigned mWriteBurstToDiskMask;      ///< debug: bitmask to indicate which timeslots to dump to disk
 
+
+  bool needWriteBurstToDisk(const GSM::Time &wTime, size_t chan)
+  {
+    /* Debug: dump bursts to disk */
+    /* bits 0-7  - chan 0 timeslots
+     * bits 8-15 - chan 1 timeslots */
+    return mWriteBurstToDiskMask & ((1<<wTime.TN()) << (8*chan));
+  }
+
   std::vector<TransceiverState> mStates;
 
   /** Start and stop I/O threads through the control socket API */
@@ -245,6 +255,10 @@ private:
   Mutex mLock;
 
 protected:
+
+  /** Estimate received burst quality and print it to debug output */
+  void estimateBurstQuality(const BitVector &wBits, signalVector *received, const GSM::Time &wTime, size_t chan);
+
   /** drive lower receive I/O and burst generation */
   void driveReceiveRadio();
 

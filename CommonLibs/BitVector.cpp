@@ -30,6 +30,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <sstream>
+#include <math.h>
 
 using namespace std;
 
@@ -533,7 +534,8 @@ float SoftVector::getEnergy(float *plow) const
 	float avg = 0; float low = 1;
 	for (int i = 0; i < len; i++) {
 		float bit = vec[i];
-		float energy = 2*((bit < 0.5) ? (0.5-bit) : (bit-0.5));
+		float energy = 2*bit-1.0;
+		energy *= energy;
 		if (energy < low) low = energy;
 		avg += energy/len;
 	}

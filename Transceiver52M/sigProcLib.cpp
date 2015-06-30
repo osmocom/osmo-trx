@@ -1523,35 +1523,40 @@ signalVector *decimateVector(signalVector &wVector, size_t factor)
   return dec;
 }
 
-SoftVector *demodulateBurst(signalVector &rxBurst, int sps,
-                            complex channel, float TOA)
+signalVector *alignBurst(signalVector &rxBurst, complex channel, float TOA)
 {
-  signalVector *delay, *dec = NULL;
-  SoftVector *bits;
+  signalVector *delay;
 
   scaleVector(rxBurst, ((complex) 1.0) / channel);
   delay = delayVector(&rxBurst, NULL, -TOA);
 
+  return delay;
+}
+
+SoftVector *demodulateBurst(signalVector &rxBurst, int sps)
+{
+  signalVector *burst, *dec = NULL;
+  SoftVector *bits;
+
   /* Shift up by a quarter of a frequency */
-  GMSKReverseRotate(*delay, sps);
+  GMSKReverseRotate(rxBurst, sps);
 
   /* Decimate and slice */
   if (sps > 1) {
-     dec = decimateVector(*delay, sps);
-     delete delay;
-     delay = NULL;
+     dec = decimateVector(rxBurst, sps);
+     burst = dec;
   } else {
-     dec = delay;
+     burst = &rxBurst;
   }
 
-  vectorSlicer(dec);
+  vectorSlicer(burst);
 
-  bits = new SoftVector(dec->size());
+  bits = new SoftVector(burst->size());
 
   SoftVector::iterator bit_itr = bits->begin();
-  signalVector::iterator burst_itr = dec->begin();
+  signalVector::iterator burst_itr = burst->begin();
 
-  for (; burst_itr < dec->end(); burst_itr++)
+  for (; burst_itr < burst->end(); burst_itr++)
     *bit_itr++ = burst_itr->real();
 
   delete dec;

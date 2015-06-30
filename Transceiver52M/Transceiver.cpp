@@ -621,14 +621,28 @@ int Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
   return 1;
 }
 
+void writeToFile(signalVector *burst, const GSM::Time &time, size_t chan, const std::string postfix="")
+{
+  std::ostringstream fname;
+  fname << chan << "_" << time.FN() << "_" << time.TN() << postfix << ".fc";
+  std::ofstream outfile(fname.str().c_str(), std::ofstream::binary);
+  outfile.write((char*)burst->begin(), burst->size() * 2 * sizeof(float));
+  outfile.close();
+}
+
 /*
  * Demodulate GMSK burst using equalization if requested. Otherwise
  * demodulate by direct rotation and soft slicing.
  */
 SoftVector *Transceiver::demodulate(TransceiverState *state,
                                     signalVector &burst, complex amp,
-                                    float toa, size_t tn, bool equalize)
+                                    float toa, size_t tn, bool equalize,
+                                    GSM::Time &wTime, size_t chan)
 {
+  signalVector *aligned, *bit_aligned=NULL;
+  SoftVector *bits;
+  bool estimateQuality = true;
+
   if (equalize) {
     scaleVector(burst, complex(1.0, 0.0) / amp);
     return equalizeBurst(burst,
@@ -638,17 +652,28 @@ SoftVector *Transceiver::demodulate(TransceiverState *state,
                          *state->DFEFeedback[tn]);
   }
 
-  return demodulateBurst(burst, mSPSRx, amp, toa);
-}
+  aligned = alignBurst(burst, amp, toa);
 
-void writeToFile(radioVector *radio_burst, size_t chan)
-{
-  GSM::Time time = radio_burst->getTime();
-  std::ostringstream fname;
-  fname << chan << "_" << time.FN() << "_" << time.TN() << ".fc";
-  std::ofstream outfile (fname.str().c_str(), std::ofstream::binary);
-  outfile.write((char*)radio_burst->getVector()->begin(), radio_burst->getVector()->size() * 2 * sizeof(float));
-  outfile.close();
+  if (estimateQuality) {
+    /* "aligned" burst has samples exactly between bits.
+     * Delay it by 1/2 bit more to get samples aligned to bit positions. */
+    bit_aligned = delayVector(aligned, NULL, 0.5);
+
+    /* Debug: dump bursts to disk */
+    if (needWriteBurstToDisk(wTime, chan))
+      writeToFile(bit_aligned, wTime, chan, "_aligned");
+  }
+
+  bits = demodulateBurst(*aligned, mSPSRx);
+
+  if (estimateQuality) {
+    /* Estimate signal quality */
+    estimateBurstQuality(bits->segment(0, gSlotLen).sliced(), bit_aligned, wTime, chan);
+    delete bit_aligned;
+  }
+
+  delete aligned;
+  return bits;
 }
 
 /*
@@ -679,10 +704,8 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   CorrType type = expectedCorrType(time, chan);
 
   /* Debug: dump bursts to disk */
-  /* bits 0-7  - chan 0 timeslots
-   * bits 8-15 - chan 1 timeslots */
-  if (mWriteBurstToDiskMask & ((1<<time.TN()) << (8*chan)))
-    writeToFile(radio_burst, chan);
+  if (needWriteBurstToDisk(time, chan))
+    writeToFile(radio_burst->getVector(), time, chan);
 
   /* No processing if the timeslot is off.
    * Not even power level or noise calculation. */
@@ -754,7 +777,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   if (equalize && (type != TSC))
     equalize = false;
 
-  bits = demodulate(state, *burst, amp, toa, time.TN(), equalize);
+  bits = demodulate(state, *burst, amp, toa, time.TN(), equalize, time, chan);
 
   delete radio_burst;
   return bits;
@@ -978,6 +1001,89 @@ void Transceiver::driveReceiveRadio()
   }
 }
 
+inline float wrapAngle2Pi(float angle)
+{
+  const float twoPi = 2.0 * M_PI;
+  return angle - twoPi * floor( angle / twoPi );
+}
+
+inline float wrapAnglePi(float angle)
+{
+  const float twoPi = 2.0 * M_PI;
+  return angle - twoPi * floor( (angle+M_PI) / twoPi);
+}
+
+inline float rad2deg(float rad)
+{
+  return rad*180/M_PI;
+}
+
+inline int vectorMaxAbs(const Vector<float> &vec)
+{
+  int max_idx = 0;
+  float max = 0.0;
+  for (size_t i=1; i<vec.size(); i++) {
+    if (fabs(vec[i]) > max) {
+      max_idx = i;
+      max = fabs(vec[i]);
+    }
+  }
+  return max_idx;
+}
+
+inline float vectorRMS(const Vector<float> &vec)
+{
+  float rms = 0;
+  for (size_t i=1; i<vec.size(); i++) {
+    rms += vec[i]*vec[i];
+  }
+  return sqrt(rms/vec.size());
+}
+
+void Transceiver::estimateBurstQuality(const BitVector &wBits, signalVector *received,
+                                       const GSM::Time &wTime, size_t chan)
+{
+  signalVector *burst;
+  Vector<float> phase_err(148); // 148 bits - burst length including guard bits
+  Vector<float> phase_err_deg(148); // 148 bits - burst length including guard bits
+  int phase_err_max;
+  float phase_err_rms;
+
+  // this code supports only 4 SPS modulation
+  // we also assume that received vector is 1 SPS
+  assert(mSPSTx==4);
+
+  burst = modulateBurst(wBits, 8 + (wTime.TN() % 4 == 0), mSPSTx);
+
+  /* Debug: dump bursts to disk */
+  if (needWriteBurstToDisk(wTime, chan))
+    writeToFile(burst, wTime, chan, "_demod");
+
+  // flip values to align modulated format with the received format
+  for (size_t i=0; i<burst->size(); i++) {
+      (*burst)[i] = complex((*burst)[i].imag(), -(*burst)[i].real());
+  }
+
+  // calculate phase error for each bit
+  for (size_t i=0; i<phase_err.size(); i++) {
+    float rx_phase = (*received)[i].arg();
+    float mod_phase = (*burst)[1+(2+i)*4].arg();
+    phase_err[i] = wrapAnglePi(rx_phase - mod_phase);
+    phase_err_deg[i] = rad2deg(phase_err[i]);
+  }
+
+  phase_err_max = vectorMaxAbs(phase_err);
+  phase_err_rms = vectorRMS(phase_err);
+
+  LOG(INFO) << std::fixed << std::right << "Phase Error time: "   << wTime
+            << " peak: " << std::setw(5) << std::setprecision(1) << phase_err_deg[phase_err_max]
+            << " @bit "  << std::setw(3) << phase_err_max
+            << " RMS: "  << std::setw(5) << std::setprecision(1) << rad2deg(phase_err_rms)
+            << " bits: " << std::setw(5) << std::setprecision(1) << phase_err_deg;
+
+  delete burst;
+}
+
 void Transceiver::driveReceiveFIFO(size_t chan)
 {
   SoftVector *rxBurst = NULL;
@@ -995,11 +1101,12 @@ void Transceiver::driveReceiveFIFO(size_t chan)
     dBm = RSSI+rssiOffset;
     TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
 
-	LOG(DEBUG) << std::fixed << std::right
+    LOG(INFO) << std::fixed << std::right
       << " time: "   << burstTime
-	  << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -dBm << "dBm"
-	  << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -(noise+rssiOffset) << "dBm"
-	  << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
+      << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -dBm << "dBm"
+      << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -(noise+rssiOffset) << "dBm"
+      << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
+      << " energy: " << std::setw(5) << std::setprecision(2) << rxBurst->getEnergy()
       << " bits: "   << *rxBurst;
 
     char burstString[gSlotLen+10];

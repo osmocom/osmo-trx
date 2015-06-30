@@ -229,16 +229,21 @@ int analyzeTrafficBurst(signalVector &rxBurst,
 signalVector *decimateVector(signalVector &wVector, size_t factor);
 
 /**
-        Demodulates a received burst using a soft-slicer.
-	@param rxBurst The burst to be demodulated.
-        @param gsmPulse The GSM pulse.
-        @param sps The number of samples per GSM symbol.
+        Applies time of arrival to align burst with bit positions
+        @param rxBurst The burst to be aligned
         @param channel The amplitude estimate of the received burst.
         @param TOA The time-of-arrival of the received burst.
+        @return The aligned burst.
+*/
+signalVector *alignBurst(signalVector &rxBurst, complex channel, float TOA);
+
+/**
+        Demodulates a received burst using a soft-slicer.
+        @param rxBurst The burst to be demodulated.
+        @param sps The number of samples per GSM symbol.
         @return The demodulated bit sequence.
 */
-SoftVector *demodulateBurst(signalVector &rxBurst, int sps,
-                            complex channel, float TOA);
+SoftVector *demodulateBurst(signalVector &rxBurst, int sps);
 
 /**
 	Design the necessary filters for a decision-feedback equalizer.
