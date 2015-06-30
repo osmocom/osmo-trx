@@ -794,7 +794,7 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
    * Generate shaping mask with squared-cosine pulse. Only 4 samples-per-symbol
    * is supported here so use length of 8 samples or 2 symbols.
    */
-  int len = 8;
+  int len = 20;
   float mask[len];
   for (i = 0; i < len; i++)
     mask[i] = 0.5 * (1.0 - cos(M_PI * (float) i / len));
@@ -807,7 +807,7 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
    *     Delay ramp by 1 sample
    */
   i = 0;
-  int start = 8 + head * sps - len + 1;
+  int start = 8 + head * sps - len + 1 + 4;
   for (;i < len; i++)
     c2_shaped->begin()[i] = mask[i] * c0_shaped->begin()[start + i];
 
@@ -820,7 +820,8 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
    *     148 useful bits
    */
   int j;
-  int end = len + 148 * sps;
+  int end = len + 148 * sps - 8;
+  assert(end + len < 625);
   for (i = end, j = 0; i < end + len; i++, j++)
     c2_shaped->begin()[i] *= mask[len - j - 1];
   for (; i < 625; i++)
