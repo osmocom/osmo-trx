@@ -704,7 +704,7 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
 {
   int burst_len;
   float phase;
-  signalVector *c0_pulse, *c1_pulse, *c0_burst, *c2_burst;
+  signalVector *c0_pulse, *c1_pulse, *c0_burst;
   signalVector *c1_burst, *c0_shaped, *c1_shaped, *c2_shaped;
   signalVector::iterator c0_itr, c1_itr;
 
@@ -737,9 +737,6 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
   c1_burst = new signalVector(burst_len, c1_pulse->size());
   c1_burst->isReal(true);
   c1_itr = c1_burst->begin();
-
-  c2_burst = new signalVector(625, c0_pulse->size());
-  c2_burst->isReal(false);
 
   /* Padded differential start bits */
   *c0_itr = 2.0 * (0x00 & 0x01) - 1.0;
@@ -831,7 +828,6 @@ static signalVector *modulateBurstLaurent(const BitVector &bits,
 
   delete c0_burst;
   delete c1_burst;
-  delete c2_burst;
   delete c0_shaped;
   delete c1_shaped;
 
