@@ -1041,11 +1041,41 @@ inline float vectorRMS(const Vector<float> &vec)
   return sqrt(rms/vec.size());
 }
 
+bool vectorLinearFit(const Vector<float> &y, float &slope, float &interceptor)
+{
+  int len_y = y.size();
+  float numerator = 0.0;
+  float denominator = 0.0;
+  float avg_x = len_y/2.0;
+  float avg_y = 0.0;
+
+  if (len_y==0)
+    return false;
+
+  for (int i=0; i<len_y; i++)
+    avg_y += y[i];
+  avg_y /= len_y;
+
+  for (int i=0; i<len_y; i++) {
+    numerator += (i - avg_x) * (y[i] - avg_y);
+    denominator += (i - avg_x) * (i - avg_x);
+  }
+
+  if (denominator == 0.0)
+    return false;
+
+  slope = numerator/denominator;
+  interceptor = avg_y - avg_x*slope;
+
+  return true;
+}
+
 void Transceiver::estimateBurstQuality(const BitVector &wBits, signalVector *received,
                                        const GSM::Time &wTime, size_t chan,
                                        Transceiver::BurstQuality &qual)
 {
   signalVector *burst;
+  float slope, interceptor;
 
   // this code supports only 4 SPS modulation
   // we also assume that received vector is 1 SPS
@@ -1065,8 +1095,21 @@ void Transceiver::estimateBurstQuality(const BitVector &wBits, signalVector *rec
   // calculate phase error for each bit
   for (size_t i=0; i<qual.phase_err.size(); i++) {
     float rx_phase = (*received)[i].arg();
+    // modulated data is 4SPS and is 1/4 bit shifted
     float mod_phase = (*burst)[1+(2+i)*4].arg();
     qual.phase_err[i] = wrapAnglePi(rx_phase - mod_phase);
+    qual.phase_err_deg[i] = rad2deg(qual.phase_err[i]);
+  }
+
+  // compensate for frequency error
+  if (vectorLinearFit(qual.phase_err, slope, interceptor)) {
+    for (size_t i=0; i<qual.phase_err.size(); i++) {
+      qual.phase_err[i] -= i*slope + interceptor;
+    }
+  }
+
+  // convert to degrees
+  for (size_t i=0; i<qual.phase_err.size(); i++) {
     qual.phase_err_deg[i] = rad2deg(qual.phase_err[i]);
   }
 
