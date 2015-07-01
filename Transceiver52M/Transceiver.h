@@ -162,7 +162,7 @@ private:
 
   std::vector<UDPSocket *> mDataSockets;  ///< socket for writing to/reading from GSM core
   std::vector<UDPSocket *> mCtrlSockets;  ///< socket for writing/reading control commands from GSM core
-  UDPSocket mClockSocket;                 ///< socket for writing clock updates to GSM core
+  std::vector<UDPSocket *> mClockSockets; ///< socket for writing clock updates to GSM core
 
   std::vector<VectorQueue> mTxPriorityQueues;   ///< priority queue of transmit bursts received from GSM core
   std::vector<VectorFIFO *>  mReceiveFIFO;      ///< radioInterface FIFO of receive bursts

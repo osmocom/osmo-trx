@@ -148,7 +148,6 @@ Transceiver::Transceiver(int wBasePort,
                          RadioInterface *wRadioInterface,
                          double wRssiOffset)
   : mBasePort(wBasePort), mAddr(wTRXAddress),
-    mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
     mSPSTx(wSPS), mSPSRx(1), mChans(wChans), mOn(false),
@@ -177,6 +176,7 @@ Transceiver::~Transceiver()
     mTxPriorityQueues[i].clear();
     delete mCtrlSockets[i];
     delete mDataSockets[i];
+    delete mClockSockets[i];
   }
 }
 
@@ -191,7 +191,7 @@ Transceiver::~Transceiver()
  */
 bool Transceiver::init(int filler, size_t rtsc)
 {
-  int d_srcport, d_dstport, c_srcport, c_dstport;
+  int t_srcport, t_dstport, d_srcport, d_dstport, c_srcport, c_dstport;
 
   if (!mChans) {
     LOG(ALERT) << "No channels assigned";
@@ -205,6 +205,7 @@ bool Transceiver::init(int filler, size_t rtsc)
 
   mDataSockets.resize(mChans);
   mCtrlSockets.resize(mChans);
+  mClockSockets.resize(mChans);
   mControlServiceLoopThreads.resize(mChans);
   mTxPriorityQueueServiceLoopThreads.resize(mChans);
   mRxServiceLoopThreads.resize(mChans);
@@ -219,13 +220,16 @@ bool Transceiver::init(int filler, size_t rtsc)
 
   /* Setup sockets */
   for (size_t i = 0; i < mChans; i++) {
-    c_srcport = mBasePort + 2 * i + 1;
-    c_dstport = mBasePort + 2 * i + 101;
-    d_srcport = mBasePort + 2 * i + 2;
-    d_dstport = mBasePort + 2 * i + 102;
+    t_srcport = mBasePort + 3 * i;
+    t_dstport = mBasePort + 3 * i + 100;
+    c_srcport = mBasePort + 3 * i + 1;
+    c_dstport = mBasePort + 3 * i + 101;
+    d_srcport = mBasePort + 3 * i + 2;
+    d_dstport = mBasePort + 3 * i + 102;
 
     mCtrlSockets[i] = new UDPSocket(c_srcport, mAddr.c_str(), c_dstport);
     mDataSockets[i] = new UDPSocket(d_srcport, mAddr.c_str(), d_dstport);
+    mClockSockets[i] = new UDPSocket(t_srcport, mAddr.c_str(), t_dstport);
   }
 
   /* Randomize the central clock */
@@ -1083,7 +1087,8 @@ void Transceiver::writeClockInterface()
 
   LOG(INFO) << "ClockInterface: sending " << command;
 
-  mClockSocket.write(command, strlen(command) + 1);
+  for (size_t i=0; i<mClockSockets.size(); i++)
+    mClockSockets[i]->write(command, strlen(command) + 1);
 
   mLastClockUpdateTime = mTransmitDeadlineClock;
 
