@@ -332,6 +332,8 @@ public:
 	TIMESTAMP getCurrentTimestampRx() { return current_time.to_ticks(rx_rate); }
 	TIMESTAMP getCurrentTimestampTx() { return current_time.to_ticks(tx_rate); }
 
+	void set_diversity(bool diversity, TIMESTAMP cmd_time, size_t chan);
+
 	/** Receive and process asynchronous message
 	    @return true if message received or false on timeout or error
 	*/
@@ -372,6 +374,8 @@ private:
 	TIMESTAMP ts_initial, ts_offset;
 	uhd::time_spec_t current_time;
 	std::vector<smpl_buf *> rx_buffers;
+
+	std::vector<uhd::property<bool>* > divsw_props;
 
 	void init_gains();
 	int set_master_clk(double rate);
@@ -792,6 +796,12 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 		ts_offset = 0;
 	} else  {
 		ts_offset = (TIMESTAMP) (offset * rx_rate);
+	}
+
+	divsw_props.resize(chans);
+	for (size_t i=0; i<chans; i++) {
+		const uhd::fs_path db_path = uhd::fs_path("/mboards/0/dboards") / ((i==0)?"A":"B");
+		divsw_props[i] = &usrp_dev->get_device()->get_tree()->access<bool>(db_path / "rx_frontends" / "0" / "diversity");
 	}
 
 	// Initialize and shadow gain values 
@@ -1262,6 +1272,26 @@ double uhd_device::fullScaleInputValue()
 double uhd_device::fullScaleOutputValue()
 {
 	return (double) SHRT_MAX;
+}
+
+void uhd_device::set_diversity(bool diversity, TIMESTAMP cmd_timestamp, size_t chan)
+{
+	// Shift read time with respect to transmit clock
+	TIMESTAMP rx_timestamp = cmd_timestamp+ts_offset;
+	const uhd::time_spec_t cmd_time = convert_time(rx_timestamp, rx_rate);
+
+//    LOG(INFO) << "Sending timed command at " << std::setprecision(15) << cmd_time.get_real_secs() << " sec "
+//              << rx_timestamp << " original cmd_timestamp=" << cmd_timestamp;
+//    LOG(INFO) << "Sending timed command at " << cmd_time.get_real_secs() << " sec "
+//              << rx_timestamp << " original cmd_timestamp=" << cmd_timestamp;
+
+	usrp_dev->set_command_time(cmd_time);
+	divsw_props[chan]->set(diversity ? 1 : 0);
+//    usrp_dev->get_device()->get_tree()->access<bool>(db_path / "rx_frontends" / "0" / "diversity").set(diversity ? 1 : 0);
+//    usrp_dev->set_rx_antenna((diversity?"RX2":"RX1"), chan);
+//    usrp_dev->set_rx_gain((diversity?rx_gains[chan]-10:rx_gains[chan]), chan);
+//    usrp_dev->set_rx_gain(rx_gains[chan], chan);
+	usrp_dev->clear_command_time();
 }
 
 bool uhd_device::recv_async_msg()

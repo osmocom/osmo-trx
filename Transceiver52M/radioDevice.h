@@ -133,6 +133,8 @@ class RadioDevice {
   virtual TIMESTAMP getCurrentTimestampRx() = 0;
   virtual TIMESTAMP getCurrentTimestampTx() = 0;
 
+  /** Diversity switch support */
+  virtual void set_diversity(bool diversity, TIMESTAMP cmd_time, size_t chan) = 0;
 };
 
 #endif
