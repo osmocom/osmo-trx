@@ -1040,6 +1040,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 
 		current_time = metadata.time_spec;
 		LOG(DEBUG) << "Received timestamp = " << current_time.get_real_secs();
+//        LOG(INFO) << "Received timestamp = " << convert_time(current_time, rx_rate);
 
 		for (size_t i = 0; i < rx_buffers.size(); i++) {
 			rc = rx_buffers[i]->write((short *) &pkt_bufs[i].front(),
@@ -1109,6 +1110,8 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 			drop_cnt = 0;
 		}
 	}
+
+//    LOG(INFO) << "Sending timestamp = " << timestamp << "(" << convert_time(metadata.time_spec, tx_rate) << ")";
 
 	thread_enable_cancel(false);
 	size_t num_smpls = tx_stream->send(bufs, len, metadata);
@@ -1308,10 +1311,11 @@ bool uhd_device::recv_async_msg()
 	if (md.event_code != uhd::async_metadata_t::EVENT_CODE_BURST_ACK) {
 		aligned = false;
 
-		if ((md.event_code != uhd::async_metadata_t::EVENT_CODE_UNDERFLOW) &&
-		    (md.event_code != uhd::async_metadata_t::EVENT_CODE_TIME_ERROR)) {
-			LOG(ERR) << str_code(md);
-		}
+		LOG(ERR) << str_code(md);
+//        if ((md.event_code != uhd::async_metadata_t::EVENT_CODE_UNDERFLOW) &&
+//            (md.event_code != uhd::async_metadata_t::EVENT_CODE_TIME_ERROR)) {
+//            LOG(ERR) << str_code(md);
+//        }
 	}
 
 	return true;
@@ -1348,7 +1352,8 @@ std::string uhd_device::str_code(uhd::rx_metadata_t metadata)
 	}
 
 	if (metadata.has_time_spec)
-		ost << " at " << metadata.time_spec.get_real_secs() << " sec.";
+		ost << " at " << metadata.time_spec.get_real_secs() << " sec "
+					  << convert_time(metadata.time_spec, rx_rate) << " TIMESTAMP";
 
 	return ost.str();
 }
@@ -1381,7 +1386,9 @@ std::string uhd_device::str_code(uhd::async_metadata_t metadata)
 	}
 
 	if (metadata.has_time_spec)
-		ost << " at " << metadata.time_spec.get_real_secs() << " sec.";
+		ost << " at " << std::setprecision(15) << metadata.time_spec.get_real_secs() << " sec "
+					  << convert_time(metadata.time_spec, rx_rate) << " Rx TIMESTAMP "
+					  << convert_time(metadata.time_spec, tx_rate) << " Tx TIMESTAMP";
 
 	return ost.str();
 }
