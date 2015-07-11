@@ -114,16 +114,16 @@ class Time {
 		return *this;
 	}
 
-    Time& decTN(unsigned step=1)
-    {
+	Time& decTN(unsigned step=1)
+	{
 		mTN -= step;
 		while (mTN<0) {
 			mTN+=8;
 			mFN-=1;
 			if (mFN<0) mFN+=gHyperframe;
 		}
-        return *this;
-    }
+		return *this;
+	}
 
 	Time& incTN(unsigned step=1)
 	{
