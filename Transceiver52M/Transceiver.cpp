@@ -1000,6 +1000,7 @@ void Transceiver::driveReceiveFIFO(size_t chan)
     TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
 
 	LOG(DEBUG) << std::fixed << std::right
+      << " chan: "   << chan
       << " time: "   << burstTime
 	  << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -dBm << "dBm"
 	  << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -(noise+rssiOffset) << "dBm"
