@@ -329,6 +329,8 @@ public:
 	inline double getSampleRate() { return tx_rate; }
 	inline double numberRead() { return rx_pkt_cnt; }
 	inline double numberWritten() { return 0; }
+	TIMESTAMP getCurrentTimestampRx() { return current_time.to_ticks(rx_rate); }
+	TIMESTAMP getCurrentTimestampTx() { return current_time.to_ticks(tx_rate); }
 
 	/** Receive and process asynchronous message
 	    @return true if message received or false on timeout or error
@@ -368,6 +370,7 @@ private:
 	uhd::time_spec_t prev_ts;
 
 	TIMESTAMP ts_initial, ts_offset;
+	uhd::time_spec_t current_time;
 	std::vector<smpl_buf *> rx_buffers;
 
 	void init_gains();
@@ -1025,8 +1028,8 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 			continue;
 		}
 
-		ts = metadata.time_spec;
-		LOG(DEBUG) << "Received timestamp = " << ts.get_real_secs();
+		current_time = metadata.time_spec;
+		LOG(DEBUG) << "Received timestamp = " << current_time.get_real_secs();
 
 		for (size_t i = 0; i < rx_buffers.size(); i++) {
 			rc = rx_buffers[i]->write((short *) &pkt_bufs[i].front(),

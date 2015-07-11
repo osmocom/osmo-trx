@@ -130,6 +130,8 @@ class RadioDevice {
   virtual double getSampleRate()=0;
   virtual double numberRead()=0;
   virtual double numberWritten()=0;
+  virtual TIMESTAMP getCurrentTimestampRx() = 0;
+  virtual TIMESTAMP getCurrentTimestampTx() = 0;
 
 };
 
