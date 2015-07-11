@@ -52,6 +52,7 @@ protected:
   bool overrun;				      ///< indicates reads from USRP are too slow
   TIMESTAMP writeTimestamp;		      ///< sample timestamp of next packet written to USRP
   TIMESTAMP readTimestamp;		      ///< sample timestamp of next packet read from USRP
+  TIMESTAMP configureTimestamp;		  ///< sample timestamp of next burst to configure
 
   RadioClock mClock;                          ///< the basestation clock!
 
@@ -134,6 +135,9 @@ public:
 
   /** get transport window type of attached device */ 
   enum RadioDevice::TxWindowType getWindowType() { return mRadio->getWindowType(); }
+
+  /** update diversity switch and other reception of GSM bursts */
+  void updateBurstRxParameters(const GSM::Time &gsmTime, size_t chan);
 
 #if USRP1
 protected:

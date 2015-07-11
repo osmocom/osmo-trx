@@ -25,6 +25,7 @@
 #include "radioInterface.h"
 #include "Resampler.h"
 #include <Logger.h>
+#include <iomanip>
 
 extern "C" {
 #include "convert.h"
@@ -190,6 +191,7 @@ bool RadioInterface::start()
 
   writeTimestamp = mRadio->initialWriteTimestamp();
   readTimestamp = mRadio->initialReadTimestamp();
+  configureTimestamp = readTimestamp;
 
   mRadio->updateAlignment(writeTimestamp-10000);
   mRadio->updateAlignment(writeTimestamp-10000);
@@ -275,6 +277,8 @@ bool RadioInterface::driveReceiveRadio()
    * pattern of 157-156-156-156 symbols per timeslot
    */
   while (recvSz > burstSize) {
+//    updateBurstRxParameters();
+
     for (size_t i = 0; i < mChans; i++) {
       burst = new radioVector(rcvClock, burstSize, head, mMIMO);
 
@@ -294,6 +298,7 @@ bool RadioInterface::driveReceiveRadio()
     rcvClock.incTN();
     readSz += burstSize;
     recvSz -= burstSize;
+    configureTimestamp += burstSize;
 
     tN = rcvClock.TN();
 
@@ -401,4 +406,43 @@ void RadioInterface::pushBuffer()
                                   writeTimestamp);
   writeTimestamp += num_sent;
   sendCursor = 0;
+}
+
+void RadioInterface::updateBurstRxParameters(const GSM::Time &gsmTime, size_t chan)
+{
+  if (chan != 0) return;
+
+  TIMESTAMP curTs = mRadio->getCurrentTimestampRx();
+
+  // TODO: Choose a proper value
+  const int burstAdvance = 8*3;
+
+  // Get TN of the burst to update
+  GSM::Time rcvClock = gsmTime;
+//  rcvClock.decTN(receiveOffset);
+  rcvClock.incTN(burstAdvance);
+  unsigned tN = rcvClock.TN();
+  unsigned fN = rcvClock.FN();
+
+  const double symbolsPerSlot = gSlotLen + 8.25;
+  // TODO: Properly take into account 156/157 burst sizes
+  //const double burstSize = (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx;
+  const TIMESTAMP burstTimestamp = configureTimestamp + symbolsPerSlot*mSPSRx*burstAdvance;
+
+  LOG(INFO) << "chan=" << chan << " " << rcvClock << " current_rx_timestamp=" << curTs
+            << " configureTimestamp=" << configureTimestamp << " (" << std::setw(5) << int(configureTimestamp)-int(curTs) << ")"
+            << " burstTimestamp=" << burstTimestamp << " (" << std::setw(5) << int(burstTimestamp)-int(curTs) << ")";
+
+//  if (tN != 2 && tN != 3)
+  if (tN != 0)
+    return;
+
+  // TODO: real decision making
+  bool diversity = false;
+//    mRadio->set_diversity(((fN%2==0) != (tN%2==0))?false:true, burstTimestamp, chan);
+//  if (tN==2)
+    diversity = (fN%2==0)?false:true;
+  LOG(INFO) << "chan=" << chan << " " << rcvClock << " diversity=" << diversity;
+  mRadio->set_diversity(diversity, burstTimestamp, chan);
+//  }
 }

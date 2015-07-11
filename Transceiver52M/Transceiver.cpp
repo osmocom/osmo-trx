@@ -682,6 +682,8 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   GSM::Time time = radio_burst->getTime();
   CorrType type = expectedCorrType(time, chan);
 
+  mRadioInterface->updateBurstRxParameters(time, chan);
+
   /* Debug: dump bursts to disk */
   /* bits 0-7  - chan 0 timeslots
    * bits 8-15 - chan 1 timeslots */
