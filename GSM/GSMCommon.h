@@ -116,9 +116,8 @@ class Time {
 
     Time& decTN(unsigned step=1)
     {
-		assert(step<=8);
 		mTN -= step;
-		if (mTN<0) {
+		while (mTN<0) {
 			mTN+=8;
 			mFN-=1;
 			if (mFN<0) mFN+=gHyperframe;
@@ -128,9 +127,8 @@ class Time {
 
 	Time& incTN(unsigned step=1)
 	{
-		assert(step<=8);
 		mTN += step;
-		if (mTN>7) {
+		while (mTN>7) {
 			mTN-=8;
 			mFN = (mFN+1) % gHyperframe;
 		}
