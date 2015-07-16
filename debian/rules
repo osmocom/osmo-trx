@@ -2,6 +2,8 @@
 
 export DEB_BUILD_HARDENING=1
 
+CFLAGS+="-march=atom -mtune=atom -O2"
+CPPFLAGS+="-march=atom -mtune=atom -O2"
 
 %:
 	dh $@ --with autoreconf
