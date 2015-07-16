@@ -1,3 +1,9 @@
+osmo-trx (0.1.9) trusty; urgency=medium
+
+  * Ask Ivan, really
+
+ -- Kirill Zakharenko <earwin@gmail.com>  Thu, 16 Jul 2015 12:13:46 +0000
+
 osmo-trx (0.1.8) precise; urgency=low
 
      * Initial release (Closes: #nnnn) <nnnn is the bug number of your ITP
