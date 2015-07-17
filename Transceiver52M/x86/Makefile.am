@@ -1,5 +1,5 @@
 if !ARCH_ARM
-AM_CFLAGS = -Wall -std=gnu99 -march=native -I../common
+AM_CFLAGS = -Wall -std=gnu99 -I../common
 
 noinst_LTLIBRARIES = libarch.la
 
