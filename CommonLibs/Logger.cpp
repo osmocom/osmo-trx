@@ -38,6 +38,14 @@
 
 using namespace std;
 
+// Switches to enable/disable logging targets
+// MUST BE DEFINED BEFORE gConfig FOR gLogEarly() TO WORK CORRECTLY
+bool gLogToConsole = true;
+bool gLogToSyslog = false;
+FILE *gLogToFile = NULL;
+Mutex gLogToLock;
+
+
 // Reference to a global config table, used all over the system.
 extern ConfigurationTable gConfig;
 
@@ -67,10 +75,6 @@ const char *levelNames[] = {
 	"EMERG", "ALERT", "CRIT", "ERR", "WARNING", "NOTICE", "INFO", "DEBUG"
 };
 int numLevels = 8;
-bool gLogToConsole = true;
-bool gLogToSyslog = false;
-FILE *gLogToFile = NULL;
-Mutex gLogToLock;
 
 
 int levelStringToInt(const string& name)
@@ -269,9 +273,32 @@ void gLogInit(const char* name, const char* level, int facility)
 void gLogEarly(int level, const char *fmt, ...)
 {
 	va_list args;
- 
+
 	va_start(args, fmt);
-	vsyslog(level | LOG_USER, fmt, args);
+
+	if (gLogToSyslog) {
+		va_list args_copy;
+		va_copy(args_copy, args);
+		vsyslog(level | LOG_USER, fmt, args_copy);
+		va_end(args_copy);
+	}
+
+	if (gLogToConsole) {
+		va_list args_copy;
+		va_copy(args_copy, args);
+		vprintf(fmt, args_copy);
+		printf("\n");
+		va_end(args_copy);
+	}
+
+	if (gLogToFile) {
+		va_list args_copy;
+		va_copy(args_copy, args);
+		vfprintf(gLogToFile, fmt, args_copy);
+		fprintf(gLogToFile, "\n");
+		va_end(args_copy);
+	}
+
 	va_end(args);
 }
 
