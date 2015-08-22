@@ -20,6 +20,7 @@
 #include "radioDevice.h"
 #include "radioVector.h"
 #include "radioClock.h"
+#include "radioBuffer.h"
 #include "Resampler.h"
 
 static const unsigned gSlotLen = 148;      ///< number of symbols per slot, not counting guard periods
@@ -40,10 +41,8 @@ protected:
   size_t mChans;
   size_t mMIMO;
 
-  std::vector<signalVector *> sendBuffer;
-  std::vector<signalVector *> recvBuffer;
-  unsigned sendCursor;
-  unsigned recvCursor;
+  std::vector<RadioBuffer *> sendBuffer;
+  std::vector<RadioBuffer *> recvBuffer;
 
   std::vector<short *> convertRecvBuffer;
   std::vector<short *> convertSendBuffer;
@@ -61,16 +60,14 @@ protected:
 
 private:
 
-  /** format samples to USRP */ 
-  int radioifyVector(signalVector &wVector,
-                     float *floatVector,
-                     bool zero);
+  /** format samples to USRP */
+  int radioifyVector(signalVector &wVector, size_t chan, bool zero);
 
   /** format samples from USRP */
-  int unRadioifyVector(float *floatVector, signalVector &wVector);
+  int unRadioifyVector(signalVector *wVector, size_t chan);
 
   /** push GSM bursts into the transmit buffer */
-  virtual void pushBuffer(void);
+  virtual bool pushBuffer(void);
 
   /** pull GSM bursts from the receive buffer */
   virtual void pullBuffer(void);
@@ -152,20 +149,15 @@ void *AlignRadioServiceLoopAdapter(RadioInterface*);
 #endif
 
 class RadioInterfaceResamp : public RadioInterface {
-
 private:
-  signalVector *innerSendBuffer;
   signalVector *outerSendBuffer;
-  signalVector *innerRecvBuffer;
   signalVector *outerRecvBuffer;
 
-  void pushBuffer();
+  bool pushBuffer();
   void pullBuffer();
 
 public:
-
   RadioInterfaceResamp(RadioDevice* wRadio, size_t wSPS = 4, size_t chans = 1);
-
   ~RadioInterfaceResamp();
 
   bool init(int type);
@@ -184,7 +176,7 @@ public:
   bool tuneRx(double freq, size_t chan);
 
 private:
-  std::vector<Resampler *> dnsamplers;
+  Resampler *dnsampler;
   std::vector<float> phases;
   signalVector *outerRecvBuffer;
 

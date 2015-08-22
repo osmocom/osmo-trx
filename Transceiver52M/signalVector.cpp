@@ -50,6 +50,15 @@ size_t signalVector::getStart() const
 	return mStart - mData;
 }
 
+size_t signalVector::updateHistory()
+{
+	size_t num = getStart();
+
+	memmove(mData, mStart + this->size() - num, num * sizeof(complex));
+
+	return num;
+}
+
 Symmetry signalVector::getSymmetry() const
 {
 	return symmetry;

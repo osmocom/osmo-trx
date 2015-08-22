@@ -32,6 +32,7 @@ public:
 
 	/** Return head room */
 	size_t getStart() const;
+	size_t updateHistory();
 
 	Symmetry getSymmetry() const;
 	void setSymmetry(Symmetry symmetry);

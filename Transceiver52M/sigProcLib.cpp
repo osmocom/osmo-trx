@@ -2128,7 +2128,6 @@ bool sigProcLibSetup()
     goto fail;
   }
 
-  dnsampler->enableHistory(false);
   dnsampler_in = new signalVector(DOWNSAMPLE_IN_LEN, dnsampler->len());
 
   return true;

@@ -52,17 +52,12 @@ public:
 	 * Input and output vector lengths must of be equal multiples of the
 	 * rational conversion rate denominator and numerator respectively.
 	 */
-	int rotate(float *in, size_t in_len, float *out, size_t out_len);
+	int rotate(const float *in, size_t in_len, float *out, size_t out_len);
 
 	/* Get filter length
 	 *   @return number of taps in each filter partition 
 	 */
 	size_t len();
-
-	/*
-	 * Enable/disable history 
-	 */
-	void enableHistory(bool on);
 
 private:
 	size_t p;
@@ -72,8 +67,6 @@ private:
 	size_t *out_path;
 
 	float **partitions;
-	float *history;
-	bool history_on;
 
 	bool initFilters(float bw);
 	void releaseFilters();

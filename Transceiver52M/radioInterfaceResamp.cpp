@@ -1,8 +1,10 @@
 /*
  * Radio device interface with sample rate conversion
- * Written by Thomas Tsou <tom@tsou.cc>
  *
- * Copyright 2011, 2012, 2013 Free Software Foundation, Inc.
+ * Copyright (C) 2011-2014 Free Software Foundation, Inc.
+ * Copyright (C) 2015 Ettus Research LLC
+ *
+ * Author: Tom Tsou <tom@tsou.cc>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -58,8 +60,8 @@ static size_t resamp_outchunk = 0;
 RadioInterfaceResamp::RadioInterfaceResamp(RadioDevice *wRadio,
 					   size_t sps, size_t chans)
 	: RadioInterface(wRadio, sps, chans),
-	  innerSendBuffer(NULL), outerSendBuffer(NULL),
-	  innerRecvBuffer(NULL), outerRecvBuffer(NULL)
+	  outerSendBuffer(NULL),
+	  outerRecvBuffer(NULL)
 {
 }
 
@@ -70,17 +72,13 @@ RadioInterfaceResamp::~RadioInterfaceResamp()
 
 void RadioInterfaceResamp::close()
 {
-	delete innerSendBuffer;
 	delete outerSendBuffer;
-	delete innerRecvBuffer;
 	delete outerRecvBuffer;
 
 	delete upsampler;
 	delete dnsampler;
 
-	innerSendBuffer = NULL;
 	outerSendBuffer = NULL;
-	innerRecvBuffer = NULL;
 	outerRecvBuffer = NULL;
 
 	upsampler = NULL;
@@ -157,20 +155,17 @@ bool RadioInterfaceResamp::init(int type)
 	 * and requires headroom equivalent to the filter length. Low
 	 * rate buffers are allocated in the main radio interface code.
 	 */
-	innerSendBuffer =
-		new signalVector(NUMCHUNKS * resamp_inchunk, upsampler->len());
+	sendBuffer[0] = new RadioBuffer(NUMCHUNKS, resamp_inchunk,
+					  upsampler->len(), true);
+	recvBuffer[0] = new RadioBuffer(NUMCHUNKS * 20, resamp_inchunk, 0, false);
+
 	outerSendBuffer =
 		new signalVector(NUMCHUNKS * resamp_outchunk);
 	outerRecvBuffer =
 		new signalVector(resamp_outchunk, dnsampler->len());
-	innerRecvBuffer =
-		new signalVector(NUMCHUNKS * resamp_inchunk / mSPSTx);
 
 	convertSendBuffer[0] = new short[outerSendBuffer->size() * 2];
 	convertRecvBuffer[0] = new short[outerRecvBuffer->size() * 2];
-
-	sendBuffer[0] = innerSendBuffer;
-	recvBuffer[0] = innerRecvBuffer;
 
 	return true;
 }
@@ -181,7 +176,7 @@ void RadioInterfaceResamp::pullBuffer()
 	bool local_underrun;
 	int rc, num_recv;
 
-	if (recvCursor > innerRecvBuffer->size() - resamp_inchunk)
+	if (recvBuffer[0]->getFreeSegments() <= 0)
 		return;
 
 	/* Outer buffer access size is fixed */
@@ -204,57 +199,47 @@ void RadioInterfaceResamp::pullBuffer()
 	/* Write to the end of the inner receive buffer */
 	rc = dnsampler->rotate((float *) outerRecvBuffer->begin(),
 			       resamp_outchunk,
-			       (float *) (innerRecvBuffer->begin() + recvCursor),
+			       recvBuffer[0]->getWriteSegment(),
 			       resamp_inchunk);
 	if (rc < 0) {
 		LOG(ALERT) << "Sample rate upsampling error";
 	}
 
-	recvCursor += resamp_inchunk;
+	/* Set history for the next chunk */
+	outerRecvBuffer->updateHistory();
 }
 
 /* Send a timestamped chunk to the device */
-void RadioInterfaceResamp::pushBuffer()
+bool RadioInterfaceResamp::pushBuffer()
 {
-	int rc, chunks, num_sent;
-	int inner_len, outer_len;
+	int rc;
+	size_t numSent;
 
-	if (sendCursor < resamp_inchunk)
-		return;
-
-	if (sendCursor > innerSendBuffer->size())
-		LOG(ALERT) << "Send buffer overflow";
-
-	chunks = sendCursor / resamp_inchunk;
-
-	inner_len = chunks * resamp_inchunk;
-	outer_len = chunks * resamp_outchunk;
+	if (sendBuffer[0]->getAvailSegments() <= 0)
+		return false;
 
 	/* Always send from the beginning of the buffer */
-	rc = upsampler->rotate((float *) innerSendBuffer->begin(), inner_len,
-			       (float *) outerSendBuffer->begin(), outer_len);
+	rc = upsampler->rotate(sendBuffer[0]->getReadSegment(),
+			       resamp_inchunk,
+			       (float *) outerSendBuffer->begin(),
+			       resamp_outchunk);
 	if (rc < 0) {
 		LOG(ALERT) << "Sample rate downsampling error";
 	}
 
 	convert_float_short(convertSendBuffer[0],
 			    (float *) outerSendBuffer->begin(),
-			    powerScaling[0], 2 * outer_len);
+			    powerScaling[0], 2 * resamp_outchunk);
 
-	num_sent = mRadio->writeSamples(convertSendBuffer,
-					outer_len,
-					&underrun,
-					writeTimestamp);
-	if (num_sent != outer_len) {
-		LOG(ALERT) << "Transmit error " << num_sent;
+	numSent = mRadio->writeSamples(convertSendBuffer,
+				       resamp_outchunk,
+				       &underrun,
+				       writeTimestamp);
+	if (numSent != resamp_outchunk) {
+		LOG(ALERT) << "Transmit error " << numSent;
 	}
 
-	/* Shift remaining samples to beginning of buffer */
-	memmove(innerSendBuffer->begin(),
-		innerSendBuffer->begin() + inner_len,
-		(sendCursor - inner_len) * 2 * sizeof(float));
+	writeTimestamp += resamp_outchunk;
 
-	writeTimestamp += outer_len;
-	sendCursor -= inner_len;
-	assert(sendCursor >= 0);
+	return true;
 }

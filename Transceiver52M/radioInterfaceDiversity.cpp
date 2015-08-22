@@ -65,13 +65,10 @@ RadioInterfaceDiversity::~RadioInterfaceDiversity()
 void RadioInterfaceDiversity::close()
 {
 	delete outerRecvBuffer;
+	delete dnsampler;
 
+	dnsampler = NULL;
 	outerRecvBuffer = NULL;
-
-	for (size_t i = 0; i < dnsamplers.size(); i++) {
-		delete dnsamplers[i];
-		dnsamplers[i] = NULL;
-	}
 
 	if (recvBuffer.size())
 		recvBuffer[0] = NULL;
@@ -98,15 +95,16 @@ bool RadioInterfaceDiversity::setupDiversityChannels()
 		return false;
 	}
 
+	dnsampler = new Resampler(resamp_inrate, resamp_outrate);
+	if (!dnsampler->init()) {
+		LOG(ALERT) << "Rx resampler failed to initialize";
+		return false;
+	}
+
 	/* One Receive buffer and downsampler per diversity channel */
 	for (size_t i = 0; i < mMIMO * mChans; i++) {
-		dnsamplers[i] = new Resampler(resamp_inrate, resamp_outrate);
-		if (!dnsamplers[i]->init()) {
-			LOG(ALERT) << "Rx resampler failed to initialize";
-			return false;
-		}
-
-		recvBuffer[i] = new signalVector(inner_rx_len);
+		recvBuffer[i] = new RadioBuffer(NUMCHUNKS,
+						resamp_inchunk, 0, false);
 	}
 
 	return true;
@@ -115,7 +113,7 @@ bool RadioInterfaceDiversity::setupDiversityChannels()
 /* Initialize I/O specific objects */
 bool RadioInterfaceDiversity::init(int type)
 {
-	int tx_len, outer_rx_len;
+	int outer_rx_len;
 
 	if ((mMIMO != 2) || (mChans != 2)) {
 		LOG(ALERT) << "Unsupported channel configuration " << mChans;
@@ -128,13 +126,11 @@ bool RadioInterfaceDiversity::init(int type)
 	convertSendBuffer.resize(mChans);
 	convertRecvBuffer.resize(mChans);
 	mReceiveFIFO.resize(mChans);
-	dnsamplers.resize(mChans * mMIMO);
 	phases.resize(mChans);
 
 	if (!setupDiversityChannels())
 		return false;
 
-	tx_len = CHUNK * mSPSTx;
 	outer_rx_len = resamp_outchunk;
 
 	for (size_t i = 0; i < mChans; i++) {
@@ -142,11 +138,11 @@ bool RadioInterfaceDiversity::init(int type)
 		convertRecvBuffer[i] = new short[outer_rx_len * 2];
 
 		/* Send buffers (not-resampled) */
-		sendBuffer[i] = new signalVector(tx_len);
-		convertSendBuffer[i] = new short[tx_len * 2];
+		sendBuffer[i] = new RadioBuffer(NUMCHUNKS, CHUNK * mSPSTx, 0, true);
+		convertSendBuffer[i] = new short[CHUNK * mSPSTx * 2];
 	}
 
-	outerRecvBuffer = new signalVector(outer_rx_len, dnsamplers[0]->len());
+	outerRecvBuffer = new signalVector(outer_rx_len, dnsampler->len());
 
 	return true;
 }
@@ -182,7 +178,7 @@ void RadioInterfaceDiversity::pullBuffer()
 	signalVector *shift, *base;
 	float *in, *out, rate = -mFreqSpacing * 2.0 * M_PI / 1.08333333e6;
 
-	if (recvCursor > recvBuffer[0]->size() - resamp_inchunk)
+	if (recvBuffer[0]->getFreeSegments() <= 0)
 		return;
 
 	/* Outer buffer access size is fixed */
@@ -211,10 +207,10 @@ void RadioInterfaceDiversity::pullBuffer()
 		/* Diversity path 1 */
 		base = outerRecvBuffer;
 		in = (float *) base->begin();
-		out = (float *) (recvBuffer[path0]->begin() + recvCursor);
+		out = (float *) recvBuffer[path0]->getWriteSegment();
 
-		rc = dnsamplers[2 * i + 0]->rotate(in, resamp_outchunk,
-						   out, resamp_inchunk);
+		rc = dnsampler->rotate(in, resamp_outchunk,
+				       out, resamp_inchunk);
 		if (rc < 0) {
 			LOG(ALERT) << "Sample rate downsampling error";
 		}
@@ -226,15 +222,15 @@ void RadioInterfaceDiversity::pullBuffer()
 		/* Diversity path 2 */
 		shift = new signalVector(base->size(), base->getStart());
 		in = (float *) shift->begin();
-		out = (float *) (recvBuffer[path1]->begin() + recvCursor);
+		out = (float *) recvBuffer[path1]->getWriteSegment();
 
 		rate = i ? -rate : rate;
 		if (!frequencyShift(shift, base, rate, phases[i], &phases[i])) {
 			LOG(ALERT) << "Frequency shift failed";
 		}
 
-		rc = dnsamplers[2 * i + 1]->rotate(in, resamp_outchunk,
-						   out, resamp_inchunk);
+		rc = dnsampler->rotate(in, resamp_outchunk,
+				       out, resamp_inchunk);
 		if (rc < 0) {
 			LOG(ALERT) << "Sample rate downsampling error";
 		}
@@ -244,5 +240,4 @@ void RadioInterfaceDiversity::pullBuffer()
 
 	underrun |= local_underrun;
 	readTimestamp += (TIMESTAMP) resamp_outchunk;
-	recvCursor += resamp_inchunk;
 }

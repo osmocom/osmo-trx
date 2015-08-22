@@ -54,6 +54,7 @@ COMMON_SOURCES = \
 	radioInterface.cpp \
 	radioVector.cpp \
 	radioClock.cpp \
+	radioBuffer.cpp \
 	sigProcLib.cpp \
 	signalVector.cpp \
 	Transceiver.cpp
@@ -72,6 +73,7 @@ noinst_HEADERS = \
 	radioVector.h \
 	radioClock.h \
 	radioDevice.h \
+	radioBuffer.h \
 	sigProcLib.h \
 	signalVector.h \
 	Transceiver.h \
