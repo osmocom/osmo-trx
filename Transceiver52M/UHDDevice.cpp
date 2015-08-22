@@ -58,6 +58,7 @@ enum uhd_dev_type {
 	USRP2,
 	B100,
 	B200,
+	B205,
 	B210,
 	E1XX,
 	E3XX,
@@ -72,6 +73,17 @@ struct uhd_dev_offset {
 	double offset;
 	const std::string desc;
 };
+
+/*
+ * USRP version dependent device timings
+ */
+#ifdef USE_UHD_3_9
+#define B2XX_TIMING_1SPS	1.7153e-4
+#define B2XX_TIMING_4SPS	1.1696e-4
+#else
+#define B2XX_TIMING_1SPS	9.9692e-5
+#define B2XX_TIMING_4SPS	6.9248e-5
+#endif
 
 /*
  * Tx / Rx sample offset values. In a perfect world, there is no group delay
@@ -90,10 +102,12 @@ static struct uhd_dev_offset uhd_offsets[NUM_USRP_TYPES * 2] = {
 	{ USRP2, 4, 8.0230e-5, "N2XX 4 SPS" },
 	{ B100,  1, 1.2104e-4, "B100 1 SPS" },
 	{ B100,  4, 7.9307e-5, "B100 4 SPS" },
-	{ B200,  1, 9.9692e-5, "B200 1 SPS" },
-	{ B200,  4, 6.9248e-5, "B200 4 SPS" },
-	{ B210,  1, 9.9692e-5, "B210 1 SPS" },
-	{ B210,  4, 6.9248e-5, "B210 4 SPS" },
+	{ B200,  1, B2XX_TIMING_1SPS, "B200 1 SPS" },
+	{ B200,  4, B2XX_TIMING_4SPS, "B200 4 SPS" },
+	{ B205,  1, B2XX_TIMING_1SPS, "B200-mini 1 SPS" },
+	{ B205,  4, B2XX_TIMING_4SPS, "B200-mini 4 SPS" },
+	{ B210,  1, B2XX_TIMING_1SPS, "B210 1 SPS" },
+	{ B210,  4, B2XX_TIMING_4SPS, "B210 4 SPS" },
 	{ E1XX,  1, 9.5192e-5, "E1XX 1 SPS" },
 	{ E1XX,  4, 6.5571e-5, "E1XX 4 SPS" },
 	{ E3XX,  1, 1.5000e-4, "E3XX 1 SPS" },
@@ -184,6 +198,7 @@ static double select_rate(uhd_dev_type type, int sps, bool diversity = false)
 	case B100:
 		return B100_BASE_RT * sps;
 	case B200:
+	case B205:
 	case B210:
 	case E1XX:
 	case E3XX:
@@ -528,7 +543,7 @@ int uhd_device::set_rates(double tx_rate, double rx_rate)
 	double tx_offset, rx_offset;
 
 	/* B2XX and E1xx are the only device where we set FPGA clocking */
-	if ((dev_type == B200) || (dev_type == B210) || (dev_type == E3XX)) {
+	if ((dev_type == B200) || (dev_type == B205) || (dev_type == B210) || (dev_type == E3XX)) {
 		if (set_master_clk(B2XX_CLK_RT) < 0)
 			return -1;
 	}
@@ -628,7 +643,7 @@ bool uhd_device::parse_dev_type()
 	std::string mboard_str, dev_str;
 	uhd::property_tree::sptr prop_tree;
 	size_t usrp1_str, usrp2_str, e100_str, e110_str, e310_str,
-	       b100_str, b200_str, b210_str, x300_str, x310_str, umtrx_str;
+	       b100_str, b200_str, b205_str, b210_str, x300_str, x310_str, umtrx_str;
 
 	prop_tree = usrp_dev->get_device()->get_tree();
 	dev_str = prop_tree->access<std::string>("/name").get();
@@ -638,6 +653,7 @@ bool uhd_device::parse_dev_type()
 	usrp2_str = dev_str.find("USRP2");
 	b100_str = mboard_str.find("B100");
 	b200_str = mboard_str.find("B200");
+	b205_str = mboard_str.find("B205");
 	b210_str = mboard_str.find("B210");
 	e100_str = mboard_str.find("E100");
 	e110_str = mboard_str.find("E110");
@@ -659,6 +675,9 @@ bool uhd_device::parse_dev_type()
 	} else if (b200_str != std::string::npos) {
 		tx_window = TX_WINDOW_USRP1;
 		dev_type = B200;
+	} else if (b205_str != std::string::npos) {
+		tx_window = TX_WINDOW_USRP1;
+		dev_type = B205;
 	} else if (b210_str != std::string::npos) {
 		tx_window = TX_WINDOW_USRP1;
 		dev_type = B210;
@@ -807,6 +826,7 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	case X3XX:
 		return RESAMP_100M;
 	case B200:
+	case B205:
 	case B210:
 	case E1XX:
 	case E3XX:
