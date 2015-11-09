@@ -25,25 +25,25 @@
 #include "config.h"
 #endif
 
-void neon_convert_ps_si16_4n(short *, float *, float *, int);
-void neon_convert_si16_ps_4n(float *, short *, int);
+void neon_convert_ps_si16_4n(short *, const float *, const float *, int);
+void neon_convert_si16_ps_4n(float *, const short *, int);
 
 #ifndef HAVE_NEON
-static void convert_si16_ps(float *out, short *in, int len)
+static void convert_si16_ps(float *out, const short *in, int len)
 {
 	for (int i = 0; i < len; i++)
 		out[i] = in[i];
 }
 
-static void convert_ps_si16(short *out, float *in, float scale, int len)
+static void convert_ps_si16(short *out, const float *in, float scale, int len)
 {
 	for (int i = 0; i < len; i++)
 		out[i] = in[i] * scale;
 }
 #else
 /* 4*N 16-bit signed integer conversion with remainder */
-static void neon_convert_si16_ps(float *restrict out,
-				 short *restrict in,
+static void neon_convert_si16_ps(float *out,
+				 const short *in,
 				 int len)
 {
 	int start = len / 4 * 4;
@@ -55,9 +55,9 @@ static void neon_convert_si16_ps(float *restrict out,
 }
 
 /* 4*N 16-bit signed integer conversion with remainder */
-static void neon_convert_ps_si16(short *restrict out,
-				 float *restrict in,
-				 float *restrict scale,
+static void neon_convert_ps_si16(short *out,
+				 const float *in,
+				 const float *scale,
 				 int len)
 {
 	int start = len / 4 * 4;
@@ -69,7 +69,7 @@ static void neon_convert_ps_si16(short *restrict out,
 }
 #endif
 
-void convert_float_short(short *out, float *in, float scale, int len)
+void convert_float_short(short *out, const float *in, float scale, int len)
 {
 #ifdef HAVE_NEON
         float q[4] = { scale, scale, scale, scale };
@@ -83,7 +83,7 @@ void convert_float_short(short *out, float *in, float scale, int len)
 #endif
 }
 
-void convert_short_float(float *out, short *in, int len)
+void convert_short_float(float *out, const short *in, int len)
 {
 #ifdef HAVE_NEON
 	if (len % 4)
