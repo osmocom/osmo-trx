@@ -36,8 +36,8 @@ enum signalError {
   SIGERR_INTERNAL,
 };
 
-/** Convert a linear number to a dB value */
-float dB(float x);
+/** Convert a power value to a dB value */
+double dB2(double x);
 
 /** Convert a dB value into a linear value */
 float dBinv(float x);
@@ -204,9 +204,6 @@ int detectRACHBurst(signalVector &rxBurst,
         @param amplitude The estimated amplitude of received TSC burst.
         @param TOA The estimate time-of-arrival of received TSC burst.
         @param maxTOA The maximum expected time-of-arrival
-        @param requestChannel Set to true if channel estimation is desired.
-        @param channelResponse The estimated channel.
-        @param channelResponseOffset The time offset b/w the first sample of the channel response and the reported TOA.
         @return positive if threshold value is reached, negative on error, zero otherwise
 */
 int analyzeTrafficBurst(signalVector &rxBurst,
@@ -215,10 +212,7 @@ int analyzeTrafficBurst(signalVector &rxBurst,
                         int sps,
                         complex &amplitude,
                         float &TOA,
-                        unsigned maxTOA,
-                        bool requestChannel = false,
-                        signalVector** channelResponse = NULL,
-                        float *channelResponseOffset = NULL);
+                        unsigned maxTOA);
 
 /**
 	Decimate a vector.
@@ -239,35 +233,5 @@ signalVector *decimateVector(signalVector &wVector, size_t factor);
 */
 SoftVector *demodulateBurst(signalVector &rxBurst, int sps,
                             complex channel, float TOA);
-
-/**
-	Design the necessary filters for a decision-feedback equalizer.
-	@param channelResponse The multipath channel that we're mitigating.
-	@param SNRestimate The signal-to-noise estimate of the channel, a linear value
-	@param Nf The number of taps in the feedforward filter.
-	@param feedForwardFilter The designed feed forward filter.
-	@param feedbackFilter The designed feedback filter.
-	@return True if DFE can be designed.
-*/
-bool designDFE(signalVector &channelResponse,
-	       float SNRestimate,
-	       int Nf,
-	       signalVector **feedForwardFilter,
-	       signalVector **feedbackFilter);
-
-/**
-	Equalize/demodulate a received burst via a decision-feedback equalizer.
-	@param rxBurst The received burst to be demodulated.
-	@param TOA The time-of-arrival of the received burst.
-	@param sps The number of samples per GSM symbol.
-	@param w The feed forward filter of the DFE.
-	@param b The feedback filter of the DFE.
-	@return The demodulated bit sequence.
-*/
-SoftVector *equalizeBurst(signalVector &rxBurst,
-		       float TOA,
-		       int sps,
-		       signalVector &w, 
-		       signalVector &b);
 
 #endif /* SIGPROCLIB_H */

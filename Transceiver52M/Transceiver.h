@@ -55,28 +55,14 @@ struct TransceiverState {
 
   /* Initialize a multiframe slot in the filler table */
   bool init(int filler, size_t sps, float scale, size_t rtsc);
+  void updateNoiseEstimates(double avg);
 
   int chanType[8];
-
-  /* Last timestamp of each timeslot's channel estimate */
-  GSM::Time chanEstimateTime[8];
 
   /* The filler table */
   signalVector *fillerTable[102][8];
   int fillerModulus[8];
   bool mRetrans;
-
-  /* Most recent channel estimate of all timeslots */
-  signalVector *chanResponse[8];
-
-  /* Most recent DFE feedback filter of all timeslots */
-  signalVector *DFEForward[8];
-  signalVector *DFEFeedback[8];
-
-  /* Most recent SNR, timing, and channel amplitude estimates */
-  float SNRestimate[8];
-  float chanRespOffset[8];
-  complex chanRespAmplitude[8];
 
   /* Received noise energy levels */
   float mNoiseLev;
@@ -195,9 +181,15 @@ private:
   void pushRadioVector(GSM::Time &nowTime);
 
   /** Pull and demodulate a burst from the receive FIFO */
-  SoftVector *pullRadioVector(GSM::Time &wTime, double &RSSI, bool &isRssiValid,
-                              double &timingOffset, double &noise,
-                              size_t chan = 0);
+  SoftVector *demodSignalVector(signalVector *burst,
+                                CorrType type,
+                                double &timingOffset);
+
+  /** choose the channel to use */
+  signalVector *chooseDiversityPath(radioVector *radio_burst, double &avg);
+
+  /** update noise estimate */
+  double updateNoiseEstimates(TransceiverState *state, double avg);
 
   /** Set modulus for specific timeslot */
   void setModulus(size_t timeslot, size_t chan);
@@ -209,19 +201,12 @@ private:
   void writeClockInterface(void);
 
   /** Detect RACH bursts */
-  int detectRACH(TransceiverState *state,
-                 signalVector &burst,
+  int detectRACH(signalVector &burst,
                  complex &amp, float &toa);
 
   /** Detect normal bursts */
-  int detectTSC(TransceiverState *state,
-                signalVector &burst,
-                complex &amp, float &toa, GSM::Time &time);
-
-  /** Demodulat burst and output soft bits */
-  SoftVector *demodulate(TransceiverState *state,
-                         signalVector &burst, complex amp,
-                         float toa, size_t tn, bool equalize);
+  int detectTSC(signalVector &burst,
+                complex &amp, float &toa);
 
   int mSPSTx;                          ///< number of samples per Tx symbol
   int mSPSRx;                          ///< number of samples per Rx symbol
@@ -250,6 +235,10 @@ protected:
 
   /** drive demodulation of GSM bursts */
   void driveReceiveFIFO(size_t chan);
+
+  /** format a packet of soft-bits to be sent over the network */
+  void formatDemodPacket(GSM::Time burstTime, double dBm, double TOA,
+                         SoftVector *rxBurst, char *burstString);
 
   /** drive transmission of GSM bursts */
   void driveTxFIFO();
