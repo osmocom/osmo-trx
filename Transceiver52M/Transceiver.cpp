@@ -909,9 +909,8 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   /* Choose a diversity channel to use */
   burst = chooseDiversityPath(radio_burst, burst_power);
   delete radio_burst;
-  if (!burst) {
+  if (!burst)
     return;
-  }
 
   /* We use idle timeslots to calculate noise levels for informational purposes.
    * Otherwise we ignore them. */
