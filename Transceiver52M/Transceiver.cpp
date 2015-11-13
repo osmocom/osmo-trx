@@ -145,11 +145,13 @@ Transceiver::Transceiver(int wBasePort,
                          size_t wSPS, size_t wChans,
                          GSM::Time wTransmitLatency,
                          RadioInterface *wRadioInterface,
-                         double wRssiOffset)
+                         double wRssiOffset,
+                         bool wExternalDemod)
   : mBasePort(wBasePort), mAddr(wTRXAddress),
     mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
+    mExternalDemod(wExternalDemod),
     mSPSTx(wSPS), mSPSRx(1), mChans(wChans), mOn(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelay(0), mWriteBurstToDiskMask(0)
 {
@@ -876,7 +878,6 @@ void Transceiver::driveReceiveFIFO(size_t chan)
 {
   radioVector *radio_burst = NULL;
   signalVector *burst = NULL;
-  SoftVector *rxBurst = NULL;
   double burst_power; // sqr(amp)
   double RSSI; // in dBFS
   double dBm;  // in dBm
@@ -884,6 +885,8 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   double noise; // noise level in dBFS
   GSM::Time burstTime;
   CorrType burstType;
+  char burstString[3000];
+  int pktLen;
 
   /* Blocking FIFO read */
   radio_burst = mReceiveFIFO[chan]->read();
@@ -924,29 +927,33 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   RSSI  = dB2(rxFullScale / burst_power);
   dBm   = RSSI+rssiOffset;
 
-  /* Pre-process and demodulate radio vector */
-  rxBurst = demodSignalVector(burst, burstType, TOA);
-  if (!rxBurst)
-    return;
+  if (!mExternalDemod) {
+    /* Pre-process and demodulate radio vector */
+    SoftVector *rxBurst = demodSignalVector(burst, burstType, TOA);
+    if (!rxBurst)
+      return;
 
-  LOG(DEBUG) << std::fixed << std::right
-    << " time: "   << burstTime
-    << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -dBm << "dBm"
-    << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -(noise+rssiOffset) << "dBm"
-    << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
-    << " bits: "   << *rxBurst;
+    LOG(DEBUG) << std::fixed << std::right
+      << " time: "   << burstTime
+      << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -dBm << "dBm"
+      << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -(noise+rssiOffset) << "dBm"
+      << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
+      << " bits: "   << *rxBurst;
 
-  char burstString[gSlotLen+10];
-  formatDemodPacket(burstTime, dBm, TOA, rxBurst, burstString);
-  delete rxBurst;
+    pktLen = formatDemodPacket(burstTime, dBm, TOA, rxBurst, burstString);
+    delete rxBurst;
+  } else {
+    /* Send radio vector as is */
+    pktLen = formatRawPacket(burstTime, dBm, TOA, burstType, mTSC, burst, burstString);
+  }
 
-  mDataSockets[chan]->write(burstString,gSlotLen+10);
+  mDataSockets[chan]->write(burstString, pktLen);
 
   delete burst;
 }
 
-void Transceiver::formatDemodPacket(GSM::Time burstTime, double dBm, double TOA,
-                                    SoftVector *rxBurst, char *burstString)
+int Transceiver::formatCommonPacketHeader(GSM::Time burstTime, double dBm, double TOA,
+                                          char *burstString)
 {
   int TOAint;  // in 1/256 symbols
   TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
@@ -957,12 +964,43 @@ void Transceiver::formatDemodPacket(GSM::Time burstTime, double dBm, double TOA,
   burstString[5] = (int)dBm;
   burstString[6] = (TOAint >> 8) & 0x0ff;
   burstString[7] = TOAint & 0x0ff;
+
+  return 8;
+}
+
+int Transceiver::formatDemodPacket(GSM::Time burstTime, double dBm, double TOA,
+                                   SoftVector *rxBurst, char *burstString)
+{
+  int headerSize = formatCommonPacketHeader(burstTime, dBm, TOA, burstString);
   SoftVector::iterator burstItr = rxBurst->begin();
 
   for (unsigned int i = 0; i < gSlotLen; i++) {
-    burstString[8+i] =(char) round((*burstItr++)*255.0);
+    burstString[headerSize+i] =(char) round((*burstItr++)*255.0);
   }
-  burstString[gSlotLen+9] = '\0';
+  burstString[gSlotLen+headerSize+1] = '\0';
+
+  return gSlotLen+headerSize+2;
+}
+
+int Transceiver::formatRawPacket(GSM::Time burstTime, double dBm, double TOA,
+                                 CorrType burstType, unsigned tsc,
+                                 signalVector *rxBurst, char *burstString)
+{
+  int headerSize = formatCommonPacketHeader(burstTime, dBm, TOA, burstString);
+  burstString[headerSize++] = burstType;
+  burstString[headerSize++] = tsc;
+  burstString[headerSize++] = 0; // alignment
+  burstString[headerSize++] = 0; // alignment
+
+  signalVector::iterator burstItr = rxBurst->begin();
+  float *signalItr = (float*)(&burstString[headerSize]);
+
+  for (unsigned int i = 0; i < gSlotLen; i++, burstItr++) {
+    signalItr[2*i] = (*burstItr).real();
+    signalItr[2*i+1] = (*burstItr).imag();
+  }
+
+  return headerSize + 2*gSlotLen*sizeof(float);
 }
 
 void Transceiver::driveTxFIFO()

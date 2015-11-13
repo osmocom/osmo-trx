@@ -87,7 +87,8 @@ public:
               size_t wSPS, size_t chans,
               GSM::Time wTransmitLatency,
               RadioInterface *wRadioInterface,
-              double wRssiOffset);
+              double wRssiOffset,
+              bool wExternalDemod);
 
   /** Destructor */
   ~Transceiver();
@@ -170,6 +171,8 @@ private:
 
   double rssiOffset;                      ///< RSSI to dBm conversion offset
 
+  bool mExternalDemod;                    ///< Should we internal or external demod
+
   /** modulate and add a burst to the transmit queue */
   void addRadioVector(size_t chan, BitVector &bits,
                       int RSSI, GSM::Time &wTime);
@@ -236,9 +239,18 @@ protected:
   /** drive demodulation of GSM bursts */
   void driveReceiveFIFO(size_t chan);
 
+  /** format a common header for packets with sent over the network */
+  int formatCommonPacketHeader(GSM::Time burstTime, double dBm, double TOA,
+                               char *burstString);
+
   /** format a packet of soft-bits to be sent over the network */
-  void formatDemodPacket(GSM::Time burstTime, double dBm, double TOA,
-                         SoftVector *rxBurst, char *burstString);
+  int formatDemodPacket(GSM::Time burstTime, double dBm, double TOA,
+                        SoftVector *rxBurst, char *burstString);
+
+  /** format a packet of raw samples to be sent over the network */
+  int formatRawPacket(GSM::Time burstTime, double dBm, double TOA,
+                      CorrType burstType, unsigned tsc,
+                      signalVector *rxBurst, char *burstString);
 
   /** drive transmission of GSM bursts */
   void driveTxFIFO();

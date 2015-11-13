@@ -72,6 +72,7 @@ struct trx_config {
 	double offset;
 	double rssi_offset;
 	bool swap_channels;
+	bool external_demod;
 };
 
 ConfigurationTable gConfig;
@@ -189,6 +190,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   Tuning offset........... " << config->offset << std::endl;
 	ost << "   RSSI to dBm offset...... " << config->rssi_offset << std::endl;
 	ost << "   Swap channels........... " << config->swap_channels << std::endl;
+	ost << "   External demodulator.... " << config->external_demod << std::endl;
 	std::cout << ost << std::endl;
 
 	return true;
@@ -244,7 +246,7 @@ Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
 	VectorFIFO *fifo;
 
 	trx = new Transceiver(config->port, config->addr.c_str(), config->sps,
-		config->chans, GSM::Time(3,0), radio, config->rssi_offset);
+		config->chans, GSM::Time(3,0), radio, config->rssi_offset, config->external_demod);
 	if (!trx->init(config->filler, config->rtsc)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
 		delete trx;
@@ -298,8 +300,9 @@ static void print_help()
 		"  -o    Set baseband frequency offset (default=auto)\n"
 		"  -r    Random burst test mode with TSC\n"
 		"  -R    RSSI to dBm offset in dB (default=0)\n"
-		"  -S    Swap channels (UmTRX only)\n",
-		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
+    "  -S    Swap channels (UmTRX only)\n"
+    "  -e    External demodulator - stream raw samples instead of soft bits (default=internal)\n",
+    "EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
 }
 
 static void handle_options(int argc, char **argv, struct trx_config *config)
@@ -316,8 +319,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->offset = 0.0;
 	config->rssi_offset = 0.0;
 	config->swap_channels = false;
+	config->external_demod = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:R:S")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:R:Se")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -362,6 +366,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'S':
 			config->swap_channels = true;
+			break;
+		case 'e':
+			config->external_demod = true;
 			break;
 		default:
 			print_help();
