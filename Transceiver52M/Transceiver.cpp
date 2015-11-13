@@ -941,6 +941,8 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   delete rxBurst;
 
   mDataSockets[chan]->write(burstString,gSlotLen+10);
+
+  delete burst;
 }
 
 void Transceiver::formatDemodPacket(GSM::Time burstTime, double dBm, double TOA,
