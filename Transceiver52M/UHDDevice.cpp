@@ -37,10 +37,12 @@
 #define B2XX_CLK_RT      26e6
 #define B2XX_MCBTS_CLK_RT   3.2e6
 #define E1XX_CLK_RT      52e6
+#define LIMESDR_CLK_RT   (GSMRATE*32)
 #define B100_BASE_RT     400000
 #define USRP2_BASE_RT    390625
 #define USRP_TX_AMPL     0.3
 #define UMTRX_TX_AMPL    0.7
+#define LIMESDR_TX_AMPL  0.3
 #define SAMPLE_BUF_SZ    (1 << 20)
 
 /*
@@ -67,6 +69,7 @@ enum uhd_dev_type {
 	E3XX,
 	X3XX,
 	UMTRX,
+	LIMESDR,
 	NUM_USRP_TYPES,
 };
 
@@ -124,6 +127,7 @@ static struct uhd_dev_offset uhd_offsets[] = {
 	{ B200,  4, 4, B2XX_TIMING_4_4SPS, "B200/B210 4 SPS" },
 	{ B210,  4, 4, B2XX_TIMING_4_4SPS, "B200/B210 4 SPS" },
 	{ UMTRX, 4, 4, 5.1503e-5, "UmTRX 4 SPS" },
+	{ LIMESDR, 4, 4, 16.5/GSMRATE, "STREAM/LimeSDR (4 SPS TX/RX)" },
 };
 #define NUM_UHD_OFFSETS (sizeof(uhd_offsets)/sizeof(uhd_offsets[0]))
 
@@ -178,6 +182,7 @@ static double select_rate(uhd_dev_type type, int sps,
 	case E1XX:
 	case E3XX:
 	case UMTRX:
+	case LIMESDR:
 		return GSMRATE * sps;
 	default:
 		break;
@@ -563,6 +568,10 @@ int uhd_device::set_rates(double tx_rate, double rx_rate)
 		if (set_master_clk(B2XX_MCBTS_CLK_RT) < 0)
 			return -1;
 	}
+	else if (dev_type == LIMESDR) {
+		if (set_master_clk(LIMESDR_CLK_RT) < 0)
+			return -1;
+	}
 
 
 	// Set sample rates
@@ -662,7 +671,7 @@ bool uhd_device::parse_dev_type()
 	std::string mboard_str, dev_str;
 	uhd::property_tree::sptr prop_tree;
 	size_t usrp1_str, usrp2_str, e100_str, e110_str, e310_str, e3xx_str,
-	       b100_str, b200_str, b210_str, x300_str, x310_str, umtrx_str;
+	       b100_str, b200_str, b210_str, x300_str, x310_str, umtrx_str, limesdr_str;
 
 	prop_tree = usrp_dev->get_device()->get_tree();
 	dev_str = prop_tree->access<std::string>("/name").get();
@@ -680,6 +689,8 @@ bool uhd_device::parse_dev_type()
 	x300_str = mboard_str.find("X300");
 	x310_str = mboard_str.find("X310");
 	umtrx_str = dev_str.find("UmTRX");
+	// LimeSDR is based on STREAM board, so it's advertized as such
+	limesdr_str = dev_str.find("STREAM");
 
 	if (usrp1_str != std::string::npos) {
 		LOG(ALERT) << "USRP1 is not supported using the UHD driver";
@@ -719,6 +730,9 @@ bool uhd_device::parse_dev_type()
 	} else if (umtrx_str != std::string::npos) {
 		tx_window = TX_WINDOW_FIXED;
 		dev_type = UMTRX;
+	} else if (limesdr_str != std::string::npos) {
+		tx_window = TX_WINDOW_USRP1;
+		dev_type = LIMESDR;
 	} else {
 		LOG(ALERT) << "Unknown UHD device type "
 			   << dev_str << " " << mboard_str;
@@ -837,6 +851,11 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 			if (iface != DIVERSITY)
 				usrp_dev->set_rx_bandwidth(500*1000*2, i);
 		}
+	} else if (dev_type == LIMESDR) {
+		for (size_t i = 0; i < chans; i++) {
+			usrp_dev->set_tx_bandwidth(5e6, i);
+			usrp_dev->set_rx_bandwidth(5e6, i);
+		}
 	}
 
 	/* Create TX and RX streamers */
@@ -888,6 +907,7 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	case B210:
 	case E1XX:
 	case E3XX:
+	case LIMESDR:
 	default:
 		break;
 	}
@@ -1346,6 +1366,8 @@ TIMESTAMP uhd_device::initialReadTimestamp()
 
 double uhd_device::fullScaleInputValue()
 {
+	if (dev_type == LIMESDR)
+		return (double) 2047 * LIMESDR_TX_AMPL;
 	if (dev_type == UMTRX)
 		return (double) SHRT_MAX * UMTRX_TX_AMPL;
 	else
@@ -1354,6 +1376,7 @@ double uhd_device::fullScaleInputValue()
 
 double uhd_device::fullScaleOutputValue()
 {
+	if (dev_type == LIMESDR) return (double) 2047;
 	return (double) SHRT_MAX;
 }
 
