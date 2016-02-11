@@ -116,8 +116,8 @@ static struct uhd_dev_offset uhd_offsets[NUM_USRP_TYPES * 2] = {
 	{ X3XX,  4, 1.1264e-4, "X3XX 4 SPS"},
 	{ UMTRX, 1, 9.9692e-5, "UmTRX 1 SPS" },
 	{ UMTRX, 4, 7.3846e-5, "UmTRX 4 SPS" },
-	{ STREAM, 1, 9.9692e-5, "STREAM 1 SPS" },
-	{ STREAM, 4, 9.9692e-5, "STREAM 4 SPS" },
+	{ STREAM, 1, 18e-6, "STREAM 1 SPS" },
+	{ STREAM, 4, 18e-6, "STREAM 4 SPS" },
 };
 
 /*
