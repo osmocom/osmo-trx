@@ -36,7 +36,7 @@ extern "C" {
 #define RESAMP_100M_INRATE			52
 #define RESAMP_100M_OUTRATE			75
 
-/* Resampling parameters for 100 MHz clocking */
+/* Resampling parameters for STREAM clocking */
 #define RESAMP_STREAM_INRATE			6
 #define RESAMP_STREAM_OUTRATE			96
 

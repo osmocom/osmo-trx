@@ -1268,6 +1268,8 @@ double uhd_device::getRxFreq(size_t chan)
 
 double uhd_device::fullScaleInputValue()
 {
+	if (dev_type == STREAM)
+		return (double) 2047 * UMTRX_TX_AMPL;
 	if (dev_type == UMTRX)
 		return (double) SHRT_MAX * UMTRX_TX_AMPL;
 	else
@@ -1276,6 +1278,7 @@ double uhd_device::fullScaleInputValue()
 
 double uhd_device::fullScaleOutputValue()
 {
+	if (dev_type == STREAM) return (double) 2047;
 	return (double) SHRT_MAX;
 }
 
