@@ -34,8 +34,10 @@
 
 #define B2XX_CLK_RT      26e6
 #define E1XX_CLK_RT      52e6
-#define STREAM_CLK_RT    208e6/3
-#define STREAM_BASE_RT   13e6/3
+//#define STREAM_CLK_RT    208e6/3
+//#define STREAM_BASE_RT   13e6/3
+#define STREAM_CLK_RT    34666624
+#define STREAM_BASE_RT   541666
 #define B100_BASE_RT     400000
 #define USRP2_BASE_RT    390625
 #define USRP_TX_AMPL     0.3

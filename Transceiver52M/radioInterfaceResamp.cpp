@@ -37,8 +37,8 @@ extern "C" {
 #define RESAMP_100M_OUTRATE			75
 
 /* Resampling parameters for STREAM clocking */
-#define RESAMP_STREAM_INRATE			6
-#define RESAMP_STREAM_OUTRATE			96
+#define RESAMP_STREAM_INRATE			4
+#define RESAMP_STREAM_OUTRATE			8
 
 /* Universal resampling parameters */
 #define NUMCHUNKS				24
