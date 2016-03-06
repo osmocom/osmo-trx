@@ -555,89 +555,36 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   }
 }
 
-/* 
- * Detect RACH synchronization sequence within a burst. No equalization
- * is used or available on the RACH channel.
- */
-int Transceiver::detectRACH(TransceiverState *state,
-                            signalVector &burst,
-                            complex &amp, float &toa)
+int Transceiver::detectBurst(TransceiverState *state, signalVector &burst,
+                            complex &amp, float &toa, CorrType type)
 {
-  float threshold = 6.0;
+  float threshold = 5.0, rc = 0;
 
-  return detectRACHBurst(burst, threshold, mSPSRx, amp, toa);
+  switch (type) {
+  case TSC:
+    rc = analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx,
+                             amp, toa, mMaxExpectedDelay);
+    break;
+  case RACH:
+    threshold = 6.0;
+    rc = detectRACHBurst(burst, threshold, mSPSRx, amp, toa);
+    break;
+  default:
+    LOG(ERR) << "Invalid correlation type";
+  }
+
+
+  return rc;
 }
 
-/*
- * Detect normal burst training sequence midamble. Update equalization
- * state information and channel estimate if necessary. Equalization
- * is currently disabled.
- */
-int Transceiver::detectTSC(TransceiverState *state, signalVector &burst,
-                           complex &amp, float &toa, GSM::Time &time)
-{
-  int success;
-  int tn = time.TN();
-  float chanOffset, threshold = 5.0;
-  bool needDFE = false, estimateChan = false;
-  double elapsed = time - state->chanEstimateTime[tn];
-  signalVector *chanResp;
-
-  /* Check equalization update state */
-  if (needDFE && ((elapsed > 50) || (!state->chanResponse[tn]))) {
-    delete state->DFEForward[tn];
-    delete state->DFEFeedback[tn];
-    state->DFEForward[tn] = NULL;
-    state->DFEFeedback[tn] = NULL;
-
-    estimateChan = true;
-  }
-
-  /* Detect normal burst midambles */
-  success = analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx, amp,
-                                toa, mMaxExpectedDelay, estimateChan,
-                                &chanResp, &chanOffset);
-  if (success <= 0) {
-    return success;
-  }
-
-  /* Set equalizer if unabled */
-  if (needDFE && estimateChan) {
-     float noise = state->mNoiseLev;
-     state->SNRestimate[tn] = amp.norm2() / (noise * noise + 1.0);
-
-     state->chanResponse[tn] = chanResp;
-     state->chanRespOffset[tn] = chanOffset;
-     state->chanRespAmplitude[tn] = amp;
-
-     scaleVector(*chanResp, complex(1.0, 0.0) / amp);
-
-     designDFE(*chanResp, state->SNRestimate[tn],
-               7, &state->DFEForward[tn], &state->DFEFeedback[tn]);
-
-     state->chanEstimateTime[tn] = time;
-  }
-
-  return 1;
-}
 
 /*
- * Demodulate GMSK burst using equalization if requested. Otherwise
- * demodulate by direct rotation and soft slicing.
+ * Demodulate GMSK by direct rotation and soft slicing.
  */
 SoftVector *Transceiver::demodulate(TransceiverState *state,
                                     signalVector &burst, complex amp,
-                                    float toa, size_t tn, bool equalize)
+                                    float toa)
 {
-  if (equalize) {
-    scaleVector(burst, complex(1.0, 0.0) / amp);
-    return equalizeBurst(burst,
-                         toa - state->chanRespOffset[tn],
-                         mSPSRx,
-                         *state->DFEForward[tn],
-                         *state->DFEFeedback[tn]);
-  }
-
   return demodulateBurst(burst, mSPSRx, amp, toa);
 }
 
@@ -660,7 +607,6 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
                                          size_t chan)
 {
   int success;
-  bool equalize = false;
   complex amp;
   float toa, pow, max = -1.0, avg = 0.0;
   int max_i = -1;
@@ -731,10 +677,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   }
 
   /* Detect normal or RACH bursts */
-  if (type == TSC)
-    success = detectTSC(state, *burst, amp, toa, time);
-  else
-    success = detectRACH(state, *burst, amp, toa);
+  success = detectBurst(state, *burst, amp, toa, type);
 
   /* Alert an error and exit */
   if (success <= 0) {
@@ -750,11 +693,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
 
   timingOffset = toa / mSPSRx;
 
-  /* Demodulate and set output info */
-  if (equalize && (type != TSC))
-    equalize = false;
-
-  bits = demodulate(state, *burst, amp, toa, time.TN(), equalize);
+  bits = demodulate(state, *burst, amp, toa);
 
   delete radio_burst;
   return bits;

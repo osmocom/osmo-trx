@@ -1485,8 +1485,7 @@ int detectRACHBurst(signalVector &rxBurst,
  *   tail: Search 4 symbols + maximum expected delay
  */
 int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
-                        int sps, complex &amp, float &toa, unsigned max_toa,
-                        bool chan_req, signalVector **chan, float *chan_offset)
+                        int sps, complex &amp, float &toa, unsigned max_toa)
 {
   int rc, target, head, tail;
   CorrelationSequence *sync;
@@ -1501,15 +1500,6 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
 
   rc = detectGeneralBurst(rxBurst, thresh, sps, amp, toa,
                           target, head, tail, sync);
-
-  /* Equalization not currently supported */
-  if (rc > 0 && chan_req) {
-    *chan = new signalVector(6 * sps);
-
-    if (chan_offset)
-      *chan_offset = 0.0;
-  }
-
   return rc;
 }
 
@@ -1564,166 +1554,6 @@ SoftVector *demodulateBurst(signalVector &rxBurst, int sps,
   delete dec;
 
   return bits;
-}
-
-// Assumes symbol-spaced sampling!!!
-// Based upon paper by Al-Dhahir and Cioffi
-bool designDFE(signalVector &channelResponse,
-	       float SNRestimate,
-	       int Nf,
-	       signalVector **feedForwardFilter,
-	       signalVector **feedbackFilter)
-{
-  
-  signalVector G0(Nf);
-  signalVector G1(Nf);
-  signalVector::iterator G0ptr = G0.begin();
-  signalVector::iterator G1ptr = G1.begin();
-  signalVector::iterator chanPtr = channelResponse.begin();
-
-  int nu = channelResponse.size()-1;
-
-  *G0ptr = 1.0/sqrtf(SNRestimate);
-  for(int j = 0; j <= nu; j++) {
-    *G1ptr = chanPtr->conj();
-    G1ptr++; chanPtr++;
-  }
-
-  signalVector *L[Nf];
-  signalVector::iterator Lptr;
-  float d = 1.0;
-  for(int i = 0; i < Nf; i++) {
-    d = G0.begin()->norm2() + G1.begin()->norm2();
-    L[i] = new signalVector(Nf+nu);
-    Lptr = L[i]->begin()+i;
-    G0ptr = G0.begin(); G1ptr = G1.begin();
-    while ((G0ptr < G0.end()) &&  (Lptr < L[i]->end())) {
-      *Lptr = (*G0ptr*(G0.begin()->conj()) + *G1ptr*(G1.begin()->conj()) )/d;
-      Lptr++;
-      G0ptr++;
-      G1ptr++;
-    }
-    complex k = (*G1.begin())/(*G0.begin());
-
-    if (i != Nf-1) {
-      signalVector G0new = G1;
-      scaleVector(G0new,k.conj());
-      addVector(G0new,G0);
-
-      signalVector G1new = G0;
-      scaleVector(G1new,k*(-1.0));
-      addVector(G1new,G1);
-      delayVector(&G1new, &G1new, -1.0);
-
-      scaleVector(G0new,1.0/sqrtf(1.0+k.norm2()));
-      scaleVector(G1new,1.0/sqrtf(1.0+k.norm2()));
-      G0 = G0new;
-      G1 = G1new;
-    }
-  }
-
-  *feedbackFilter = new signalVector(nu);
-  L[Nf-1]->segmentCopyTo(**feedbackFilter,Nf,nu);
-  scaleVector(**feedbackFilter,(complex) -1.0);
-  conjugateVector(**feedbackFilter);
-
-  signalVector v(Nf);
-  signalVector::iterator vStart = v.begin();
-  signalVector::iterator vPtr;
-  *(vStart+Nf-1) = (complex) 1.0;
-  for(int k = Nf-2; k >= 0; k--) {
-    Lptr = L[k]->begin()+k+1;
-    vPtr = vStart + k+1;
-    complex v_k = 0.0;
-    for (int j = k+1; j < Nf; j++) {
-      v_k -= (*vPtr)*(*Lptr);
-      vPtr++; Lptr++;
-    }
-     *(vStart + k) = v_k;
-  }
-
-  *feedForwardFilter = new signalVector(Nf);
-  signalVector::iterator w = (*feedForwardFilter)->end();
-  for (int i = 0; i < Nf; i++) {
-    delete L[i];
-    complex w_i = 0.0;
-    int endPt = ( nu < (Nf-1-i) ) ? nu : (Nf-1-i);
-    vPtr = vStart+i;
-    chanPtr = channelResponse.begin();
-    for (int k = 0; k < endPt+1; k++) {
-      w_i += (*vPtr)*(chanPtr->conj());
-      vPtr++; chanPtr++;
-    }
-    *--w = w_i/d;
-  }
-
-
-  return true;
-  
-}
-
-// Assumes symbol-rate sampling!!!!
-SoftVector *equalizeBurst(signalVector &rxBurst,
-		       float TOA,
-		       int sps,
-		       signalVector &w, // feedforward filter
-		       signalVector &b) // feedback filter
-{
-  signalVector *postForwardFull;
-
-  if (!delayVector(&rxBurst, &rxBurst, -TOA))
-    return NULL;
-
-  postForwardFull = convolve(&rxBurst, &w, NULL,
-                             CUSTOM, 0, rxBurst.size() + w.size() - 1);
-  if (!postForwardFull)
-    return NULL;
-
-  signalVector* postForward = new signalVector(rxBurst.size());
-  postForwardFull->segmentCopyTo(*postForward,w.size()-1,rxBurst.size());
-  delete postForwardFull;
-
-  signalVector::iterator dPtr = postForward->begin();
-  signalVector::iterator dBackPtr;
-  signalVector::iterator rotPtr = GMSKRotation4->begin();
-  signalVector::iterator revRotPtr = GMSKReverseRotation4->begin();
-
-  signalVector *DFEoutput = new signalVector(postForward->size());
-  signalVector::iterator DFEItr = DFEoutput->begin();
-
-  // NOTE: can insert the midamble and/or use midamble to estimate BER
-  for (; dPtr < postForward->end(); dPtr++) {
-    dBackPtr = dPtr-1;
-    signalVector::iterator bPtr = b.begin();
-    while ( (bPtr < b.end()) && (dBackPtr >= postForward->begin()) ) {
-      *dPtr = *dPtr + (*bPtr)*(*dBackPtr);
-      bPtr++;
-      dBackPtr--;
-    }
-    *dPtr = *dPtr * (*revRotPtr);
-    *DFEItr = *dPtr;
-    // make decision on symbol
-    *dPtr = (dPtr->real() > 0.0) ? 1.0 : -1.0;
-    //*DFEItr = *dPtr;
-    *dPtr = *dPtr * (*rotPtr);
-    DFEItr++;
-    rotPtr++;
-    revRotPtr++;
-  }
-
-  vectorSlicer(DFEoutput);
-
-  SoftVector *burstBits = new SoftVector(postForward->size());
-  SoftVector::iterator burstItr = burstBits->begin();
-  DFEItr = DFEoutput->begin();
-  for (; DFEItr < DFEoutput->end(); DFEItr++) 
-    *burstItr++ = DFEItr->real();
-
-  delete postForward;
-
-  delete DFEoutput;
-
-  return burstBits;
 }
 
 bool sigProcLibSetup()
