@@ -98,7 +98,7 @@ public:
   */
   Transceiver(int wBasePort,
               const char *TRXAddress,
-              size_t wSPS, size_t chans,
+              size_t tx_sps, size_t rx_sps, size_t chans,
               GSM::Time wTransmitLatency,
               RadioInterface *wRadioInterface,
               double wRssiOffset);

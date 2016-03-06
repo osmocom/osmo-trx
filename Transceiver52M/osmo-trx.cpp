@@ -41,10 +41,18 @@
  *     ARM and non-SIMD enabled architectures.
  */
 #if defined(HAVE_NEON) || !defined(HAVE_SSE3)
-#define DEFAULT_SPS		1
+#define DEFAULT_TX_SPS		1
 #else
-#define DEFAULT_SPS		4
+#define DEFAULT_TX_SPS		4
 #endif
+
+/*
+ * Samples-per-symbol for uplink (receiver) path
+ *     Do not modify this value. EDGE configures 4 sps automatically on
+ *     B200/B210 devices only. Use of 4 sps on the receive path for other
+ *     configurations is not supported.
+ */
+#define DEFAULT_RX_SPS		1
 
 /* Default configuration parameters
  *     Note that these values are only used if the particular key does not
@@ -63,7 +71,8 @@ struct trx_config {
 	std::string addr;
 	std::string dev_args;
 	unsigned port;
-	unsigned sps;
+	unsigned tx_sps;
+	unsigned rx_sps;
 	unsigned chans;
 	unsigned rtsc;
 	bool extref;
@@ -182,7 +191,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   TRX Base Port........... " << config->port << std::endl;
 	ost << "   TRX Address............. " << config->addr << std::endl;
 	ost << "   Channels................ " << config->chans << std::endl;
-	ost << "   Samples-per-Symbol...... " << config->sps << std::endl;
+	ost << "   Tx Samples-per-Symbol... " << config->tx_sps << std::endl;
 	ost << "   External Reference...... " << refstr << std::endl;
 	ost << "   C0 Filler Table......... " << fillstr << std::endl;
 	ost << "   Diversity............... " << divstr << std::endl;
@@ -208,16 +217,17 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
 
 	switch (type) {
 	case RadioDevice::NORMAL:
-		radio = new RadioInterface(usrp, config->sps, config->chans);
+		radio = new RadioInterface(usrp, config->tx_sps,
+					   config->rx_sps, config->chans);
 		break;
 	case RadioDevice::RESAMP_64M:
 	case RadioDevice::RESAMP_100M:
-		radio = new RadioInterfaceResamp(usrp,
-						 config->sps, config->chans);
+		radio = new RadioInterfaceResamp(usrp, config->tx_sps,
+						 config->chans);
 		break;
 	case RadioDevice::DIVERSITY:
-		radio = new RadioInterfaceDiversity(usrp,
-						    config->sps, config->chans);
+		radio = new RadioInterfaceDiversity(usrp, config->tx_sps,
+						    config->chans);
 		break;
 	default:
 		LOG(ALERT) << "Unsupported radio interface configuration";
@@ -243,8 +253,9 @@ Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
 	Transceiver *trx;
 	VectorFIFO *fifo;
 
-	trx = new Transceiver(config->port, config->addr.c_str(), config->sps,
-		config->chans, GSM::Time(3,0), radio, config->rssi_offset);
+	trx = new Transceiver(config->port, config->addr.c_str(),
+			      config->tx_sps, config->rx_sps, config->chans,
+			      GSM::Time(3,0), radio, config->rssi_offset);
 	if (!trx->init(config->filler, config->rtsc)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
 		delete trx;
@@ -307,7 +318,8 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	int option;
 
 	config->port = 0;
-	config->sps = DEFAULT_SPS;
+	config->tx_sps = DEFAULT_TX_SPS;
+	config->rx_sps = DEFAULT_RX_SPS;
 	config->chans = DEFAULT_CHANS;
 	config->rtsc = 0;
 	config->extref = false;
@@ -351,7 +363,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			config->offset = atof(optarg);
 			break;
 		case 's':
-			config->sps = atoi(optarg);
+			config->tx_sps = atoi(optarg);
 			break;
 		case 'r':
 			config->rtsc = atoi(optarg);
@@ -369,8 +381,8 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		}
 	}
 
-	if ((config->sps != 1) && (config->sps != 4)) {
-		printf("Unsupported samples-per-symbol %i\n\n", config->sps);
+	if ((config->tx_sps != 1) && (config->tx_sps != 4)) {
+		printf("Unsupported samples-per-symbol %i\n\n", config->tx_sps);
 		print_help();
 		exit(0);
 	}
@@ -405,7 +417,7 @@ int main(int argc, char *argv[])
 	srandom(time(NULL));
 
 	/* Create the low level device object */
-	usrp = RadioDevice::make(config.sps, config.chans,
+	usrp = RadioDevice::make(config.tx_sps, config.rx_sps, config.chans,
 				 config.diversity, config.offset);
 	type = usrp->open(config.dev_args, config.extref, config.swap_channels);
 	if (type < 0) {

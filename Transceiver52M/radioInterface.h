@@ -87,7 +87,8 @@ public:
 
   /** constructor */
   RadioInterface(RadioDevice* wRadio = NULL,
-                 size_t sps = 4, size_t chans = 1, size_t diversity = 1,
+                 size_t tx_sps = 4, size_t rx_sps = 1,
+		 size_t chans = 1, size_t diversity = 1,
                  int receiveOffset = 3, GSM::Time wStartTime = GSM::Time(0));
 
   /** destructor */

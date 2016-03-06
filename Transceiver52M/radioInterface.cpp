@@ -33,12 +33,12 @@ extern "C" {
 #define CHUNK		625
 #define NUMCHUNKS	4
 
-RadioInterface::RadioInterface(RadioDevice *wRadio,
-                               size_t sps, size_t chans, size_t diversity,
+RadioInterface::RadioInterface(RadioDevice *wRadio, size_t tx_sps,
+                               size_t rx_sps, size_t chans, size_t diversity,
                                int wReceiveOffset, GSM::Time wStartTime)
-  : mRadio(wRadio), mSPSTx(sps), mSPSRx(1), mChans(chans), mMIMO(diversity),
-    sendCursor(0), recvCursor(0), underrun(false), overrun(false),
-    receiveOffset(wReceiveOffset), mOn(false)
+  : mRadio(wRadio), mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans),
+    mMIMO(diversity), sendCursor(0), recvCursor(0), underrun(false),
+    overrun(false), receiveOffset(wReceiveOffset), mOn(false)
 {
   mClock.set(wStartTime);
 }
@@ -262,7 +262,12 @@ bool RadioInterface::driveReceiveRadio()
   int recvSz = recvCursor;
   int readSz = 0;
   const int symbolsPerSlot = gSlotLen + 8;
-  int burstSize = (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx;
+  int burstSize;
+
+  if (mSPSRx == 4)
+    burstSize = 625;
+  else
+    burstSize = symbolsPerSlot + (tN % 4 == 0);
 
   /* 
    * Pre-allocate head room for the largest correlation size
@@ -297,7 +302,8 @@ bool RadioInterface::driveReceiveRadio()
 
     tN = rcvClock.TN();
 
-    burstSize = (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx;
+    if (mSPSRx != 4)
+      burstSize = (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx;
   }
 
   if (readSz > 0) {

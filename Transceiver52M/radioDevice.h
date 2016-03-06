@@ -37,7 +37,7 @@ class RadioDevice {
   /* Radio interface types */
   enum RadioInterfaceType { NORMAL, RESAMP_64M, RESAMP_100M, DIVERSITY };
 
-  static RadioDevice *make(size_t sps, size_t chans = 1,
+  static RadioDevice *make(size_t tx_sps, size_t rx_sps = 1, size_t chans = 1,
                            bool diversity = false, double offset = 0.0);
 
   /** Initialize the USRP */

@@ -143,7 +143,7 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
 
 Transceiver::Transceiver(int wBasePort,
                          const char *wTRXAddress,
-                         size_t wSPS, size_t wChans,
+                         size_t tx_sps, size_t rx_sps, size_t chans,
                          GSM::Time wTransmitLatency,
                          RadioInterface *wRadioInterface,
                          double wRssiOffset)
@@ -151,7 +151,7 @@ Transceiver::Transceiver(int wBasePort,
     mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
-    mSPSTx(wSPS), mSPSRx(1), mChans(wChans), mOn(false),
+    mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mOn(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelay(0), mWriteBurstToDiskMask(0)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();

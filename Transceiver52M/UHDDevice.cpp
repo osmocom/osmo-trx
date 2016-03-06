@@ -68,7 +68,8 @@ enum uhd_dev_type {
 
 struct uhd_dev_offset {
 	enum uhd_dev_type type;
-	int sps;
+	int tx_sps;
+	int rx_sps;
 	double offset;
 	const std::string desc;
 };
@@ -79,9 +80,11 @@ struct uhd_dev_offset {
 #ifdef USE_UHD_3_9
 #define B2XX_TIMING_1SPS	1.7153e-4
 #define B2XX_TIMING_4SPS	1.1696e-4
+#define B2XX_TIMING_4_4SPS	5.89578e-5
 #else
 #define B2XX_TIMING_1SPS	9.9692e-5
 #define B2XX_TIMING_4SPS	6.9248e-5
+#define B2XX_TIMING_4_4SPS	4.19034e-5
 #endif
 
 /*
@@ -95,24 +98,32 @@ struct uhd_dev_offset {
  *   USRP1 with timestamps is not supported by UHD.
  */
 static struct uhd_dev_offset uhd_offsets[NUM_USRP_TYPES * 2] = {
-	{ USRP1, 1,       0.0, "USRP1 not supported" },
-	{ USRP1, 4,       0.0, "USRP1 not supported"},
-	{ USRP2, 1, 1.2184e-4, "N2XX 1 SPS" },
-	{ USRP2, 4, 8.0230e-5, "N2XX 4 SPS" },
-	{ B100,  1, 1.2104e-4, "B100 1 SPS" },
-	{ B100,  4, 7.9307e-5, "B100 4 SPS" },
-	{ B200,  1, B2XX_TIMING_1SPS, "B200 1 SPS" },
-	{ B200,  4, B2XX_TIMING_4SPS, "B200 4 SPS" },
-	{ B210,  1, B2XX_TIMING_1SPS, "B210 1 SPS" },
-	{ B210,  4, B2XX_TIMING_4SPS, "B210 4 SPS" },
-	{ E1XX,  1, 9.5192e-5, "E1XX 1 SPS" },
-	{ E1XX,  4, 6.5571e-5, "E1XX 4 SPS" },
-	{ E3XX,  1, 1.5000e-4, "E3XX 1 SPS" },
-	{ E3XX,  4, 1.2740e-4, "E3XX 4 SPS" },
-	{ X3XX,  1, 1.5360e-4, "X3XX 1 SPS"},
-	{ X3XX,  4, 1.1264e-4, "X3XX 4 SPS"},
-	{ UMTRX, 1, 9.9692e-5, "UmTRX 1 SPS" },
-	{ UMTRX, 4, 7.3846e-5, "UmTRX 4 SPS" },
+	{ USRP1, 1, 1,       0.0, "USRP1 not supported" },
+	{ USRP1, 4, 1,       0.0, "USRP1 not supported"},
+	{ USRP2, 1, 1, 1.2184e-4, "N2XX 1 SPS" },
+	{ USRP2, 4, 1, 8.0230e-5, "N2XX 4 SPS" },
+	{ B100,  1, 1, 1.2104e-4, "B100 1 SPS" },
+	{ B100,  4, 1, 7.9307e-5, "B100 4 SPS" },
+	{ B200,  1, 1, B2XX_TIMING_1SPS, "B200 1 SPS" },
+	{ B200,  4, 1, B2XX_TIMING_4SPS, "B200 4 SPS" },
+	{ B210,  1, 1, B2XX_TIMING_1SPS, "B210 1 SPS" },
+	{ B210,  4, 1, B2XX_TIMING_4SPS, "B210 4 SPS" },
+	{ E1XX,  1, 1, 9.5192e-5, "E1XX 1 SPS" },
+	{ E1XX,  4, 1, 6.5571e-5, "E1XX 4 SPS" },
+	{ E3XX,  1, 1, 1.5000e-4, "E3XX 1 SPS" },
+	{ E3XX,  4, 1, 1.2740e-4, "E3XX 4 SPS" },
+	{ X3XX,  1, 1, 1.5360e-4, "X3XX 1 SPS"},
+	{ X3XX,  4, 1, 1.1264e-4, "X3XX 4 SPS"},
+	{ UMTRX, 1, 1, 9.9692e-5, "UmTRX 1 SPS" },
+	{ UMTRX, 4, 1, 7.3846e-5, "UmTRX 4 SPS" },
+};
+
+struct uhd_dev_offset edge_offset = {
+	.type = B200,
+	.tx_sps = 4,
+	.rx_sps = 4,
+	.offset = B2XX_TIMING_4_4SPS,
+	.desc = "B200/B210 EDGE mode (4 SPS TX/RX)",
 };
 
 /*
@@ -120,18 +131,23 @@ static struct uhd_dev_offset uhd_offsets[NUM_USRP_TYPES * 2] = {
  * diversity receiver only.
  */
 static struct uhd_dev_offset special_offsets[] = {
-	{ UMTRX, 1, 8.0875e-5, "UmTRX diversity, 1 SPS" },
-	{ UMTRX, 4, 5.2103e-5, "UmTRX diversity, 4 SPS" },
+	{ UMTRX, 1, 1, 8.0875e-5, "UmTRX diversity, 1 SPS" },
+	{ UMTRX, 4, 1, 5.2103e-5, "UmTRX diversity, 4 SPS" },
 };
 
-static double get_dev_offset(enum uhd_dev_type type,
-			     int sps, bool diversity = false)
+static double get_dev_offset(enum uhd_dev_type type, int tx_sps,
+			     bool edge = false, bool diversity = false)
 {
 	struct uhd_dev_offset *offset = NULL;
 
 	/* Reject USRP1 */
 	if (type == USRP1) {
 		LOG(ERR) << "Invalid device type";
+		return 0.0;
+	}
+
+	if (edge && diversity) {
+		LOG(ERR) << "Unsupported configuration";
 		return 0.0;
 	}
 
@@ -142,7 +158,7 @@ static double get_dev_offset(enum uhd_dev_type type,
 			return 0.0;
 		}
 
-		switch (sps) {
+		switch (tx_sps) {
 		case 1:
 			offset = &special_offsets[0];
 			break;
@@ -150,11 +166,22 @@ static double get_dev_offset(enum uhd_dev_type type,
 		default:
 			offset = &special_offsets[1];
 		}
+	} else if (edge) {
+		if ((type != B200) && (type != B210)) {
+			LOG(ALERT) << "EDGE support on B200/B210 only";
+			return 0.0;
+		}
+		if (tx_sps != 4) {
+			LOG(ALERT) << "Invalid device configuration";
+			return 0.0;
+		}
+
+		offset = &edge_offset;
 	} else {
 		/* Search for matching offset value */
 		for (int i = 0; i < NUM_USRP_TYPES * 2; i++) {
 			if ((type == uhd_offsets[i].type) &&
-                            (sps == uhd_offsets[i].sps)) {
+                            (tx_sps == uhd_offsets[i].tx_sps)) {
 				offset = &uhd_offsets[i];
 				break;
 			}
@@ -281,7 +308,8 @@ private:
 */
 class uhd_device : public RadioDevice {
 public:
-	uhd_device(size_t sps, size_t chans, bool diversity, double offset);
+	uhd_device(size_t tx_sps, size_t rx_sps,
+		   size_t chans, bool diversity, double offset);
 	~uhd_device();
 
 	int open(const std::string &args, bool extref, bool swap_channels);
@@ -302,8 +330,8 @@ public:
 	bool setTxFreq(double wFreq, size_t chan);
 	bool setRxFreq(double wFreq, size_t chan);
 
-	inline TIMESTAMP initialWriteTimestamp() { return ts_initial * sps; }
-	inline TIMESTAMP initialReadTimestamp() { return ts_initial; }
+	inline TIMESTAMP initialWriteTimestamp();
+	inline TIMESTAMP initialReadTimestamp();
 
 	double fullScaleInputValue();
 	double fullScaleOutputValue();
@@ -344,7 +372,7 @@ private:
 	enum TxWindowType tx_window;
 	enum uhd_dev_type dev_type;
 
-	size_t sps, chans;
+	size_t tx_sps, rx_sps, chans;
 	double tx_rate, rx_rate;
 
 	double tx_gain_min, tx_gain_max;
@@ -423,14 +451,16 @@ static void thread_enable_cancel(bool cancel)
 		 pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 }
 
-uhd_device::uhd_device(size_t sps, size_t chans, bool diversity, double offset)
+uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
+		       size_t chans, bool diversity, double offset)
 	: tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),
 	  started(false), aligned(false), rx_pkt_cnt(0), drop_cnt(0),
 	  prev_ts(0,0), ts_initial(0), ts_offset(0)
 {
-	this->sps = sps;
+	this->tx_sps = tx_sps;
+	this->rx_sps = rx_sps;
 	this->chans = chans;
 	this->offset = offset;
 	this->diversity = diversity;
@@ -738,12 +768,8 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 		usrp_dev->set_clock_source("external");
 
 	// Set rates
-	double _rx_rate;
-	double _tx_rate = select_rate(dev_type, sps);
-	if (diversity)
-		_rx_rate = select_rate(dev_type, 1, true);
-	else
-		_rx_rate = _tx_rate / sps;
+	double _tx_rate = select_rate(dev_type, tx_sps);
+	double _rx_rate = select_rate(dev_type, rx_sps, diversity);
 
 	if ((_tx_rate < 0.0) || (_rx_rate < 0.0))
 		return -1;
@@ -777,8 +803,14 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		rx_buffers[i] = new smpl_buf(buf_len, rx_rate);
 
-	// Set receive chain sample offset 
-	double offset = get_dev_offset(dev_type, sps, diversity);
+	// Set receive chain sample offset. Trigger the EDGE offset
+	// table by checking for 4 SPS on the receive path. No other
+	// configuration supports using 4 SPS.
+	bool edge = false;
+	if (rx_sps == 4)
+		edge = true;
+
+	double offset = get_dev_offset(dev_type, tx_sps, edge, diversity);
 	if (offset == 0.0) {
 		LOG(ERR) << "Unsupported configuration, no correction applied";
 		ts_offset = 0;
@@ -1243,6 +1275,24 @@ double uhd_device::getRxFreq(size_t chan)
 	return rx_freqs[chan];
 }
 
+/*
+ * Only allow sampling the Rx path lower than Tx and not vice-versa.
+ * Using Tx with 4 SPS and Rx at 1 SPS is the only allowed mixed
+ * combination.
+ */
+TIMESTAMP uhd_device::initialWriteTimestamp()
+{
+	if (rx_sps == tx_sps)
+		return ts_initial;
+	else
+		return ts_initial * tx_sps;
+}
+
+TIMESTAMP uhd_device::initialReadTimestamp()
+{
+	return ts_initial;
+}
+
 double uhd_device::fullScaleInputValue()
 {
 	if (dev_type == UMTRX)
@@ -1508,8 +1558,8 @@ std::string smpl_buf::str_code(ssize_t code)
 	}
 }
 
-RadioDevice *RadioDevice::make(size_t sps, size_t chans,
-			       bool diversity, double offset)
+RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
+			       size_t chans, bool diversity, double offset)
 {
-	return new uhd_device(sps, chans, diversity, offset);
+	return new uhd_device(tx_sps, rx_sps, chans, diversity, offset);
 }
