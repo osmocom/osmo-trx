@@ -49,7 +49,7 @@ float vectorNorm2(const signalVector &x);
 float vectorPower(const signalVector &x);
 
 /** Setup the signal processing library */
-bool sigProcLibSetup(int sps);
+bool sigProcLibSetup();
 
 /** Destroy the signal processing library */
 void sigProcLibDestroy(void);
@@ -150,22 +150,6 @@ complex peakDetect(const signalVector &rxBurst,
 */
 void scaleVector(signalVector &x,
 		 complex scale);
-
-/**
-        Generate a modulated GSM midamble, stored within the library.
-        @param gsmPulse The GSM pulse used for modulation.
-        @param sps The number of samples per GSM symbol.
-        @param TSC The training sequence [0..7]
-        @return Success.
-*/
-bool generateMidamble(int sps, int tsc);
-/**
-        Generate a modulated RACH sequence, stored within the library.
-        @param gsmPulse The GSM pulse used for modulation.
-        @param sps The number of samples per GSM symbol.
-        @return Success.
-*/
-bool generateRACHSequence(int sps);
 
 /**
         Energy detector, checks to see if received burst energy is above a threshold.

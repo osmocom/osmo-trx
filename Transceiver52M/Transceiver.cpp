@@ -198,7 +198,7 @@ bool Transceiver::init(int filler, size_t rtsc)
     return false;
   }
 
-  if (!sigProcLibSetup(mSPSTx)) {
+  if (!sigProcLibSetup()) {
     LOG(ALERT) << "Failed to initialize signal processing library";
     return false;
   }
@@ -898,7 +898,6 @@ void Transceiver::driveControl(size_t chan)
       sprintf(response, "RSP SETTSC 1 %d", TSC);
     else {
       mTSC = TSC;
-      generateMidamble(mSPSRx, TSC);
       sprintf(response,"RSP SETTSC 0 %d", TSC);
     }
   }
