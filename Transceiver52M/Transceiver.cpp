@@ -367,7 +367,12 @@ void Transceiver::addRadioVector(size_t chan, BitVector &bits,
     return;
   }
 
-  burst = modulateBurst(bits, 8 + (wTime.TN() % 4 == 0), mSPSTx);
+  /* Use the number of bits as the EDGE burst indicator */
+  if (bits.size() == EDGE_BURST_NBITS)
+    burst = modulateEdgeBurst(bits, mSPSTx);
+  else
+    burst = modulateBurst(bits, 8 + (wTime.TN() % 4 == 0), mSPSTx);
+
   scaleVector(*burst, txFullScale * pow(10, -RSSI / 10));
 
   radio_burst = new radioVector(wTime, burst);
@@ -561,6 +566,13 @@ int Transceiver::detectBurst(TransceiverState *state, signalVector &burst,
   float threshold = 5.0, rc = 0;
 
   switch (type) {
+  case EDGE:
+    rc = detectEdgeBurst(burst, mTSC, threshold, mSPSRx,
+                         amp, toa, mMaxExpectedDelay);
+    if (rc > 0)
+      break;
+    else
+      type = TSC;
   case TSC:
     rc = analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx,
                              amp, toa, mMaxExpectedDelay);
@@ -573,6 +585,8 @@ int Transceiver::detectBurst(TransceiverState *state, signalVector &burst,
     LOG(ERR) << "Invalid correlation type";
   }
 
+  if (rc > 0)
+    return type;
 
   return rc;
 }
@@ -583,8 +597,11 @@ int Transceiver::detectBurst(TransceiverState *state, signalVector &burst,
  */
 SoftVector *Transceiver::demodulate(TransceiverState *state,
                                     signalVector &burst, complex amp,
-                                    float toa)
+                                    float toa, CorrType type)
 {
+  if (type == EDGE)
+	  return demodEdgeBurst(burst, mSPSRx, amp, toa);
+
   return demodulateBurst(burst, mSPSRx, amp, toa);
 }
 
@@ -606,7 +623,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
                                          double &timingOffset, double &noise,
                                          size_t chan)
 {
-  int success;
+  int rc;
   complex amp;
   float toa, pow, max = -1.0, avg = 0.0;
   int max_i = -1;
@@ -677,13 +694,14 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   }
 
   /* Detect normal or RACH bursts */
-  success = detectBurst(state, *burst, amp, toa, type);
+  rc = detectBurst(state, *burst, amp, toa, type);
 
-  /* Alert an error and exit */
-  if (success <= 0) {
-    if (success == -SIGERR_CLIP) {
+  if (rc > 0) {
+    type = (CorrType) rc;
+  } else if (rc <= 0) {
+    if (rc == -SIGERR_CLIP) {
       LOG(WARNING) << "Clipping detected on received RACH or Normal Burst";
-    } else if (success != SIGERR_NONE) {
+    } else if (rc != SIGERR_NONE) {
       LOG(WARNING) << "Unhandled RACH or Normal Burst detection error";
     }
 
@@ -693,7 +711,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
 
   timingOffset = toa / mSPSRx;
 
-  bits = demodulate(state, *burst, amp, toa);
+  bits = demodulate(state, *burst, amp, toa, type);
 
   delete radio_burst;
   return bits;
@@ -916,6 +934,19 @@ void Transceiver::driveReceiveRadio()
   }
 }
 
+void Transceiver::logRxBurst(SoftVector *burst, GSM::Time time, double dbm,
+                             double rssi, double noise, double toa)
+{
+  LOG(DEBUG) << std::fixed << std::right
+    << " time: "   << time
+    << " RSSI: "   << std::setw(5) << std::setprecision(1) << rssi
+                   << "dBFS/" << std::setw(6) << -dbm << "dBm"
+    << " noise: "  << std::setw(5) << std::setprecision(1) << noise
+                   << "dBFS/" << std::setw(6) << -(noise + rssiOffset) << "dBm"
+    << " TOA: "    << std::setw(5) << std::setprecision(2) << toa
+    << " bits: "   << *burst;
+}
+
 void Transceiver::driveReceiveFIFO(size_t chan)
 {
   SoftVector *rxBurst = NULL;
@@ -926,37 +957,39 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   double noise; // noise level in dBFS
   GSM::Time burstTime;
   bool isRssiValid; // are RSSI, noise and burstTime valid
+  unsigned nbits = gSlotLen;
 
   rxBurst = pullRadioVector(burstTime, RSSI, isRssiValid, TOA, noise, chan);
+  if (!rxBurst)
+    return;
 
-  if (rxBurst) { 
-    dBm = RSSI+rssiOffset;
-    TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
+  /*
+   * EDGE demodulator returns 444 (148 * 3) bits
+   */
+  if (rxBurst->size() == gSlotLen * 3)
+    nbits = gSlotLen * 3;
 
-    LOG(DEBUG) << std::fixed << std::right
-      << " time: "   << burstTime
-      << " RSSI: "   << std::setw(5) << std::setprecision(1) << RSSI << "dBFS/" << std::setw(6) << -dBm << "dBm"
-      << " noise: "  << std::setw(5) << std::setprecision(1) << noise << "dBFS/" << std::setw(6) << -(noise+rssiOffset) << "dBm"
-      << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
-      << " bits: "   << *rxBurst;
+  dBm = RSSI + rssiOffset;
+  logRxBurst(rxBurst, burstTime, dBm, RSSI, noise, TOA);
 
-    char burstString[gSlotLen+10];
-    burstString[0] = burstTime.TN();
-    for (int i = 0; i < 4; i++)
-      burstString[1+i] = (burstTime.FN() >> ((3-i)*8)) & 0x0ff;
-    burstString[5] = (int)dBm;
-    burstString[6] = (TOAint >> 8) & 0x0ff;
-    burstString[7] = TOAint & 0x0ff;
-    SoftVector::iterator burstItr = rxBurst->begin();
+  TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
 
-    for (unsigned int i = 0; i < gSlotLen; i++) {
-      burstString[8+i] =(char) round((*burstItr++)*255.0);
-    }
-    burstString[gSlotLen+9] = '\0';
-    delete rxBurst;
+  char burstString[nbits + 10];
+  burstString[0] = burstTime.TN();
+  for (int i = 0; i < 4; i++)
+    burstString[1+i] = (burstTime.FN() >> ((3-i)*8)) & 0x0ff;
+  burstString[5] = (int)dBm;
+  burstString[6] = (TOAint >> 8) & 0x0ff;
+  burstString[7] = TOAint & 0x0ff;
+  SoftVector::iterator burstItr = rxBurst->begin();
 
-    mDataSockets[chan]->write(burstString,gSlotLen+10);
-  }
+  for (unsigned i = 0; i < nbits; i++)
+    burstString[8 + i] = (char) round((*burstItr++) * 255.0);
+
+  burstString[nbits + 9] = '\0';
+  delete rxBurst;
+
+  mDataSockets[chan]->write(burstString, nbits + 10);
 }
 
 void Transceiver::driveTxFIFO()

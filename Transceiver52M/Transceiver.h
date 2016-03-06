@@ -147,6 +147,7 @@ public:
     OFF,               ///< timeslot is off
     TSC,	       ///< timeslot should contain a normal burst
     RACH,	       ///< timeslot should contain an access burst
+    EDGE,	       ///< timeslot should contain an EDGE burst
     IDLE	       ///< timeslot is an idle (or dummy) burst
   } CorrType;
 
@@ -214,7 +215,7 @@ private:
 
   /** Demodulate burst and output soft bits */
   SoftVector *demodulate(TransceiverState *state, signalVector &burst,
-                         complex amp, float toa);
+                         complex amp, float toa, CorrType type);
 
   int mSPSTx;                          ///< number of samples per Tx symbol
   int mSPSRx;                          ///< number of samples per Rx symbol
@@ -272,6 +273,8 @@ protected:
   /** set priority on current thread */
   void setPriority(float prio = 0.5) { mRadioInterface->setPriority(prio); }
 
+  void logRxBurst(SoftVector *burst, GSM::Time time, double dbm,
+                  double rssi, double noise, double toa);
 };
 
 void *RxUpperLoopAdapter(TransceiverChannel *);

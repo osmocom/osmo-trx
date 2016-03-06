@@ -81,6 +81,7 @@ struct trx_config {
 	double offset;
 	double rssi_offset;
 	bool swap_channels;
+	bool edge;
 };
 
 ConfigurationTable gConfig;
@@ -130,7 +131,7 @@ bool testConfig()
  */
 bool trx_setup_config(struct trx_config *config)
 {
-	std::string refstr, fillstr, divstr;
+	std::string refstr, fillstr, divstr, edgestr;
 
 	if (!testConfig())
 		return false;
@@ -170,6 +171,7 @@ bool trx_setup_config(struct trx_config *config)
 	if (config->diversity)
 		config->chans = 2;
 
+	edgestr = config->edge ? "Enabled" : "Disabled";
 	refstr = config->extref ? "Enabled" : "Disabled";
 	divstr = config->diversity ? "Enabled" : "Disabled";
 	switch (config->filler) {
@@ -192,6 +194,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   TRX Address............. " << config->addr << std::endl;
 	ost << "   Channels................ " << config->chans << std::endl;
 	ost << "   Tx Samples-per-Symbol... " << config->tx_sps << std::endl;
+	ost << "   EDGE support............ " << edgestr << std::endl;
 	ost << "   External Reference...... " << refstr << std::endl;
 	ost << "   C0 Filler Table......... " << fillstr << std::endl;
 	ost << "   Diversity............... " << divstr << std::endl;
@@ -214,6 +217,10 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
                                    RadioDevice *usrp, int type)
 {
 	RadioInterface *radio = NULL;
+
+	if ((config->rx_sps != 1) && (type != RadioDevice::NORMAL)) {
+		LOG(ALERT) << "Unsupported radio interface configuration";
+	}
 
 	switch (type) {
 	case RadioDevice::NORMAL:
@@ -301,6 +308,7 @@ static void print_help()
 		"  -l    Logging level (%s)\n"
 		"  -i    IP address of GSM core\n"
 		"  -p    Base port number\n"
+		"  -e    Enable EDGE receiver\n"
 		"  -d    Enable dual channel diversity receiver\n"
 		"  -x    Enable external 10 MHz reference\n"
 		"  -s    Samples-per-symbol (1 or 4)\n"
@@ -328,8 +336,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->offset = 0.0;
 	config->rssi_offset = 0.0;
 	config->swap_channels = false;
+	config->edge = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:R:S")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:R:Se")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -375,6 +384,10 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		case 'S':
 			config->swap_channels = true;
 			break;
+		case 'e':
+			config->edge = true;
+			config->rx_sps = 4;
+			break;
 		default:
 			print_help();
 			exit(0);
@@ -383,6 +396,12 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 
 	if ((config->tx_sps != 1) && (config->tx_sps != 4)) {
 		printf("Unsupported samples-per-symbol %i\n\n", config->tx_sps);
+		print_help();
+		exit(0);
+	}
+
+	if (config->edge && (config->tx_sps != 4)) {
+		printf("EDGE only supported at 4 samples per symbol\n\n");
 		print_help();
 		exit(0);
 	}

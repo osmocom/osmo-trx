@@ -20,6 +20,11 @@
 #include "BitVector.h"
 #include "signalVector.h"
 
+/* Burst lengths */
+#define NORMAL_BURST_NBITS		148
+#define EDGE_BURST_NBITS		444
+#define EDGE_BURST_NSYMS		(EDGE_BURST_NBITS / 3)
+
 /** Convolution type indicator */
 enum ConvType {
   START_ONLY,
