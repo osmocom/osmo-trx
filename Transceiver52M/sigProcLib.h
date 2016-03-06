@@ -104,6 +104,13 @@ signalVector *modulateBurst(const BitVector &wBurst,
 			    int guardPeriodLength,
 			    int sps, bool emptyPulse = false);
 
+/** 8-PSK modulate a burst of bits */
+signalVector *modulateEdgeBurst(const BitVector &bits,
+                                int sps, bool emptyPulse = false);
+
+/** Generate a EDGE burst with random payload - 4 SPS (625 samples) only */
+signalVector *generateEdgeBurst(int tsc);
+
 /** Sinc function */
 float sinc(float x);
 
@@ -202,6 +209,33 @@ int analyzeTrafficBurst(signalVector &rxBurst,
                         unsigned maxTOA);
 
 /**
+        EDGE burst detector
+        @param burst The received GSM burst of interest
+ 
+        @param detectThreshold The threshold that the received burst's post-correlator SNR is compared against to determine validity.
+        @param sps The number of samples per GSM symbol.
+        @param amplitude The estimated amplitude of received TSC burst.
+        @param TOA The estimate time-of-arrival of received TSC burst.
+        @param maxTOA The maximum expected time-of-arrival
+        @return positive if threshold value is reached, negative on error, zero otherwise
+*/
+int detectEdgeBurst(signalVector &burst,
+                    unsigned TSC,
+                    float detectThreshold,
+                    int sps,
+                    complex &amplitude,
+                    float &TOA,
+                    unsigned maxTOA);
+
+/**
+	Downsample 4 SPS to 1 SPS using a polyphase filterbank
+        @param burst Input burst of at least 624 symbols
+        @return Decimated signal vector of 156 symbols
+*/
+
+signalVector *downsampleBurst(signalVector &burst);
+
+/**
 	Decimate a vector.
         @param wVector The vector of interest.
         @param factor Decimation factor.
@@ -220,4 +254,16 @@ signalVector *decimateVector(signalVector &wVector, size_t factor);
 */
 SoftVector *demodulateBurst(signalVector &rxBurst, int sps,
                             complex channel, float TOA);
+
+/**
+        Demodulate 8-PSK EDGE burst with soft symbol ooutput
+	@param rxBurst The burst to be demodulated.
+        @param sps The number of samples per GSM symbol.
+        @param channel The amplitude estimate of the received burst.
+        @param TOA The time-of-arrival of the received burst.
+        @return The demodulated bit sequence.
+*/
+SoftVector *demodEdgeBurst(signalVector &rxBurst, int sps,
+                           complex channel, float TOA);
+
 #endif /* SIGPROCLIB_H */

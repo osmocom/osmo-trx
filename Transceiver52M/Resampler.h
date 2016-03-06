@@ -59,6 +59,11 @@ public:
 	 */
 	size_t len();
 
+	/*
+	 * Enable/disable history 
+	 */
+	void enableHistory(bool on);
+
 private:
 	size_t p;
 	size_t q;
@@ -68,6 +73,7 @@ private:
 
 	float **partitions;
 	float *history;
+	bool history_on;
 
 	bool initFilters(float bw);
 	void releaseFilters();
