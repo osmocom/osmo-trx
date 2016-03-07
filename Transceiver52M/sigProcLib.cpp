@@ -965,6 +965,68 @@ static signalVector *shapeEdgeBurst(const signalVector &symbols)
 }
 
 /*
+ * Generate a random GSM normal burst.
+ */
+signalVector *genRandNormalBurst(int tsc, int sps, int tn)
+{
+  if ((tsc < 0) || (tsc > 7) || (tn < 0) || (tn > 7))
+    return NULL;
+  if ((sps != 1) && (sps != 4))
+    return NULL;
+
+  int i = 0;
+  BitVector *bits = new BitVector(148);
+  signalVector *burst;
+
+  /* Tail bits */
+  for (; i < 4; i++)
+    (*bits)[i] = 0;
+
+  /* Random bits */
+  for (; i < 61; i++)
+    (*bits)[i] = rand() % 2;
+
+  /* Training sequence */
+  for (int n = 0; i < 87; i++, n++)
+    (*bits)[i] = gTrainingSequence[tsc][n];
+
+  /* Random bits */
+  for (; i < 144; i++)
+    (*bits)[i] = rand() % 2;
+
+  /* Tail bits */
+  for (; i < 148; i++)
+    (*bits)[i] = 0;
+
+  int guard = 8 + !(tn % 4);
+  burst = modulateBurst(*bits, guard, sps);
+  delete bits;
+
+  return burst;
+}
+
+signalVector *generateEmptyBurst(int sps, int tn)
+{
+	if ((tn < 0) || (tn > 7))
+		return NULL;
+
+	if (sps == 4)
+		return new signalVector(625);
+	else if (sps == 1)
+		return new signalVector(148 + 8 + !(tn % 4));
+	else
+		return NULL;
+}
+
+signalVector *generateDummyBurst(int sps, int tn)
+{
+	if (((sps != 1) && (sps != 4)) || (tn < 0) || (tn > 7))
+		return NULL;
+
+	return modulateBurst(gDummyBurst, 8 + !(tn % 4), sps);
+}
+
+/*
  * Generate a random 8-PSK EDGE burst. Only 4 SPS is supported with
  * the returned burst being 625 samples in length.
  */

@@ -116,6 +116,15 @@ signalVector *modulateEdgeBurst(const BitVector &bits,
 /** Generate a EDGE burst with random payload - 4 SPS (625 samples) only */
 signalVector *generateEdgeBurst(int tsc);
 
+/** Generate an empty burst - 4 or 1 SPS */
+signalVector *generateEmptyBurst(int sps, int tn);
+
+/** Generate a normal GSM burst with random payload - 4 or 1 SPS */
+signalVector *genRandNormalBurst(int tsc, int sps, int tn);
+
+/** Generate a dummy GSM burst - 4 or 1 SPS */
+signalVector *generateDummyBurst(int sps, int tn);
+
 /** Sinc function */
 float sinc(float x);
 

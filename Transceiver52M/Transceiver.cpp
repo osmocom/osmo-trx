@@ -71,63 +71,25 @@ TransceiverState::~TransceiverState()
   }
 }
 
-static BitVector *genRandNormalBurst(size_t tsc)
-{
-  if (tsc > 7)
-    return NULL;
-
-  BitVector *bits = new BitVector(148);
-
-  size_t i = 0;
-
-  /* Tail bits */
-  for (; i < 4; i++)
-    (*bits)[i] = 0;
-
-  /* Random bits */
-  for (; i < 61; i++)
-    (*bits)[i] = rand() % 2;
-
-  /* Training sequence */
-  for (int j = 0; i < 87; i++, j++)
-    (*bits)[i] = GSM::gTrainingSequence[tsc][j];
-
-  /* Random bits */
-  for (; i < 144; i++)
-    (*bits)[i] = rand() % 2;
-
-  /* Tail bits */
-  for (; i < 148; i++)
-    (*bits)[i] = 0;
-
-  return bits;
-}
-
 bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
 {
-  BitVector *bits;
   signalVector *burst;
 
   if ((sps != 1) && (sps != 4))
     return false;
 
   for (size_t n = 0; n < 8; n++) {
-    size_t guard = 8 + !(n % 4);
-    size_t len = sps == 4 ? 625 : 148 + guard;
-
     for (size_t i = 0; i < 102; i++) {
       switch (filler) {
       case Transceiver::FILLER_DUMMY:
-        burst = modulateBurst(gDummyBurst, guard, sps);
+        burst = generateDummyBurst(sps, n);
         break;
       case Transceiver::FILLER_RAND:
-        bits = genRandNormalBurst(rtsc);
-        burst = modulateBurst(*bits, guard, sps);
-        delete bits;
+        burst = genRandNormalBurst(rtsc, sps, n);
         break;
       case Transceiver::FILLER_ZERO:
       default:
-        burst = new signalVector(len);
+        burst = generateEmptyBurst(sps, n);
       }
 
       scaleVector(*burst, scale);
