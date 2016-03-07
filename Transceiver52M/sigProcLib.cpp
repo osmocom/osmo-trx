@@ -789,26 +789,26 @@ static void rotateBurst2(signalVector &burst, double phase)
     burst[i] = burst[i] * rot;
 }
 
-static signalVector *modulateBurstLaurent(const BitVector &bits,
-					  int guard_len, int sps)
+/*
+ * Ignore the guard length argument in the GMSK modulator interface
+ * because it results in 624/628 sized bursts instead of the preferred
+ * burst length of 625. Only 4 SPS is supported.
+ */
+static signalVector *modulateBurstLaurent(const BitVector &bits)
 {
-  int burst_len;
+  int burst_len, sps = 4;
   float phase;
   signalVector *c0_pulse, *c1_pulse, *c0_burst;
   signalVector *c1_burst, *c0_shaped, *c1_shaped;
   signalVector::iterator c0_itr, c1_itr;
 
-  /*
-   * Apply before and after bits to reduce phase error at burst edges.
-   * Make sure there is enough room in the burst to accomodate all bits.
-   */
-  if (guard_len < 4)
-    guard_len = 4;
-
   c0_pulse = GSMPulse4->c0;
   c1_pulse = GSMPulse4->c1;
 
-  burst_len = sps * (bits.size() + guard_len);
+  if (bits.size() > 156)
+    return NULL;
+
+  burst_len = 625;
 
   c0_burst = new signalVector(burst_len, c0_pulse->size());
   c0_burst->isReal(true);
@@ -1083,7 +1083,7 @@ signalVector *modulateBurst(const BitVector &wBurst, int guardPeriodLength,
   if (emptyPulse)
     return rotateBurst(wBurst, guardPeriodLength, sps);
   else if (sps == 4)
-    return modulateBurstLaurent(wBurst, guardPeriodLength, sps);
+    return modulateBurstLaurent(wBurst);
   else
     return modulateBurstBasic(wBurst, guardPeriodLength, sps);
 }
