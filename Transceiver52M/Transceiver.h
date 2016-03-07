@@ -154,7 +154,8 @@ public:
   enum FillerType {
     FILLER_DUMMY,
     FILLER_ZERO,
-    FILLER_RAND,
+    FILLER_NORM_RAND,
+    FILLER_EDGE_RAND,
   };
 
 private:

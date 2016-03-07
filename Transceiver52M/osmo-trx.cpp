@@ -181,8 +181,11 @@ bool trx_setup_config(struct trx_config *config)
 	case Transceiver::FILLER_ZERO:
 		fillstr = "Disabled";
 		break;
-	case Transceiver::FILLER_RAND:
+	case Transceiver::FILLER_NORM_RAND:
 		fillstr = "Normal busrts with random payload";
+		break;
+	case Transceiver::FILLER_EDGE_RAND:
+		fillstr = "EDGE busrts with random payload";
 		break;
 	}
 
@@ -376,7 +379,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'r':
 			config->rtsc = atoi(optarg);
-			config->filler = Transceiver::FILLER_RAND;
+			config->filler = Transceiver::FILLER_NORM_RAND;
 			break;
 		case 'R':
 			config->rssi_offset = atof(optarg);
@@ -393,6 +396,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			exit(0);
 		}
 	}
+
+	if (config->edge && (config->filler == Transceiver::FILLER_NORM_RAND))
+		config->filler = Transceiver::FILLER_EDGE_RAND;
 
 	if ((config->tx_sps != 1) && (config->tx_sps != 4)) {
 		printf("Unsupported samples-per-symbol %i\n\n", config->tx_sps);

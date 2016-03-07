@@ -84,8 +84,11 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
       case Transceiver::FILLER_DUMMY:
         burst = generateDummyBurst(sps, n);
         break;
-      case Transceiver::FILLER_RAND:
+      case Transceiver::FILLER_NORM_RAND:
         burst = genRandNormalBurst(rtsc, sps, n);
+        break;
+      case Transceiver::FILLER_EDGE_RAND:
+        burst = generateEdgeBurst(rtsc);
         break;
       case Transceiver::FILLER_ZERO:
       default:
@@ -96,8 +99,10 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
       fillerTable[i][n] = burst;
     }
 
-    if (filler == Transceiver::FILLER_RAND)
-      chanType[n] = Transceiver::TSC;
+    if ((filler == Transceiver::FILLER_NORM_RAND) ||
+        (filler == Transceiver::FILLER_EDGE_RAND)) {
+        chanType[n] = Transceiver::TSC;
+    }
   }
 
   return false;
