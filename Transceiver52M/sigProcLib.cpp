@@ -1964,6 +1964,32 @@ static SoftVector *softSliceEdgeBurst(signalVector &burst)
 }
 
 /*
+ * Shared portion of GMSK and EDGE demodulators consisting of timing
+ * recovery and single tap channel correction. For 4 SPS (if activated),
+ * the output is downsampled prior to the 1 SPS modulation specific
+ * stages.
+ */
+static signalVector *demodCommon(signalVector &burst, int sps,
+                                 complex chan, float toa)
+{
+  signalVector *delay, *dec;
+
+  if ((sps != 1) && (sps != 4))
+    return NULL;
+
+  scaleVector(burst, (complex) 1.0 / chan);
+  delay = delayVector(&burst, NULL, -toa * (float) sps);
+
+  if (sps == 1)
+    return delay;
+
+  dec = downsampleBurst(*delay);
+
+  delete delay;
+  return dec;
+}
+
+/*
  * Demodulate GSMK burst. Prior to symbol rotation, operate at
  * 4 SPS (if activated) to minimize distortion through the fractional
  * delay filters. Symbol rotation and after always operates at 1 SPS.
@@ -1972,17 +1998,11 @@ SoftVector *demodulateBurst(signalVector &rxBurst, int sps,
                             complex channel, float TOA)
 {
   SoftVector *bits;
-  signalVector *delay, *dec;
+  signalVector *dec;
 
-  scaleVector(rxBurst, ((complex) 1.0) / channel);
-  delay = delayVector(&rxBurst, NULL, -TOA * (float) sps);
-
-  if (sps == 4) {
-    dec = downsampleBurst(*delay);
-    delete delay;
-  } else {
-    dec = delay;
-  }
+  dec = demodCommon(rxBurst, sps, channel, TOA);
+  if (!dec)
+    return NULL;
 
   /* Shift up by a quarter of a frequency */
   GMSKReverseRotate(*dec, 1);
@@ -2015,24 +2035,17 @@ SoftVector *demodEdgeBurst(signalVector &burst, int sps,
                            complex chan, float toa)
 {
   SoftVector *bits;
-  signalVector *delay, *dec, *rot, *eq;
+  signalVector *dec, *rot, *eq;
 
-  if ((sps != 1) && (sps != 4))
+  dec = demodCommon(burst, sps, chan, toa);
+  if (!dec)
     return NULL;
 
-  scaleVector(burst, ((complex) 1.0) / chan);
-  delay = delayVector(&burst, NULL, -toa * (float) sps);
-
-  if (sps == 4) {
-    dec = downsampleBurst(*delay);
-    delete delay;
-  } else {
-    dec = delay;
-  }
-
+  /* Equalize and derotate */
   eq = convolve(dec, GSMPulse4->c0_inv, NULL, NO_DELAY);
   rot = derotateEdgeBurst(*eq, 1);
 
+  /* Soft slice and normalize */
   bits = softSliceEdgeBurst(*dec);
   vectorSlicer(bits);
 
