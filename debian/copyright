@@ -1,0 +1,25 @@
+The Debian packaging is:
+
+    Copyright (C) 2014 Max <max.suraev@fairwaves.ru>
+
+It was downloaded from:
+
+    git://git.osmocom.org/osmo-trx
+
+Upstream Authors:
+
+    Thomas Tsou <tom@tsou.cc>
+    David A. Burgess <dburgess@kestrelsp.com>
+    Harvind S. Samra <hssamra@kestrelsp.com>
+    Raffi Sevlian <raffisev@gmail.com>
+
+Copyright:
+
+     Copyright (C) 2012-2013 Thomas Tsou <tom@tsou.cc>
+     Copyright (C) 2011 Range Networks, Inc.
+     Copyright (C) 2008-2011 Free Software Foundation, Inc.
+
+License:
+
+    GNU Affero General Public License, Version 3
+
