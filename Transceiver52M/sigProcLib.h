@@ -192,13 +192,15 @@ bool energyDetect(signalVector &rxBurst,
         @param sps The number of samples per GSM symbol.
         @param amplitude The estimated amplitude of received RACH burst.
         @param TOA The estimate time-of-arrival of received RACH burst.
+        @param maxTOA The maximum expected time-of-arrival
         @return positive if threshold value is reached, negative on error, zero otherwise
 */
 int detectRACHBurst(signalVector &rxBurst,
                     float detectThreshold,
                     int sps,
                     complex &amplitude,
-                    float &TOA);
+                    float &TOA,
+                    unsigned maxTOA);
 
 /**
         Normal burst correlator, detector, channel estimator.
