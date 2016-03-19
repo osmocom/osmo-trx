@@ -119,7 +119,8 @@ Transceiver::Transceiver(int wBasePort,
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
     mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mOn(false),
-    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelay(0), mWriteBurstToDiskMask(0)
+    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
+    mWriteBurstToDiskMask(0)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
@@ -535,18 +536,19 @@ int Transceiver::detectBurst(TransceiverState *state, signalVector &burst,
   switch (type) {
   case EDGE:
     rc = detectEdgeBurst(burst, mTSC, threshold, mSPSRx,
-                         amp, toa, mMaxExpectedDelay);
+                         amp, toa, mMaxExpectedDelayNB);
     if (rc > 0)
       break;
     else
       type = TSC;
   case TSC:
     rc = analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx,
-                             amp, toa, mMaxExpectedDelay);
+                             amp, toa, mMaxExpectedDelayNB);
     break;
   case RACH:
     threshold = 6.0;
-    rc = detectRACHBurst(burst, threshold, mSPSRx, amp, toa);
+    rc = detectRACHBurst(burst, threshold, mSPSRx, amp, toa,
+                         mMaxExpectedDelayAB);
     break;
   default:
     LOG(ERR) << "Invalid correlation type";
@@ -753,8 +755,15 @@ void Transceiver::driveControl(size_t chan)
     //set expected maximum time-of-arrival
     int maxDelay;
     sscanf(buffer,"%3s %s %d",cmdcheck,command,&maxDelay);
-    mMaxExpectedDelay = maxDelay; // 1 GSM symbol is approx. 1 km
+    mMaxExpectedDelayAB = maxDelay; // 1 GSM symbol is approx. 1 km
     sprintf(response,"RSP SETMAXDLY 0 %d",maxDelay);
+  }
+  else if (strcmp(command,"SETMAXDLYNB")==0) {
+    //set expected maximum time-of-arrival
+    int maxDelay;
+    sscanf(buffer,"%3s %s %d",cmdcheck,command,&maxDelay);
+    mMaxExpectedDelayNB = maxDelay; // 1 GSM symbol is approx. 1 km
+    sprintf(response,"RSP SETMAXDLYNB 0 %d",maxDelay);
   }
   else if (strcmp(command,"SETRXGAIN")==0) {
     //set expected maximum time-of-arrival
