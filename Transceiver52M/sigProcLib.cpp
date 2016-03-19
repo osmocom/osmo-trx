@@ -1864,7 +1864,7 @@ int detectGeneralBurst(signalVector &rxBurst,
  *
  * Correlation window parameters:
  *   target: Tail bits + RACH length (reduced from 41 to a multiple of 4)
- *   head: Search 4 symbols before target
+ *   head: Search 8 symbols before target
  *   tail: Search 4 symbols + maximum expected delay
  */
 int detectRACHBurst(signalVector &rxBurst,
@@ -1878,7 +1878,7 @@ int detectRACHBurst(signalVector &rxBurst,
   CorrelationSequence *sync;
 
   target = 8 + 40;
-  head = 4;
+  head = 8;
   tail = 4 + maxTOA;
   sync = gRACHSequence;
 
