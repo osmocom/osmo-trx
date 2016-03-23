@@ -53,6 +53,8 @@ extern const BitVector gDummyBurst;
 
 /** Random access burst synch. sequence */
 extern const BitVector gRACHSynchSequence;
+/** Random access burst synch. sequence, GSM 05.02 5.2.7 */
+extern const BitVector gRACHBurst;
 
 
 /**@name Modulus operations for frame numbers. */

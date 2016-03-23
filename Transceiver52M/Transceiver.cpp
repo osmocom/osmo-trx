@@ -90,6 +90,9 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
       case Transceiver::FILLER_EDGE_RAND:
         burst = generateEdgeBurst(rtsc);
         break;
+      case Transceiver::FILLER_ACCESS_RAND:
+        burst = genRandAccessBurst(sps, n);
+        break;
       case Transceiver::FILLER_ZERO:
       default:
         burst = generateEmptyBurst(sps, n);

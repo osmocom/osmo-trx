@@ -122,6 +122,9 @@ signalVector *generateEmptyBurst(int sps, int tn);
 /** Generate a normal GSM burst with random payload - 4 or 1 SPS */
 signalVector *genRandNormalBurst(int tsc, int sps, int tn);
 
+/** Generate an access GSM burst with random payload - 4 or 1 SPS */
+signalVector *genRandAccessBurst(int sps, int tn);
+
 /** Generate a dummy GSM burst - 4 or 1 SPS */
 signalVector *generateDummyBurst(int sps, int tn);
 
