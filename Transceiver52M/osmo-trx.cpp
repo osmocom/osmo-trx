@@ -187,6 +187,9 @@ bool trx_setup_config(struct trx_config *config)
 	case Transceiver::FILLER_EDGE_RAND:
 		fillstr = "EDGE busrts with random payload";
 		break;
+	case Transceiver::FILLER_ACCESS_RAND:
+		fillstr = "Access busrts with random payload";
+		break;
 	}
 
 	std::ostringstream ost("");
@@ -319,6 +322,7 @@ static void print_help()
 		"  -f    Enable C0 filler table\n"
 		"  -o    Set baseband frequency offset (default=auto)\n"
 		"  -r    Random burst test mode with TSC\n"
+		"  -A    Random burst test mode with Access Bursts\n"
 		"  -R    RSSI to dBm offset in dB (default=0)\n"
 		"  -S    Swap channels (UmTRX only)\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
@@ -341,7 +345,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->swap_channels = false;
 	config->edge = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:R:Se")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:AR:Se")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -380,6 +384,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		case 'r':
 			config->rtsc = atoi(optarg);
 			config->filler = Transceiver::FILLER_NORM_RAND;
+			break;
+		case 'A':
+			config->filler = Transceiver::FILLER_ACCESS_RAND;
 			break;
 		case 'R':
 			config->rssi_offset = atof(optarg);

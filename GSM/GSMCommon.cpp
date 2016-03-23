@@ -56,6 +56,9 @@ const BitVector GSM::gDummyBurst("0001111101101110110000010100100111000001001000
 
 const BitVector GSM::gRACHSynchSequence("01001011011111111001100110101010001111000");
 
+//                               |-head-||---------midamble----------------------||--------------data----------------||t|
+const BitVector GSM::gRACHBurst("0011101001001011011111111001100110101010001111000110111101111110000111001001010110011000");
+
 
 int32_t GSM::FNDelta(int32_t v1, int32_t v2)
 {

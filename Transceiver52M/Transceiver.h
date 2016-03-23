@@ -156,6 +156,7 @@ public:
     FILLER_ZERO,
     FILLER_NORM_RAND,
     FILLER_EDGE_RAND,
+    FILLER_ACCESS_RAND,
   };
 
 private:
