@@ -117,6 +117,7 @@ static struct uhd_dev_offset uhd_offsets[] = {
 	{ UMTRX, 1, 1, 9.9692e-5, "UmTRX 1 SPS" },
 	{ UMTRX, 4, 1, 7.3846e-5, "UmTRX 4 SPS" },
 	{ B200,  4, 4, B2XX_TIMING_4_4SPS, "B200/B210 EDGE mode (4 SPS TX/RX)" },
+	{ B210,  4, 4, B2XX_TIMING_4_4SPS, "B200/B210 EDGE mode (4 SPS TX/RX)" },
 	{ UMTRX, 4, 4, 5.1503e-5, "UmTRX EDGE mode (4 SPS TX/RX)" },
 };
 #define NUM_UHD_OFFSETS (sizeof(uhd_offsets)/sizeof(uhd_offsets[0]))
