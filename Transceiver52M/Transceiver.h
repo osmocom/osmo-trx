@@ -54,7 +54,7 @@ struct TransceiverState {
   ~TransceiverState();
 
   /* Initialize a multiframe slot in the filler table */
-  bool init(int filler, size_t sps, float scale, size_t rtsc);
+  bool init(int filler, size_t sps, float scale, size_t rtsc, unsigned rach_delay);
 
   int chanType[8];
 
@@ -107,7 +107,7 @@ public:
   ~Transceiver();
 
   /** Start the control loop */
-  bool init(int filler, size_t rtsc);
+  bool init(int filler, size_t rtsc, unsigned rach_delay);
 
   /** attach the radioInterface receive FIFO */
   bool receiveFIFO(VectorFIFO *wFIFO, size_t chan)
