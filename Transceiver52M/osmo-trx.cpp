@@ -75,6 +75,7 @@ struct trx_config {
 	unsigned rx_sps;
 	unsigned chans;
 	unsigned rtsc;
+	unsigned rach_delay;
 	bool extref;
 	Transceiver::FillerType filler;
 	bool diversity;
@@ -270,7 +271,7 @@ Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
 	trx = new Transceiver(config->port, config->addr.c_str(),
 			      config->tx_sps, config->rx_sps, config->chans,
 			      GSM::Time(3,0), radio, config->rssi_offset);
-	if (!trx->init(config->filler, config->rtsc)) {
+	if (!trx->init(config->filler, config->rtsc, config->rach_delay)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
 		delete trx;
 		return NULL;
@@ -322,8 +323,8 @@ static void print_help()
 		"  -c    Number of ARFCN channels (default=1)\n"
 		"  -f    Enable C0 filler table\n"
 		"  -o    Set baseband frequency offset (default=auto)\n"
-		"  -r    Random burst test mode with TSC\n"
-		"  -A    Random burst test mode with Access Bursts\n"
+		"  -r    Random Normal Burst test mode with TSC\n"
+		"  -A    Random Access Burst test mode with delay\n"
 		"  -R    RSSI to dBm offset in dB (default=0)\n"
 		"  -S    Swap channels (UmTRX only)\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
@@ -338,6 +339,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->rx_sps = DEFAULT_RX_SPS;
 	config->chans = DEFAULT_CHANS;
 	config->rtsc = 0;
+	config->rach_delay = 0;
 	config->extref = false;
 	config->filler = Transceiver::FILLER_ZERO;
 	config->diversity = false;
@@ -346,7 +348,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->swap_channels = false;
 	config->edge = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:AR:Se")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:A:R:Se")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -387,6 +389,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			config->filler = Transceiver::FILLER_NORM_RAND;
 			break;
 		case 'A':
+			config->rach_delay = atoi(optarg);
 			config->filler = Transceiver::FILLER_ACCESS_RAND;
 			break;
 		case 'R':
@@ -422,6 +425,12 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 
 	if (config->rtsc > 7) {
 		printf("Invalid training sequence %i\n\n", config->rtsc);
+		print_help();
+		exit(0);
+	}
+
+	if (config->rach_delay > 68) {
+		printf("RACH delay is too big %i\n\n", config->rach_delay);
 		print_help();
 		exit(0);
 	}

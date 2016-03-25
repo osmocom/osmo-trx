@@ -1017,30 +1017,36 @@ signalVector *genRandNormalBurst(int tsc, int sps, int tn)
 /*
  * Generate a random GSM access burst.
  */
-signalVector *genRandAccessBurst(int sps, int tn)
+signalVector *genRandAccessBurst(int delay, int sps, int tn)
 {
   if ((tn < 0) || (tn > 7))
     return NULL;
   if ((sps != 1) && (sps != 4))
     return NULL;
+  if (delay > 68)
+    return NULL;
 
   int i = 0;
-  BitVector *bits = new BitVector(88);
+  BitVector *bits = new BitVector(88+delay);
   signalVector *burst;
 
+  /* delay */
+  for (; i < delay; i++)
+    (*bits)[i] = 0;
+
   /* head and synch bits */
-  for (int n = 0; i < 49; i++, n++)
+  for (int n = 0; i < 49+delay; i++, n++)
     (*bits)[i] = gRACHBurst[n];
 
   /* Random bits */
-  for (; i < 85; i++)
+  for (; i < 85+delay; i++)
     (*bits)[i] = rand() % 2;
 
   /* Tail bits */
-  for (; i < 88; i++)
+  for (; i < 88+delay; i++)
     (*bits)[i] = 0;
 
-  int guard = 68 + !(tn % 4);
+  int guard = 68-delay + !(tn % 4);
   burst = modulateBurst(*bits, guard, sps);
   delete bits;
 
