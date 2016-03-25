@@ -912,10 +912,11 @@ void Transceiver::driveReceiveRadio()
   }
 }
 
-void Transceiver::logRxBurst(SoftVector *burst, GSM::Time time, double dbm,
+void Transceiver::logRxBurst(size_t chan, SoftVector *burst, GSM::Time time, double dbm,
                              double rssi, double noise, double toa)
 {
   LOG(DEBUG) << std::fixed << std::right
+    << " chan: "   << chan
     << " time: "   << time
     << " RSSI: "   << std::setw(5) << std::setprecision(1) << rssi
                    << "dBFS/" << std::setw(6) << -dbm << "dBm"
@@ -948,7 +949,7 @@ void Transceiver::driveReceiveFIFO(size_t chan)
     nbits = gSlotLen * 3;
 
   dBm = RSSI + rssiOffset;
-  logRxBurst(rxBurst, burstTime, dBm, RSSI, noise, TOA);
+  logRxBurst(chan, rxBurst, burstTime, dBm, RSSI, noise, TOA);
 
   TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
 

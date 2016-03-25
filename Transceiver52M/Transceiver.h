@@ -276,7 +276,7 @@ protected:
   /** set priority on current thread */
   void setPriority(float prio = 0.5) { mRadioInterface->setPriority(prio); }
 
-  void logRxBurst(SoftVector *burst, GSM::Time time, double dbm,
+  void logRxBurst(size_t chan, SoftVector *burst, GSM::Time time, double dbm,
                   double rssi, double noise, double toa);
 };
 
