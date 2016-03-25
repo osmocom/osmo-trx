@@ -71,7 +71,7 @@ TransceiverState::~TransceiverState()
   }
 }
 
-bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
+bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc, unsigned rach_delay)
 {
   signalVector *burst;
 
@@ -91,7 +91,7 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc)
         burst = generateEdgeBurst(rtsc);
         break;
       case Transceiver::FILLER_ACCESS_RAND:
-        burst = genRandAccessBurst(sps, n);
+        burst = genRandAccessBurst(rach_delay, sps, n);
         break;
       case Transceiver::FILLER_ZERO:
       default:
@@ -160,7 +160,7 @@ Transceiver::~Transceiver()
  * are still expected to report clock indications through control channel
  * activity.
  */
-bool Transceiver::init(int filler, size_t rtsc)
+bool Transceiver::init(int filler, size_t rtsc, unsigned rach_delay)
 {
   int d_srcport, d_dstport, c_srcport, c_dstport;
 
@@ -216,7 +216,7 @@ bool Transceiver::init(int filler, size_t rtsc)
     if (i && filler == FILLER_DUMMY)
       filler = FILLER_ZERO;
 
-    mStates[i].init(filler, mSPSTx, txFullScale, rtsc);
+    mStates[i].init(filler, mSPSTx, txFullScale, rtsc, rach_delay);
   }
 
   return true;
