@@ -131,7 +131,7 @@ Transceiver::Transceiver(int wBasePort,
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
     mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false),
-    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
+    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(2*rx_sps), mMaxExpectedDelayNB(2*rx_sps),
     mWriteBurstToDiskMask(0)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();
