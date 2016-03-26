@@ -223,7 +223,7 @@ bool Transceiver::init(int filler, size_t rtsc)
     c_srcport = mBasePort + 2 * i + 1;
     c_dstport = mBasePort + 2 * i + 101;
     d_srcport = mBasePort + 2 * i + 2;
-    d_dstport = mBasePort + 2 * i + (mExternalDemod)?202:102;
+    d_dstport = mBasePort + 2 * i + (mExternalDemod?202:102);
 
     mCtrlSockets[i] = new UDPSocket(c_srcport, mAddr.c_str(), c_dstport);
     mDataSockets[i] = new UDPSocket(d_srcport, mAddr.c_str(), d_dstport);
