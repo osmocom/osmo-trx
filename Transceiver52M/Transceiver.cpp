@@ -910,10 +910,12 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   }
 
   /* Choose a diversity channel to use */
+  /* Returned value is a pointer to the radio_burst internal structure */
   burst = chooseDiversityPath(radio_burst, burst_power);
-  delete radio_burst;
-  if (!burst)
+  if (!burst) {
+    delete radio_burst;
     return;
+  }
 
   /* We use idle timeslots to calculate noise levels for informational purposes.
    * Otherwise we ignore them. */
@@ -940,16 +942,16 @@ void Transceiver::driveReceiveFIFO(size_t chan)
       << " TOA: "    << std::setw(5) << std::setprecision(2) << TOA
       << " bits: "   << *rxBurst;
 
-  pktLen = formatDemodPacket(burstTime, dBm, TOA, rxBurst, burstString);
+    pktLen = formatDemodPacket(burstTime, dBm, TOA, rxBurst, burstString);
     delete rxBurst;
   } else {
     /* Send radio vector as is */
-  pktLen = formatRawPacket(burstTime, dBm, TOA, burstType, mTSC, burst, burstString);
+    pktLen = formatRawPacket(burstTime, dBm, TOA, burstType, mTSC, burst, burstString);
   }
 
   mDataSockets[chan]->write(burstString, pktLen);
 
-  delete burst;
+  delete radio_burst;
 }
 
 int Transceiver::formatCommonPacketHeader(GSM::Time burstTime, double dBm, double TOA,
