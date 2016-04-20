@@ -71,7 +71,8 @@ libtransceiver_la_SOURCES = \
 
 bin_PROGRAMS = \
 	osmo-trx \
-	osmo-trx-gen
+	osmo-trx-gen \
+	osmo-trx-dec
 
 noinst_HEADERS = \
 	Complex.h \
@@ -103,6 +104,13 @@ osmo_trx_LDADD = \
 
 osmo_trx_gen_SOURCES = osmo-trx-gen.cpp
 osmo_trx_gen_LDADD = \
+	libtransceiver.la \
+	$(ARCH_LA) \
+	$(GSM_LA) \
+	$(COMMON_LA) $(SQLITE_LA)
+
+osmo_trx_dec_SOURCES = osmo-trx-dec.cpp
+osmo_trx_dec_LDADD = \
 	libtransceiver.la \
 	$(ARCH_LA) \
 	$(GSM_LA) \
