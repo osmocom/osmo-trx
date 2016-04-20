@@ -212,11 +212,11 @@ private:
   void writeClockInterface(void);
 
   /** Detectbursts */
-  int detectBurst(TransceiverState *state, signalVector &burst,
+  int detectBurst(signalVector &burst,
                   complex &amp, float &toa, CorrType type);
 
   /** Demodulate burst and output soft bits */
-  SoftVector *demodulate(TransceiverState *state, signalVector &burst,
+  SoftVector *demodulate(signalVector &burst,
                          complex amp, float toa, CorrType type);
 
   int mSPSTx;                          ///< number of samples per Tx symbol

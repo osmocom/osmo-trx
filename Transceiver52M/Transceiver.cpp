@@ -531,8 +531,8 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   }
 }
 
-int Transceiver::detectBurst(TransceiverState *state, signalVector &burst,
-                            complex &amp, float &toa, CorrType type)
+int Transceiver::detectBurst(signalVector &burst,
+                             complex &amp, float &toa, CorrType type)
 {
   float threshold = 5.0, rc = 0;
 
@@ -567,8 +567,7 @@ int Transceiver::detectBurst(TransceiverState *state, signalVector &burst,
 /*
  * Demodulate GMSK by direct rotation and soft slicing.
  */
-SoftVector *Transceiver::demodulate(TransceiverState *state,
-                                    signalVector &burst, complex amp,
+SoftVector *Transceiver::demodulate(signalVector &burst, complex amp,
                                     float toa, CorrType type)
 {
   if (type == EDGE)
@@ -666,7 +665,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   }
 
   /* Detect normal or RACH bursts */
-  rc = detectBurst(state, *burst, amp, toa, type);
+  rc = detectBurst(*burst, amp, toa, type);
 
   if (rc > 0) {
     type = (CorrType) rc;
@@ -683,7 +682,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
 
   timingOffset = toa / mSPSRx;
 
-  bits = demodulate(state, *burst, amp, toa, type);
+  bits = demodulate(*burst, amp, toa, type);
 
   delete radio_burst;
   return bits;
