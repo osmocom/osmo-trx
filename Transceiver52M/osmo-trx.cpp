@@ -200,6 +200,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   TRX Address............. " << config->addr << std::endl;
 	ost << "   Channels................ " << config->chans << std::endl;
 	ost << "   Tx Samples-per-Symbol... " << config->tx_sps << std::endl;
+	ost << "   Rx Samples-per-Symbol... " << config->rx_sps << std::endl;
 	ost << "   EDGE support............ " << edgestr << std::endl;
 	ost << "   External Reference...... " << refstr << std::endl;
 	ost << "   C0 Filler Table......... " << fillstr << std::endl;
