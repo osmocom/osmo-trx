@@ -935,26 +935,35 @@ static signalVector *mapEdgeSymbols(const BitVector &bits)
   return symbols;
 }
 
+/*
+ * EDGE 8-PSK rotate and pulse shape
+ *
+ * Delay the EDGE downlink bursts by one symbol in order to match GMSK pulse
+ * shaping group delay. The difference in group delay arises from the dual
+ * pulse filter combination of the GMSK Laurent represenation whereas 8-PSK
+ * uses a single pulse linear filter.
+ */
 static signalVector *shapeEdgeBurst(const signalVector &symbols)
 {
-  size_t nsyms, nsamps = 625;
+  size_t nsyms, nsamps = 625, sps = 4;
   signalVector *burst, *shape;
   signalVector::iterator burst_itr;
 
   nsyms = symbols.size();
 
-  if (nsyms * 4 > nsamps)
+  if (nsyms * sps > nsamps)
     nsyms = 156;
 
   burst = new signalVector(nsamps, GSMPulse4->c0->size());
-  burst_itr = burst->begin();
 
-  for (size_t i = 0; i < nsyms; i++) {
+  /* Delay burst by 1 symbol */
+  burst_itr = burst->begin() + sps;
+  for (size_t i = 0; i < nsyms - 1; i++) {
     float phase = i * 3.0f * M_PI / 8.0f;
     Complex<float> rot = Complex<float>(cos(phase), sin(phase));
 
     *burst_itr = symbols[i] * rot;
-    burst_itr += 4;
+    burst_itr += sps;
   }
 
   /* Single Gaussian pulse approximation shaping */
