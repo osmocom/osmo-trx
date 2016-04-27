@@ -2089,7 +2089,7 @@ SoftVector *demodEdgeBurst(signalVector &burst, int sps,
   rot = derotateEdgeBurst(*eq, 1);
 
   /* Soft slice and normalize */
-  bits = softSliceEdgeBurst(*dec);
+  bits = softSliceEdgeBurst(*rot);
   vectorSlicer(bits);
 
   delete dec;
