@@ -271,7 +271,6 @@ bool Transceiver::start()
                             TxUpperLoopAdapter, (void*) chan);
   }
 
-  writeClockInterface();
   mOn = true;
   return true;
 }
@@ -715,9 +714,6 @@ void Transceiver::driveControl(size_t chan)
   char response[MAX_PACKET_LENGTH];
 
   sscanf(buffer,"%3s %s",cmdcheck,command);
-
-  if (!chan)
-    writeClockInterface();
 
   if (strcmp(cmdcheck,"CMD")!=0) {
     LOG(WARNING) << "bogus message on control interface";
