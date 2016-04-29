@@ -704,7 +704,7 @@ void Transceiver::driveControl(size_t chan)
   int msgLen = -1;
   buffer[0] = '\0';
 
-  msgLen = mCtrlSockets[chan]->read(buffer);
+  msgLen = mCtrlSockets[chan]->read(buffer, sizeof(buffer));
 
   if (msgLen < 1) {
     return;
@@ -872,7 +872,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   char buffer[gSlotLen+50];
 
   // check data socket
-  size_t msgLen = mDataSockets[chan]->read(buffer);
+  size_t msgLen = mDataSockets[chan]->read(buffer, sizeof(buffer));
 
   if (msgLen!=gSlotLen+1+4+1) {
     LOG(ERR) << "badly formatted packet on GSM->TRX interface";

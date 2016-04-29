@@ -108,7 +108,7 @@ public:
 		@param buffer A char[MAX_UDP_LENGTH] procured by the caller.
 		@return The number of bytes received or -1 on non-blocking pass.
 	*/
-	int read(char* buffer);
+	int read(char* buffer, size_t length);
 
 	/**
 		Receive a packet with a timeout.
@@ -116,7 +116,7 @@ public:
 		@param maximum wait time in milliseconds
 		@return The number of bytes received or -1 on timeout.
 	*/
-	int read(char* buffer, unsigned timeout);
+	int read(char* buffer, size_t length, unsigned timeout);
 
 
 	/** Send a packet to a given destination, other than the default. */
