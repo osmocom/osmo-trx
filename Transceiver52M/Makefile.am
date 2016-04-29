@@ -21,7 +21,7 @@
 
 include $(top_srcdir)/Makefile.common
 
-AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I./common
+AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/common
 AM_CXXFLAGS = -ldl -lpthread
 
 SUBDIRS = arm x86
