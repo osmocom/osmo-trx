@@ -1,3 +1,11 @@
+osmo-trx (0.1.10~2) trusty; urgency=medium
+
+  * c88385c makefile: Fix build from an external path.
+  * 0479562 EDGE: Fix demodulation slicer input
+  * d2b0703 uhd: Correct timing alignment in 8-PSK and GMSK downlink bursts
+
+ -- Alexander Chemeris <Alexander.Chemeris@gmail.com>  Sat, 30 Apr 2016 01:57:45 +0300
+
 osmo-trx (0.1.10~1) trusty; urgency=medium
 
   * some EDGE support in master
