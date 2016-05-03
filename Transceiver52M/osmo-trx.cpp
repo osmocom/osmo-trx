@@ -37,14 +37,9 @@
  *     1 - Uses minimized modulator (less computation, more distortion)
  *
  *     Other values are invalid. Receive path (uplink) is always
- *     downsampled to 1 sps. Default to 4 sps for all cases except for
- *     ARM and non-SIMD enabled architectures.
+ *     downsampled to 1 sps. Default to 4 sps for all cases.
  */
-#if defined(HAVE_NEON) || !defined(HAVE_SSE3)
-#define DEFAULT_TX_SPS		1
-#else
 #define DEFAULT_TX_SPS		4
-#endif
 
 /*
  * Samples-per-symbol for uplink (receiver) path
