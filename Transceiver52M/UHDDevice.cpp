@@ -110,8 +110,8 @@ static struct uhd_dev_offset uhd_offsets[] = {
 	{ B210,  4, 1, B2XX_TIMING_4SPS, "B210 4 SPS" },
 	{ E1XX,  1, 1, 9.5192e-5, "E1XX 1 SPS" },
 	{ E1XX,  4, 1, 6.5571e-5, "E1XX 4 SPS" },
-	{ E3XX,  1, 1, 1.5000e-4, "E3XX 1 SPS" },
-	{ E3XX,  4, 1, 1.2740e-4, "E3XX 4 SPS" },
+	{ E3XX,  1, 1, 1.84616e-4, "E3XX 1 SPS" },
+	{ E3XX,  4, 1, 1.29231e-4, "E3XX 4 SPS" },
 	{ X3XX,  1, 1, 1.5360e-4, "X3XX 1 SPS"},
 	{ X3XX,  4, 1, 1.1264e-4, "X3XX 4 SPS"},
 	{ UMTRX, 1, 1, 9.9692e-5, "UmTRX 1 SPS" },
@@ -657,7 +657,7 @@ bool uhd_device::parse_dev_type()
 	b210_str = mboard_str.find("B210");
 	e100_str = mboard_str.find("E100");
 	e110_str = mboard_str.find("E110");
-	e310_str = mboard_str.find("E310");
+	e310_str = mboard_str.find("E3XX");
 	x300_str = mboard_str.find("X300");
 	x310_str = mboard_str.find("X310");
 	umtrx_str = dev_str.find("UmTRX");
@@ -700,7 +700,8 @@ bool uhd_device::parse_dev_type()
 		tx_window = TX_WINDOW_FIXED;
 		dev_type = UMTRX;
 	} else {
-		LOG(ALERT) << "Unknown UHD device type " << dev_str;
+		LOG(ALERT) << "Unknown UHD device type "
+			   << dev_str << " " << mboard_str;
 		return false;
 	}
 
