@@ -131,6 +131,7 @@ static struct uhd_dev_offset special_offsets[] = {
 	{ UMTRX, 4, 1, 5.2103e-5, "UmTRX diversity, 4 SPS" },
 };
 
+
 /*
  * Select sample rate based on device type and requested samples-per-symbol.
  * The base rate is either GSM symbol rate, 270.833 kHz, or the minimum
@@ -644,7 +645,7 @@ bool uhd_device::parse_dev_type()
 {
 	std::string mboard_str, dev_str;
 	uhd::property_tree::sptr prop_tree;
-	size_t usrp1_str, usrp2_str, e100_str, e110_str, e310_str,
+	size_t usrp1_str, usrp2_str, e100_str, e110_str, e310_str, e3xx_str,
 	       b100_str, b200_str, b210_str, x300_str, x310_str, umtrx_str;
 
 	prop_tree = usrp_dev->get_device()->get_tree();
@@ -658,7 +659,8 @@ bool uhd_device::parse_dev_type()
 	b210_str = mboard_str.find("B210");
 	e100_str = mboard_str.find("E100");
 	e110_str = mboard_str.find("E110");
-	e310_str = mboard_str.find("E3XX");
+	e310_str = mboard_str.find("E310");
+	e3xx_str = mboard_str.find("E3XX");
 	x300_str = mboard_str.find("X300");
 	x310_str = mboard_str.find("X310");
 	umtrx_str = dev_str.find("UmTRX");
@@ -688,7 +690,8 @@ bool uhd_device::parse_dev_type()
 	} else if (usrp2_str != std::string::npos) {
 		tx_window = TX_WINDOW_FIXED;
 		dev_type = USRP2;
-	} else if (e310_str != std::string::npos) {
+	} else if ((e310_str != std::string::npos) ||
+		   (e3xx_str != std::string::npos)) {
 		tx_window = TX_WINDOW_FIXED;
 		dev_type = E3XX;
 	} else if (x300_str != std::string::npos) {
@@ -717,6 +720,26 @@ bool uhd_device::parse_dev_type()
 	return true;
 }
 
+/*
+ * Check for UHD version > 3.9.0 for E3XX support
+ */
+static bool uhd_e3xx_version_chk()
+{
+	std::string ver = uhd::get_version_string();
+	std::string major_str(ver.begin(), ver.begin() + 3);
+	std::string minor_str(ver.begin() + 4, ver.begin() + 7);
+
+	int major_val = atoi(major_str.c_str());
+	int minor_val = atoi(minor_str.c_str());
+
+	if (major_val < 3)
+		return false;
+	if (minor_val < 9)
+		return false;
+
+	return true;
+}
+
 int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 {
 	// Find UHD devices
@@ -739,6 +762,11 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	// Check for a valid device type and set bus type
 	if (!parse_dev_type())
 		return -1;
+
+	if ((dev_type == E3XX) && !uhd_e3xx_version_chk()) {
+		LOG(ALERT) << "E3XX requires UHD 003.009.000 or greater";
+		return -1;
+	}
 
 	// Verify and set channels
 	if ((dev_type == B210) && (chans == 2)) {
