@@ -68,8 +68,8 @@ enum uhd_dev_type {
 
 struct uhd_dev_offset {
 	enum uhd_dev_type type;
-	int tx_sps;
-	int rx_sps;
+	size_t tx_sps;
+	size_t rx_sps;
 	double offset;
 	const std::string desc;
 };
@@ -130,64 +130,6 @@ static struct uhd_dev_offset special_offsets[] = {
 	{ UMTRX, 1, 1, 8.0875e-5, "UmTRX diversity, 1 SPS" },
 	{ UMTRX, 4, 1, 5.2103e-5, "UmTRX diversity, 4 SPS" },
 };
-
-static double get_dev_offset(enum uhd_dev_type type, int tx_sps, int rx_sps,
-			     bool edge = false, bool diversity = false)
-{
-	struct uhd_dev_offset *offset = NULL;
-
-	/* Reject USRP1 */
-	if (type == USRP1) {
-		LOG(ERR) << "Invalid device type";
-		return 0.0;
-	}
-
-	if (edge && diversity) {
-		LOG(ERR) << "Unsupported configuration";
-		return 0.0;
-	}
-
-	if (edge && (type != B200) && (type != B210) && (type != UMTRX)) {
-		LOG(ALERT) << "EDGE is supported on B200/B210 and UmTRX only";
-		return 0.0;
-	}
-
-	/* Special cases (e.g. diversity receiver) */
-	if (diversity) {
-		if (type != UMTRX) {
-			LOG(ALERT) << "Diversity on UmTRX only";
-			return 0.0;
-		}
-
-		switch (tx_sps) {
-		case 1:
-			offset = &special_offsets[0];
-			break;
-		case 4:
-		default:
-			offset = &special_offsets[1];
-		}
-	} else {
-		/* Search for matching offset value */
-		for (size_t i = 0; i < NUM_UHD_OFFSETS; i++) {
-			if ((type == uhd_offsets[i].type) &&
-				(tx_sps == uhd_offsets[i].tx_sps) &&
-				(rx_sps == uhd_offsets[i].rx_sps)) {
-				offset = &uhd_offsets[i];
-				break;
-			}
-		}
-	}
-
-	if (!offset) {
-		LOG(ERR) << "Invalid device configuration";
-		return 0.0;
-	}
-
-	std::cout << "-- Setting " << offset->desc << std::endl;
-
-	return offset->offset;
-}
 
 /*
  * Select sample rate based on device type and requested samples-per-symbol.
@@ -385,6 +327,7 @@ private:
 	std::vector<smpl_buf *> rx_buffers;
 
 	void init_gains();
+	double get_dev_offset(bool edge, bool diversity);
 	int set_master_clk(double rate);
 	int set_rates(double tx_rate, double rx_rate);
 	bool parse_dev_type();
@@ -511,6 +454,64 @@ void uhd_device::init_gains()
 
 	return;
 
+}
+
+double uhd_device::get_dev_offset(bool edge, bool diversity)
+{
+	struct uhd_dev_offset *offset = NULL;
+
+	/* Reject USRP1 */
+	if (dev_type == USRP1) {
+		LOG(ERR) << "Invalid device type";
+		return 0.0;
+	}
+
+	if (edge && diversity) {
+		LOG(ERR) << "Unsupported configuration";
+		return 0.0;
+	}
+
+	if (edge && (dev_type != B200) &&
+	    (dev_type != B210) && (dev_type != UMTRX)) {
+		LOG(ALERT) << "EDGE is supported on B200/B210 and UmTRX only";
+		return 0.0;
+	}
+
+	/* Special cases (e.g. diversity receiver) */
+	if (diversity) {
+		if (dev_type != UMTRX) {
+			LOG(ALERT) << "Diversity on UmTRX only";
+			return 0.0;
+		}
+
+		switch (tx_sps) {
+		case 1:
+			offset = &special_offsets[0];
+			break;
+		case 4:
+		default:
+			offset = &special_offsets[1];
+		}
+	} else {
+		/* Search for matching offset value */
+		for (size_t i = 0; i < NUM_UHD_OFFSETS; i++) {
+			if ((dev_type == uhd_offsets[i].type) &&
+				(tx_sps == uhd_offsets[i].tx_sps) &&
+				(rx_sps == uhd_offsets[i].rx_sps)) {
+				offset = &uhd_offsets[i];
+				break;
+			}
+		}
+	}
+
+	if (!offset) {
+		LOG(ERR) << "Invalid device configuration";
+		return 0.0;
+	}
+
+	std::cout << "-- Setting " << offset->desc << std::endl;
+
+	return offset->offset;
 }
 
 int uhd_device::set_master_clk(double clk_rate)
@@ -802,7 +803,7 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	if (rx_sps == 4)
 		edge = true;
 
-	double offset = get_dev_offset(dev_type, tx_sps, rx_sps, edge, diversity);
+	double offset = get_dev_offset(edge, diversity);
 	if (offset == 0.0) {
 		LOG(ERR) << "Unsupported configuration, no correction applied";
 		ts_offset = 0;
