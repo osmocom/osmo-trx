@@ -170,7 +170,7 @@ static double select_rate(uhd_dev_type type, int sps, bool diversity = false)
 }
 
 /*
-    Sample Buffer - Allows reading and writing of timed samples using OpenBTS
+    Sample Buffer - Allows reading and writing of timed samples using osmo-trx
                     or UHD style timestamps. Time conversions are handled
                     internally or accessable through the static convert calls.
 */
