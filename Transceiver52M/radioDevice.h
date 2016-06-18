@@ -22,7 +22,7 @@
 #include "config.h"
 #endif
 
-#define GSMRATE       1625e3/6
+#define GSMRATE       (1625e3/6)
 
 /** a 64-bit virtual timestamp for radio data */
 typedef unsigned long long TIMESTAMP;
