@@ -1,3 +1,18 @@
+osmo-trx (0.1.10~3) trusty; urgency=medium
+
+  * 737fc25 transceiver: WIP: Set default max delay to 2 samples.
+  * 58f5333 sigProcLib: Change number of head bits in detectRACHBurst() from 4 to 8.
+  * ceb4171 transceiver: Add an option to emulate a RACH delay in random filler mode.
+  * 5bf037b transceiver: Log channel number in DEBUG output of demoded bursts.
+  * a057c7d radioInterface: Initialize power scale with a meaningful default.
+  * 3b093bb uhd: Set minimum UHD version requirement for E3XX
+  * 0fe41a5 uhd: Set default Tx sampling to 4 sps
+  * a5e0f1c uhd: Update default E3XX settings
+  * 2c650a6 common: Add mandatory length field to UDP receive calls
+  * d4555f2 common: Restrict UDP binding to localhost only
+
+ -- Alexander Chemeris <Alexander.Chemeris@gmail.com>  Sat, 18 Jun 2016 16:07:17 +0300
+
 osmo-trx (0.1.10~2) trusty; urgency=medium
 
   * c88385c makefile: Fix build from an external path.
@@ -21,6 +36,6 @@ osmo-trx (0.1.9) trusty; urgency=medium
 
 osmo-trx (0.1.8) precise; urgency=low
 
-     * Initial release (Closes: #nnnn) <nnnn is the bug number of your ITP
+     * Initial release
 
  -- Ivan Klyuchnikov <Ivan.Kluchnikov@fairwaves.ru>  Sun, 9 Mar 2014 14:10:10 +0400
