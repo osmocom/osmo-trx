@@ -70,6 +70,8 @@ bool RadioInterface::init(int type)
 
     convertSendBuffer[i] = new short[sendBuffer[i]->size() * 2];
     convertRecvBuffer[i] = new short[recvBuffer[i]->size() * 2];
+
+    powerScaling[i] = 1.0;
   }
 
   sendCursor = 0;
