@@ -1858,8 +1858,8 @@ int detectGeneralBurst(signalVector &rxBurst,
  *
  * Correlation window parameters:
  *   target: Tail bits + RACH length (reduced from 41 to a multiple of 4)
- *   head: Search 4 symbols before target
- *   tail: Search 4 symbols + maximum expected delay
+ *   head: Search 8 symbols before target
+ *   tail: Search 8 symbols + maximum expected delay
  */
 int detectRACHBurst(signalVector &rxBurst,
             float thresh,
@@ -1872,8 +1872,8 @@ int detectRACHBurst(signalVector &rxBurst,
   CorrelationSequence *sync;
 
   target = 8 + 40;
-  head = 4;
-  tail = 4 + maxTOA;
+  head = 8;
+  tail = 8 + maxTOA;
   sync = gRACHSequence;
 
   rc = detectGeneralBurst(rxBurst, thresh, sps, amp, toa,
@@ -1887,8 +1887,8 @@ int detectRACHBurst(signalVector &rxBurst,
  *
  * Correlation window parameters:
  *   target: Tail + data + mid-midamble + 1/2 remaining midamblebits
- *   head: Search 4 symbols before target
- *   tail: Search 4 symbols + maximum expected delay
+ *   head: Search 6 symbols before target
+ *   tail: Search 6 symbols + maximum expected delay
  */
 int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
                         int sps, complex &amp, float &toa, unsigned max_toa)
@@ -1900,8 +1900,8 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
     return -SIGERR_UNSUPPORTED;
 
   target = 3 + 58 + 16 + 5;
-  head = 4;
-  tail = 4 + max_toa;
+  head = 6;
+  tail = 6 + max_toa;
   sync = gMidambles[tsc];
 
   rc = detectGeneralBurst(rxBurst, thresh, sps, amp, toa,
@@ -1919,8 +1919,8 @@ int detectEdgeBurst(signalVector &rxBurst, unsigned tsc, float thresh,
     return -SIGERR_UNSUPPORTED;
 
   target = 3 + 58 + 16 + 5;
-  head = 5;
-  tail = 5 + max_toa;
+  head = 6;
+  tail = 6 + max_toa;
   sync = gEdgeMidambles[tsc];
 
   rc = detectGeneralBurst(rxBurst, thresh, sps, amp, toa,
