@@ -1,8 +1,10 @@
 /*
  * Device support for Ettus Research UHD driver 
- * Written by Thomas Tsou <ttsou@vt.edu>
  *
  * Copyright 2010,2011 Free Software Foundation, Inc.
+ * Copyright (C) 2015 Ettus Research LLC
+ *
+ * Author: Tom Tsou <tom.tsou@ettus.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -137,11 +139,13 @@ static struct uhd_dev_offset special_offsets[] = {
  * The base rate is either GSM symbol rate, 270.833 kHz, or the minimum
  * usable channel spacing of 400 kHz.
  */
-static double select_rate(uhd_dev_type type, int sps, bool diversity = false)
+static double select_rate(uhd_dev_type type, int sps,
+			  RadioDevice::InterfaceType iface)
 {
-	if (diversity && (type == UMTRX)) {
-		return GSMRATE * 4;
-	} else if (diversity) {
+	if (iface == RadioDevice::DIVERSITY) {
+		if (type == UMTRX)
+			return GSMRATE * 4;
+
 		LOG(ALERT) << "Diversity supported on UmTRX only";
 		return -9999.99;
 	}
@@ -242,8 +246,8 @@ private:
 */
 class uhd_device : public RadioDevice {
 public:
-	uhd_device(size_t tx_sps, size_t rx_sps,
-		   size_t chans, bool diversity, double offset);
+	uhd_device(size_t tx_sps, size_t rx_sps, InterfaceType type,
+		   size_t chans, double offset);
 	~uhd_device();
 
 	int open(const std::string &args, bool extref, bool swap_channels);
@@ -264,8 +268,8 @@ public:
 	bool setTxFreq(double wFreq, size_t chan);
 	bool setRxFreq(double wFreq, size_t chan);
 
-	inline TIMESTAMP initialWriteTimestamp();
-	inline TIMESTAMP initialReadTimestamp();
+	TIMESTAMP initialWriteTimestamp();
+	TIMESTAMP initialReadTimestamp();
 
 	double fullScaleInputValue();
 	double fullScaleOutputValue();
@@ -328,7 +332,7 @@ private:
 	std::vector<smpl_buf *> rx_buffers;
 
 	void init_gains();
-	double get_dev_offset(bool edge, bool diversity);
+	double get_dev_offset();
 	int set_master_clk(double rate);
 	int set_rates(double tx_rate, double rx_rate);
 	bool parse_dev_type();
@@ -342,7 +346,7 @@ private:
 	bool set_freq(double freq, size_t chan, bool tx);
 
 	Thread *async_event_thrd;
-	bool diversity;
+	InterfaceType iface;
 	Mutex tune_lock;
 };
 
@@ -387,7 +391,7 @@ static void thread_enable_cancel(bool cancel)
 }
 
 uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
-		       size_t chans, bool diversity, double offset)
+		       InterfaceType iface, size_t chans, double offset)
 	: tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),
@@ -398,7 +402,7 @@ uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
 	this->rx_sps = rx_sps;
 	this->chans = chans;
 	this->offset = offset;
-	this->diversity = diversity;
+	this->iface = iface;
 }
 
 uhd_device::~uhd_device()
@@ -457,7 +461,7 @@ void uhd_device::init_gains()
 
 }
 
-double uhd_device::get_dev_offset(bool edge, bool diversity)
+double uhd_device::get_dev_offset()
 {
 	struct uhd_dev_offset *offset = NULL;
 
@@ -467,21 +471,10 @@ double uhd_device::get_dev_offset(bool edge, bool diversity)
 		return 0.0;
 	}
 
-	if (edge && diversity) {
-		LOG(ERR) << "Unsupported configuration";
-		return 0.0;
-	}
-
-	if (edge && (dev_type != B200) &&
-	    (dev_type != B210) && (dev_type != UMTRX)) {
-		LOG(ALERT) << "EDGE is supported on B200/B210 and UmTRX only";
-		return 0.0;
-	}
-
 	/* Special cases (e.g. diversity receiver) */
-	if (diversity) {
-		if (dev_type != UMTRX) {
-			LOG(ALERT) << "Diversity on UmTRX only";
+	if (iface == DIVERSITY) {
+		if ((dev_type != UMTRX) || (rx_sps != 1)) {
+			LOG(ALERT) << "Unsupported device configuration";
 			return 0.0;
 		}
 
@@ -789,8 +782,11 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 		usrp_dev->set_clock_source("external");
 
 	// Set rates
-	double _tx_rate = select_rate(dev_type, tx_sps);
-	double _rx_rate = select_rate(dev_type, rx_sps, diversity);
+	double _rx_rate = select_rate(dev_type, rx_sps, iface);
+	double _tx_rate = select_rate(dev_type, tx_sps, iface);
+
+	if (iface == DIVERSITY)
+		_rx_rate = select_rate(dev_type, 1, iface);
 
 	if ((_tx_rate < 0.0) || (_rx_rate < 0.0))
 		return -1;
@@ -802,7 +798,7 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 		// Setting LMS6002D LPF to 500kHz gives us the best signal quality
 		for (size_t i = 0; i < chans; i++) {
 			usrp_dev->set_tx_bandwidth(500*1000*2, i);
-			if (!diversity)
+			if (iface != DIVERSITY)
 				usrp_dev->set_rx_bandwidth(500*1000*2, i);
 		}
 	}
@@ -827,11 +823,7 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	// Set receive chain sample offset. Trigger the EDGE offset
 	// table by checking for 4 SPS on the receive path. No other
 	// configuration supports using 4 SPS.
-	bool edge = false;
-	if (rx_sps == 4)
-		edge = true;
-
-	double offset = get_dev_offset(edge, diversity);
+	double offset = get_dev_offset();
 	if (offset == 0.0) {
 		LOG(ERR) << "Unsupported configuration, no correction applied";
 		ts_offset = 0;
@@ -845,7 +837,7 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	// Print configuration
 	LOG(INFO) << "\n" << usrp_dev->get_pp_string();
 
-	if (diversity)
+	if (iface == DIVERSITY)
 		return DIVERSITY;
 
 	switch (dev_type) {
@@ -1580,7 +1572,7 @@ std::string smpl_buf::str_code(ssize_t code)
 }
 
 RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       size_t chans, bool diversity, double offset)
+			       InterfaceType iface, size_t chans, double offset)
 {
-	return new uhd_device(tx_sps, rx_sps, chans, diversity, offset);
+	return new uhd_device(tx_sps, rx_sps, iface, chans, offset);
 }
