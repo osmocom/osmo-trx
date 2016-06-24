@@ -67,6 +67,7 @@ libtransceiver_la_SOURCES = \
 	$(COMMON_SOURCES) \
 	Resampler.cpp \
 	radioInterfaceResamp.cpp \
+	radioInterfaceMulti.cpp \
 	radioInterfaceDiversity.cpp
 
 bin_PROGRAMS = osmo-trx

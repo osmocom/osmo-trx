@@ -23,6 +23,7 @@
 #endif
 
 #define GSMRATE       (1625e3/6)
+#define MCBTS_SPACING  800000.0
 
 /** a 64-bit virtual timestamp for radio data */
 typedef unsigned long long TIMESTAMP;
@@ -39,6 +40,7 @@ class RadioDevice {
     NORMAL,
     RESAMP_64M,
     RESAMP_100M,
+    MULTI_ARFCN,
     DIVERSITY,
   };
 

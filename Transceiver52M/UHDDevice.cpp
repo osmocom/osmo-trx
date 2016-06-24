@@ -35,6 +35,7 @@
 #endif
 
 #define B2XX_CLK_RT      26e6
+#define B2XX_MCBTS_CLK_RT   3.2e6
 #define E1XX_CLK_RT      52e6
 #define B100_BASE_RT     400000
 #define USRP2_BASE_RT    390625
@@ -61,6 +62,7 @@ enum uhd_dev_type {
 	B100,
 	B200,
 	B210,
+	B2XX_MCBTS,
 	E1XX,
 	E3XX,
 	X3XX,
@@ -110,6 +112,7 @@ static struct uhd_dev_offset uhd_offsets[] = {
 	{ B200,  4, 1, B2XX_TIMING_4SPS, "B200 4/1 Tx/Rx SPS" },
 	{ B210,  1, 1, B2XX_TIMING_1SPS, "B210 1 SPS" },
 	{ B210,  4, 1, B2XX_TIMING_4SPS, "B210 4/1 Tx/Rx SPS" },
+	{ B2XX_MCBTS, 4, 4, 1.07188e-4, "B200/B210 4 SPS Multi-ARFCN" },
 	{ E1XX,  1, 1, 9.5192e-5, "E1XX 1 SPS" },
 	{ E1XX,  4, 1, 6.5571e-5, "E1XX 4/1 Tx/Rx SPS" },
 	{ E3XX,  1, 1, 1.84616e-4, "E3XX 1 SPS" },
@@ -150,8 +153,19 @@ static double select_rate(uhd_dev_type type, int sps,
 		return -9999.99;
 	}
 
+
 	if ((sps != 4) && (sps != 1))
 		return -9999.99;
+
+	if (iface == RadioDevice::MULTI_ARFCN) {
+		switch (type) {
+		case B2XX_MCBTS:
+			return  4 * MCBTS_SPACING;
+		default:
+			LOG(ALERT) << "Invalid device combination";
+			return -9999.99;
+		}
+	}
 
 	switch (type) {
 	case USRP2:
@@ -542,11 +556,14 @@ int uhd_device::set_rates(double tx_rate, double rx_rate)
 	if ((dev_type == B200) || (dev_type == B210) || (dev_type == E3XX)) {
 		if (set_master_clk(B2XX_CLK_RT) < 0)
 			return -1;
-	}
-	else if (dev_type == E1XX) {
+	} else if (dev_type == E1XX) {
 		if (set_master_clk(E1XX_CLK_RT) < 0)
 			return -1;
+	} else if (dev_type == B2XX_MCBTS) {
+		if (set_master_clk(B2XX_MCBTS_CLK_RT) < 0)
+			return -1;
 	}
+
 
 	// Set sample rates
 	try {
@@ -574,6 +591,9 @@ int uhd_device::set_rates(double tx_rate, double rx_rate)
 
 double uhd_device::setTxGain(double db, size_t chan)
 {
+	if (iface == MULTI_ARFCN)
+		chan = 0;
+
 	if (chan >= tx_gains.size()) {
 		LOG(ALERT) << "Requested non-existent channel" << chan;
 		return 0.0f;
@@ -620,6 +640,9 @@ double uhd_device::setRxGain(double db, size_t chan)
 
 double uhd_device::getRxGain(size_t chan)
 {
+	if (iface == MULTI_ARFCN)
+		chan = 0;
+
 	if (chan >= rx_gains.size()) {
 		LOG(ALERT) << "Requested non-existent channel " << chan;
 		return 0.0f;
@@ -762,11 +785,24 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	}
 
 	// Verify and set channels
-	if ((dev_type == B210) && (chans == 2)) {
-	} else if ((dev_type == UMTRX) && (chans == 2)) {
-		uhd::usrp::subdev_spec_t subdev_spec(swap_channels?"B:0 A:0":"A:0 B:0");
-		usrp_dev->set_tx_subdev_spec(subdev_spec);
-		usrp_dev->set_rx_subdev_spec(subdev_spec);
+	if (iface == MULTI_ARFCN) {
+		if ((dev_type != B200) && (dev_type != B210)) {
+			LOG(ALERT) << "Unsupported device configuration";
+			return -1;
+		}
+
+		dev_type = B2XX_MCBTS;
+		chans = 1;
+	} else if (chans == 2) {
+		if (dev_type == B210) {
+		} else if (dev_type == UMTRX) {
+			uhd::usrp::subdev_spec_t subdev_spec(swap_channels?"B:0 A:0":"A:0 B:0");
+			usrp_dev->set_tx_subdev_spec(subdev_spec);
+			usrp_dev->set_rx_subdev_spec(subdev_spec);
+		} else {
+			LOG(ALERT) << "Invalid device configuration";
+			return -1;
+		}
 	} else if (chans != 1) {
 		LOG(ALERT) << "Invalid channel combination for device";
 		return -1;
@@ -839,6 +875,8 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 
 	if (iface == DIVERSITY)
 		return DIVERSITY;
+	if (iface == MULTI_ARFCN)
+		return MULTI_ARFCN;
 
 	switch (dev_type) {
 	case B100:
@@ -1295,7 +1333,7 @@ double uhd_device::getRxFreq(size_t chan)
  */
 TIMESTAMP uhd_device::initialWriteTimestamp()
 {
-	if (rx_sps == tx_sps)
+	if ((iface == MULTI_ARFCN) || (rx_sps == tx_sps))
 		return ts_initial;
 	else
 		return ts_initial * tx_sps;

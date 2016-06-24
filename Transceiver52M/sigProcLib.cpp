@@ -80,7 +80,6 @@ static Complex<float> psk8_table[8] = {
 #define DOWNSAMPLE_OUT_LEN	156
 
 static Resampler *dnsampler = NULL;
-static signalVector *dnsampler_in = NULL;
 
 /*
  * RACH and midamble correlation waveforms. Store the buffer separately
@@ -163,7 +162,6 @@ void sigProcLibDestroy()
   delete GSMPulse1;
   delete GSMPulse4;
   delete dnsampler;
-  delete dnsampler_in;
 
   GMSKRotation1 = NULL;
   GMSKRotation4 = NULL;
@@ -1936,13 +1934,15 @@ int detectEdgeBurst(signalVector &rxBurst, unsigned tsc, float thresh,
 
 signalVector *downsampleBurst(signalVector &burst)
 {
-  size_t ilen = DOWNSAMPLE_IN_LEN, olen = DOWNSAMPLE_OUT_LEN;
+  signalVector *in, *out;
 
-  signalVector *out = new signalVector(olen);
-  memcpy(dnsampler_in->begin(), burst.begin(), ilen * 2 * sizeof(float));
+  in = new signalVector(DOWNSAMPLE_IN_LEN, dnsampler->len());
+  out = new signalVector(DOWNSAMPLE_OUT_LEN);
+  memcpy(in->begin(), burst.begin(), DOWNSAMPLE_IN_LEN * 2 * sizeof(float));
 
-  dnsampler->rotate((float *) dnsampler_in->begin(), ilen,
-                    (float *) out->begin(), olen);
+  dnsampler->rotate((float *) in->begin(), DOWNSAMPLE_IN_LEN,
+                    (float *) out->begin(), DOWNSAMPLE_OUT_LEN);
+  delete in;
   return out;
 };
 
@@ -2127,8 +2127,6 @@ bool sigProcLibSetup()
     LOG(ALERT) << "Rx resampler failed to initialize";
     goto fail;
   }
-
-  dnsampler_in = new signalVector(DOWNSAMPLE_IN_LEN, dnsampler->len());
 
   return true;
 
