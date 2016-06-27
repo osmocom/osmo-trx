@@ -221,10 +221,6 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
 {
 	RadioInterface *radio = NULL;
 
-	if ((config->rx_sps != 1) && (type != RadioDevice::NORMAL)) {
-		LOG(ALERT) << "Unsupported radio interface configuration";
-	}
-
 	switch (type) {
 	case RadioDevice::NORMAL:
 		radio = new RadioInterface(usrp, config->tx_sps,
@@ -314,7 +310,8 @@ static void print_help()
 		"  -e    Enable EDGE receiver\n"
 		"  -d    Enable dual channel diversity receiver\n"
 		"  -x    Enable external 10 MHz reference\n"
-		"  -s    Samples-per-symbol (1 or 4)\n"
+		"  -s    Tx samples-per-symbol (1 or 4)\n"
+		"  -b    Rx samples-per-symbol (1 or 4)\n"
 		"  -c    Number of ARFCN channels (default=1)\n"
 		"  -f    Enable C0 filler table\n"
 		"  -o    Set baseband frequency offset (default=auto)\n"
@@ -343,7 +340,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->swap_channels = false;
 	config->edge = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:r:A:R:Se")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dxfo:s:b:r:A:R:Se")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -379,6 +376,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		case 's':
 			config->tx_sps = atoi(optarg);
 			break;
+		case 'b':
+			config->rx_sps = atoi(optarg);
+			break;
 		case 'r':
 			config->rtsc = atoi(optarg);
 			config->filler = Transceiver::FILLER_NORM_RAND;
@@ -403,17 +403,17 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		}
 	}
 
+	/* Force 4 SPS for EDGE configurations */
+	if (config->edge) {
+		config->tx_sps = 4;
+		config->rx_sps = 4;
+	}
+
 	if (config->edge && (config->filler == Transceiver::FILLER_NORM_RAND))
 		config->filler = Transceiver::FILLER_EDGE_RAND;
 
 	if ((config->tx_sps != 1) && (config->tx_sps != 4)) {
 		printf("Unsupported samples-per-symbol %i\n\n", config->tx_sps);
-		print_help();
-		exit(0);
-	}
-
-	if (config->edge && (config->tx_sps != 4)) {
-		printf("EDGE only supported at 4 samples per symbol\n\n");
 		print_help();
 		exit(0);
 	}
