@@ -827,7 +827,7 @@ void Transceiver::driveControl(size_t chan)
     // set TSC
     unsigned TSC;
     sscanf(buffer, "%3s %s %d", cmdcheck, command, &TSC);
-    if (mOn || (TSC < 0) || (TSC > 7))
+    if ((TSC < 0) || (TSC > 7))
       sprintf(response, "RSP SETTSC 1 %d", TSC);
     else if (chan && (TSC != mTSC))
       sprintf(response, "RSP SETTSC 1 %d", TSC);
