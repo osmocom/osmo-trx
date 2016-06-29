@@ -1678,6 +1678,17 @@ release:
   return status;
 }
 
+/*
+ * Peak-to-average computation +/- range from peak in symbols
+ */
+#define COMPUTE_PEAK_MIN     2
+#define COMPUTE_PEAK_MAX     5
+
+/*
+ * Minimum number of values needed to compute peak-to-average
+ */
+#define COMPUTE_PEAK_CNT     5
+
 static float computePeakRatio(signalVector *corr,
                               int sps, float toa, complex amp)
 {
@@ -1691,7 +1702,7 @@ static float computePeakRatio(signalVector *corr,
 
   peak = corr->begin() + (int) rint(toa);
 
-  for (int i = 2 * sps; i <= 5 * sps; i++) {
+  for (int i = COMPUTE_PEAK_MIN * sps; i <= COMPUTE_PEAK_MAX * sps; i++) {
     if (peak - i >= corr->begin()) {
       avg += (peak - i)->norm2();
       num++;
@@ -1702,7 +1713,7 @@ static float computePeakRatio(signalVector *corr,
     }
   }
 
-  if (num < 2)
+  if (num < COMPUTE_PEAK_CNT)
     return 0.0;
 
   rms = sqrtf(avg / (float) num) + 0.00001;

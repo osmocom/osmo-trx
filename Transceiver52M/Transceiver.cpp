@@ -44,6 +44,15 @@ using namespace GSM;
 /* Number of running values use in noise average */
 #define NOISE_CNT			20
 
+/*
+ * Burst detection threshold
+ *
+ * Decision threshold value for burst gating on peak-to-average value of
+ * correlated synchronization sequences. Lower values pass more bursts up
+ * to upper layers but will increase the false detection rate.
+ */
+#define BURST_THRESH			4.0
+
 TransceiverState::TransceiverState()
   : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT), mPower(0.0)
 {
@@ -534,23 +543,22 @@ Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
 int Transceiver::detectBurst(signalVector &burst,
                              complex &amp, float &toa, CorrType type)
 {
-  float threshold = 5.0, rc = 0;
+  int rc = 0;
 
   switch (type) {
   case EDGE:
-    rc = detectEdgeBurst(burst, mTSC, threshold, mSPSRx,
+    rc = detectEdgeBurst(burst, mTSC, BURST_THRESH, mSPSRx,
                          amp, toa, mMaxExpectedDelayNB);
     if (rc > 0)
       break;
     else
       type = TSC;
   case TSC:
-    rc = analyzeTrafficBurst(burst, mTSC, threshold, mSPSRx,
+    rc = analyzeTrafficBurst(burst, mTSC, BURST_THRESH, mSPSRx,
                              amp, toa, mMaxExpectedDelayNB);
     break;
   case RACH:
-    threshold = 6.0;
-    rc = detectRACHBurst(burst, threshold, mSPSRx, amp, toa,
+    rc = detectRACHBurst(burst, BURST_THRESH, mSPSRx, amp, toa,
                          mMaxExpectedDelayAB);
     break;
   default:
