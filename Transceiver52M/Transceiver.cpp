@@ -877,12 +877,20 @@ void Transceiver::driveControl(size_t chan)
 
 bool Transceiver::driveTxPriorityQueue(size_t chan)
 {
-  char buffer[gSlotLen+50];
+  int burstLen;
+  char buffer[EDGE_BURST_NBITS + 50];
 
   // check data socket
   size_t msgLen = mDataSockets[chan]->read(buffer, sizeof(buffer));
 
-  if (msgLen!=gSlotLen+1+4+1) {
+  if (msgLen == gSlotLen + 1 + 4 + 1) {
+    burstLen = gSlotLen;
+  } else if (msgLen == EDGE_BURST_NBITS + 1 + 4 + 1) {
+    if (mSPSTx != 4)
+      return false;
+
+    burstLen = EDGE_BURST_NBITS;
+  } else {
     LOG(ERR) << "badly formatted packet on GSM->TRX interface";
     return false;
   }
@@ -895,7 +903,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(frameNum,timeSlot);
   
   int RSSI = (int) buffer[5];
-  static BitVector newBurst(gSlotLen);
+  static BitVector newBurst(burstLen);
   BitVector::iterator itr = newBurst.begin();
   char *bufferItr = buffer+6;
   while (itr < newBurst.end()) 
