@@ -284,7 +284,8 @@ Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
 	trx = new Transceiver(config->port, config->addr.c_str(),
 			      config->tx_sps, config->rx_sps, config->chans,
 			      GSM::Time(3,0), radio, config->rssi_offset);
-	if (!trx->init(config->filler, config->rtsc, config->rach_delay)) {
+	if (!trx->init(config->filler, config->rtsc,
+		       config->rach_delay, config->edge)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
 		delete trx;
 		return NULL;
@@ -422,7 +423,6 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'e':
 			config->edge = true;
-			config->rx_sps = 4;
 			break;
 		default:
 			print_help();

@@ -107,7 +107,7 @@ public:
   ~Transceiver();
 
   /** Start the control loop */
-  bool init(int filler, size_t rtsc, unsigned rach_delay);
+  bool init(int filler, size_t rtsc, unsigned rach_delay, bool edge);
 
   /** attach the radioInterface receive FIFO */
   bool receiveFIFO(VectorFIFO *wFIFO, size_t chan)
@@ -223,6 +223,7 @@ private:
   int mSPSRx;                          ///< number of samples per Rx symbol
   size_t mChans;
 
+  bool mEdge;
   bool mOn;	                           ///< flag to indicate that transceiver is powered on
   bool mHandover[8][8];                ///< expect handover to the timeslot/subslot
   double mTxFreq;                      ///< the transmit frequency

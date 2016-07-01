@@ -130,7 +130,7 @@ Transceiver::Transceiver(int wBasePort,
     mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
-    mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mOn(false),
+    mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
     mWriteBurstToDiskMask(0)
 {
@@ -169,7 +169,7 @@ Transceiver::~Transceiver()
  * are still expected to report clock indications through control channel
  * activity.
  */
-bool Transceiver::init(int filler, size_t rtsc, unsigned rach_delay)
+bool Transceiver::init(int filler, size_t rtsc, unsigned rach_delay, bool edge)
 {
   int d_srcport, d_dstport, c_srcport, c_dstport;
 
@@ -182,6 +182,8 @@ bool Transceiver::init(int filler, size_t rtsc, unsigned rach_delay)
     LOG(ALERT) << "Failed to initialize signal processing library";
     return false;
   }
+
+  mEdge = edge;
 
   mDataSockets.resize(mChans);
   mCtrlSockets.resize(mChans);
@@ -619,6 +621,10 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   /* Set time and determine correlation type */
   GSM::Time time = radio_burst->getTime();
   CorrType type = expectedCorrType(time, chan);
+
+  /* Enable 8-PSK burst detection if EDGE is enabled */
+  if (mEdge && (type == TSC))
+    type = EDGE;
 
   /* Debug: dump bursts to disk */
   /* bits 0-7  - chan 0 timeslots
