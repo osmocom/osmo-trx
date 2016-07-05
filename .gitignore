@@ -1,0 +1,44 @@
+# build results
+*.o
+*.lo
+*.la
+Transceiver52M/osmo-trx
+
+# tests
+CommonLibs/BitVectorTest
+CommonLibs/ConfigurationTest
+CommonLibs/F16Test
+CommonLibs/InterthreadTest
+CommonLibs/LogTest
+CommonLibs/RegexpTest
+CommonLibs/SocketsTest
+CommonLibs/TimevalTest
+CommonLibs/URLEncodeTest
+CommonLibs/VectorTest
+
+# automake/autoconf
+*.in
+.deps
+.libs
+.dirstamp
+*~
+Makefile
+config.log
+config.status
+config.h
+config.guess
+config.sub
+config/*
+configure
+compile
+aclocal.m4
+autom4te.cache
+depcomp
+install-sh
+libtool
+ltmain.sh
+missing
+stamp-h1
+
+# vim
+*.sw?
