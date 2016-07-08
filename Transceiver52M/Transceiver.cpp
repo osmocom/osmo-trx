@@ -757,14 +757,12 @@ void Transceiver::driveControl(size_t chan)
     int ts=0,ss=0;
     sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&ts,&ss);
     mHandover[ts][ss] = true;
-    LOG(WARNING) << "HANDOVER RACH at timeslot " << ts << " subslot " << ss;
     sprintf(response,"RSP HANDOVER 0 %d %d",ts,ss);
   }
   else if (strcmp(command,"NOHANDOVER")==0){
     int ts=0,ss=0;
     sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&ts,&ss);
     mHandover[ts][ss] = false;
-    LOG(WARNING) << "NOHANDOVER at timeslot " << ts << " subslot " << ss;
     sprintf(response,"RSP NOHANDOVER 0 %d %d",ts,ss);
   }
   else if (strcmp(command,"SETMAXDLY")==0) {
