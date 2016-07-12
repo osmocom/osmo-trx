@@ -344,7 +344,7 @@ bool RadioInterface::pushBuffer()
 
   for (size_t i = 0; i < mChans; i++) {
     convert_float_short(convertSendBuffer[i],
-                        (float *) sendBuffer[0]->getReadSegment(),
+                        (float *) sendBuffer[i]->getReadSegment(),
                         powerScaling[i],
                         segmentLen * 2);
   }
