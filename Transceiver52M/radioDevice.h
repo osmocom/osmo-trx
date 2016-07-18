@@ -44,11 +44,17 @@ class RadioDevice {
     DIVERSITY,
   };
 
+  enum ReferenceType {
+    REF_INTERNAL,
+    REF_EXTERNAL,
+    REF_GPS,
+  };
+
   static RadioDevice *make(size_t tx_sps, size_t rx_sps, InterfaceType type,
                            size_t chans = 1, double offset = 0.0);
 
   /** Initialize the USRP */
-  virtual int open(const std::string &args = "", bool extref = false, bool swap_channels = false)=0;
+  virtual int open(const std::string &args, int ref, bool swap_channels)=0;
 
   virtual ~RadioDevice() { }
 

@@ -99,7 +99,7 @@ private:
   USRPDevice(size_t sps);
 
   /** Instantiate the USRP */
-  int open(const std::string &, bool, bool);
+  int open(const std::string &, int, bool);
 
   /** Start the USRP */
   bool start();

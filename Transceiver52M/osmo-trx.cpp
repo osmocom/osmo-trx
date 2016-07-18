@@ -72,6 +72,7 @@ struct trx_config {
 	unsigned rtsc;
 	unsigned rach_delay;
 	bool extref;
+	bool gpsref;
 	Transceiver::FillerType filler;
 	bool diversity;
 	bool mcbts;
@@ -183,9 +184,15 @@ bool trx_setup_config(struct trx_config *config)
 	}
 
 	edgestr = config->edge ? "Enabled" : "Disabled";
-	refstr = config->extref ? "Enabled" : "Disabled";
 	divstr = config->diversity ? "Enabled" : "Disabled";
 	mcstr = config->mcbts ? "Enabled" : "Disabled";
+
+	if (config->extref)
+		refstr = "External";
+	else if (config->gpsref)
+		refstr = "GPS";
+	else
+		refstr = "Internal";
 
 	switch (config->filler) {
 	case Transceiver::FILLER_DUMMY:
@@ -215,7 +222,7 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   Tx Samples-per-Symbol... " << config->tx_sps << std::endl;
 	ost << "   Rx Samples-per-Symbol... " << config->rx_sps << std::endl;
 	ost << "   EDGE support............ " << edgestr << std::endl;
-	ost << "   External Reference...... " << refstr << std::endl;
+	ost << "   Reference............... " << refstr << std::endl;
 	ost << "   C0 Filler Table......... " << fillstr << std::endl;
 	ost << "   Multi-Carrier........... " << mcstr << std::endl;
 	ost << "   Diversity............... " << divstr << std::endl;
@@ -331,9 +338,10 @@ static void print_help()
 		"  -i    IP address of GSM core\n"
 		"  -p    Base port number\n"
 		"  -e    Enable EDGE receiver\n"
-		"  -d    Enable dual channel diversity receiver\n"
+		"  -d    Enable dual channel diversity receiver (deprecated)\n"
 		"  -m    Enable multi-ARFCN transceiver (default=disabled)\n"
 		"  -x    Enable external 10 MHz reference\n"
+		"  -g    Enable GPSDO reference\n"
 		"  -s    Tx samples-per-symbol (1 or 4)\n"
 		"  -b    Rx samples-per-symbol (1 or 4)\n"
 		"  -c    Number of ARFCN channels (default=1)\n"
@@ -357,6 +365,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->rtsc = 0;
 	config->rach_delay = 0;
 	config->extref = false;
+	config->gpsref = false;
 	config->filler = Transceiver::FILLER_ZERO;
 	config->mcbts = false;
 	config->diversity = false;
@@ -365,7 +374,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->swap_channels = false;
 	config->edge = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dmxfo:s:b:r:A:R:Se")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dmxgfo:s:b:r:A:R:Se")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -394,6 +403,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'x':
 			config->extref = true;
+			break;
+		case 'g':
+			config->gpsref = true;
 			break;
 		case 'f':
 			config->filler = Transceiver::FILLER_DUMMY;
@@ -430,6 +442,12 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		}
 	}
 
+	if (config->gpsref && config->extref) {
+		printf("External and GPSDO references unavailable at the same time\n\n");
+		print_help();
+		exit(0);
+	}
+
 	/* Force 4 SPS for EDGE or multi-ARFCN configurations */
 	if ((config->edge) || (config->mcbts)) {
 		config->tx_sps = 4;
@@ -461,7 +479,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 
 int main(int argc, char *argv[])
 {
-	int type, chans;
+	int type, chans, ref;
 	RadioDevice *usrp;
 	RadioInterface *radio = NULL;
 	Transceiver *trx = NULL;
@@ -486,9 +504,16 @@ int main(int argc, char *argv[])
 	if (config.mcbts)
 		iface = RadioDevice::MULTI_ARFCN;
 
+	if (config.extref)
+		ref = RadioDevice::REF_EXTERNAL;
+	else if (config.gpsref)
+		ref = RadioDevice::REF_GPS;
+	else
+		ref = RadioDevice::REF_INTERNAL;
+
 	usrp = RadioDevice::make(config.tx_sps, config.rx_sps, iface,
 				 config.chans, config.offset);
-	type = usrp->open(config.dev_args, config.extref, config.swap_channels);
+	type = usrp->open(config.dev_args, ref, config.swap_channels);
 	if (type < 0) {
 		LOG(ALERT) << "Failed to create radio device" << std::endl;
 		goto shutdown;

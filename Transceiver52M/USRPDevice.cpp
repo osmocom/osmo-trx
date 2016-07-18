@@ -89,7 +89,7 @@ USRPDevice::USRPDevice(size_t sps)
 #endif
 }
 
-int USRPDevice::open(const std::string &, bool, bool)
+int USRPDevice::open(const std::string &, int, bool)
 {
   writeLock.unlock();
 

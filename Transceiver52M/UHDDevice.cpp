@@ -269,7 +269,7 @@ public:
 		   size_t chans, double offset);
 	~uhd_device();
 
-	int open(const std::string &args, bool extref, bool swap_channels);
+	int open(const std::string &args, int ref, bool swap_channels);
 	bool start();
 	bool stop();
 	bool restart();
@@ -770,8 +770,10 @@ static bool uhd_e3xx_version_chk()
 	return true;
 }
 
-int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
+int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 {
+	const char *refstr;
+
 	// Find UHD devices
 	uhd::device_addr_t addr(args);
 	uhd::device_addrs_t dev_addrs = uhd::device::find(addr);
@@ -828,8 +830,22 @@ int uhd_device::open(const std::string &args, bool extref, bool swap_channels)
 	rx_gains.resize(chans);
 	rx_buffers.resize(chans);
 
-	if (extref)
-		usrp_dev->set_clock_source("external");
+	switch (ref) {
+	case REF_INTERNAL:
+		refstr = "internal";
+		break;
+	case REF_EXTERNAL:
+		refstr = "external";
+		break;
+	case REF_GPS:
+		refstr = "gpsdo";
+		break;
+	default:
+		LOG(ALERT) << "Invalid reference type";
+		return -1;
+	}
+
+	usrp_dev->set_clock_source(refstr);
 
 	// Set rates
 	double _rx_rate = select_rate(dev_type, rx_sps, iface);
