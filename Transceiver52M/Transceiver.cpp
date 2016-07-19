@@ -906,7 +906,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(frameNum,timeSlot);
   
   int RSSI = (int) buffer[5];
-  static BitVector newBurst(burstLen);
+  BitVector newBurst(burstLen);
   BitVector::iterator itr = newBurst.begin();
   char *bufferItr = buffer+6;
   while (itr < newBurst.end()) 
