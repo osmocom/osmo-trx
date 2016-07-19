@@ -694,7 +694,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
     return NULL;
   }
 
-  timingOffset = toa / mSPSRx;
+  timingOffset = toa;
 
   bits = demodulate(*burst, amp, toa, type);
 
