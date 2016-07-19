@@ -956,7 +956,7 @@ static signalVector *shapeEdgeBurst(const signalVector &symbols)
 
   /* Delay burst by 1 symbol */
   burst_itr = burst->begin() + sps;
-  for (size_t i = 0; i < nsyms - 1; i++) {
+  for (size_t i = 0; i < nsyms; i++) {
     float phase = i * 3.0f * M_PI / 8.0f;
     Complex<float> rot = Complex<float>(cos(phase), sin(phase));
 
