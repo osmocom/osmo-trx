@@ -173,16 +173,6 @@ bool trx_setup_config(struct trx_config *config)
 		return false;
 	}
 
-	/* Diversity only supported on 2 channels without multi-carrier */
-	if (config->diversity && config->mcbts) {
-		std::cout << "Multi-carrier diversity unsupported" << std::endl;
-		return false;
-	}
-	if (config->diversity && (config->chans != 2)) {
-		std::cout << "Setting channels to 2 for diversity" << std::endl;
-		config->chans = 2;
-	}
-
 	edgestr = config->edge ? "Enabled" : "Disabled";
 	divstr = config->diversity ? "Enabled" : "Disabled";
 	mcstr = config->mcbts ? "Enabled" : "Disabled";
@@ -254,9 +244,11 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
 	case RadioDevice::RESAMP_64M:
 	case RadioDevice::RESAMP_100M:
 		radio = new RadioInterfaceResamp(usrp, config->tx_sps,
-						 config->chans);
+						 config->rx_sps);
 		break;
 	case RadioDevice::DIVERSITY:
+
+
 		radio = new RadioInterfaceDiversity(usrp, config->tx_sps,
 						    config->chans);
 		break;
@@ -442,16 +434,33 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		}
 	}
 
-	if (config->gpsref && config->extref) {
-		printf("External and GPSDO references unavailable at the same time\n\n");
-		print_help();
-		exit(0);
-	}
-
 	/* Force 4 SPS for EDGE or multi-ARFCN configurations */
 	if ((config->edge) || (config->mcbts)) {
 		config->tx_sps = 4;
 		config->rx_sps = 4;
+	}
+
+	if (config->gpsref && config->extref) {
+		printf("External and GPSDO references unavailable at the same time\n\n");
+		goto bad_config;
+	}
+
+	/* Special restrictions on (deprecated) diversity configuration */
+	if (config->diversity) {
+		if (config->mcbts || config->edge) {
+			std::cout << "Multi-carrier/EDGE diversity unsupported" << std::endl;
+			goto bad_config;
+		}
+
+		if (config->rx_sps != 1) {
+			std::cout << "Diversity only supported with 1 SPS" << std::endl;
+			goto bad_config;
+		}
+
+		if (config->chans != 2) {
+			std::cout << "Diversity only supported with 2 channels" << std::endl;
+			goto bad_config;
+		}
 	}
 
 	if (config->edge && (config->filler == Transceiver::FILLER_NORM_RAND))
@@ -460,21 +469,24 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	if ((config->tx_sps != 1) && (config->tx_sps != 4) &&
 	    (config->rx_sps != 1) && (config->rx_sps != 4)) {
 		printf("Unsupported samples-per-symbol %i\n\n", config->tx_sps);
-		print_help();
-		exit(0);
+		goto bad_config;
 	}
 
 	if (config->rtsc > 7) {
 		printf("Invalid training sequence %i\n\n", config->rtsc);
-		print_help();
-		exit(0);
+		goto bad_config;
 	}
 
 	if (config->rach_delay > 68) {
 		printf("RACH delay is too big %i\n\n", config->rach_delay);
-		print_help();
-		exit(0);
+		goto bad_config;
 	}
+
+	return;
+
+bad_config:
+	print_help();
+	exit(0);
 }
 
 int main(int argc, char *argv[])

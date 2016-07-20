@@ -51,8 +51,8 @@ static size_t resamp_outrate = 0;
 static size_t resamp_outchunk = 0;
 
 RadioInterfaceDiversity::RadioInterfaceDiversity(RadioDevice *wRadio,
-						 size_t sps, size_t chans)
-	: RadioInterface(wRadio, sps, chans, 2), outerRecvBuffer(NULL),
+						 size_t tx_sps, size_t chans)
+	: RadioInterface(wRadio, tx_sps, 1, chans, 2), outerRecvBuffer(NULL),
 	  mDiversity(false), mFreqSpacing(0.0)
 {
 }

@@ -58,10 +58,9 @@ static size_t resamp_outrate = 0;
 static size_t resamp_outchunk = 0;
 
 RadioInterfaceResamp::RadioInterfaceResamp(RadioDevice *wRadio,
-					   size_t sps, size_t chans)
-	: RadioInterface(wRadio, sps, chans),
-	  outerSendBuffer(NULL),
-	  outerRecvBuffer(NULL)
+					   size_t tx_sps, size_t rx_sps)
+	: RadioInterface(wRadio, tx_sps, rx_sps, 1),
+	  outerSendBuffer(NULL), outerRecvBuffer(NULL)
 {
 }
 
@@ -97,11 +96,6 @@ bool RadioInterfaceResamp::init(int type)
 {
 	float cutoff = 1.0f;
 
-	if (mChans != 1) {
-		LOG(ALERT) << "Unsupported channel configuration " << mChans;
-		return false;
-	}
-
 	close();
 
 	sendBuffer.resize(1);
@@ -126,13 +120,8 @@ bool RadioInterfaceResamp::init(int type)
 		return false;
 	}
 
-	resamp_inchunk = resamp_inrate * 4;
-	resamp_outchunk = resamp_outrate * 4;
-
-	if (resamp_inchunk  * NUMCHUNKS < 157 * mSPSTx * 2) {
-		LOG(ALERT) << "Invalid inner chunk size " << resamp_inchunk;
-		return false;
-	}
+	resamp_inchunk = resamp_inrate * 4 * mSPSRx;
+	resamp_outchunk = resamp_outrate * 4 * mSPSRx;
 
 	if (mSPSTx == 4)
 		cutoff = RESAMP_TX4_FILTER;

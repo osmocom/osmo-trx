@@ -85,8 +85,7 @@ public:
   virtual void close();
 
   /** constructor */
-  RadioInterface(RadioDevice* wRadio = NULL,
-                 size_t tx_sps = 4, size_t rx_sps = 1,
+  RadioInterface(RadioDevice* wRadio, size_t tx_sps, size_t rx_sps,
 		 size_t chans = 1, size_t diversity = 1,
                  int receiveOffset = 3, GSM::Time wStartTime = GSM::Time(0));
 
@@ -159,7 +158,7 @@ private:
   void pullBuffer();
 
 public:
-  RadioInterfaceResamp(RadioDevice* wRadio, size_t wSPS = 4, size_t chans = 1);
+  RadioInterfaceResamp(RadioDevice* wRadio, size_t tx_sps, size_t rx_sps);
   ~RadioInterfaceResamp();
 
   bool init(int type);
@@ -196,8 +195,7 @@ public:
 
 class RadioInterfaceDiversity : public RadioInterface {
 public:
-  RadioInterfaceDiversity(RadioDevice* wRadio,
-                          size_t sps = 4, size_t chans = 2);
+  RadioInterfaceDiversity(RadioDevice* wRadio, size_t tx_sps, size_t chans);
 
   ~RadioInterfaceDiversity();
 
