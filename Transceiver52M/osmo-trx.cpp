@@ -43,11 +43,10 @@
 
 /*
  * Samples-per-symbol for uplink (receiver) path
- *     Do not modify this value. EDGE configures 4 sps automatically on
- *     B200/B210 devices only. Use of 4 sps on the receive path for other
- *     configurations is not supported.
+ *     4 - Provides better timing precision (avoids FPGA DDC timing ambiguity)
+ *     1 - Reduces processor load, but increases timing ambiguity
  */
-#define DEFAULT_RX_SPS		1
+#define DEFAULT_RX_SPS		4
 
 /* Default configuration parameters
  *     Note that these values are only used if the particular key does not
