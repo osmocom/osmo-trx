@@ -191,7 +191,7 @@ int Resampler::rotate(const float *in, size_t in_len, float *out, size_t out_len
 bool Resampler::init(float bw)
 {
 	/* Filterbank filter internals */
-	if (initFilters(bw) < 0)
+	if (!initFilters(bw))
 		return false;
 
 	/* Precompute filterbank paths */
