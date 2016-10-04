@@ -1909,7 +1909,7 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
   int rc, target, head, tail;
   CorrelationSequence *sync;
 
-  if ((tsc < 0) || (tsc > 7))
+  if (tsc > 7)
     return -SIGERR_UNSUPPORTED;
 
   target = 3 + 58 + 16 + 5;
