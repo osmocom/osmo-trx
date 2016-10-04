@@ -1790,10 +1790,6 @@ static int detectBurst(signalVector &burst,
   /* Normalize our channel gain */
   *amp = *amp / sync->gain;
 
-  /* Compenate for residual rotation with dual Laurent pulse */
-  if (sps == 4)
-    *amp = *amp * complex(0.0, 1.0);
-
   /* Compensate for residuate time lag */
   *toa = *toa - sync->toa;
 
