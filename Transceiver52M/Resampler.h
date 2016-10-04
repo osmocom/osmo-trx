@@ -47,7 +47,7 @@ public:
 	 *   @param in_len input buffer length
 	 *   @param out continuous buffer of output complex float values
 	 *   @param out_len output buffer length
-	 *   @return number of samples outputted, negative on error
+	 *   @return 0 on success and negative on error
          *
 	 * Input and output vector lengths must of be equal multiples of the
 	 * rational conversion rate denominator and numerator respectively.

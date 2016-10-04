@@ -1945,15 +1945,22 @@ int detectEdgeBurst(signalVector &rxBurst, unsigned tsc, float thresh,
 
 signalVector *downsampleBurst(signalVector &burst)
 {
+  int rc;
   signalVector *in, *out;
 
   in = new signalVector(DOWNSAMPLE_IN_LEN, dnsampler->len());
   out = new signalVector(DOWNSAMPLE_OUT_LEN);
   memcpy(in->begin(), burst.begin(), DOWNSAMPLE_IN_LEN * 2 * sizeof(float));
 
-  dnsampler->rotate((float *) in->begin(), DOWNSAMPLE_IN_LEN,
-                    (float *) out->begin(), DOWNSAMPLE_OUT_LEN);
+  rc = dnsampler->rotate((float *) in->begin(), DOWNSAMPLE_IN_LEN,
+                         (float *) out->begin(), DOWNSAMPLE_OUT_LEN);
   delete in;
+
+  if (rc < 0) {
+    delete out;
+    return NULL;
+  }
+
   return out;
 };
 

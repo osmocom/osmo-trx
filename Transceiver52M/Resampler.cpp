@@ -185,7 +185,7 @@ int Resampler::rotate(const float *in, size_t in_len, float *out, size_t out_len
 			      n, 1, 1, 0);
 	}
 
-	return out_len;
+	return 0;
 }
 
 bool Resampler::init(float bw)
