@@ -1729,8 +1729,10 @@ bool energyDetect(signalVector &rxBurst,
 
   signalVector::const_iterator windowItr = rxBurst.begin(); //+rxBurst.size()/2 - 5*windowLength/2;
   float energy = 0.0;
-  if (windowLength < 0) windowLength = 20;
-  if (windowLength > rxBurst.size()) windowLength = rxBurst.size();
+
+  if (windowLength > rxBurst.size())
+    windowLength = rxBurst.size();
+
   for (unsigned i = 0; i < windowLength; i++) {
     energy += windowItr->norm2();
     windowItr+=4;
