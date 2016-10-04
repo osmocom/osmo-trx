@@ -60,6 +60,9 @@
 #define DEFAULT_DIVERSITY	false
 #define DEFAULT_CHANS		1
 
+/* Max number of channels in multi-carrier configuration */
+#define MAX_MCHANS		3
+
 struct trx_config {
 	std::string log_level;
 	std::string addr;
@@ -167,7 +170,7 @@ bool trx_setup_config(struct trx_config *config)
 	if (!config->chans)
 		config->chans = DEFAULT_CHANS;
 
-	if (config->mcbts && ((config->chans < 0) || (config->chans > 5))) {
+	if (config->mcbts && (config->chans > MAX_MCHANS)) {
 		std::cout << "Unsupported number of channels" << std::endl;
 		return false;
 	}
