@@ -125,7 +125,8 @@ static struct uhd_dev_offset uhd_offsets[] = {
 	{ UMTRX, 1, 1, 9.9692e-5, "UmTRX 1 SPS" },
 	{ UMTRX, 4, 1, 7.3846e-5, "UmTRX 4/1 Tx/Rx SPS" },
 	{ USRP2, 4, 4, 4.6080e-5, "N2XX 4 SPS" },
-	{ B210,  4, 4, B2XX_TIMING_4_4SPS, "B200/B210 4 SPS" },
+	{ B200,  4, 4, B2XX_TIMING_4_4SPS, "B200 4 SPS" },
+	{ B210,  4, 4, B2XX_TIMING_4_4SPS, "B210 4 SPS" },
 	{ UMTRX, 4, 4, 5.1503e-5, "UmTRX 4 SPS" },
 	{ LIMESDR, 4, 4, 16.5/GSMRATE, "STREAM/LimeSDR (4 SPS TX/RX)" },
 };
