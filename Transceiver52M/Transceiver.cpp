@@ -744,14 +744,15 @@ void Transceiver::driveControl(size_t chan)
     sprintf(response,"RSP POWEROFF 0");
   }
   else if (strcmp(command,"POWERON")==0) {
-    if (!start())
+    if (!start()) {
       sprintf(response,"RSP POWERON 1");
-    else
+    } else {
       sprintf(response,"RSP POWERON 0");
       for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++)
           mHandover[i][j] = false;
       }
+    }
   }
   else if (strcmp(command,"HANDOVER")==0){
     int ts=0,ss=0;
