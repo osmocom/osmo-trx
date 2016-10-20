@@ -47,7 +47,7 @@ RadioBuffer::RadioBuffer(size_t numSegments, size_t segmentLen,
 
 RadioBuffer::~RadioBuffer()
 {
-	delete buffer;
+	delete[] buffer;
 }
 
 void RadioBuffer::reset()

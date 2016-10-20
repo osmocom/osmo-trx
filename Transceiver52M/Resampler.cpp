@@ -61,7 +61,7 @@ bool Resampler::initFilters(float bw)
 
 	partitions = (float **) malloc(sizeof(float *) * p);
 	if (!partitions) {
-		free(proto);
+		delete[] proto;
 		return false;
 	}
 

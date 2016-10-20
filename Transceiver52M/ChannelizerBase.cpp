@@ -80,8 +80,10 @@ bool ChannelizerBase::initFilters()
 		return false;
 
 	subFilters = (float **) malloc(sizeof(float *) * m);
-	if (!subFilters)
+	if (!subFilters) {
+		delete[] proto;
 		return false;
+	}
 
 	for (size_t i = 0; i < m; i++) {
 		subFilters[i] = (float *)
@@ -122,7 +124,7 @@ bool ChannelizerBase::initFilters()
 	for (size_t i = 0; i < m; i++)
 		reverse(subFilters[i], hLen);
 
-	delete proto;
+	delete[] proto;
 
 	return true;
 }
