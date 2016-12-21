@@ -1,7 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: OsmoTRX
 Source: http://cgit.osmocom.org/osmo-trx/
-Files-Excluded: sqlite3 Transceiver52M/std_inband.rbf
+Files-Excluded: Transceiver52M/std_inband.rbf
 
 Files: *
 Copyright: 2008-2013 Free Software Foundation
@@ -41,7 +41,6 @@ License: GPL-3+
 Files: CommonLibs/Makefile.am
        GSM/Makefile.am
        Transceiver52M/Makefile.am
-       sqlite3/Makefile.am
        Transceiver52M/Transceiver.h
        Transceiver52M/Transceiver.cpp
 Copyright: 2008-2010 Free Software Foundation
