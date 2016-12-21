@@ -28,7 +28,6 @@ AM_CXXFLAGS = -Wall -pthread -ldl
 
 # Order must be preserved
 SUBDIRS = \
-	sqlite3 \
 	CommonLibs \
 	GSM \
 	Transceiver52M

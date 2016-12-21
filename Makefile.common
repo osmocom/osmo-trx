@@ -33,6 +33,6 @@ STD_DEFINES_AND_INCLUDES = \
 
 COMMON_LA = $(top_builddir)/CommonLibs/libcommon.la
 GSM_LA = $(top_builddir)/GSM/libGSM.la
-SQLITE_LA = $(top_builddir)/sqlite3/libsqlite.la -ldl
+SQLITE_LA = -lsqlite3
 
 MOSTLYCLEANFILES = *~
