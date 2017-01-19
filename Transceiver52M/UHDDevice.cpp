@@ -84,9 +84,15 @@ struct uhd_dev_offset {
 /*
  * USRP version dependent device timings
  */
+#ifdef USE_UHD_3_9
 #define B2XX_TIMING_1SPS	1.7153e-4
 #define B2XX_TIMING_4SPS	1.1696e-4
 #define B2XX_TIMING_4_4SPS	6.18462e-5
+#else
+#define B2XX_TIMING_1SPS	9.9692e-5
+#define B2XX_TIMING_4SPS	6.9248e-5
+#define B2XX_TIMING_4_4SPS	4.52308e-5
+#endif
 
 /*
  * Tx / Rx sample offset values. In a perfect world, there is no group delay

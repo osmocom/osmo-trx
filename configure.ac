@@ -97,9 +97,12 @@ AS_IF([test "x$with_usrp1" = "xyes"], [
 ])
 
 AS_IF([test "x$with_usrp1" != "xyes"],[
-    PKG_CHECK_MODULES(UHD, uhd >= 003.009)
+    PKG_CHECK_MODULES(UHD, uhd >= 003.009,
+        [AC_DEFINE(USE_UHD_3_9, 1, UHD version 3.9.0 or higher)],
+        [PKG_CHECK_MODULES(UHD, uhd >= 003.005.004)]
+    )
+    AC_DEFINE(USE_UHD, 1, All UHD versions)
     PKG_CHECK_MODULES(FFTWF, fftw3f)
-    AC_DEFINE(USE_UHD, 1, Using UHD driver)
 ])
 
 AS_IF([test "x$with_singledb" = "xyes"], [
