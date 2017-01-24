@@ -1,25 +1,162 @@
-The Debian packaging is:
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: OsmoTRX
+Source: http://cgit.osmocom.org/osmo-trx/
+Files-Excluded: sqlite3 Transceiver52M/std_inband.rbf
 
-    Copyright (C) 2014 Max <max.suraev@fairwaves.ru>
+Files: *
+Copyright: 2008-2013 Free Software Foundation
+           2010 Kestrel Signal Processing, Inc.
+           2010-2012 Range Networks, Inc.
+License: AGPL-3+
 
-It was downloaded from:
+Files: Transceiver52M/arm/*
+       Transceiver52M/x86/*
+       Transceiver52M/common/*
+       Transceiver52M/Resampler.cpp
+       Transceiver52M/Resampler.h
+       Transceiver52M/osmo-trx.cpp
+       Transceiver52M/radioInterfaceDiversity.cpp
+Copyright: 2012-2013 Thomas Tsou <tom@tsou.cc>
+License: LGPL-2.1+
 
-    git://git.osmocom.org/osmo-trx
+Files: config/ax_check_compile_flag.m4
+Copyright: 2008 Guido U. Draheim <guidod@gmx.de>
+           2011 Maarten Bosmans <mkbosmans@gmail.com>
+License: GPL-3+
 
-Upstream Authors:
+Files: config/ax_gcc_x86_cpuid.m4
+Copyright: 2008 Steven G. Johnson <stevenj@alum.mit.edu>
+           2008 Matteo Frigo
+License: GPL-3+
 
-    Thomas Tsou <tom@tsou.cc>
-    David A. Burgess <dburgess@kestrelsp.com>
-    Harvind S. Samra <hssamra@kestrelsp.com>
-    Raffi Sevlian <raffisev@gmail.com>
+Files: config/ax_ext.m4
+Copyright: 2007 Christophe Tournayre <turn3r@users.sourceforge.net>
+           2013 Michael Petch <mpetch@capp-sysware.com>
+License: license_for_ax_ext_m4
 
-Copyright:
+Files: config/ax_gcc_x86_avx_xgetbv.m4
+Copyright: 2013 Michael Petch <mpetch@capp-sysware.com>
+License: GPL-3+
 
-     Copyright (C) 2012-2013 Thomas Tsou <tom@tsou.cc>
-     Copyright (C) 2011 Range Networks, Inc.
-     Copyright (C) 2008-2011 Free Software Foundation, Inc.
+Files: CommonLibs/Makefile.am
+       GSM/Makefile.am
+       Transceiver52M/Makefile.am
+       sqlite3/Makefile.am
+       Transceiver52M/Transceiver.h
+       Transceiver52M/Transceiver.cpp
+Copyright: 2008-2010 Free Software Foundation
+           2010-2012 Range Networks, Inc.
+License: GPL-3+
 
-License:
+Files: autogen.sh
+Copyright: 2005-2009 United States Government as represented by
+                     the U.S. Army Research Laboratory.
+License: BSD-3-clause
 
-    GNU Affero General Public License, Version 3
+Files: CommonLibs/sqlite3util.cpp
+Copyright: 2010 Kestrel Signal Processing Inc.
+License: none
+ No license described for file.
+Comment: In the previous version of the file in the git repository
+ at upstream it is written:
+   Written by David A. Burgess, Kestrel Signal Processing, Inc., 2010
+   The author disclaims copyright to this source code.
+ In the git log, this is written:
+   I do not claim any copyright over this change, as it's very basic.
+   Looking forward to see it merged into mainline.
+ See revision e766abbf82f02473038a83fd2f78befd08544cab at
+ https://github.com/osmocom/osmo-trx
 
+Files: debian/*
+Copyright: 2015 Ruben Undheim <ruben.undheim@gmail.com>
+License: GPL-3+
+
+
+License: AGPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ GNU Affero General Public License for more details.
+ .
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+License: GPL-3+
+ This package is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This package is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program. If not, see <http://www.gnu.org/licenses/>
+ .
+ On Debian systems, the complete text of the GNU General
+ Public License version 3 can be found in "/usr/share/common-licenses/GPL-3".
+
+
+License: LGPL-2.1+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+ .
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ .
+ You should have received a copy of the GNU Lesser General Public
+ License along with this program. If not, see
+ <http://www.gnu.org/licenses/>
+ .
+ On Debian systems, the complete text of the GNU Lesser General
+ Public License version 2.1 can be found in
+ "/usr/share/common-licenses/LGPL-2.1".
+
+
+License: license_for_ax_ext_m4
+ Copying and distribution of this file, with or without modification, are
+ permitted in any medium without royalty provided the copyright notice
+ and this notice are preserved. This file is offered as-is, without any
+ warranty.
+
+
+License: BSD-3-clause
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions
+ are met:
+ .
+ 1. Redistributions of source code must retain the above copyright
+ notice, this list of conditions and the following disclaimer.
+ .
+ 2. Redistributions in binary form must reproduce the above
+ copyright notice, this list of conditions and the following
+ disclaimer in the documentation and/or other materials provided
+ with the distribution.
+ .
+ 3. The name of the author may not be used to endorse or promote
+ products derived from this software without specific prior written
+ permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+ OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

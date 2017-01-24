@@ -1,17 +1,40 @@
 Source: osmo-trx
-Maintainer: Ivan Klyuchnikov <ivan.kluchnikov@fairwaves.ru>
 Section: net
 Priority: optional
-Standards-Version: 3.9.3
-Build-Depends: debhelper (>= 9), autotools-dev, libdbd-sqlite3, pkg-config, dh-autoreconf, libuhd-dev, libusb-1.0-0-dev, libboost-all-dev, hardening-wrapper, libfftw3-dev
-Homepage: http://openbsc.osmocom.org/trac/wiki/OsmoTRX
-Vcs-Git: git://git.osmocom.org/osmo-trx
+Maintainer: Ivan Klyuchnikov <ivan.kluchnikov@fairwaves.ru>
+Build-Depends: debhelper (>= 9),
+               autotools-dev,
+               libdbd-sqlite3,
+               pkg-config,
+               dh-autoreconf,
+               libuhd-dev,
+               libusb-1.0-0-dev,
+               libboost-all-dev,
+               hardening-wrapper,
+               libfftw3-dev
+Standards-Version: 3.9.6
 Vcs-Browser: http://cgit.osmocom.org/osmo-trx
+Vcs-Git: git://git.osmocom.org/osmo-trx
+Homepage: https://projects.osmocom.org/projects/osmotrx
 
 Package: osmo-trx
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libdbd-sqlite3
-Description: OsmoTRX is a software-defined radio transceiver that implements the Layer 1 physical layer of a BTS
+Description: SDR transceiver that implements Layer 1 of a GSM BTS
+ OsmoTRX is a software-defined radio transceiver that implements the Layer 1
+ physical layer of a BTS comprising the following 3GPP specifications:
+ .
+ TS 05.01 "Physical layer on the radio path"
+ TS 05.02 "Multiplexing and Multiple Access on the Radio Path"
+ TS 05.04 "Modulation"
+ TS 05.10 "Radio subsystem synchronization"
+ .
+ In this context, BTS is "Base transceiver station". It's the stations that
+ connect mobile phones to the mobile network.
+ .
+ 3GPP is the "3rd Generation Partnership Project" which is the collaboration
+ between different telecommunication associations for developing new
+ generations of mobile phone networks. (post-2G/GSM)
 
 Package: osmo-trx-dbg
 Architecture: any
@@ -20,5 +43,3 @@ Priority: extra
 Depends: osmo-trx (= ${binary:Version}), ${misc:Depends}
 Description: Debug symbols for the osmo-trx
  Make debugging possible
-
-
