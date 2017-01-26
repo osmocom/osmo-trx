@@ -78,7 +78,7 @@ URLEncodeTest_SOURCES = URLEncodeTest.cpp
 URLEncodeTest_LDADD = libcommon.la
 
 BitVectorTest_SOURCES = BitVectorTest.cpp
-BitVectorTest_LDADD = libcommon.la $(SQLITE_LA)
+BitVectorTest_LDADD = libcommon.la $(SQLITE3_LIBS)
 
 InterthreadTest_SOURCES = InterthreadTest.cpp
 InterthreadTest_LDADD = libcommon.la
@@ -92,19 +92,19 @@ TimevalTest_SOURCES = TimevalTest.cpp
 TimevalTest_LDADD = libcommon.la
 
 VectorTest_SOURCES = VectorTest.cpp
-VectorTest_LDADD = libcommon.la $(SQLITE_LA)
+VectorTest_LDADD = libcommon.la $(SQLITE3_LIBS)
 
 RegexpTest_SOURCES = RegexpTest.cpp
 RegexpTest_LDADD = libcommon.la
 
 ConfigurationTest_SOURCES = ConfigurationTest.cpp
-ConfigurationTest_LDADD = libcommon.la 	$(SQLITE_LA)
+ConfigurationTest_LDADD = libcommon.la 	$(SQLITE3_LIBS)
 
 # ReportingTest_SOURCES = ReportingTest.cpp
 # ReportingTest_LDADD = libcommon.la $(SQLITE_LA)
 
 LogTest_SOURCES = LogTest.cpp
-LogTest_LDADD = libcommon.la $(SQLITE_LA)
+LogTest_LDADD = libcommon.la $(SQLITE3_LIBS)
 
 F16Test_SOURCES = F16Test.cpp
 

@@ -4,7 +4,7 @@
 */
 
 
-#include "sqlite3.h"
+#include <sqlite3.h>
 #include "sqlite3util.h"
 
 #include <string.h>

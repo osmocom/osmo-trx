@@ -23,16 +23,13 @@ top_builddir = $(abs_top_builddir)
 
 COMMON_INCLUDEDIR = $(top_srcdir)/CommonLibs
 GSM_INCLUDEDIR = $(top_srcdir)/GSM
-SQLITE_INCLUDEDIR = $(top_srcdir)/sqlite3
 
 STD_DEFINES_AND_INCLUDES = \
 	$(SVNDEV) \
 	-I$(COMMON_INCLUDEDIR) \
-	-I$(GSM_INCLUDEDIR) \
-	-I$(SQLITE_INCLUDEDIR)
+	-I$(GSM_INCLUDEDIR)
 
 COMMON_LA = $(top_builddir)/CommonLibs/libcommon.la
 GSM_LA = $(top_builddir)/GSM/libGSM.la
-SQLITE_LA = -lsqlite3
 
 MOSTLYCLEANFILES = *~

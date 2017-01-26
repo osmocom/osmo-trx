@@ -118,7 +118,10 @@ AM_CONDITIONAL(USRP1, [test "x$with_usrp1" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
 
+AC_CHECK_LIB(sqlite3, sqlite3_open, , AC_MSG_ERROR(sqlite3 is not available))
+
 PKG_CHECK_MODULES(LIBUSB, libusb-1.0)
+PKG_CHECK_MODULES(SQLITE3, sqlite3)
 
 AC_CHECK_HEADER([boost/config.hpp],[],
     [AC_MSG_ERROR([boost/config.hpp not found, install e.g. libboost-dev])])
