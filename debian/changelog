@@ -1,3 +1,10 @@
+osmo-trx (0.1.11) trusty; urgency=medium
+
+  * Rebase fairwaves branch on master.
+  * New release of osmo-trx for fairwaves build.
+
+ -- Ivan Klyuchnikov <kluchnikovi@gmail.com>  Wed, 15 Feb 2017 19:00:32 +0300
+
 osmo-trx (0.1.10~3) trusty; urgency=medium
 
   * 737fc25 transceiver: WIP: Set default max delay to 2 samples.
