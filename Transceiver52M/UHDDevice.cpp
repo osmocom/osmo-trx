@@ -28,10 +28,13 @@
 #include <uhd/property_tree.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
 #include <uhd/utils/thread_priority.hpp>
-#include <uhd/utils/msg.hpp>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
+#ifndef USE_UHD_3_11
+#include <uhd/utils/msg.hpp>
 #endif
 
 #define B2XX_CLK_RT      26e6
@@ -84,7 +87,7 @@ struct uhd_dev_offset {
 /*
  * USRP version dependent device timings
  */
-#ifdef USE_UHD_3_9
+#if defined(USE_UHD_3_9) || defined(USE_UHD_3_11)
 #define B2XX_TIMING_1SPS	1.7153e-4
 #define B2XX_TIMING_4SPS	1.1696e-4
 #define B2XX_TIMING_4_4SPS	6.18462e-5
@@ -383,7 +386,8 @@ void *async_event_loop(uhd_device *dev)
 	return NULL;
 }
 
-/* 
+#ifndef USE_UHD_3_11
+/*
     Catch and drop underrun 'U' and overrun 'O' messages from stdout
     since we already report using the logging facility. Direct
     everything else appropriately.
@@ -404,6 +408,7 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 		break;
 	}
 }
+#endif
 
 static void thread_enable_cancel(bool cancel)
 {
@@ -995,9 +1000,10 @@ bool uhd_device::start()
 		return false;
 	}
 
+#ifndef USE_UHD_3_11
 	// Register msg handler
 	uhd::msg::register_handler(&uhd_msg_handler);
-
+#endif
 	// Start asynchronous event (underrun check) loop
 	async_event_thrd = new Thread();
 	async_event_thrd->start((void * (*)(void*))async_event_loop, (void*)this);
