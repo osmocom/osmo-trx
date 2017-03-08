@@ -38,7 +38,7 @@
 #endif
 
 #define B2XX_CLK_RT      26e6
-#define B2XX_MCBTS_CLK_RT   3.2e6
+#define B2XX_MCBTS_CLK_RT   51.2e6
 #define E1XX_CLK_RT      52e6
 #define LIMESDR_CLK_RT   (GSMRATE*32)
 #define B100_BASE_RT     400000
@@ -91,10 +91,12 @@ struct uhd_dev_offset {
 #define B2XX_TIMING_1SPS	1.7153e-4
 #define B2XX_TIMING_4SPS	1.1696e-4
 #define B2XX_TIMING_4_4SPS	6.18462e-5
+#define B2XX_TIMING_MCBTS	7e-5
 #else
 #define B2XX_TIMING_1SPS	9.9692e-5
 #define B2XX_TIMING_4SPS	6.9248e-5
 #define B2XX_TIMING_4_4SPS	4.52308e-5
+#define B2XX_TIMING_MCBTS	6.42452e-5
 #endif
 
 /*
@@ -118,7 +120,7 @@ static struct uhd_dev_offset uhd_offsets[] = {
 	{ B200,  4, 1, B2XX_TIMING_4SPS, "B200 4/1 Tx/Rx SPS" },
 	{ B210,  1, 1, B2XX_TIMING_1SPS, "B210 1 SPS" },
 	{ B210,  4, 1, B2XX_TIMING_4SPS, "B210 4/1 Tx/Rx SPS" },
-	{ B2XX_MCBTS, 4, 4, 1.07188e-4, "B200/B210 4 SPS Multi-ARFCN" },
+	{ B2XX_MCBTS, 4, 4, B2XX_TIMING_MCBTS, "B200/B210 4 SPS Multi-ARFCN" },
 	{ E1XX,  1, 1, 9.5192e-5, "E1XX 1 SPS" },
 	{ E1XX,  4, 1, 6.5571e-5, "E1XX 4/1 Tx/Rx SPS" },
 	{ E3XX,  1, 1, 1.84616e-4, "E3XX 1 SPS" },
@@ -1046,8 +1048,6 @@ void uhd_device::setPriority(float prio)
 
 int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 {
-	uhd::time_spec_t ts;
-
 	if (!num_smpls) {
 		LOG(ERR) << str_code(md);
 
@@ -1070,17 +1070,20 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 		return ERROR_UNRECOVERABLE;
 	}
 
-	ts = md.time_spec;
-
 	// Monotonicity check
-	if (ts < prev_ts) {
+	if (md.time_spec < prev_ts) {
 		LOG(ALERT) << "UHD: Loss of monotonic time";
-		LOG(ALERT) << "Current time: " << ts.get_real_secs() << ", " 
+		LOG(ALERT) << "Current time: " << md.time_spec.get_real_secs() << ", "
 			   << "Previous time: " << prev_ts.get_real_secs();
 		return ERROR_TIMING;
-	} else {
-		prev_ts = ts;
 	}
+
+	// Workaround for UHD tick rounding bug
+	TIMESTAMP ticks = md.time_spec.to_ticks(rx_rate);
+	if (ticks - prev_ts.to_ticks(rx_rate) == rx_spp - 1)
+		md.time_spec = uhd::time_spec_t::from_ticks(++ticks, rx_rate);
+
+	prev_ts = md.time_spec;
 
 	return 0;
 }
