@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Ivan Klyuchnikov <ivan.kluchnikov@fairwaves.ru>
 Build-Depends: debhelper (>= 9),
                autotools-dev,
+               autoconf-archive,
                libdbd-sqlite3,
                libsqlite3-dev,
                pkg-config,
