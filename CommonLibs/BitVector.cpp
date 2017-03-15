@@ -546,7 +546,11 @@ ostream& operator<<(ostream& os, const SoftVector& sv)
 {
 	for (size_t i=0; i<sv.size(); i++) {
 		if (sv[i]<0.25) os << "0";
+		else if (sv[i]<0.4) os << "o";
+		else if (sv[i]<0.5) os << ".";
 		else if (sv[i]>0.75) os << "1";
+		else if (sv[i]>0.6) os << "|";
+		else if (sv[i]>0.5) os << "'";
 		else os << "-";
 	}
 	return os;
