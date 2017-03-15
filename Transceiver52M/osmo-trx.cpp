@@ -256,7 +256,8 @@ static void print_help()
 		"  -c    Number of ARFCN channels (default=1)\n"
 		"  -f    Enable C0 filler table\n"
 		"  -o    Set baseband frequency offset (default=auto)\n"
-		"  -r    Random Normal Burst test mode with TSC\n"
+		"  -r    Random GMSK Normal Burst test mode with given TSC\n"
+		"  -E    Random 8-PSK Normal Burst test mode with given TSC\n"
 		"  -A    Random Access Burst test mode with delay\n"
 		"  -R    RSSI to dBm offset in dB (default=0)\n"
 		"  -S    Swap channels (UmTRX only)\n",
@@ -284,7 +285,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->swap_channels = false;
 	config->edge = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dmxgfo:s:b:r:A:R:Se")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dmxgfo:s:b:r:E:A:R:Se")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -330,6 +331,10 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			config->rtsc = atoi(optarg);
 			config->filler = Transceiver::FILLER_NORM_RAND;
 			break;
+		case 'E':
+			config->rtsc = atoi(optarg);
+			config->filler = Transceiver::FILLER_EDGE_RAND;
+			break;
 		case 'A':
 			config->rach_delay = atoi(optarg);
 			config->filler = Transceiver::FILLER_ACCESS_RAND;
@@ -360,8 +365,10 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		goto bad_config;
 	}
 
-	if (config->edge && (config->filler == Transceiver::FILLER_NORM_RAND))
-		config->filler = Transceiver::FILLER_EDGE_RAND;
+	if (!config->edge && (config->filler == Transceiver::FILLER_EDGE_RAND)) {
+		printf("Can't enable EDGE filler when EDGE mode is disabled\n\n");
+		goto bad_config;
+	}
 
 	if ((config->tx_sps != 1) && (config->tx_sps != 4) &&
 	    (config->rx_sps != 1) && (config->rx_sps != 4)) {
