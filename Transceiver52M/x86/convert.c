@@ -176,26 +176,34 @@ static void convert_si16_ps(float *out, const short *in, int len)
 
 void convert_float_short(short *out, const float *in, float scale, int len)
 {
+	void (*conv_func)(short *, const float *, float, int);
+
 #ifdef HAVE_SSE3
 	if (!(len % 16))
-		_sse_convert_scale_ps_si16_16n(out, in, scale, len);
+		conv_func = _sse_convert_scale_ps_si16_16n;
 	else if (!(len % 8))
-		_sse_convert_scale_ps_si16_8n(out, in, scale, len);
+		conv_func = _sse_convert_scale_ps_si16_8n;
 	else
-		_sse_convert_scale_ps_si16(out, in, scale, len);
+		conv_func = _sse_convert_scale_ps_si16;
 #else
-	convert_scale_ps_si16(out, in, scale, len);
+	conv_func = convert_scale_ps_si16;
 #endif
+
+	conv_func(out, in, scale, len);
 }
 
 void convert_short_float(float *out, const short *in, int len)
 {
+	void (*conv_func) (float *, const short *, int);
+
 #ifdef HAVE_SSE4_1
 	if (!(len % 16))
-		_sse_convert_si16_ps_16n(out, in, len);
+		conv_func = _sse_convert_si16_ps_16n;
 	else
-		_sse_convert_si16_ps(out, in, len);
+		conv_func = _sse_convert_si16_ps;
 #else
-	convert_si16_ps(out, in, len);
+	conv_func = convert_si16_ps;
 #endif
+
+	conv_func(out, in, len);
 }
