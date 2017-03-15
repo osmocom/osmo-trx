@@ -607,7 +607,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   avg = sqrt(avg / radio_burst->chans());
 
   wTime = time;
-  RSSI = 20.0 * log10(rxFullScale / avg);
+  RSSI = 20.0 * log10(avg / rxFullScale);
 
   /* RSSI estimation are valid */
   isRssiValid = true;
