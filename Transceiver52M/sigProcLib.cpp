@@ -1721,10 +1721,7 @@ static float computePeakRatio(signalVector *corr,
   return (amp.abs()) / rms;
 }
 
-bool energyDetect(signalVector &rxBurst,
-		  unsigned windowLength,
-		  float detectThreshold,
-                  float *avgPwr)
+float energyDetect(signalVector &rxBurst, unsigned windowLength)
 {
 
   signalVector::const_iterator windowItr = rxBurst.begin(); //+rxBurst.size()/2 - 5*windowLength/2;
@@ -1735,8 +1732,7 @@ bool energyDetect(signalVector &rxBurst,
     energy += windowItr->norm2();
     windowItr+=4;
   }
-  if (avgPwr) *avgPwr = energy/windowLength;
-  return (energy/windowLength > detectThreshold*detectThreshold);
+  return energy/windowLength;
 }
 
 /*

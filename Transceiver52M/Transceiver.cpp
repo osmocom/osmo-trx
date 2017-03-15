@@ -606,7 +606,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
 {
   int rc;
   complex amp;
-  float toa, pow, max = -1.0, avg = 0.0;
+  float toa, max = -1.0, avg = 0.0;
   int max_i = -1;
   signalVector *burst;
   SoftVector *bits = NULL;
@@ -641,7 +641,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
 
   /* Select the diversity channel with highest energy */
   for (size_t i = 0; i < radio_burst->chans(); i++) {
-    energyDetect(*radio_burst->getVector(i), 20 * mSPSRx, 0.0, &pow);
+    float pow = energyDetect(*radio_burst->getVector(i), 20 * mSPSRx);
     if (pow > max) {
       max = pow;
       max_i = i;

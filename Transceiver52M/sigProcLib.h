@@ -176,17 +176,13 @@ void scaleVector(signalVector &x,
 		 complex scale);
 
 /**
-        Energy detector, checks to see if received burst energy is above a threshold.
-        @param rxBurst The received GSM burst of interest.
+        Rough energy estimator.
+        @param rxBurst A GSM burst.
         @param windowLength The number of burst samples used to compute burst energy
-        @param detectThreshold The detection threshold, a linear value.
-        @param avgPwr The average power of the received burst.
-        @return True if burst energy is above threshold.
+        @return The average power of the received burst.
 */
-bool energyDetect(signalVector &rxBurst,
-		  unsigned windowLength,
-                  float detectThreshold,
-                  float *avgPwr = NULL);
+float energyDetect(signalVector &rxBurst,
+                   unsigned windowLength);
 
 /**
         RACH aka Access Burst correlator/detector.
