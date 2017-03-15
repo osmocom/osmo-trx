@@ -27,4 +27,6 @@ int base_convolve_complex(const float *x, int x_len,
 			  int start, int len,
 			  int step, int offset);
 
+void convolve_init(void);
+
 #endif /* _CONVOLVE_H_ */

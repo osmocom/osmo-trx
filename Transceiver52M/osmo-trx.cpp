@@ -32,6 +32,11 @@
 #include <Logger.h>
 #include <Configuration.h>
 
+extern "C" {
+#include "convolve.h"
+#include "convert.h"
+}
+
 /* Samples-per-symbol for downlink path
  *     4 - Uses precision modulator (more computation, less distortion)
  *     1 - Uses minimized modulator (less computation, more distortion)
@@ -421,6 +426,9 @@ int main(int argc, char *argv[])
 	Transceiver *trx = NULL;
 	RadioDevice::InterfaceType iface = RadioDevice::NORMAL;
 	struct trx_config config;
+
+	convolve_init();
+	convert_init();
 
 	handle_options(argc, argv, &config);
 

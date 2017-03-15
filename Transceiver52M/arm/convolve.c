@@ -58,6 +58,13 @@ static void neon_conv_cmplx_4n(float *x, float *h, float *y, int h_len, int len)
 }
 #endif
 
+/* API: Initalize convolve module */
+void convolve_init(void)
+{
+	/* Stub */
+	return;
+}
+
 /* API: Aligned complex-real */
 int convolve_real(float *x, int x_len,
 		  float *h, int h_len,

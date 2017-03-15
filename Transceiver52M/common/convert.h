@@ -3,5 +3,6 @@
 
 void convert_float_short(short *out, const float *in, float scale, int len);
 void convert_short_float(float *out, const short *in, int len);
+void convert_init(void);
 
 #endif /* _CONVERT_H_ */

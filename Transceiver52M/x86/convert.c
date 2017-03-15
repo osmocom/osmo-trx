@@ -25,6 +25,17 @@
 #include "config.h"
 #endif
 
+/* Architecture dependant function pointers */
+struct convert_cpu_context {
+	void (*convert_si16_ps_16n) (float *, const short *, int);
+	void (*convert_si16_ps) (float *, const short *, int);
+	void (*convert_scale_ps_si16_16n)(short *, const float *, float, int);
+	void (*convert_scale_ps_si16_8n)(short *, const float *, float, int);
+	void (*convert_scale_ps_si16)(short *, const float *, float, int);
+};
+
+static struct convert_cpu_context c;
+
 #ifdef HAVE_SSE3
 #include <xmmintrin.h>
 #include <emmintrin.h>
@@ -157,53 +168,61 @@ static void _sse_convert_scale_ps_si16_16n(short *restrict out,
 		_mm_storeu_si128((__m128i *) &out[16 * i + 8], m7);
 	}
 }
-#else /* HAVE_SSE3 */
+#endif
+
+__attribute__((optimize("no-tree-vectorize")))
 static void convert_scale_ps_si16(short *out, const float *in,
 				  float scale, int len)
 {
 	for (int i = 0; i < len; i++)
 		out[i] = in[i] * scale;
 }
-#endif
 
-#ifndef HAVE_SSE4_1
+__attribute__((optimize("no-tree-vectorize")))
 static void convert_si16_ps(float *out, const short *in, int len)
 {
 	for (int i = 0; i < len; i++)
 		out[i] = in[i];
 }
+
+void convert_init(void)
+{
+	c.convert_scale_ps_si16_16n = convert_scale_ps_si16;
+	c.convert_scale_ps_si16_8n = convert_scale_ps_si16;
+	c.convert_scale_ps_si16 = convert_scale_ps_si16;
+	c.convert_si16_ps_16n = convert_si16_ps;
+	c.convert_si16_ps = convert_si16_ps;
+
+#ifdef HAVE_SSE4_1
+	if (__builtin_cpu_supports("sse4.1")) {
+		c.convert_si16_ps_16n = &_sse_convert_si16_ps_16n;
+		c.convert_si16_ps = &_sse_convert_si16_ps;
+	}
 #endif
+
+#ifdef HAVE_SSE3
+	if (__builtin_cpu_supports("sse3")) {
+		c.convert_scale_ps_si16_16n = _sse_convert_scale_ps_si16_16n;
+		c.convert_scale_ps_si16_8n = _sse_convert_scale_ps_si16_8n;
+		c.convert_scale_ps_si16 = _sse_convert_scale_ps_si16;
+	}
+#endif
+}
 
 void convert_float_short(short *out, const float *in, float scale, int len)
 {
-	void (*conv_func)(short *, const float *, float, int);
-
-#ifdef HAVE_SSE3
 	if (!(len % 16))
-		conv_func = _sse_convert_scale_ps_si16_16n;
+		c.convert_scale_ps_si16_16n(out, in, scale, len);
 	else if (!(len % 8))
-		conv_func = _sse_convert_scale_ps_si16_8n;
+		c.convert_scale_ps_si16_8n(out, in, scale, len);
 	else
-		conv_func = _sse_convert_scale_ps_si16;
-#else
-	conv_func = convert_scale_ps_si16;
-#endif
-
-	conv_func(out, in, scale, len);
+		c.convert_scale_ps_si16(out, in, scale, len);
 }
 
 void convert_short_float(float *out, const short *in, int len)
 {
-	void (*conv_func) (float *, const short *, int);
-
-#ifdef HAVE_SSE4_1
 	if (!(len % 16))
-		conv_func = _sse_convert_si16_ps_16n;
+		c.convert_si16_ps_16n(out, in, len);
 	else
-		conv_func = _sse_convert_si16_ps;
-#else
-	conv_func = convert_si16_ps;
-#endif
-
-	conv_func(out, in, len);
+		c.convert_si16_ps(out, in, len);
 }
