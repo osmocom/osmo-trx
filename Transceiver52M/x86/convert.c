@@ -170,28 +170,13 @@ static void _sse_convert_scale_ps_si16_16n(short *restrict out,
 }
 #endif
 
-__attribute__((optimize("no-tree-vectorize")))
-static void convert_scale_ps_si16(short *out, const float *in,
-				  float scale, int len)
-{
-	for (int i = 0; i < len; i++)
-		out[i] = in[i] * scale;
-}
-
-__attribute__((optimize("no-tree-vectorize")))
-static void convert_si16_ps(float *out, const short *in, int len)
-{
-	for (int i = 0; i < len; i++)
-		out[i] = in[i];
-}
-
 void convert_init(void)
 {
-	c.convert_scale_ps_si16_16n = convert_scale_ps_si16;
-	c.convert_scale_ps_si16_8n = convert_scale_ps_si16;
-	c.convert_scale_ps_si16 = convert_scale_ps_si16;
-	c.convert_si16_ps_16n = convert_si16_ps;
-	c.convert_si16_ps = convert_si16_ps;
+	c.convert_scale_ps_si16_16n = base_convert_float_short;
+	c.convert_scale_ps_si16_8n = base_convert_float_short;
+	c.convert_scale_ps_si16 = base_convert_float_short;
+	c.convert_si16_ps_16n = base_convert_short_float;
+	c.convert_si16_ps = base_convert_short_float;
 
 #ifdef HAVE_SSE4_1
 	if (__builtin_cpu_supports("sse4.1")) {

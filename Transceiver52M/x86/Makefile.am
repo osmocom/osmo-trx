@@ -5,6 +5,7 @@ noinst_LTLIBRARIES = libarch.la
 
 libarch_la_SOURCES = \
 	../common/convolve_base.c \
+	../common/convert_base.c \
 	convert.c \
 	convolve.c
 endif

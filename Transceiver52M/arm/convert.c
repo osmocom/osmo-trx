@@ -28,19 +28,6 @@
 void neon_convert_ps_si16_4n(short *, const float *, const float *, int);
 void neon_convert_si16_ps_4n(float *, const short *, int);
 
-#ifndef HAVE_NEON
-static void convert_si16_ps(float *out, const short *in, int len)
-{
-	for (int i = 0; i < len; i++)
-		out[i] = in[i];
-}
-
-static void convert_ps_si16(short *out, const float *in, float scale, int len)
-{
-	for (int i = 0; i < len; i++)
-		out[i] = in[i] * scale;
-}
-#else
 /* 4*N 16-bit signed integer conversion with remainder */
 static void neon_convert_si16_ps(float *out,
 				 const short *in,
@@ -79,7 +66,7 @@ void convert_float_short(short *out, const float *in, float scale, int len)
 	else
 		neon_convert_ps_si16_4n(out, in, q, len >> 2);
 #else
-	convert_ps_si16(out, in, scale, len);
+	base_convert_float_short(out, in, scale, len);
 #endif
 }
 
@@ -91,6 +78,6 @@ void convert_short_float(float *out, const short *in, int len)
 	else
 		neon_convert_si16_ps_4n(out, in, len >> 2);
 #else
-	convert_si16_ps(out, in, len);
+	base_convert_short_float(out, in, len);
 #endif
 }
