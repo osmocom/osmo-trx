@@ -427,6 +427,22 @@ int main(int argc, char *argv[])
 	RadioDevice::InterfaceType iface = RadioDevice::NORMAL;
 	struct trx_config config;
 
+#ifdef HAVE_SSE3
+	printf("Info: SSE3 support compiled in");
+	if (__builtin_cpu_supports("sse3"))
+		printf(" and supported by CPU\n");
+	else
+		printf(", but not supported by CPU\n");
+#endif
+
+#ifdef HAVE_SSE4_1
+	printf("Info: SSE4.1 support compiled in");
+	if (__builtin_cpu_supports("sse4.1"))
+		printf(" and supported by CPU\n");
+	else
+		printf(", but not supported by CPU\n");
+#endif
+
 	convolve_init();
 	convert_init();
 
