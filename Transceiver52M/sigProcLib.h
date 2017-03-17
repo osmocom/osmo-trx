@@ -21,9 +21,9 @@
 #include "signalVector.h"
 
 /* Burst lengths */
-#define NORMAL_BURST_NBITS		148
-#define EDGE_BURST_NBITS		444
-#define EDGE_BURST_NSYMS		(EDGE_BURST_NBITS / 3)
+#define NORMAL_BURST_NBITS    148
+#define EDGE_BURST_NBITS      444
+#define EDGE_BURST_NSYMS      (EDGE_BURST_NBITS / 3)
 
 /** Convolution type indicator */
 enum ConvType {
@@ -79,55 +79,55 @@ bool sigProcLibSetup();
 /** Destroy the signal processing library */
 void sigProcLibDestroy(void);
 
-/** 
- 	Convolve two vectors. 
-	@param a,b The vectors to be convolved.
-	@param c, A preallocated vector to hold the convolution result.
-	@param spanType The type/span of the convolution.
-	@return The convolution result or NULL on error.
+/**
+        Convolve two vectors.
+        @param a,b The vectors to be convolved.
+        @param c, A preallocated vector to hold the convolution result.
+        @param spanType The type/span of the convolution.
+        @return The convolution result or NULL on error.
 */
 signalVector *convolve(const signalVector *a, const signalVector *b,
                        signalVector *c, ConvType spanType,
                        size_t start = 0, size_t len = 0,
                        size_t step = 1, int offset = 0);
 
-/** 
+/**
         Frequency shift a vector.
-	@param y The frequency shifted vector.
-	@param x The vector to-be-shifted.
-	@param freq The digital frequency shift
-	@param startPhase The starting phase of the oscillator 
-	@param finalPhase The final phase of the oscillator
-	@return The frequency shifted vector.
+        @param y The frequency shifted vector.
+        @param x The vector to-be-shifted.
+        @param freq The digital frequency shift
+        @param startPhase The starting phase of the oscillator
+        @param finalPhase The final phase of the oscillator
+        @return The frequency shifted vector.
 */
 signalVector* frequencyShift(signalVector *y,
-			     signalVector *x,
-			     float freq = 0.0,
-			     float startPhase = 0.0,
-			     float *finalPhase=NULL);
+                             signalVector *x,
+                             float freq = 0.0,
+                             float startPhase = 0.0,
+                             float *finalPhase=NULL);
 
-/** 
-        Correlate two vectors. 
+/**
+        Correlate two vectors.
         @param a,b The vectors to be correlated.
         @param c, A preallocated vector to hold the correlation result.
         @param spanType The type/span of the correlation.
         @return The correlation result.
 */
 signalVector* correlate(signalVector *a,
-			signalVector *b,
-			signalVector *c,
-			ConvType spanType,
+                        signalVector *b,
+                        signalVector *c,
+                        ConvType spanType,
                         bool bReversedConjugated = false,
-			unsigned startIx = 0,
-			unsigned len = 0);
+                        unsigned startIx = 0,
+                        unsigned len = 0);
 
 /** Operate soft slicer on a soft-bit vector */
 bool vectorSlicer(SoftVector *x);
 
 /** GMSK modulate a GSM burst of bits */
 signalVector *modulateBurst(const BitVector &wBurst,
-			    int guardPeriodLength,
-			    int sps, bool emptyPulse = false);
+                            int guardPeriodLength,
+                            int sps, bool emptyPulse = false);
 
 /** 8-PSK modulate a burst of bits */
 signalVector *modulateEdgeBurst(const BitVector &bits,
@@ -156,7 +156,7 @@ signalVector *delayVector(signalVector *in, signalVector *out, float delay);
 
 /** Add two vectors in-place */
 bool addVector(signalVector &x,
-	       signalVector &y);
+               signalVector &y);
 
 /** Multiply two vectors in-place*/
 bool multVector(signalVector &x,
@@ -168,24 +168,24 @@ signalVector *gaussianNoise(int length,
                             complex mean = complex(0.0));
 
 /**
-	Given a non-integer index, interpolate a sample.
-	@param inSig The signal from which to interpolate.
-	@param ix The index.
-	@return The interpolated signal value.
+        Given a non-integer index, interpolate a sample.
+        @param inSig The signal from which to interpolate.
+        @param ix The index.
+        @return The interpolated signal value.
 */
 complex interpolatePoint(const signalVector &inSig,
-			 float ix);
+                         float ix);
 
 /**
-	Given a correlator output, locate the correlation peak.
-	@param rxBurst The correlator result.
-	@param peakIndex Pointer to value to receive interpolated peak index.
-	@param avgPower Power to value to receive mean power.
-	@return Peak value.
+        Given a correlator output, locate the correlation peak.
+        @param rxBurst The correlator result.
+        @param peakIndex Pointer to value to receive interpolated peak index.
+        @param avgPower Power to value to receive mean power.
+        @return Peak value.
 */
 complex peakDetect(const signalVector &rxBurst,
-		   float *peakIndex,
-		   float *avgPwr);
+                   float *peakIndex,
+                   float *avgPwr);
 
 /**
         Apply a scalar to a vector.
@@ -193,7 +193,7 @@ complex peakDetect(const signalVector &rxBurst,
         @param scale The scalar.
 */
 void scaleVector(signalVector &x,
-		 complex scale);
+                 complex scale);
 
 /**
         Rough energy estimator.
@@ -288,14 +288,14 @@ int detectAnyBurst(signalVector &burst,
                    unsigned max_toa);
 
 /**
-	Downsample 4 SPS to 1 SPS using a polyphase filterbank
+        Downsample 4 SPS to 1 SPS using a polyphase filterbank
         @param burst Input burst of at least 624 symbols
         @return Decimated signal vector of 156 symbols
 */
 signalVector *downsampleBurst(signalVector &burst);
 
 /**
-	Decimate a vector.
+        Decimate a vector.
         @param wVector The vector of interest.
         @param factor Decimation factor.
         @return The decimated signal vector.
@@ -316,7 +316,7 @@ SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
 
 /**
         Demodulate 8-PSK EDGE burst with soft symbol ooutput
-	@param rxBurst The burst to be demodulated.
+        @param rxBurst The burst to be demodulated.
         @param sps The number of samples per GSM symbol.
         @param channel The amplitude estimate of the received burst.
         @param TOA The time-of-arrival of the received burst.
