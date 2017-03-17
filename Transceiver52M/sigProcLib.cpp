@@ -2137,6 +2137,15 @@ SoftVector *demodEdgeBurst(signalVector &burst, int sps,
   return bits;
 }
 
+SoftVector *demodAnyBurst(signalVector &burst, int sps, complex amp,
+                          float toa, CorrType type)
+{
+  if (type == EDGE)
+    return demodEdgeBurst(burst, sps, amp, toa);
+  else
+    return demodGmskBurst(burst, sps, amp, toa);
+}
+
 bool sigProcLibSetup()
 {
   initTrigTables();

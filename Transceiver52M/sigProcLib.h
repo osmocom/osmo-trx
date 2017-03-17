@@ -325,4 +325,8 @@ SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
 SoftVector *demodEdgeBurst(signalVector &rxBurst, int sps,
                            complex channel, float TOA);
 
+/** Demodulate burst basde on type and output soft bits */
+SoftVector *demodAnyBurst(signalVector &burst, int sps,
+                          complex amp, float toa, CorrType type);
+
 #endif /* SIGPROCLIB_H */

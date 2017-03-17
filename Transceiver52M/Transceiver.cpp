@@ -533,18 +533,6 @@ CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   }
 }
 
-/*
- * Demodulate GMSK by direct rotation and soft slicing.
- */
-SoftVector *Transceiver::demodulate(signalVector &burst, complex amp,
-                                    float toa, CorrType type)
-{
-  if (type == EDGE)
-	  return demodEdgeBurst(burst, mSPSRx, amp, toa);
-
-  return demodGmskBurst(burst, mSPSRx, amp, toa);
-}
-
 void writeToFile(radioVector *radio_burst, size_t chan)
 {
   GSM::Time time = radio_burst->getTime();
@@ -656,7 +644,7 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
 
   timingOffset = toa;
 
-  bits = demodulate(*burst, amp, toa, type);
+  bits = demodAnyBurst(*burst, mSPSRx, amp, toa, type);
 
   delete radio_burst;
   return bits;
