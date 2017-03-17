@@ -9,10 +9,10 @@ public:
 
 	~RadioBuffer();
 
-	const size_t getSegmentLen() { return segmentLen; };
-	const size_t getNumSegments() { return numSegments; };
-	const size_t getAvailSamples() { return availSamples; };
-	const size_t getAvailSegments() { return availSamples / segmentLen; };
+	const size_t getSegmentLen() { return segmentLen; }
+	const size_t getNumSegments() { return numSegments; }
+	const size_t getAvailSamples() { return availSamples; }
+	const size_t getAvailSegments() { return availSamples / segmentLen; }
 
 	const size_t getFreeSamples()
 	{
