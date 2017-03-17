@@ -202,10 +202,6 @@ private:
   /** send messages over the clock socket */
   void writeClockInterface(void);
 
-  /** Detectbursts */
-  int detectBurst(signalVector &burst,
-                  complex &amp, float &toa, CorrType type);
-
   /** Demodulate burst and output soft bits */
   SoftVector *demodulate(signalVector &burst,
                          complex amp, float toa, CorrType type);

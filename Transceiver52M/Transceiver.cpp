@@ -542,38 +542,6 @@ CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   }
 }
 
-int Transceiver::detectBurst(signalVector &burst,
-                             complex &amp, float &toa, CorrType type)
-{
-  int rc = 0;
-
-  switch (type) {
-  case EDGE:
-    rc = detectEdgeBurst(burst, mTSC, BURST_THRESH, mSPSRx,
-                         amp, toa, mMaxExpectedDelayNB);
-    if (rc > 0)
-      break;
-    else
-      type = TSC;
-  case TSC:
-    rc = analyzeTrafficBurst(burst, mTSC, BURST_THRESH, mSPSRx,
-                             amp, toa, mMaxExpectedDelayNB);
-    break;
-  case RACH:
-    rc = detectRACHBurst(burst, BURST_THRESH, mSPSRx, amp, toa,
-                         mMaxExpectedDelayAB);
-    break;
-  default:
-    LOG(ERR) << "Invalid correlation type";
-  }
-
-  if (rc > 0)
-    return type;
-
-  return rc;
-}
-
-
 /*
  * Demodulate GMSK by direct rotation and soft slicing.
  */
@@ -679,7 +647,8 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   }
 
   /* Detect normal or RACH bursts */
-  rc = detectBurst(*burst, amp, toa, type);
+  rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, amp, toa,
+                      (type==RACH)?mMaxExpectedDelayAB:mMaxExpectedDelayNB);
 
   if (rc > 0) {
     type = (CorrType) rc;

@@ -255,6 +255,28 @@ int detectEdgeBurst(signalVector &burst,
                     unsigned max_toa);
 
 /**
+        8-PSK/GMSK/RACH burst detector
+        @param burst The received GSM burst of interest
+        @param tsc Midamble type (0..7) also known as TSC
+        @param threshold The threshold that the received burst's post-correlator SNR is compared against to determine validity.
+        @param sps The number of samples per GSM symbol.
+        @param amplitude The estimated amplitude of received TSC burst.
+        @param toa The estimate time-of-arrival of received TSC burst (in symbols).
+        @param max_toa The maximum expected time-of-arrival (in symbols).
+        @return positive value (CorrType) if threshold value is reached,
+                negative value (-SignalError) on error,
+                zero (SIGERR_NONE) if no burst is detected
+*/
+int detectAnyBurst(signalVector &burst,
+                   unsigned tsc,
+                   float threshold,
+                   int sps,
+                   CorrType type,
+                   complex &amp,
+                   float &toa,
+                   unsigned max_toa);
+
+/**
 	Downsample 4 SPS to 1 SPS using a polyphase filterbank
         @param burst Input burst of at least 624 symbols
         @return Decimated signal vector of 156 symbols

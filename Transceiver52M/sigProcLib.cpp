@@ -1925,6 +1925,38 @@ int detectEdgeBurst(signalVector &burst, unsigned tsc, float threshold,
   return rc;
 }
 
+int detectAnyBurst(signalVector &burst, unsigned tsc, float threshold,
+                   int sps, CorrType type, complex &amp, float &toa,
+                   unsigned max_toa)
+{
+  int rc = 0;
+
+  switch (type) {
+  case EDGE:
+    rc = detectEdgeBurst(burst, tsc, threshold, sps,
+                         amp, toa, max_toa);
+    if (rc > 0)
+      break;
+    else
+      type = TSC;
+  case TSC:
+    rc = analyzeTrafficBurst(burst, tsc, threshold, sps,
+                             amp, toa, max_toa);
+    break;
+  case RACH:
+    rc = detectRACHBurst(burst, threshold, sps, amp, toa,
+                         max_toa);
+    break;
+  default:
+    LOG(ERR) << "Invalid correlation type";
+  }
+
+  if (rc > 0)
+    return type;
+
+  return rc;
+}
+
 signalVector *downsampleBurst(signalVector &burst)
 {
   signalVector *in, *out;
