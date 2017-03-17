@@ -1124,7 +1124,7 @@ signalVector *generateEdgeBurst(int tsc)
  * Modulate 8-PSK burst. When empty pulse shaping (rotation only)
  * is enabled, the output vector length will be bit sequence length
  * times the SPS value. When pulse shaping is enabled, the output
- * vector length is fixed at 625 samples (156.25 sybols at 4 SPS).
+ * vector length is fixed at 625 samples (156.25 symbols at 4 SPS).
  * Pulse shaped bit sequences that go beyond one burst are truncated.
  * Pulse shaping at anything but 4 SPS is not supported.
  */
