@@ -583,7 +583,7 @@ SoftVector *Transceiver::demodulate(signalVector &burst, complex amp,
   if (type == EDGE)
 	  return demodEdgeBurst(burst, mSPSRx, amp, toa);
 
-  return demodulateBurst(burst, mSPSRx, amp, toa);
+  return demodGmskBurst(burst, mSPSRx, amp, toa);
 }
 
 void writeToFile(radioVector *radio_burst, size_t chan)

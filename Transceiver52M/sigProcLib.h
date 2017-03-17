@@ -261,16 +261,16 @@ signalVector *downsampleBurst(signalVector &burst);
 signalVector *decimateVector(signalVector &wVector, size_t factor);
 
 /**
-        Demodulates a received burst using a soft-slicer.
-	@param rxBurst The burst to be demodulated.
+        Demodulates a GMSK burst using a soft-slicer.
+        @param rxBurst The burst to be demodulated.
         @param gsmPulse The GSM pulse.
         @param sps The number of samples per GSM symbol.
         @param channel The amplitude estimate of the received burst.
         @param TOA The time-of-arrival of the received burst.
         @return The demodulated bit sequence.
 */
-SoftVector *demodulateBurst(signalVector &rxBurst, int sps,
-                            complex channel, float TOA);
+SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
+                           complex channel, float TOA);
 
 /**
         Demodulate 8-PSK EDGE burst with soft symbol ooutput

@@ -2050,7 +2050,7 @@ static signalVector *demodCommon(signalVector &burst, int sps,
  * 4 SPS (if activated) to minimize distortion through the fractional
  * delay filters. Symbol rotation and after always operates at 1 SPS.
  */
-SoftVector *demodulateBurst(signalVector &rxBurst, int sps,
+SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
                             complex channel, float TOA)
 {
   SoftVector *bits;
