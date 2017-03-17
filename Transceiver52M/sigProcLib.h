@@ -50,6 +50,15 @@ enum SignalError {
   SIGERR_INTERNAL,
 };
 
+/*
+ * Burst detection threshold
+ *
+ * Decision threshold value for burst gating on peak-to-average value of
+ * correlated synchronization sequences. Lower values pass more bursts up
+ * to upper layers but will increase the false detection rate.
+ */
+#define BURST_THRESH    4.0
+
 /** Convert a linear number to a dB value */
 float dB(float x);
 

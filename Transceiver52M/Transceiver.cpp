@@ -44,15 +44,6 @@ using namespace GSM;
 /* Number of running values use in noise average */
 #define NOISE_CNT			20
 
-/*
- * Burst detection threshold
- *
- * Decision threshold value for burst gating on peak-to-average value of
- * correlated synchronization sequences. Lower values pass more bursts up
- * to upper layers but will increase the false detection rate.
- */
-#define BURST_THRESH			4.0
-
 TransceiverState::TransceiverState()
   : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT), mPower(0.0)
 {
