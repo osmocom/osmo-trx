@@ -42,7 +42,7 @@ enum CorrType{
   IDLE         ///< timeslot is an idle (or dummy) burst
 };
 
-enum signalError {
+enum SignalError {
   SIGERR_NONE,
   SIGERR_BOUNDS,
   SIGERR_CLIP,
