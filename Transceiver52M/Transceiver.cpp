@@ -113,7 +113,7 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc, un
 
     if ((filler == Transceiver::FILLER_NORM_RAND) ||
         (filler == Transceiver::FILLER_EDGE_RAND)) {
-        chanType[n] = Transceiver::TSC;
+        chanType[n] = TSC;
     }
   }
 
@@ -452,8 +452,8 @@ void Transceiver::setModulus(size_t timeslot, size_t chan)
 }
 
 
-Transceiver::CorrType Transceiver::expectedCorrType(GSM::Time currTime,
-                                                    size_t chan)
+CorrType Transceiver::expectedCorrType(GSM::Time currTime,
+                                       size_t chan)
 {
   static int tchh_subslot[26] = { 0,1,0,1,0,1,0,1,0,1,0,1,0,0,1,0,1,0,1,0,1,0,1,0,1,1 };
   static int sdcch4_subslot[102] = { 3,3,3,3,0,0,2,2,2,2,3,3,3,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,2,2,2,2,

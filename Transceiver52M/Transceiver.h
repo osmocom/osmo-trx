@@ -142,15 +142,6 @@ public:
     LOOPBACK            ///< similar go VII, used in loopback testing
   } ChannelCombination;
 
-  /** Codes for burst types of received bursts*/
-  typedef enum {
-    OFF,               ///< timeslot is off
-    TSC,	       ///< timeslot should contain a normal burst
-    RACH,	       ///< timeslot should contain an access burst
-    EDGE,	       ///< timeslot should contain an EDGE burst
-    IDLE	       ///< timeslot is an idle (or dummy) burst
-  } CorrType;
-
   enum FillerType {
     FILLER_DUMMY,
     FILLER_ZERO,
