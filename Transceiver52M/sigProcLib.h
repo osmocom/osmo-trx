@@ -189,69 +189,71 @@ bool energyDetect(signalVector &rxBurst,
                   float *avgPwr = NULL);
 
 /**
-        RACH correlator/detector.
-        @param rxBurst The received GSM burst of interest.
-        @param detectThreshold The threshold that the received burst's post-correlator SNR is compared against to determine validity.
+        RACH aka Access Burst correlator/detector.
+        @param burst The received GSM burst of interest.
+        @param threshold The threshold that the received burst's post-correlator SNR is compared against to determine validity.
         @param sps The number of samples per GSM symbol.
         @param amplitude The estimated amplitude of received RACH burst.
-        @param TOA The estimate time-of-arrival of received RACH burst.
-        @param maxTOA The maximum expected time-of-arrival
-        @return positive if threshold value is reached, negative on error, zero otherwise
+        @param toa The estimate time-of-arrival of received RACH burst.
+        @param max_toa The maximum expected time-of-arrival
+        @return 1 if threshold value is reached,
+                negative value (-SignalError) on error,
+                zero (SIGERR_NONE) if no burst is detected
 */
-int detectRACHBurst(signalVector &rxBurst,
-                    float detectThreshold,
+int detectRACHBurst(signalVector &burst,
+                    float threshold,
                     int sps,
                     complex &amplitude,
-                    float &TOA,
-                    unsigned maxTOA);
+                    float &toa,
+                    unsigned max_toa);
 
 /**
-        Normal burst correlator, detector, channel estimator.
+        GMSK Normal Burst correlator/detector.
         @param rxBurst The received GSM burst of interest.
- 
-        @param detectThreshold The threshold that the received burst's post-correlator SNR is compared against to determine validity.
+        @param tsc Midamble type (0..7) also known as TSC
+        @param threshold The threshold that the received burst's post-correlator SNR is compared against to determine validity.
         @param sps The number of samples per GSM symbol.
         @param amplitude The estimated amplitude of received TSC burst.
-        @param TOA The estimate time-of-arrival of received TSC burst.
-        @param maxTOA The maximum expected time-of-arrival
-        @param requestChannel Set to true if channel estimation is desired.
-        @param channelResponse The estimated channel.
-        @param channelResponseOffset The time offset b/w the first sample of the channel response and the reported TOA.
-        @return positive if threshold value is reached, negative on error, zero otherwise
+        @param toa The estimate time-of-arrival of received TSC burst.
+        @param max_toa The maximum expected time-of-arrival
+        @return 1 if threshold value is reached,
+                negative value (-SignalError) on error,
+                zero (SIGERR_NONE) if no burst is detected
 */
-int analyzeTrafficBurst(signalVector &rxBurst,
-                        unsigned TSC,
-                        float detectThreshold,
+int analyzeTrafficBurst(signalVector &burst,
+                        unsigned tsc,
+                        float threshold,
                         int sps,
                         complex &amplitude,
-                        float &TOA,
-                        unsigned maxTOA);
+                        float &toa,
+                        unsigned max_toa);
 
 /**
-        EDGE burst detector
+        EDGE/8-PSK Normal Burst correlator/detector
         @param burst The received GSM burst of interest
- 
-        @param detectThreshold The threshold that the received burst's post-correlator SNR is compared against to determine validity.
+        @param tsc Midamble type (0..7) also known as TSC
+        @param threshold The threshold that the received burst's post-correlator SNR is compared against to determine validity.
         @param sps The number of samples per GSM symbol.
         @param amplitude The estimated amplitude of received TSC burst.
-        @param TOA The estimate time-of-arrival of received TSC burst.
-        @param maxTOA The maximum expected time-of-arrival
-        @return positive if threshold value is reached, negative on error, zero otherwise
+        @param toa The estimate time-of-arrival of received TSC burst.
+        @param max_toa The maximum expected time-of-arrival
+        @return 1 if threshold value is reached,
+                negative value (-SignalError) on error,
+                zero (SIGERR_NONE) if no burst is detected
 */
 int detectEdgeBurst(signalVector &burst,
-                    unsigned TSC,
-                    float detectThreshold,
+                    unsigned tsc,
+                    float threshold,
                     int sps,
                     complex &amplitude,
-                    float &TOA,
-                    unsigned maxTOA);
+                    float &toa,
+                    unsigned max_toa);
 
 /**
 	Downsample 4 SPS to 1 SPS using a polyphase filterbank
         @param burst Input burst of at least 624 symbols
         @return Decimated signal vector of 156 symbols
 */
-
 signalVector *downsampleBurst(signalVector &burst);
 
 /**

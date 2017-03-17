@@ -1876,22 +1876,22 @@ int detectGeneralBurst(signalVector &rxBurst,
  *   head: Search 8 symbols before target
  *   tail: Search 8 symbols + maximum expected delay
  */
-int detectRACHBurst(signalVector &rxBurst,
-            float thresh,
+int detectRACHBurst(signalVector &burst,
+            float threshold,
             int sps,
-            complex &amp,
+            complex &amplitude,
             float &toa,
-            unsigned maxTOA)
+            unsigned max_toa)
 {
   int rc, target, head, tail;
   CorrelationSequence *sync;
 
   target = 8 + 40;
   head = 8;
-  tail = 8 + maxTOA;
+  tail = 8 + max_toa;
   sync = gRACHSequence;
 
-  rc = detectGeneralBurst(rxBurst, thresh, sps, amp, toa,
+  rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
                           target, head, tail, sync);
 
   return rc;
@@ -1905,8 +1905,8 @@ int detectRACHBurst(signalVector &rxBurst,
  *   head: Search 6 symbols before target
  *   tail: Search 6 symbols + maximum expected delay
  */
-int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
-                        int sps, complex &amp, float &toa, unsigned max_toa)
+int analyzeTrafficBurst(signalVector &burst, unsigned tsc, float threshold,
+                        int sps, complex &amplitude, float &toa, unsigned max_toa)
 {
   int rc, target, head, tail;
   CorrelationSequence *sync;
@@ -1919,13 +1919,13 @@ int analyzeTrafficBurst(signalVector &rxBurst, unsigned tsc, float thresh,
   tail = 6 + max_toa;
   sync = gMidambles[tsc];
 
-  rc = detectGeneralBurst(rxBurst, thresh, sps, amp, toa,
+  rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
                           target, head, tail, sync);
   return rc;
 }
 
-int detectEdgeBurst(signalVector &rxBurst, unsigned tsc, float thresh,
-                    int sps, complex &amp, float &toa, unsigned max_toa)
+int detectEdgeBurst(signalVector &burst, unsigned tsc, float threshold,
+                    int sps, complex &amplitude, float &toa, unsigned max_toa)
 {
   int rc, target, head, tail;
   CorrelationSequence *sync;
@@ -1938,7 +1938,7 @@ int detectEdgeBurst(signalVector &rxBurst, unsigned tsc, float thresh,
   tail = 6 + max_toa;
   sync = gEdgeMidambles[tsc];
 
-  rc = detectGeneralBurst(rxBurst, thresh, sps, amp, toa,
+  rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
                           target, head, tail, sync);
   return rc;
 }
