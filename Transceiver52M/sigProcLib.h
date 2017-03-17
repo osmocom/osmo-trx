@@ -41,6 +41,8 @@ enum CorrType{
   EDGE,        ///< timeslot should contain an EDGE burst
   IDLE         ///< timeslot is an idle (or dummy) burst
 };
+std::string corrTypeToString(CorrType corr);
+std::ostream& operator<<(std::ostream& os, CorrType corr);
 
 enum SignalError {
   SIGERR_NONE,

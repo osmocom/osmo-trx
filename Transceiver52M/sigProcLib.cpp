@@ -2166,3 +2166,26 @@ fail:
   sigProcLibDestroy();
   return false;
 }
+
+std::string corrTypeToString(CorrType corr) {
+  switch (corr) {
+  case OFF:
+    return "OFF";
+  case TSC:
+    return "TSC";
+  case RACH:
+    return "RACH";
+  case EDGE:
+    return "EDGE";
+  case IDLE:
+    return "IDLE";
+  default:
+    return "unknown";
+  }
+}
+
+std::ostream& operator<<(std::ostream& os, CorrType corr)
+{
+  os << corrTypeToString(corr);
+  return os;
+}
