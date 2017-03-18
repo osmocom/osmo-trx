@@ -1855,8 +1855,8 @@ int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float threshold
     return -SIGERR_UNSUPPORTED;
 
   target = 3 + 58 + 16 + 5;
-  head = 6;
-  tail = 6 + max_toa;
+  head = 3;
+  tail = 3 + max_toa;
   sync = gMidambles[tsc];
 
   rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
