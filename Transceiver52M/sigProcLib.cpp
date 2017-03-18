@@ -737,20 +737,6 @@ bool vectorSlicer(SoftVector *x)
   return true;
 }
 
-bool vectorSlicer(signalVector *x)
-{
-
-  signalVector::iterator xP = x->begin();
-  signalVector::iterator xPEnd = x->end();
-  while (xP < xPEnd) {
-    *xP = (complex) (0.5*(xP->real()+1.0F));
-    if (xP->real() > 1.0) *xP = 1.0;
-    if (xP->real() < 0.0) *xP = 0.0;
-    xP++;
-  }
-  return true;
-}
-
 static signalVector *rotateBurst(const BitVector &wBurst,
                                  int guardPeriodLength, int sps)
 {
@@ -2020,6 +2006,22 @@ static SoftVector *softSliceEdgeBurst(signalVector &burst)
 }
 
 /*
+ * Convert signalVector to SoftVector by taking real part of the signal.
+ */
+static SoftVector *signalToSoftVector(signalVector *dec)
+{
+  SoftVector *bits = new SoftVector(dec->size());
+
+  SoftVector::iterator bit_itr = bits->begin();
+  signalVector::iterator burst_itr = dec->begin();
+
+  for (; burst_itr < dec->end(); burst_itr++)
+    *bit_itr++ = burst_itr->real();
+
+  return bits;
+}
+
+/*
  * Shared portion of GMSK and EDGE demodulators consisting of timing
  * recovery and single tap channel correction. For 4 SPS (if activated),
  * the output is downsampled prior to the 1 SPS modulation specific
@@ -2062,17 +2064,11 @@ SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
 
   /* Shift up by a quarter of a frequency */
   GMSKReverseRotate(*dec, 1);
-  vectorSlicer(dec);
-
-  bits = new SoftVector(dec->size());
-
-  SoftVector::iterator bit_itr = bits->begin();
-  signalVector::iterator burst_itr = dec->begin();
-
-  for (; burst_itr < dec->end(); burst_itr++)
-    *bit_itr++ = burst_itr->real();
-
+  /* Take real part of the signal */
+  bits = signalToSoftVector(dec);
   delete dec;
+
+  vectorSlicer(bits);
 
   return bits;
 }

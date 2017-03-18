@@ -101,8 +101,8 @@ signalVector* correlate(signalVector *a,
 			unsigned startIx = 0,
 			unsigned len = 0);
 
-/** Operate soft slicer on real-valued portion of vector */ 
-bool vectorSlicer(signalVector *x);
+/** Operate soft slicer on a soft-bit vector */
+bool vectorSlicer(SoftVector *x);
 
 /** GMSK modulate a GSM burst of bits */
 signalVector *modulateBurst(const BitVector &wBurst,
