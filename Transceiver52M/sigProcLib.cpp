@@ -2068,8 +2068,6 @@ SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
   bits = signalToSoftVector(dec);
   delete dec;
 
-  vectorSlicer(bits);
-
   return bits;
 }
 
@@ -2099,7 +2097,6 @@ SoftVector *demodEdgeBurst(signalVector &burst, int sps,
 
   /* Soft slice and normalize */
   bits = softSliceEdgeBurst(*rot);
-  vectorSlicer(bits);
 
   delete dec;
   delete eq;

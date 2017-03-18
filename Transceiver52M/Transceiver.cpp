@@ -962,6 +962,9 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   if (!rxBurst)
     return;
 
+  // Convert -1..+1 soft bits to 0..1 soft bits
+  vectorSlicer(rxBurst);
+
   /*
    * EDGE demodulator returns 444 (148 * 3) bits
    */
