@@ -83,7 +83,6 @@
 
 
 #include "Threads.h"		// must be after defines above, if these files are to be allowed to use LOG()
-#include "Utils.h"
 
 /**
 	A C++ stream-based thread-safe logger.
@@ -123,6 +122,8 @@ extern bool gLogToSyslog;	// Output log messages to syslog
 
 std::list<std::string> gGetLoggerAlarms();		///< Get a copy of the recent alarm list.
 
+const std::string timestr();		// A timestamp to print in messages.
+std::ostream& operator<<(std::ostream& os, std::ostringstream& ss);
 
 /**@ Global control and initialization of the logging system. */
 //@{

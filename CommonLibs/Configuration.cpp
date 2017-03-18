@@ -53,6 +53,23 @@ static const char* createConfigTable = {
 	")"
 };
 
+static std::string replaceAll(const std::string input, const std::string search, const std::string replace)
+{
+	std::string output = input;
+ 	int index = 0;
+
+	while (true) {
+		index = output.find(search, index);
+		if (index == std::string::npos) {
+			break;
+		}
+
+		output.replace(index, replace.length(), replace);
+		index += replace.length();
+	}
+
+	return output;
+}
 
 
 float ConfigurationRecord::floatNumber() const
@@ -259,8 +276,8 @@ string ConfigurationTable::getTeX(const std::string& program, const std::string&
 	ss << "% END AUTO-GENERATED CONTENT" << endl;
 	ss << endl;
 
-	string tmp = Utils::replaceAll(ss.str(), "^", "\\^");
-	return Utils::replaceAll(tmp, "_", "\\_");
+	string tmp = replaceAll(ss.str(), "^", "\\^");
+	return replaceAll(tmp, "_", "\\_");
 }
 
 bool ConfigurationTable::defines(const string& key)

@@ -30,6 +30,7 @@
 #include <fstream>
 #include <string>
 #include <stdarg.h>
+#include <sys/time.h>	// For gettimeofday
 
 #include "Configuration.h"
 #include "Logger.h"
@@ -111,6 +112,31 @@ int lookupLevel(const string& key)
 	return level;
 }
 
+static std::string format(const char *fmt, ...)
+{
+	va_list ap;
+	char buf[300];
+	va_start(ap,fmt);
+	int n = vsnprintf(buf,300,fmt,ap);
+	va_end(ap);
+	if (n >= (300-4)) { strcpy(&buf[(300-4)],"..."); }
+	return std::string(buf);
+}
+
+const std::string timestr()
+{
+	struct timeval tv;
+	struct tm tm;
+	gettimeofday(&tv,NULL);
+	localtime_r(&tv.tv_sec,&tm);
+	unsigned tenths = tv.tv_usec / 100000;	// Rounding down is ok.
+	return format(" %02d:%02d:%02d.%1d",tm.tm_hour,tm.tm_min,tm.tm_sec,tenths);
+}
+
+std::ostream& operator<<(std::ostream& os, std::ostringstream& ss)
+{
+	return os << ss.str();
+}
 
 int getLoggingLevel(const char* filename)
 {
