@@ -30,6 +30,9 @@ public:
 	/** Override base assignment operator to include start offsets */
 	void operator=(const signalVector& vector);
 
+	/** Return an alias to a segment of this signalVector. */
+	signalVector segment(size_t start, size_t span);
+
 	/** Return head room */
 	size_t getStart() const;
 	size_t updateHistory();

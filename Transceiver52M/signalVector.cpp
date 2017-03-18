@@ -45,6 +45,11 @@ void signalVector::operator=(const signalVector& vector)
 	mStart = mData + vector.getStart();
 }
 
+signalVector signalVector::segment(size_t start, size_t span)
+{
+	return signalVector(mData, start, span);
+}
+
 size_t signalVector::getStart() const
 {
 	return mStart - mData;
