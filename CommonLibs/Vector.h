@@ -92,6 +92,13 @@ template <class T> class Vector {
 		mEnd = mStart + newSize;
 	}
 
+	/** Reduce addressable size of the Vector, keeping content. */
+	void shrink(size_t newSize)
+	{
+		assert(newSize <= mEnd - mStart);
+		mEnd = mStart + newSize;
+	}
+
 	/** Release memory and clear pointers. */
 	void clear() { resize(0); }
 
