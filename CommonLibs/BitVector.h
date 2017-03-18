@@ -89,142 +89,6 @@ class Generator {
 
 
 
-
-/** Parity (CRC-type) generator and checker based on a Generator. */
-class Parity : public Generator {
-
-	protected:
-
-	unsigned mCodewordSize;
-
-	public:
-
-	Parity(uint64_t wCoefficients, unsigned wParitySize, unsigned wCodewordSize)
-		:Generator(wCoefficients, wParitySize),
-		mCodewordSize(wCodewordSize)
-	{ }
-
-	/** Compute the parity word and write it into the target segment.  */
-	void writeParityWord(const BitVector& data, BitVector& parityWordTarget, bool invert=true);
-
-	/** Compute the syndrome of a received sequence. */
-	uint64_t syndrome(const BitVector& receivedCodeword);
-};
-
-
-
-
-/**
-	Class to represent convolutional coders/decoders of rate 1/2, memory length 4.
-	This is the "workhorse" coder for most GSM channels.
-*/
-class ViterbiR2O4 {
-
-	private:
-		/**name Lots of precomputed elements so the compiler can optimize like hell. */
-		//@{
-		/**@name Core values. */
-		//@{
-		static const unsigned mIRate = 2;	///< reciprocal of rate
-		static const unsigned mOrder = 4;	///< memory length of generators
-		//@}
-		/**@name Derived values. */
-		//@{
-		static const unsigned mIStates = 0x01 << mOrder;	///< number of states, number of survivors
-		static const uint32_t mSMask = mIStates-1;			///< survivor mask
-		static const uint32_t mCMask = (mSMask<<1) | 0x01;	///< candidate mask
-		static const uint32_t mOMask = (0x01<<mIRate)-1;	///< ouput mask, all iRate low bits set
-		static const unsigned mNumCands = mIStates*2;		///< number of candidates to generate during branching
-		static const unsigned mDeferral = 6*mOrder;			///< deferral to be used
-		//@}
-		//@}
-
-		/** Precomputed tables. */
-		//@{
-		uint32_t mCoeffs[mIRate];					///< polynomial for each generator
-		uint32_t mStateTable[mIRate][2*mIStates];	///< precomputed generator output tables
-		uint32_t mGeneratorTable[2*mIStates];		///< precomputed coder output table
-		//@}
-	
-	public:
-
-		/**
-		  A candidate sequence in a Viterbi decoder.
-		  The 32-bit state register can support a deferral of 6 with a 4th-order coder.
-		 */
-		typedef struct candStruct {
-			uint32_t iState;	///< encoder input associated with this candidate
-			uint32_t oState;	///< encoder output associated with this candidate
-			float cost;			///< cost (metric value), float to support soft inputs
-		} vCand;
-
-		/** Clear a structure. */
-		void clear(vCand& v)
-		{
-			v.iState=0;
-			v.oState=0;
-			v.cost=0;
-		}
-		
-
-	private:
-
-		/**@name Survivors and candidates. */
-		//@{
-		vCand mSurvivors[mIStates];			///< current survivor pool
-		vCand mCandidates[2*mIStates];		///< current candidate pool
-		//@}
-
-	public:
-
-		unsigned iRate() const { return mIRate; }
-		uint32_t cMask() const { return mCMask; }
-		uint32_t stateTable(unsigned g, unsigned i) const { return mStateTable[g][i]; }
-		unsigned deferral() const { return mDeferral; }
-		
-
-		ViterbiR2O4();
-
-		/** Set all cost metrics to zero. */
-		void initializeStates();
-
-		/**
-			Full cycle of the Viterbi algorithm: branch, metrics, prune, select.
-			@return reference to minimum-cost candidate.
-		*/
-		const vCand& step(uint32_t inSample, const float *probs, const float *iprobs);
-
-	private:
-
-		/** Branch survivors into new candidates. */
-		void branchCandidates();
-
-		/** Compute cost metrics for soft-inputs. */
-		void getSoftCostMetrics(uint32_t inSample, const float *probs, const float *iprobs);
-
-		/** Select survivors from the candidate set. */
-		void pruneCandidates();
-
-		/** Find the minimum cost survivor. */
-		const vCand& minCost() const;
-
-		/**
-			Precompute the state tables.
-			@param g Generator index 0..((1/rate)-1)
-		*/
-		void computeStateTables(unsigned g);
-
-		/**
-			Precompute the generator outputs.
-			mCoeffs must be defined first.
-		*/
-		void computeGeneratorTable();
-
-};
-
-
-
-
 class BitVector : public Vector<char> {
 
 
@@ -288,8 +152,6 @@ class BitVector : public Vector<char> {
 	uint64_t syndrome(Generator& gen) const;
 	/** Calculate the parity word for the vector with the given Generator. */
 	uint64_t parity(Generator& gen) const;
-	/** Encode the signal with the GSM rate 1/2 convolutional encoder. */
-	void encode(const ViterbiR2O4& encoder, BitVector& target);
 	//@}
 
 
@@ -427,10 +289,7 @@ class SoftVector: public Vector<float> {
 	const SoftVector tail(size_t start) const { return segment(start,size()-start); }
 	//@}
 
-	/** Decode soft symbols with the GSM rate-1/2 Viterbi decoder. */
-	void decode(ViterbiR2O4 &decoder, BitVector& target) const;
-
-	// (pat) How good is the SoftVector in the sense of the bits being solid?
+	// How good is the SoftVector in the sense of the bits being solid?
 	// Result of 1 is perfect and 0 means all the bits were 0.5
 	// If plow is non-NULL, also return the lowest energy bit.
 	float getEnergy(float *low=0) const;
