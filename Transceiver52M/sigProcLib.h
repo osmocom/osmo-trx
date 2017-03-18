@@ -152,7 +152,7 @@ signalVector *generateDummyBurst(int sps, int tn);
 float sinc(float x);
 
 /** Delay a vector */
-signalVector *delayVector(signalVector *in, signalVector *out, float delay);
+signalVector *delayVector(const signalVector *in, signalVector *out, float delay);
 
 /** Add two vectors in-place */
 bool addVector(signalVector &x,
@@ -311,7 +311,7 @@ signalVector *decimateVector(signalVector &wVector, size_t factor);
         @param TOA The time-of-arrival of the received burst.
         @return The demodulated bit sequence.
 */
-SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
+SoftVector *demodGmskBurst(const signalVector &rxBurst, int sps,
                            complex channel, float TOA);
 
 /**
@@ -322,11 +322,11 @@ SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
         @param TOA The time-of-arrival of the received burst.
         @return The demodulated bit sequence.
 */
-SoftVector *demodEdgeBurst(signalVector &rxBurst, int sps,
+SoftVector *demodEdgeBurst(const signalVector &rxBurst, int sps,
                            complex channel, float TOA);
 
 /** Demodulate burst basde on type and output soft bits */
-SoftVector *demodAnyBurst(signalVector &burst, int sps,
+SoftVector *demodAnyBurst(const signalVector &burst, int sps,
                           complex amp, float toa, CorrType type);
 
 #endif /* SIGPROCLIB_H */

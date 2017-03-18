@@ -1253,7 +1253,7 @@ void generateDelayFilters()
   }
 }
 
-signalVector *delayVector(signalVector *in, signalVector *out, float delay)
+signalVector *delayVector(const signalVector *in, signalVector *out, float delay)
 {
   int whole, index;
   float frac;
@@ -2060,7 +2060,7 @@ static SoftVector *signalToSoftVector(signalVector *dec)
  * the output is downsampled prior to the 1 SPS modulation specific
  * stages.
  */
-static signalVector *demodCommon(signalVector &burst, int sps,
+static signalVector *demodCommon(const signalVector &burst, int sps,
                                  complex chan, float toa)
 {
   signalVector *delay, *dec;
@@ -2068,8 +2068,8 @@ static signalVector *demodCommon(signalVector &burst, int sps,
   if ((sps != 1) && (sps != 4))
     return NULL;
 
-  scaleVector(burst, (complex) 1.0 / chan);
   delay = delayVector(&burst, NULL, -toa * (float) sps);
+  scaleVector(*delay, (complex) 1.0 / chan);
 
   if (sps == 1)
     return delay;
@@ -2085,7 +2085,7 @@ static signalVector *demodCommon(signalVector &burst, int sps,
  * 4 SPS (if activated) to minimize distortion through the fractional
  * delay filters. Symbol rotation and after always operates at 1 SPS.
  */
-SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
+SoftVector *demodGmskBurst(const signalVector &rxBurst, int sps,
                            complex channel, float TOA)
 {
   SoftVector *bits;
@@ -2114,7 +2114,7 @@ SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
  * through the fractional delay filters at 1 SPS renders signal
  * nearly unrecoverable.
  */
-SoftVector *demodEdgeBurst(signalVector &burst, int sps,
+SoftVector *demodEdgeBurst(const signalVector &burst, int sps,
                            complex chan, float toa)
 {
   SoftVector *bits;
@@ -2138,7 +2138,7 @@ SoftVector *demodEdgeBurst(signalVector &burst, int sps,
   return bits;
 }
 
-SoftVector *demodAnyBurst(signalVector &burst, int sps, complex amp,
+SoftVector *demodAnyBurst(const signalVector &burst, int sps, complex amp,
                           float toa, CorrType type)
 {
   if (type == EDGE)
