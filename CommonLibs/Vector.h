@@ -222,6 +222,21 @@ template <class T> class Vector {
 		memcpy(other.mStart,base,span*sizeof(T));
 	}
 
+	/**
+		Move (copy) a segment of this vector into a different position in the vector
+		@param from Start point from which to copy.
+		@param to   Start point to which to copy.
+		@param span The number of elements to copy.
+	*/
+	void segmentMove(size_t from, size_t to, size_t span)
+	{
+		const T* baseFrom = mStart + from;
+		T* baseTo = mStart + to;
+		assert(baseFrom+span<=mEnd);
+		assert(baseTo+span<=mEnd);
+		memmove(baseTo,baseFrom,span*sizeof(T));
+	}
+
 	void fill(const T& val)
 	{
 		T* dp=mStart;
