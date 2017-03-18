@@ -30,6 +30,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <sstream>
+#include <math.h>
 
 using namespace std;
 
@@ -268,7 +269,7 @@ SoftVector::SoftVector(const BitVector& source)
 	resize(source.size());
 	for (size_t i=0; i<size(); i++) {
 		if (source.bit(i)) mStart[i]=1.0F;
-		else mStart[i]=0.0F;
+		else mStart[i]=-1.0F;
 	}
 }
 
@@ -278,7 +279,7 @@ BitVector SoftVector::sliced() const
 	size_t sz = size();
 	BitVector newSig(sz);
 	for (size_t i=0; i<sz; i++) {
-		if (mStart[i]>0.5F) newSig[i]=1;
+		if (mStart[i]>0.0F) newSig[i]=1;
 		else newSig[i] = 0;
 	}
 	return newSig;
@@ -291,8 +292,7 @@ float SoftVector::getEnergy(float *plow) const
 	int len = vec.size();
 	float avg = 0; float low = 1;
 	for (int i = 0; i < len; i++) {
-		float bit = vec[i];
-		float energy = 2*((bit < 0.5) ? (0.5-bit) : (bit-0.5));
+		float energy = fabsf(vec[i]);
 		if (energy < low) low = energy;
 		avg += energy/len;
 	}
@@ -304,12 +304,12 @@ float SoftVector::getEnergy(float *plow) const
 ostream& operator<<(ostream& os, const SoftVector& sv)
 {
 	for (size_t i=0; i<sv.size(); i++) {
-		if (sv[i]<0.25) os << "0";
-		else if (sv[i]<0.4) os << "o";
-		else if (sv[i]<0.5) os << ".";
-		else if (sv[i]>0.75) os << "1";
-		else if (sv[i]>0.6) os << "|";
-		else if (sv[i]>0.5) os << "'";
+		if (sv[i]<-0.5) os << "0";
+		else if (sv[i]<-0.25) os << "o";
+		else if (sv[i]<0.0) os << ".";
+		else if (sv[i]>0.5) os << "1";
+		else if (sv[i]>0.25) os << "|";
+		else if (sv[i]>0.0) os << "'";
 		else os << "-";
 	}
 	return os;

@@ -290,19 +290,19 @@ class SoftVector: public Vector<float> {
 	//@}
 
 	// How good is the SoftVector in the sense of the bits being solid?
-	// Result of 1 is perfect and 0 means all the bits were 0.5
+	// Result of 1 is perfect and 0 means all the bits were 0.0
 	// If plow is non-NULL, also return the lowest energy bit.
 	float getEnergy(float *low=0) const;
 
 	/** Fill with "unknown" values. */
-	void unknown() { fill(0.5F); }
+	void unknown() { fill(0.0F); }
 
 	/** Return a hard bit value from a given index by slicing. */
 	bool bit(size_t index) const
 	{
 		const float *dp = mStart+index;
 		assert(dp<mEnd);
-		return (*dp)>0.5F;
+		return (*dp)>0.0F;
 	}
 
 	/** Slice the whole signal into bits. */
