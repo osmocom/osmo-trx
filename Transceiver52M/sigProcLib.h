@@ -201,7 +201,7 @@ void scaleVector(signalVector &x,
         @param windowLength The number of burst samples used to compute burst energy
         @return The average power of the received burst.
 */
-float energyDetect(signalVector &rxBurst,
+float energyDetect(const signalVector &rxBurst,
                    unsigned windowLength);
 
 /**
@@ -216,7 +216,7 @@ float energyDetect(signalVector &rxBurst,
                 negative value (-SignalError) on error,
                 zero (SIGERR_NONE) if no burst is detected
 */
-int detectRACHBurst(signalVector &burst,
+int detectRACHBurst(const signalVector &burst,
                     float threshold,
                     int sps,
                     complex &amplitude,
@@ -236,7 +236,7 @@ int detectRACHBurst(signalVector &burst,
                 negative value (-SignalError) on error,
                 zero (SIGERR_NONE) if no burst is detected
 */
-int analyzeTrafficBurst(signalVector &burst,
+int analyzeTrafficBurst(const signalVector &burst,
                         unsigned tsc,
                         float threshold,
                         int sps,
@@ -257,7 +257,7 @@ int analyzeTrafficBurst(signalVector &burst,
                 negative value (-SignalError) on error,
                 zero (SIGERR_NONE) if no burst is detected
 */
-int detectEdgeBurst(signalVector &burst,
+int detectEdgeBurst(const signalVector &burst,
                     unsigned tsc,
                     float threshold,
                     int sps,
@@ -278,7 +278,7 @@ int detectEdgeBurst(signalVector &burst,
                 negative value (-SignalError) on error,
                 zero (SIGERR_NONE) if no burst is detected
 */
-int detectAnyBurst(signalVector &burst,
+int detectAnyBurst(const signalVector &burst,
                    unsigned tsc,
                    float threshold,
                    int sps,
@@ -292,7 +292,7 @@ int detectAnyBurst(signalVector &burst,
         @param burst Input burst of at least 624 symbols
         @return Decimated signal vector of 156 symbols
 */
-signalVector *downsampleBurst(signalVector &burst);
+signalVector *downsampleBurst(const signalVector &burst);
 
 /**
         Decimate a vector.

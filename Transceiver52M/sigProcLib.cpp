@@ -1707,7 +1707,7 @@ static float computePeakRatio(signalVector *corr,
   return (amp.abs()) / rms;
 }
 
-float energyDetect(signalVector &rxBurst, unsigned windowLength)
+float energyDetect(const signalVector &rxBurst, unsigned windowLength)
 {
 
   signalVector::const_iterator windowItr = rxBurst.begin(); //+rxBurst.size()/2 - 5*windowLength/2;
@@ -1729,12 +1729,13 @@ float energyDetect(signalVector &rxBurst, unsigned windowLength)
  * For higher oversampling values, we assume the energy detector is in place
  * and we run full interpolating peak detection.
  */
-static int detectBurst(signalVector &burst,
+static int detectBurst(const signalVector &burst,
                        signalVector &corr, CorrelationSequence *sync,
                        float thresh, int sps, complex *amp, float *toa,
                        int start, int len)
 {
-  signalVector *corr_in, *dec = NULL;
+  const signalVector *corr_in;
+  signalVector *dec = NULL;
 
   if (sps == 4) {
     dec = downsampleBurst(burst);
@@ -1782,7 +1783,7 @@ static int detectBurst(signalVector &burst,
   return 1;
 }
 
-static float maxAmplitude(signalVector &burst)
+static float maxAmplitude(const signalVector &burst)
 {
     float max = 0.0;
     for (size_t i = 0; i < burst.size(); i++) {
@@ -1803,13 +1804,13 @@ static float maxAmplitude(signalVector &burst)
  *   head: Search symbols before target
  *   tail: Search symbols after target
  */
-int detectGeneralBurst(signalVector &rxBurst,
-                       float thresh,
-                       int sps,
-                       complex &amp,
-                       float &toa,
-                       int target, int head, int tail,
-                       CorrelationSequence *sync)
+static int detectGeneralBurst(const signalVector &rxBurst,
+                              float thresh,
+                              int sps,
+                              complex &amp,
+                              float &toa,
+                              int target, int head, int tail,
+                              CorrelationSequence *sync)
 {
   int rc, start, len;
   bool clipping = false;
@@ -1858,7 +1859,7 @@ int detectGeneralBurst(signalVector &rxBurst,
  *   head: Search 8 symbols before target
  *   tail: Search 8 symbols + maximum expected delay
  */
-int detectRACHBurst(signalVector &burst,
+int detectRACHBurst(const signalVector &burst,
             float threshold,
             int sps,
             complex &amplitude,
@@ -1887,7 +1888,7 @@ int detectRACHBurst(signalVector &burst,
  *   head: Search 6 symbols before target
  *   tail: Search 6 symbols + maximum expected delay
  */
-int analyzeTrafficBurst(signalVector &burst, unsigned tsc, float threshold,
+int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float threshold,
                         int sps, complex &amplitude, float &toa, unsigned max_toa)
 {
   int rc, target, head, tail;
@@ -1906,7 +1907,7 @@ int analyzeTrafficBurst(signalVector &burst, unsigned tsc, float threshold,
   return rc;
 }
 
-int detectEdgeBurst(signalVector &burst, unsigned tsc, float threshold,
+int detectEdgeBurst(const signalVector &burst, unsigned tsc, float threshold,
                     int sps, complex &amplitude, float &toa, unsigned max_toa)
 {
   int rc, target, head, tail;
@@ -1925,7 +1926,7 @@ int detectEdgeBurst(signalVector &burst, unsigned tsc, float threshold,
   return rc;
 }
 
-int detectAnyBurst(signalVector &burst, unsigned tsc, float threshold,
+int detectAnyBurst(const signalVector &burst, unsigned tsc, float threshold,
                    int sps, CorrType type, complex &amp, float &toa,
                    unsigned max_toa)
 {
@@ -1957,7 +1958,7 @@ int detectAnyBurst(signalVector &burst, unsigned tsc, float threshold,
   return rc;
 }
 
-signalVector *downsampleBurst(signalVector &burst)
+signalVector *downsampleBurst(const signalVector &burst)
 {
   signalVector *in, *out;
 
@@ -2085,7 +2086,7 @@ static signalVector *demodCommon(signalVector &burst, int sps,
  * delay filters. Symbol rotation and after always operates at 1 SPS.
  */
 SoftVector *demodGmskBurst(signalVector &rxBurst, int sps,
-                            complex channel, float TOA)
+                           complex channel, float TOA)
 {
   SoftVector *bits;
   signalVector *dec;
