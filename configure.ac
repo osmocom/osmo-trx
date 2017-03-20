@@ -114,7 +114,10 @@ AS_IF([test "x$with_singledb" = "xyes"], [
 
 # Find and define supported SIMD extensions
 AS_IF([test "x$with_sse" != "xno"], [
-    AX_EXT
+    AX_SSE
+], [
+    AM_CONDITIONAL(HAVE_SSE3, false)
+    AM_CONDITIONAL(HAVE_SSE4_1, false)
 ])
 
 AM_CONDITIONAL(USRP1, [test "x$with_usrp1" = "xyes"])
