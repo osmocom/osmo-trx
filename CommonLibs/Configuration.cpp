@@ -113,7 +113,7 @@ ConfigurationTable::ConfigurationTable(const char* filename, const char *wCmdNam
 		"Maximum number of alarms to remember inside the application."
 	);
 	mSchema[tmp->getName()] = *tmp;
-	free(tmp);
+	delete tmp;
 
 	tmp = new ConfigurationKey("Log.File","",
 		"",
@@ -127,7 +127,7 @@ ConfigurationTable::ConfigurationTable(const char* filename, const char *wCmdNam
 			"To disable again, execute \"unconfig Log.File\"."
 	);
 	mSchema[tmp->getName()] = *tmp;
-	free(tmp);
+	delete tmp;
 
 	tmp = new ConfigurationKey("Log.Level","NOTICE",
 		"",
@@ -145,7 +145,7 @@ ConfigurationTable::ConfigurationTable(const char* filename, const char *wCmdNam
 		"Default logging level when no other level is defined for a file."
 	);
 	mSchema[tmp->getName()] = *tmp;
-	free(tmp);
+	delete tmp;
 
 	// Add application specific schema
 	mSchema.insert(wSchema.begin(), wSchema.end());
