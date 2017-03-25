@@ -30,65 +30,6 @@
 #include <stdint.h>
 
 
-class BitVector;
-class SoftVector;
-
-
-
-/** Shift-register (LFSR) generator. */
-class Generator {
-
-	private:
-
-	uint64_t mCoeff;	///< polynomial coefficients. LSB is zero exponent.
-	uint64_t mState;	///< shift register state. LSB is most recent.
-	uint64_t mMask;		///< mask for reading state
-	unsigned mLen;		///< number of bits used in shift register
-	unsigned mLen_1;	///< mLen - 1
-
-	public:
-
-	Generator(uint64_t wCoeff, unsigned wLen)
-		:mCoeff(wCoeff),mState(0),
-		mMask((1ULL<<wLen)-1),
-		mLen(wLen),mLen_1(wLen-1)
-	{ assert(wLen<64); }
-
-	void clear() { mState=0; }
-
-	/**@name Accessors */
-	//@{
-	uint64_t state() const { return mState & mMask; }
-	unsigned size() const { return mLen; }
-	//@}
-
-	/**
-		Calculate one bit of a syndrome.
-		This is in the .h for inlining.
-	*/
-	void syndromeShift(unsigned inBit)
-	{
-		const unsigned fb = (mState>>(mLen_1)) & 0x01;
-		mState = (mState<<1) ^ (inBit & 0x01);
-		if (fb) mState ^= mCoeff;
-	}
-
-	/**
-		Update the generator state by one cycle.
-		This is in the .h for inlining.
-	*/
-	void encoderShift(unsigned inBit)
-	{
-		const unsigned fb = ((mState>>(mLen_1)) ^ inBit) & 0x01;
-		mState <<= 1;
-		if (fb) mState ^= mCoeff;
-	}
-
-
-};
-
-
-
 class BitVector : public Vector<char> {
 
 
@@ -145,14 +86,6 @@ class BitVector : public Vector<char> {
 
 
 	void zero() { fill(0); }
-
-	/**@name FEC operations. */
-	//@{
-	/** Calculate the syndrome of the vector with the given Generator. */
-	uint64_t syndrome(Generator& gen) const;
-	/** Calculate the parity word for the vector with the given Generator. */
-	uint64_t parity(Generator& gen) const;
-	//@}
 
 
 	/** Invert 0<->1. */

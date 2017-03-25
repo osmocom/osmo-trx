@@ -200,25 +200,6 @@ void BitVector::LSB8MSB()
 
 
 
-uint64_t BitVector::syndrome(Generator& gen) const
-{
-	gen.clear();
-	const char *dp = mStart;
-	while (dp<mEnd) gen.syndromeShift(*dp++);
-	return gen.state();
-}
-
-
-uint64_t BitVector::parity(Generator& gen) const
-{
-	gen.clear();
-	const char *dp = mStart;
-	while (dp<mEnd) gen.encoderShift(*dp++);
-	return gen.state();
-}
-
-
-
 unsigned BitVector::sum() const
 {
 	unsigned sum = 0;
