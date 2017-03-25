@@ -927,19 +927,25 @@ signalVector *genRandNormalBurst(int tsc, int sps, int tn)
   signalVector *burst;
 
   /* Tail bits */
-  for (; i < 4; i++)
+  for (; i < 3; i++)
     (*bits)[i] = 0;
 
   /* Random bits */
-  for (; i < 61; i++)
+  for (; i < 60; i++)
     (*bits)[i] = rand() % 2;
+
+  /* Stealing bit */
+  (*bits)[i++] = 0;
 
   /* Training sequence */
   for (int n = 0; i < 87; i++, n++)
     (*bits)[i] = gTrainingSequence[tsc][n];
 
+  /* Stealing bit */
+  (*bits)[i++] = 0;
+
   /* Random bits */
-  for (; i < 144; i++)
+  for (; i < 145; i++)
     (*bits)[i] = rand() % 2;
 
   /* Tail bits */
