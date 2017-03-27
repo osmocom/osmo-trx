@@ -69,7 +69,9 @@ libtransceiver_la_SOURCES = \
 	radioInterfaceResamp.cpp \
 	radioInterfaceMulti.cpp
 
-bin_PROGRAMS = osmo-trx
+bin_PROGRAMS = \
+	osmo-trx \
+	osmo-trx-gen
 
 noinst_HEADERS = \
 	Complex.h \
@@ -98,6 +100,13 @@ osmo_trx_LDADD = \
 	$(ARCH_LA) \
 	$(GSM_LA) \
 	$(COMMON_LA) $(SQLITE3_LIBS)
+
+osmo_trx_gen_SOURCES = osmo-trx-gen.cpp
+osmo_trx_gen_LDADD = \
+	libtransceiver.la \
+	$(ARCH_LA) \
+	$(GSM_LA) \
+	$(COMMON_LA) $(SQLITE_LA)
 
 if USRP1 
 libtransceiver_la_SOURCES += USRPDevice.cpp
