@@ -1773,10 +1773,6 @@ static int detectBurst(const signalVector &burst,
   /* Normalize our channel gain */
   *amp = *amp / sync->gain;
 
-  /* Compenate for residual rotation with dual Laurent pulse */
-  if (sps == 4)
-    *amp = *amp * complex(0.0, 1.0);
-
   /* Compensate for residuate time lag */
   *toa = *toa - sync->toa;
 
@@ -1894,7 +1890,7 @@ int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float threshold
   int rc, target, head, tail;
   CorrelationSequence *sync;
 
-  if ((tsc < 0) || (tsc > 7))
+  if (tsc > 7)
     return -SIGERR_UNSUPPORTED;
 
   target = 3 + 58 + 16 + 5;
@@ -1913,7 +1909,7 @@ int detectEdgeBurst(const signalVector &burst, unsigned tsc, float threshold,
   int rc, target, head, tail;
   CorrelationSequence *sync;
 
-  if ((tsc < 0) || (tsc > 7))
+  if (tsc > 7)
     return -SIGERR_UNSUPPORTED;
 
   target = 3 + 58 + 16 + 5;
