@@ -1962,8 +1962,12 @@ signalVector *downsampleBurst(const signalVector &burst)
   out = new signalVector(DOWNSAMPLE_OUT_LEN);
   memcpy(in->begin(), burst.begin(), DOWNSAMPLE_IN_LEN * 2 * sizeof(float));
 
-  dnsampler->rotate((float *) in->begin(), DOWNSAMPLE_IN_LEN,
-                    (float *) out->begin(), DOWNSAMPLE_OUT_LEN);
+  if (dnsampler->rotate((float *) in->begin(), DOWNSAMPLE_IN_LEN,
+                        (float *) out->begin(), DOWNSAMPLE_OUT_LEN) < 0) {
+    delete out;
+    out = NULL;
+  }
+
   delete in;
   return out;
 };
