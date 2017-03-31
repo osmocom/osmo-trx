@@ -49,16 +49,9 @@
  */
 #define DEFAULT_RX_SPS		1
 
-/* Default configuration parameters
- *     Note that these values are only used if the particular key does not
- *     exist in the configuration database. IP port and address values will
- *     typically be overwritten by the OpenBTS.db values. Other values will
- *     not be in the database by default.
- */
+/* Default configuration parameters */
 #define DEFAULT_TRX_PORT	5700
 #define DEFAULT_TRX_IP		"127.0.0.1"
-#define DEFAULT_EXTREF		false
-#define DEFAULT_DIVERSITY	false
 #define DEFAULT_CHANS		1
 
 struct trx_config {
@@ -86,40 +79,6 @@ ConfigurationTable gConfig;
 
 volatile bool gshutdown = false;
 
-/* Run sanity check on configuration table
- *     The global table constructor cannot provide notification in the
- *     event of failure. Make sure that we can access the database,
- *     write to it, and that it contains the bare minimum required keys.
- */
-bool testConfig()
-{
-	int val = 9999;
-	std::string test = "asldfkjsaldkf";
-	const char *key = "Log.Level";
-
-	/* Attempt to query */
-	try {
-		gConfig.getStr(key);
-	} catch (...) {
-		std::cerr << std::endl;
-		std::cerr << "Config: Failed query required key " << key
-			  << std::endl;
-		return false;
-	}
-
-	/* Attempt to set a test value in the global config */
-	if (!gConfig.set(test, val)) {
-		std::cerr << std::endl;
-		std::cerr << "Config: Failed to set test key" << std::endl;
-		return false;
-	} else {
-		gConfig.remove(test);
-	}
-
-	return true;
-}
-
-
 /* Setup configuration values
  *     Don't query the existence of the Log.Level because it's a
  *     mandatory value. That is, if it doesn't exist, the configuration
@@ -130,43 +89,6 @@ bool testConfig()
 bool trx_setup_config(struct trx_config *config)
 {
 	std::string refstr, fillstr, divstr, mcstr, edgestr;
-
-	if (!testConfig())
-		return false;
-
-	if (config->log_level == "")
-		config->log_level = gConfig.getStr("Log.Level");
-
-	if (!config->port) {
-		if (gConfig.defines("TRX.Port"))
-			config->port = gConfig.getNum("TRX.Port");
-		else
-			config->port = DEFAULT_TRX_PORT;
-	}
-
-	if (config->addr == "") {
-		if (gConfig.defines("TRX.IP"))
-			config->addr = gConfig.getStr("TRX.IP");
-		else
-			config->addr = DEFAULT_TRX_IP;
-	}
-
-	if (!config->extref) {
-		if (gConfig.defines("TRX.Reference"))
-			config->extref = gConfig.getNum("TRX.Reference");
-		else
-			config->extref = DEFAULT_EXTREF;
-	}
-
-	if (!config->diversity) {
-		if (gConfig.defines("TRX.Diversity"))
-			config->diversity = gConfig.getNum("TRX.Diversity");
-		else
-			config->diversity = DEFAULT_DIVERSITY;
-	}
-
-	if (!config->chans)
-		config->chans = DEFAULT_CHANS;
 
 	if (config->mcbts && config->chans > 5) {
 		std::cout << "Unsupported number of channels" << std::endl;
@@ -350,7 +272,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 {
 	int option;
 
-	config->port = 0;
+	config->log_level = "NOTICE";
+	config->addr = DEFAULT_TRX_IP;
+	config->port = DEFAULT_TRX_PORT;
 	config->tx_sps = DEFAULT_TX_SPS;
 	config->rx_sps = DEFAULT_RX_SPS;
 	config->chans = DEFAULT_CHANS;
