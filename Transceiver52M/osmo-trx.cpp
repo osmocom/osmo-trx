@@ -72,7 +72,6 @@ struct trx_config {
 	bool extref;
 	bool gpsref;
 	Transceiver::FillerType filler;
-	bool diversity;
 	bool mcbts;
 	double offset;
 	double rssi_offset;
@@ -101,7 +100,6 @@ bool trx_setup_config(struct trx_config *config)
 	}
 
 	edgestr = config->edge ? "Enabled" : "Disabled";
-	divstr = config->diversity ? "Enabled" : "Disabled";
 	mcstr = config->mcbts ? "Enabled" : "Disabled";
 
 	if (config->extref)
@@ -142,7 +140,6 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   Reference............... " << refstr << std::endl;
 	ost << "   C0 Filler Table......... " << fillstr << std::endl;
 	ost << "   Multi-Carrier........... " << mcstr << std::endl;
-	ost << "   Diversity............... " << divstr << std::endl;
 	ost << "   Tuning offset........... " << config->offset << std::endl;
 	ost << "   RSSI to dBm offset...... " << config->rssi_offset << std::endl;
 	ost << "   Swap channels........... " << config->swap_channels << std::endl;
@@ -172,12 +169,6 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
 	case RadioDevice::RESAMP_100M:
 		radio = new RadioInterfaceResamp(usrp, config->tx_sps,
 						 config->rx_sps);
-		break;
-	case RadioDevice::DIVERSITY:
-
-
-		radio = new RadioInterfaceDiversity(usrp, config->tx_sps,
-						    config->chans);
 		break;
 	case RadioDevice::MULTI_ARFCN:
 		radio = new RadioInterfaceMulti(usrp, config->tx_sps,
@@ -257,7 +248,6 @@ static void print_help()
 		"  -i    IP address of GSM core\n"
 		"  -p    Base port number\n"
 		"  -e    Enable EDGE receiver\n"
-		"  -d    Enable dual channel diversity receiver (deprecated)\n"
 		"  -m    Enable multi-ARFCN transceiver (default=disabled)\n"
 		"  -x    Enable external 10 MHz reference\n"
 		"  -g    Enable GPSDO reference\n"
@@ -289,7 +279,6 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->gpsref = false;
 	config->filler = Transceiver::FILLER_ZERO;
 	config->mcbts = false;
-	config->diversity = false;
 	config->offset = 0.0;
 	config->rssi_offset = 0.0;
 	config->swap_channels = false;
@@ -318,9 +307,6 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'm':
 			config->mcbts = true;
-			break;
-		case 'd':
-			config->diversity = true;
 			break;
 		case 'x':
 			config->extref = true;
@@ -372,24 +358,6 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	if (config->gpsref && config->extref) {
 		printf("External and GPSDO references unavailable at the same time\n\n");
 		goto bad_config;
-	}
-
-	/* Special restrictions on (deprecated) diversity configuration */
-	if (config->diversity) {
-		if (config->mcbts || config->edge) {
-			std::cout << "Multi-carrier/EDGE diversity unsupported" << std::endl;
-			goto bad_config;
-		}
-
-		if (config->rx_sps != 1) {
-			std::cout << "Diversity only supported with 1 SPS" << std::endl;
-			goto bad_config;
-		}
-
-		if (config->chans != 2) {
-			std::cout << "Diversity only supported with 2 channels" << std::endl;
-			goto bad_config;
-		}
 	}
 
 	if (config->edge && (config->filler == Transceiver::FILLER_NORM_RAND))

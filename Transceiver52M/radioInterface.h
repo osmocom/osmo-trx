@@ -41,7 +41,6 @@ protected:
   size_t mSPSTx;
   size_t mSPSRx;
   size_t mChans;
-  size_t mMIMO;
 
   std::vector<RadioBuffer *> sendBuffer;
   std::vector<RadioBuffer *> recvBuffer;
@@ -86,8 +85,8 @@ public:
 
   /** constructor */
   RadioInterface(RadioDevice* wRadio, size_t tx_sps, size_t rx_sps,
-		 size_t chans = 1, size_t diversity = 1,
-                 int receiveOffset = 3, GSM::Time wStartTime = GSM::Time(0));
+                 size_t chans = 1, int receiveOffset = 3,
+                 GSM::Time wStartTime = GSM::Time(0));
 
   /** destructor */
   virtual ~RadioInterface();
@@ -191,26 +190,4 @@ public:
   bool tuneTx(double freq, size_t chan);
   bool tuneRx(double freq, size_t chan);
   double setRxGain(double dB, size_t chan);
-};
-
-class RadioInterfaceDiversity : public RadioInterface {
-public:
-  RadioInterfaceDiversity(RadioDevice* wRadio, size_t tx_sps, size_t chans);
-
-  ~RadioInterfaceDiversity();
-
-  bool init(int type);
-  void close();
-  bool tuneRx(double freq, size_t chan);
-
-private:
-  Resampler *dnsampler;
-  std::vector<float> phases;
-  signalVector *outerRecvBuffer;
-
-  bool mDiversity;
-  double mFreqSpacing;
-
-  bool setupDiversityChannels();
-  void pullBuffer();
 };

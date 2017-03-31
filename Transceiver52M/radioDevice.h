@@ -41,7 +41,6 @@ class RadioDevice {
     RESAMP_64M,
     RESAMP_100M,
     MULTI_ARFCN,
-    DIVERSITY,
   };
 
   enum ReferenceType {

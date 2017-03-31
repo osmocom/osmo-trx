@@ -654,51 +654,6 @@ static PulseSequence *generateGSMPulse(int sps)
   return pulse;
 }
 
-signalVector* frequencyShift(signalVector *y,
-			     signalVector *x,
-			     float freq,
-			     float startPhase,
-			     float *finalPhase)
-{
-
-  if (!x) return NULL;
- 
-  if (y==NULL) {
-    y = new signalVector(x->size());
-    y->isReal(x->isReal());
-    if (y==NULL) return NULL;
-  }
-
-  if (y->size() < x->size()) return NULL;
-
-  float phase = startPhase;
-  signalVector::iterator yP = y->begin();
-  signalVector::iterator xPEnd = x->end();
-  signalVector::iterator xP = x->begin();
-
-  if (x->isReal()) {
-    while (xP < xPEnd) {
-      (*yP++) = expjLookup(phase)*( (xP++)->real() );
-      phase += freq;
-    }
-  }
-  else {
-    while (xP < xPEnd) {
-      (*yP++) = (*xP++)*expjLookup(phase);
-      phase += freq;
-      if (phase > 2 * M_PI)
-        phase -= 2 * M_PI;
-      else if (phase < -2 * M_PI)
-        phase += 2 * M_PI;
-    }
-  }
-
-
-  if (finalPhase) *finalPhase = phase;
-
-  return y;
-}
-
 signalVector* reverseConjugate(signalVector *b)
 {
     signalVector *tmp = new signalVector(b->size());

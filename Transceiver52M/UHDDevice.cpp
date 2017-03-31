@@ -139,16 +139,6 @@ static struct uhd_dev_offset uhd_offsets[] = {
 #define NUM_UHD_OFFSETS (sizeof(uhd_offsets)/sizeof(uhd_offsets[0]))
 
 /*
- * Offset handling for special cases. Currently used for UmTRX dual channel
- * diversity receiver only.
- */
-static struct uhd_dev_offset special_offsets[] = {
-	{ UMTRX, 1, 1, 8.0875e-5, "UmTRX diversity, 1 SPS" },
-	{ UMTRX, 4, 1, 5.2103e-5, "UmTRX diversity, 4 SPS" },
-};
-
-
-/*
  * Select sample rate based on device type and requested samples-per-symbol.
  * The base rate is either GSM symbol rate, 270.833 kHz, or the minimum
  * usable channel spacing of 400 kHz.
@@ -156,15 +146,6 @@ static struct uhd_dev_offset special_offsets[] = {
 static double select_rate(uhd_dev_type type, int sps,
 			  RadioDevice::InterfaceType iface)
 {
-	if (iface == RadioDevice::DIVERSITY) {
-		if (type == UMTRX)
-			return GSMRATE * 4;
-
-		LOG(ALERT) << "Diversity supported on UmTRX only";
-		return -9999.99;
-	}
-
-
 	if ((sps != 4) && (sps != 1))
 		return -9999.99;
 
@@ -499,30 +480,13 @@ double uhd_device::get_dev_offset()
 		return 0.0;
 	}
 
-	/* Special cases (e.g. diversity receiver) */
-	if (iface == DIVERSITY) {
-		if ((dev_type != UMTRX) || (rx_sps != 1)) {
-			LOG(ALERT) << "Unsupported device configuration";
-			return 0.0;
-		}
-
-		switch (tx_sps) {
-		case 1:
-			offset = &special_offsets[0];
+	/* Search for matching offset value */
+	for (size_t i = 0; i < NUM_UHD_OFFSETS; i++) {
+		if ((dev_type == uhd_offsets[i].type) &&
+			(tx_sps == uhd_offsets[i].tx_sps) &&
+			(rx_sps == uhd_offsets[i].rx_sps)) {
+			offset = &uhd_offsets[i];
 			break;
-		case 4:
-		default:
-			offset = &special_offsets[1];
-		}
-	} else {
-		/* Search for matching offset value */
-		for (size_t i = 0; i < NUM_UHD_OFFSETS; i++) {
-			if ((dev_type == uhd_offsets[i].type) &&
-				(tx_sps == uhd_offsets[i].tx_sps) &&
-				(rx_sps == uhd_offsets[i].rx_sps)) {
-				offset = &uhd_offsets[i];
-				break;
-			}
 		}
 	}
 
@@ -860,9 +824,6 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	double _rx_rate = select_rate(dev_type, rx_sps, iface);
 	double _tx_rate = select_rate(dev_type, tx_sps, iface);
 
-	if (iface == DIVERSITY)
-		_rx_rate = select_rate(dev_type, 1, iface);
-
 	if ((_tx_rate < 0.0) || (_rx_rate < 0.0))
 		return -1;
 	if (set_rates(_tx_rate, _rx_rate) < 0)
@@ -873,8 +834,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 		// Setting LMS6002D LPF to 500kHz gives us the best signal quality
 		for (size_t i = 0; i < chans; i++) {
 			usrp_dev->set_tx_bandwidth(500*1000*2, i);
-			if (iface != DIVERSITY)
-				usrp_dev->set_rx_bandwidth(500*1000*2, i);
+			usrp_dev->set_rx_bandwidth(500*1000*2, i);
 		}
 	} else if (dev_type == LIMESDR) {
 		for (size_t i = 0; i < chans; i++) {
@@ -917,8 +877,6 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	// Print configuration
 	LOG(INFO) << "\n" << usrp_dev->get_pp_string();
 
-	if (iface == DIVERSITY)
-		return DIVERSITY;
 	if (iface == MULTI_ARFCN)
 		return MULTI_ARFCN;
 

@@ -31,11 +31,10 @@ extern "C" {
 #define NUMCHUNKS	4
 
 RadioInterface::RadioInterface(RadioDevice *wRadio, size_t tx_sps,
-                               size_t rx_sps, size_t chans, size_t diversity,
+                               size_t rx_sps, size_t chans,
                                int wReceiveOffset, GSM::Time wStartTime)
   : mRadio(wRadio), mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans),
-    mMIMO(diversity), underrun(false), overrun(false),
-    receiveOffset(wReceiveOffset), mOn(false)
+    underrun(false), overrun(false), receiveOffset(wReceiveOffset), mOn(false)
 {
   mClock.set(wStartTime);
 }
@@ -47,7 +46,7 @@ RadioInterface::~RadioInterface(void)
 
 bool RadioInterface::init(int type)
 {
-  if ((type != RadioDevice::NORMAL) || (mMIMO > 1) || !mChans) {
+  if ((type != RadioDevice::NORMAL) || !mChans) {
     LOG(ALERT) << "Invalid configuration";
     return false;
   }
@@ -253,10 +252,8 @@ bool RadioInterface::driveReceiveRadio()
    */
   while (recvSz > burstSize) {
     for (size_t i = 0; i < mChans; i++) {
-      burst = new radioVector(rcvClock, burstSize, head, mMIMO);
-
-      for (size_t n = 0; n < mMIMO; n++)
-        unRadioifyVector(burst->getVector(n), i);
+      burst = new radioVector(rcvClock, burstSize, head);
+      unRadioifyVector(burst->getVector(), i);
 
       if (mReceiveFIFO[i].size() < 32)
         mReceiveFIFO[i].write(burst);
