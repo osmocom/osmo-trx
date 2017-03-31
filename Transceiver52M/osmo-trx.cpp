@@ -168,7 +168,7 @@ bool trx_setup_config(struct trx_config *config)
 	if (!config->chans)
 		config->chans = DEFAULT_CHANS;
 
-	if (config->mcbts && ((config->chans < 0) || (config->chans > 5))) {
+	if (config->mcbts && config->chans > 5) {
 		std::cout << "Unsupported number of channels" << std::endl;
 		return false;
 	}
