@@ -112,7 +112,7 @@ bool Resampler::initFilters(float bw)
 		}
 	}
 
-	delete proto;
+	delete[] proto;
 
 	return true;
 }
