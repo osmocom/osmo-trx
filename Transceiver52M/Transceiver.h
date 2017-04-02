@@ -84,6 +84,9 @@ struct TransceiverState {
 
   /* Shadowed downlink attenuation */
   int mPower;
+
+  /* Pseudorandom bit sequence */
+  PRBS9 mPrbs;
 };
 
 /** The Transceiver class, responsible for physical layer of basestation */

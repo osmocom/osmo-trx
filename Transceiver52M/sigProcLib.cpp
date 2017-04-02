@@ -915,7 +915,7 @@ static signalVector *shapeEdgeBurst(const signalVector &symbols)
 /*
  * Generate a random GSM normal burst.
  */
-signalVector *genRandNormalBurst(int tsc, int sps, int tn)
+signalVector *genRandNormalBurst(int tsc, int sps, int tn, PRBS &prbs)
 {
   if ((tsc < 0) || (tsc > 7) || (tn < 0) || (tn > 7))
     return NULL;
@@ -932,7 +932,7 @@ signalVector *genRandNormalBurst(int tsc, int sps, int tn)
 
   /* Random bits */
   for (; i < 60; i++)
-    (*bits)[i] = rand() % 2;
+    (*bits)[i] = prbs.generateBit();
 
   /* Stealing bit */
   (*bits)[i++] = 0;
@@ -946,7 +946,7 @@ signalVector *genRandNormalBurst(int tsc, int sps, int tn)
 
   /* Random bits */
   for (; i < 145; i++)
-    (*bits)[i] = rand() % 2;
+    (*bits)[i] = prbs.generateBit();
 
   /* Tail bits */
   for (; i < 148; i++)

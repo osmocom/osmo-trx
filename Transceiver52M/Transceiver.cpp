@@ -85,7 +85,7 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc, un
         burst = generateDummyBurst(sps, n);
         break;
       case Transceiver::FILLER_NORM_RAND:
-        burst = genRandNormalBurst(rtsc, sps, n);
+        burst = genRandNormalBurst(rtsc, sps, n, mPrbs);
         break;
       case Transceiver::FILLER_EDGE_RAND:
         burst = generateEdgeBurst(rtsc);

@@ -22,6 +22,7 @@
 #include "radioInterface.h"
 #include "Resampler.h"
 #include <Logger.h>
+#include <PRBS.h>
 
 extern "C" {
 #include "convert.h"

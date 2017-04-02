@@ -18,6 +18,7 @@
 #include "Vector.h"
 #include "Complex.h"
 #include "BitVector.h"
+#include "PRBS.h"
 #include "signalVector.h"
 
 /* Burst lengths */
@@ -140,7 +141,7 @@ signalVector *generateEdgeBurst(int tsc);
 signalVector *generateEmptyBurst(int sps, int tn);
 
 /** Generate a normal GSM burst with random payload - 4 or 1 SPS */
-signalVector *genRandNormalBurst(int tsc, int sps, int tn);
+signalVector *genRandNormalBurst(int tsc, int sps, int tn, PRBS &prbs);
 
 /** Generate an access GSM burst with random payload - 4 or 1 SPS */
 signalVector *genRandAccessBurst(int delay, int sps, int tn);
