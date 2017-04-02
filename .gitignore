@@ -15,6 +15,7 @@ CommonLibs/SocketsTest
 CommonLibs/TimevalTest
 CommonLibs/URLEncodeTest
 CommonLibs/VectorTest
+CommonLibs/PRBSTest
 
 # automake/autoconf
 *.in
