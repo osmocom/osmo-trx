@@ -42,6 +42,7 @@ libcommon_la_SOURCES = \
 
 noinst_PROGRAMS = \
 	BitVectorTest \
+	PRBSTest \
 	InterthreadTest \
 	SocketsTest \
 	TimevalTest \
@@ -53,6 +54,7 @@ noinst_PROGRAMS = \
 
 noinst_HEADERS = \
 	BitVector.h \
+	PRBS.h \
 	Interthread.h \
 	LinkedLists.h \
 	Sockets.h \
@@ -65,6 +67,8 @@ noinst_HEADERS = \
 
 BitVectorTest_SOURCES = BitVectorTest.cpp
 BitVectorTest_LDADD = libcommon.la $(SQLITE3_LIBS)
+
+PRBSTest_SOURCES = PRBSTest.cpp
 
 InterthreadTest_SOURCES = InterthreadTest.cpp
 InterthreadTest_LDADD = libcommon.la
