@@ -56,7 +56,7 @@ static const char* createConfigTable = {
 static std::string replaceAll(const std::string input, const std::string search, const std::string replace)
 {
 	std::string output = input;
- 	int index = 0;
+	size_t index = 0;
 
 	while (true) {
 		index = output.find(search, index);
