@@ -12,7 +12,6 @@ Build-Depends: debhelper (>= 9),
                libuhd-dev,
                libusb-1.0-0-dev,
                libboost-all-dev,
-               hardening-wrapper,
                libfftw3-dev
 Standards-Version: 3.9.6
 Vcs-Browser: http://cgit.osmocom.org/osmo-trx
