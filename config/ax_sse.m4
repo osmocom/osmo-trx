@@ -48,19 +48,21 @@ AC_DEFUN([AX_SSE],
       AX_CHECK_COMPILE_FLAG(-msse3, ax_cv_support_sse3_ext=yes, [])
       if test x"$ax_cv_support_sse3_ext" = x"yes"; then
         SIMD_FLAGS="$SIMD_FLAGS -msse3"
-        AC_DEFINE(HAVE_SSE3,,[Support SSE3 (Streaming SIMD Extensions 3) instructions])
-	AM_CONDITIONAL(HAVE_SSE3, true)
+        AC_DEFINE(HAVE_SSE3,,
+          [Support SSE3 (Streaming SIMD Extensions 3) instructions])
+        AM_CONDITIONAL(HAVE_SSE3, true)
       else
-        AC_MSG_WARN([Your compiler does not support sse3 instructions, can you try another compiler?])
+        AC_MSG_WARN([Your compiler does not support SSE3 instructions])
       fi
 
       AX_CHECK_COMPILE_FLAG(-msse4.1, ax_cv_support_sse41_ext=yes, [])
       if test x"$ax_cv_support_sse41_ext" = x"yes"; then
         SIMD_FLAGS="$SIMD_FLAGS -msse4.1"
-        AC_DEFINE(HAVE_SSE4_1,,[Support SSE4.1 (Streaming SIMD Extensions 4.1) instructions])
-	AM_CONDITIONAL(HAVE_SSE4_1, true)
+        AC_DEFINE(HAVE_SSE4_1,,
+          [Support SSE4.1 (Streaming SIMD Extensions 4.1) instructions])
+        AM_CONDITIONAL(HAVE_SSE4_1, true)
       else
-        AC_MSG_WARN([Your compiler does not support sse4.1 instructions, can you try another compiler?])
+        AC_MSG_WARN([Your compiler does not support SSE4.1])
       fi
   ;;
   esac
