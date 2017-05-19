@@ -4,14 +4,13 @@
 #
 # SYNOPSIS
 #
-#   AX_EXT
+#   AX_SSE
 #
 # DESCRIPTION
 #
-#   Find supported SIMD extensions by requesting cpuid. When an SIMD
-#   extension is found, the -m"simdextensionname" is added to SIMD_FLAGS if
-#   compiler supports it. For example, if "sse2" is available, then "-msse2"
-#   is added to SIMD_FLAGS.
+#   Find SIMD extensions supported by compiler. The -m"simdextensionname" is
+#   added to SIMD_FLAGS if compiler supports it. For example, if "sse2" is
+#   available, then "-msse2" is added to SIMD_FLAGS.
 #
 #   This macro calls:
 #
@@ -19,7 +18,7 @@
 #
 #   And defines:
 #
-#     HAVE_MMX / HAVE_SSE / HAVE_SSE2 / HAVE_SSE3 / HAVE_SSSE3 / HAVE_SSE4.1 / HAVE_SSE4.2 / HAVE_AVX
+#     HAVE_SSE3 / HAVE_SSE4.1
 #
 # LICENSE
 #
