@@ -40,6 +40,9 @@ AC_DEFUN([AX_SSE],
 [
   AC_REQUIRE([AC_CANONICAL_HOST])
 
+  AM_CONDITIONAL(HAVE_SSE3, false)
+  AM_CONDITIONAL(HAVE_SSE4_1, false)
+
   case $host_cpu in
     i[[3456]]86*|x86_64*|amd64*)
       AX_CHECK_COMPILE_FLAG(-msse3, ax_cv_support_sse3_ext=yes, [])
@@ -49,7 +52,6 @@ AC_DEFUN([AX_SSE],
 	AM_CONDITIONAL(HAVE_SSE3, true)
       else
         AC_MSG_WARN([Your compiler does not support sse3 instructions, can you try another compiler?])
-	AM_CONDITIONAL(HAVE_SSE3, false)
       fi
 
       AX_CHECK_COMPILE_FLAG(-msse4.1, ax_cv_support_sse41_ext=yes, [])
@@ -59,7 +61,6 @@ AC_DEFUN([AX_SSE],
 	AM_CONDITIONAL(HAVE_SSE4_1, true)
       else
         AC_MSG_WARN([Your compiler does not support sse4.1 instructions, can you try another compiler?])
-	AM_CONDITIONAL(HAVE_SSE4_1, false)
       fi
   ;;
   esac
