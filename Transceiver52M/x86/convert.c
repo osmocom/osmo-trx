@@ -46,6 +46,7 @@ void convert_init(void)
 	c.convert_si16_ps_16n = base_convert_short_float;
 	c.convert_si16_ps = base_convert_short_float;
 
+#ifdef HAVE___BUILTIN_CPU_SUPPORTS
 #ifdef HAVE_SSE4_1
 	if (__builtin_cpu_supports("sse4.1")) {
 		c.convert_si16_ps_16n = &_sse_convert_si16_ps_16n;
@@ -59,6 +60,7 @@ void convert_init(void)
 		c.convert_scale_ps_si16_8n = _sse_convert_scale_ps_si16_8n;
 		c.convert_scale_ps_si16 = _sse_convert_scale_ps_si16;
 	}
+#endif
 #endif
 }
 

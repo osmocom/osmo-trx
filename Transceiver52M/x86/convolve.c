@@ -82,7 +82,7 @@ void convolve_init(void)
 	c.conv_real4n = (void *)_base_convolve_real;
 	c.conv_real = (void *)_base_convolve_real;
 
-#ifdef HAVE_SSE3
+#if defined(HAVE_SSE3) && defined(HAVE___BUILTIN_CPU_SUPPORTS)
 	if (__builtin_cpu_supports("sse3")) {
 		c.conv_cmplx_4n = sse_conv_cmplx_4n;
 		c.conv_cmplx_8n = sse_conv_cmplx_8n;

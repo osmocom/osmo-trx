@@ -397,18 +397,26 @@ int main(int argc, char *argv[])
 
 #ifdef HAVE_SSE3
 	printf("Info: SSE3 support compiled in");
+#ifdef HAVE___BUILTIN_CPU_SUPPORTS
 	if (__builtin_cpu_supports("sse3"))
 		printf(" and supported by CPU\n");
 	else
 		printf(", but not supported by CPU\n");
+#else
+	printf(", but runtime SIMD detection disabled\n");
+#endif
 #endif
 
 #ifdef HAVE_SSE4_1
 	printf("Info: SSE4.1 support compiled in");
+#ifdef HAVE___BUILTIN_CPU_SUPPORTS
 	if (__builtin_cpu_supports("sse4.1"))
 		printf(" and supported by CPU\n");
 	else
 		printf(", but not supported by CPU\n");
+#else
+	printf(", but runtime SIMD detection disabled\n");
+#endif
 #endif
 
 	convolve_init();
