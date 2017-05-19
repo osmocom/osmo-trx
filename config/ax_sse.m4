@@ -42,12 +42,6 @@ AC_DEFUN([AX_SSE],
 
   case $host_cpu in
     i[[3456]]86*|x86_64*|amd64*)
-
-      AC_REQUIRE([AX_GCC_X86_CPUID])
-      AC_REQUIRE([AX_GCC_X86_AVX_XGETBV])
-
-      AX_GCC_X86_CPUID(0x00000001)
-
       AX_CHECK_COMPILE_FLAG(-msse3, ax_cv_support_sse3_ext=yes, [])
       if test x"$ax_cv_support_sse3_ext" = x"yes"; then
         SIMD_FLAGS="$SIMD_FLAGS -msse3"
