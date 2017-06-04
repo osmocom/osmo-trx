@@ -58,7 +58,7 @@ class RadioDevice {
   virtual ~RadioDevice() { }
 
   /** Start the USRP */
-  virtual bool start()=0;
+  virtual bool start(bool txOnly = false)=0;
 
   /** Stop the USRP */
   virtual bool stop()=0;
@@ -91,6 +91,7 @@ class RadioDevice {
         @param isControl Set if data is a control packet, e.g. a ping command
         @return The number of samples actually written
   */
+  virtual void triggerGPIO(TIMESTAMP timestamp) = 0;
   virtual int writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
                            TIMESTAMP timestamp, bool isControl = false) = 0;
 

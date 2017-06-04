@@ -212,7 +212,7 @@ public:
 	~uhd_device();
 
 	int open(const std::string &args, int ref, bool swap_channels);
-	bool start();
+	bool start(bool tx_only);
 	bool stop();
 	bool restart();
 	void setPriority(float prio);
@@ -224,6 +224,7 @@ public:
 	int writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
 			 TIMESTAMP timestamp, bool isControl);
 
+	void triggerGPIO(TIMESTAMP ts);
 	bool updateAlignment(TIMESTAMP timestamp);
 
 	bool setTxFreq(double wFreq, size_t chan);
@@ -784,7 +785,7 @@ bool uhd_device::restart()
 	return flush_recv(10);
 }
 
-bool uhd_device::start()
+bool uhd_device::start(bool tx_only)
 {
 	LOG(INFO) << "Starting USRP...";
 
@@ -802,12 +803,21 @@ bool uhd_device::start()
 	async_event_thrd->start((void * (*)(void*))async_event_loop, (void*)this);
 
 	// Start streaming
-	if (!restart())
+	if (!tx_only && !restart())
 		return false;
 
+	// Setup GPIO
+        usrp_dev->set_gpio_attr("FP0", "CTRL", 0x00);
+        usrp_dev->set_gpio_attr("FP0", "DDR", 0x01);
+
 	// Display usrp time
-	double time_now = usrp_dev->get_time_now().get_real_secs();
-	LOG(INFO) << "The current time is " << time_now << " seconds";
+	auto now = usrp_dev->get_time_now();
+	LOG(INFO) << "The current time is " << now.get_real_secs() << " seconds";
+
+	if (tx_only) {
+		auto start = uhd::time_spec_t(now.get_real_secs() + 1.0);
+		ts_initial = start.to_ticks(tx_rate);
+	}
 
 	started = true;
 	return true;
@@ -972,6 +982,27 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	return len;
 }
 
+#define GSM_FRAME_PERIOD	(120e-3/26)
+#define GPIO_FRAME_ADVANCE	5
+#define GPIO_ON_PERIOD		(GSM_FRAME_PERIOD / 2)
+
+/*
+ * Trigger GPIO a handful of frames ahead of the current sample timestamp.
+ * This extends the number of GPIO triggers in the device side command
+ * queue and prevents late packet and underrun errors on the RF sample path.
+ */
+void uhd_device::triggerGPIO(TIMESTAMP ticks)
+{
+	auto ts = uhd::time_spec_t::from_ticks(ticks, tx_rate);
+	auto adv = uhd::time_spec_t(GPIO_FRAME_ADVANCE * GSM_FRAME_PERIOD);
+	auto per = uhd::time_spec_t(GPIO_ON_PERIOD);
+
+	usrp_dev->set_command_time(ts - adv);
+	usrp_dev->set_gpio_attr("FP0", "OUT", 0x01);
+	usrp_dev->set_command_time(ts - adv + per);
+	usrp_dev->set_gpio_attr("FP0", "OUT", 0x00);
+}
+
 int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
 			     unsigned long long timestamp,bool isControl)
 {
@@ -981,13 +1012,7 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 	metadata.end_of_burst = false;
 	metadata.time_spec = uhd::time_spec_t::from_ticks(timestamp, tx_rate);
 
-	*underrun = false;
-
-	// No control packets
-	if (isControl) {
-		LOG(ERR) << "Control packets not supported";
-		return 0;
-	}
+	if (underrun) *underrun = false;
 
 	if (bufs.size() != chans) {
 		LOG(ALERT) << "Invalid channel combination " << bufs.size();
@@ -997,10 +1022,9 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 	// Drop a fixed number of packets (magic value)
 	if (!aligned) {
 		drop_cnt++;
-
 		if (drop_cnt == 1) {
 			LOG(DEBUG) << "Aligning transmitter: stop burst";
-			*underrun = true;
+			if (underrun) *underrun = true;
 			metadata.end_of_burst = true;
 		} else if (drop_cnt < 30) {
 			LOG(DEBUG) << "Aligning transmitter: packet advance";
@@ -1014,7 +1038,7 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 	}
 
 	thread_enable_cancel(false);
-	size_t num_smpls = tx_stream->send(bufs, len, metadata);
+	size_t num_smpls = tx_stream->send(bufs, len, metadata, 1.0);
 	thread_enable_cancel(true);
 
 	if (num_smpls != (unsigned) len) {

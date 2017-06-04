@@ -82,7 +82,6 @@ float ConfigurationRecord::floatNumber() const
 
 ConfigurationTable::ConfigurationTable(const char* filename, const char *wCmdName, ConfigurationKeyMap wSchema)
 {
-	gLogEarly(LOG_INFO, "opening configuration table from path %s", filename);
 	// Connect to the database.
 	int rc = sqlite3_open(filename,&mDB);
 	// (pat) When I used malloc here, sqlite3 sporadically crashes.

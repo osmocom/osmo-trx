@@ -65,12 +65,18 @@ signalVector *modulateBurst(const BitVector &wBurst,
                             int guardPeriodLength,
                             int sps, bool emptyPulse = false);
 
+signalVector *modulateBurstLaurent4(const BitVector &wBurst);
+signalVector *modulateBurstLaurent2(const BitVector &wBurst);
+signalVector *modulateBurstLaurent1(const BitVector &wBurst);
+signalVector *modulateBurstNCO(const BitVector &wBurst);
+
 /** 8-PSK modulate a burst of bits */
 signalVector *modulateEdgeBurst(const BitVector &bits,
                                 int sps, bool emptyPulse = false);
 
 /** Generate a EDGE burst with random payload - 4 SPS (625 samples) only */
 signalVector *generateEdgeBurst(int tsc);
+signalVector *shapeEdgeBurst(const signalVector &symbols);
 
 /** Generate an empty burst - 4 or 1 SPS */
 signalVector *generateEmptyBurst(int sps, int tn);

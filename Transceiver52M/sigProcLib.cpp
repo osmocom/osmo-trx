@@ -64,7 +64,7 @@ static signalVector *GMSKReverseRotation1 = NULL;
 /* Precomputed fractional delay filters */
 static signalVector *delayFilters[DELAYFILTS];
 
-static const Complex<float> psk8_table[8] = {
+extern const Complex<float> psk8_table[8] = {
    Complex<float>(-0.70710678,  0.70710678),
    Complex<float>( 0.0, -1.0),
    Complex<float>( 0.0,  1.0),
@@ -110,8 +110,9 @@ struct CorrelationSequence {
  * for SSE instructions.
  */
 struct PulseSequence {
-  PulseSequence() : c0(NULL), c1(NULL), c0_inv(NULL), empty(NULL),
-		    c0_buffer(NULL), c1_buffer(NULL), c0_inv_buffer(NULL)
+  PulseSequence() : c0(NULL), c1(NULL), c2(NULL), c3(NULL), c0_inv(NULL), empty(NULL),
+                    c0_buffer(NULL), c1_buffer(NULL), c2_buffer(NULL),
+                    c3_buffer(NULL), c0_inv_buffer(NULL), g(NULL)
   {
   }
 
@@ -119,19 +120,29 @@ struct PulseSequence {
   {
     delete c0;
     delete c1;
+    delete c2;
+    delete c3;
     delete c0_inv;
     delete empty;
+    delete g;
     free(c0_buffer);
     free(c1_buffer);
+    free(c2_buffer);
+    free(c3_buffer);
   }
 
   signalVector *c0;
   signalVector *c1;
+  signalVector *c2;
+  signalVector *c3;
   signalVector *c0_inv;
   signalVector *empty;
   void *c0_buffer;
   void *c1_buffer;
+  void *c2_buffer;
+  void *c3_buffer;
   void *c0_inv_buffer;
+  signalVector *g;
 };
 
 static CorrelationSequence *gMidambles[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
@@ -442,6 +453,121 @@ static bool generateInvertC0Pulse(PulseSequence *pulse)
   return true;
 }
 
+static bool generateGPulse(int sps, PulseSequence *pulse)
+{
+  int len;
+
+  if (!pulse)
+    return false;
+
+  switch (sps) {
+  case 4:
+    len = 12;
+    break;
+  default:
+    return false;
+  }
+
+  pulse->g = new signalVector(len);
+  pulse->g->isReal(true);
+
+  /* Enable alignment for SSE usage */
+  pulse->c3->setAligned(true);
+
+  signalVector::iterator xP = pulse->g->begin();
+
+  switch (sps) {
+  case 4:
+    *xP++ = 9.36941412e-03;
+    *xP++ = 3.08922969e-02;
+    *xP++ = 7.76167091e-02;
+    *xP++ = 1.50953651e-01;
+    *xP++ = 2.31509315e-01;
+    *xP++ = 2.85056778e-01;
+    *xP++ = 2.85056778e-01;
+    *xP++ = 2.31509315e-01;
+    *xP++ = 1.50953651e-01;
+    *xP++ = 7.76167091e-02;
+    *xP++ = 3.08922969e-02;
+    *xP++ = 9.36941412e-03;
+    break;
+  }
+
+  return true;
+}
+
+static bool generateC3Pulse(int sps, PulseSequence *pulse)
+{
+  int len;
+
+  if (!pulse)
+    return false;
+
+  switch (sps) {
+  case 4:
+    len = 4;
+    break;
+  default:
+    return false;
+  }
+
+  pulse->c3_buffer = convolve_h_alloc(len);
+  pulse->c3 = new signalVector((complex *) pulse->c3_buffer, 0, len);
+  pulse->c3->isReal(true);
+
+  /* Enable alignment for SSE usage */
+  pulse->c3->setAligned(true);
+
+  signalVector::iterator xP = pulse->c3->begin();
+
+  switch (sps) {
+  case 4:
+    /* BT = 0.30 */
+    *xP++ = 0.0;
+    *xP++ = 9.66809925e-04;
+    *xP++ = 1.14560468e-03;
+    *xP++ = 5.28599308e-04;
+  }
+
+  return true;
+}
+
+static bool generateC2Pulse(int sps, PulseSequence *pulse)
+{
+  int len;
+
+  if (!pulse)
+    return false;
+
+  switch (sps) {
+  case 4:
+    len = 4;
+    break;
+  default:
+    return false;
+  }
+
+  pulse->c2_buffer = convolve_h_alloc(len);
+  pulse->c2 = new signalVector((complex *) pulse->c2_buffer, 0, len);
+  pulse->c2->isReal(true);
+
+  /* Enable alignment for SSE usage */
+  pulse->c2->setAligned(true);
+
+  signalVector::iterator xP = pulse->c2->begin();
+
+  switch (sps) {
+  case 4:
+    /* BT = 0.30 */
+    *xP++ = 0.0;
+    *xP++ = 5.28599308e-04;
+    *xP++ = 1.14560468e-03;
+    *xP++ = 9.66809925e-04;
+  }
+
+  return true;
+}
+
 static bool generateC1Pulse(int sps, PulseSequence *pulse)
 {
   int len;
@@ -540,6 +666,9 @@ static PulseSequence *generateGSMPulse(int sps)
     *xP++ = 2.84385729e-02;
     *xP++ = 4.46348606e-03;
     generateC1Pulse(sps, pulse);
+    generateC2Pulse(sps, pulse);
+    generateC3Pulse(sps, pulse);
+    generateGPulse(sps, pulse);
   } else {
     center = (float) (len - 1.0) / 2.0;
 
@@ -617,12 +746,186 @@ static void rotateBurst2(signalVector &burst, double phase)
     burst[i] = burst[i] * rot;
 }
 
+signalVector *modulateBurstNCO(const BitVector &bits)
+{
+  auto sps = 4;
+  auto burst = signalVector(625);
+  auto it = burst.begin();
+  burst.isReal(true);
+
+  /* Leading differential bit */
+  *it = 2.0 * (bits[0] & 0x01) - 1.0;
+  it += sps;
+
+   /* Main burst bits */
+  for (size_t i = 1; i < bits.size(); i++) {
+    *it = 2.0 * ((bits[i-1] & 0x01) ^ (bits[i] & 0x01)) - 1.0;
+    it += sps;
+  }
+
+  /* Trailing differential bit */
+  *it = 2.0 * (bits[bits.size()-1] & 0x01) - 1.0;
+
+  auto shaped = convolve(&burst, GSMPulse4->g, NULL, START_ONLY);
+  auto rotate = new signalVector(shaped->size());
+
+  auto itr = rotate->begin();
+  auto its = shaped->begin();
+  double accum = 0.0;
+  while (itr != rotate->end()) {
+    *itr++ = Complex<float>(cos(accum), sin(accum));
+    accum -= its++->real();
+  }
+
+  /*
+   * Hack off guard interval at start and end
+   *   These values make E4406A happy with TSC detection
+   */
+  itr = rotate->end() - 25;
+  while (itr != rotate->end())
+    *itr++ = Complex<float>(0, 0);
+
+  itr = rotate->begin();
+  while (itr != rotate->begin() + 1)
+    *itr++ = Complex<float>(0, 0);
+
+  delete shaped;
+  return rotate;
+}
+
 /*
  * Ignore the guard length argument in the GMSK modulator interface
  * because it results in 624/628 sized bursts instead of the preferred
  * burst length of 625. Only 4 SPS is supported.
  */
-static signalVector *modulateBurstLaurent(const BitVector &bits)
+signalVector *modulateBurstLaurent4(const BitVector &bits)
+{
+  int burst_len, sps = 4;
+  float phase;
+  signalVector *c0_pulse, *c1_pulse, *c2_pulse, *c3_pulse,
+               *c0_shaped, *c1_shaped, *c2_shaped, *c3_shaped;
+  signalVector::iterator c0_itr, c1_itr, c2_itr, c3_itr;
+
+  c0_pulse = GSMPulse4->c0;
+  c1_pulse = GSMPulse4->c1;
+  c2_pulse = GSMPulse4->c2;
+  c3_pulse = GSMPulse4->c3;
+
+  if (bits.size() > 156)
+    return NULL;
+
+  burst_len = 625;
+
+  auto c0_burst = signalVector(burst_len, c0_pulse->size());
+  auto c1_burst = signalVector(burst_len, c1_pulse->size());
+  auto c2_burst = signalVector(burst_len, c2_pulse->size());
+  auto c3_burst = signalVector(burst_len, c3_pulse->size());
+
+  c0_itr = c0_burst.begin();
+  c1_itr = c1_burst.begin();
+  c2_itr = c2_burst.begin();
+  c3_itr = c3_burst.begin();
+
+  /* Padded differential tail bits */
+  *c0_itr = 2.0 * (0x00 & 0x01) - 1.0;
+  c0_itr += sps;
+
+  /* Main burst bits */
+  for (unsigned i = 0; i < bits.size(); i++) {
+    *c0_itr = 2.0 * (bits[i] & 0x01) - 1.0;
+    c0_itr += sps;
+  }
+
+  /* Padded differential tail bits */
+  *c0_itr = 2.0 * (0x00 & 0x01) - 1.0;
+
+  /* Generate C0 phase coefficients */
+  GMSKRotate(c0_burst, sps);
+  c0_burst.isReal(false);
+
+  /* Generate C1, C2, C3 phase coefficients */
+  c0_itr = c0_burst.begin();
+  c0_itr += sps * 2;
+  c1_itr += sps * 2;
+  c2_itr += sps * 2;
+  c3_itr += sps * 2;
+
+  /* Bit 0 */
+  auto p1 = bits[0] & 0x01;
+  auto p2 = 0;
+  auto p3 = p1 ^ p2;
+
+  *c1_itr = *c0_itr * Complex<float>(0, 2.0 * p1 - 1.0);
+  *c2_itr = *c0_itr * Complex<float>(0, 2.0 * p2 - 1.0);
+  *c3_itr = *c0_itr * Complex<float>(2.0 * p3 - 1.0, 0);
+
+  c0_itr += sps;
+  c1_itr += sps;
+  c2_itr += sps;
+  c3_itr += sps;
+
+  /* Bit 1 */
+  p1 = (bits[1] & 0x01) ^ (bits[0] & 0x01);
+  p2 = (bits[0] & 0x01);
+  p3 = p1 ^ p2;
+
+  *c1_itr = *c0_itr * Complex<float>(0, 2.0 * p1 - 1.0);
+  *c2_itr = *c0_itr * Complex<float>(0, 2.0 * p2 - 1.0);
+  *c3_itr = *c0_itr * Complex<float>(2.0 * p3 - 1.0, 0);
+
+  c0_itr += sps;
+  c1_itr += sps;
+  c2_itr += sps;
+  c3_itr += sps;
+
+  /* Bit 2 - end */
+  for (size_t i = 3; i < bits.size(); i++) {
+    p1 = (bits[i-1] & 0x01) ^ (bits[i-2] & 0x01);
+    p2 = (bits[i-2] & 0x01) ^ (bits[i-3] & 0x01);
+    p3 = p1 ^ p2;
+
+    *c1_itr = *c0_itr * Complex<float>(0, 2.0 * p1 - 1.0);
+    *c2_itr = *c0_itr * Complex<float>(0, 2.0 * p2 - 1.0);
+    *c3_itr = *c0_itr * Complex<float>(2.0 * p3 - 1.0, 0);
+
+    c0_itr += sps;
+    c1_itr += sps;
+    c2_itr += sps;
+    c3_itr += sps;
+  }
+
+  /* Residual bits (unfinished) */
+  int i = bits.size();
+  phase = 2.0 * ((bits[i-1] & 0x01) ^ (bits[i-2] & 0x01)) - 1.0;
+  *c1_itr = *c0_itr * Complex<float>(0, phase);
+
+  /* Pulse shape all component functions */
+  c0_shaped = convolve(&c0_burst, c0_pulse, NULL, START_ONLY);
+  c1_shaped = convolve(&c1_burst, c1_pulse, NULL, START_ONLY);
+  c2_shaped = convolve(&c2_burst, c2_pulse, NULL, START_ONLY);
+  c3_shaped = convolve(&c3_burst, c3_pulse, NULL, START_ONLY);
+
+  /* Combine shaped outputs into C0 */
+  c0_itr = c0_shaped->begin();
+  c1_itr = c1_shaped->begin();
+  c2_itr = c2_shaped->begin();
+  c3_itr = c3_shaped->begin();
+  for (unsigned i = 0; i < c0_shaped->size(); i++ )
+    *c0_itr++ += *c1_itr++ + *c2_itr++ + *c3_itr++;
+
+  delete c1_shaped;
+  delete c2_shaped;
+  delete c3_shaped;
+
+  return c0_shaped;
+}
+
+/*
+ * Ignore the guard length argument in the GMSK modulator interface
+ * because it results in 624/628 sized bursts instead of the preferred
+ * burst length of 625. Only 4 SPS is supported.
+ */
+signalVector *modulateBurstLaurent2(const BitVector &bits)
 {
   int burst_len, sps = 4;
   float phase;
@@ -704,6 +1007,41 @@ static signalVector *modulateBurstLaurent(const BitVector &bits)
   return c0_shaped;
 }
 
+signalVector *modulateBurstLaurent1(const BitVector &bits)
+{
+  if (bits.size() > 156) return NULL;
+
+  int sps = 4;
+  auto burst = signalVector(625, GSMPulse4->c0->size());
+  auto itr = burst.begin();
+  burst.isReal(true);
+
+  /* Padded differential tail bits */
+  *itr = -1.0;
+  itr += sps;
+
+  /* Main burst bits */
+  for (unsigned i = 0; i < bits.size(); i++) {
+    *itr = 2.0 * (bits[i] & 0x01) - 1.0;
+    itr += sps;
+  }
+
+  /* Padded differential tail bits */
+  *itr = -1.0;
+
+  /* Generate C0 phase coefficients */
+  GMSKRotate(burst, sps);
+  burst.isReal(false);
+
+  /* Pulse shaping */
+  return convolve(&burst, GSMPulse4->c0, NULL, START_ONLY);
+}
+
+signalVector *modulateBurstLaurent(const BitVector &bits)
+{
+  return modulateBurstLaurent2(bits);
+}
+
 static signalVector *rotateEdgeBurst(const signalVector &symbols, int sps)
 {
   signalVector *burst;
@@ -771,7 +1109,7 @@ static signalVector *mapEdgeSymbols(const BitVector &bits)
  * pulse filter combination of the GMSK Laurent represenation whereas 8-PSK
  * uses a single pulse linear filter.
  */
-static signalVector *shapeEdgeBurst(const signalVector &symbols)
+signalVector *shapeEdgeBurst(const signalVector &symbols)
 {
   size_t nsyms, nsamps = 625, sps = 4;
   signalVector *burst, *shape;

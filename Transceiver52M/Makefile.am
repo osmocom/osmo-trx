@@ -69,7 +69,7 @@ libtransceiver_la_SOURCES = \
 	radioInterfaceResamp.cpp \
 	radioInterfaceMulti.cpp
 
-bin_PROGRAMS = osmo-trx
+bin_PROGRAMS = osmo-trx osmo-siggen
 
 noinst_HEADERS = \
 	Complex.h \
@@ -99,10 +99,18 @@ osmo_trx_LDADD = \
 	$(GSM_LA) \
 	$(COMMON_LA) $(SQLITE3_LIBS)
 
+osmo_siggen_SOURCES = osmo-siggen.cpp
+osmo_siggen_LDADD = \
+	libtransceiver.la \
+	$(ARCH_LA) \
+	$(GSM_LA) \
+	$(COMMON_LA) $(SQLITE3_LIBS)
+
 if USRP1 
 libtransceiver_la_SOURCES += USRPDevice.cpp
 osmo_trx_LDADD += $(USRP_LIBS)
 else
 libtransceiver_la_SOURCES += UHDDevice.cpp
 osmo_trx_LDADD += $(UHD_LIBS) $(FFTWF_LIBS)
+osmo_siggen_LDADD += $(UHD_LIBS) $(FFTWF_LIBS)
 endif
