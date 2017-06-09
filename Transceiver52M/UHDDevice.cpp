@@ -21,6 +21,7 @@
  * See the COPYING file in the main directory for details.
  */
 
+#include <map>
 #include "radioDevice.h"
 #include "Threads.h"
 #include "Logger.h"
@@ -37,12 +38,6 @@
 #include <uhd/utils/msg.hpp>
 #endif
 
-#define B2XX_CLK_RT      26e6
-#define B2XX_MCBTS_CLK_RT   51.2e6
-#define E1XX_CLK_RT      52e6
-#define LIMESDR_CLK_RT   (GSMRATE*32)
-#define B100_BASE_RT     400000
-#define USRP2_BASE_RT    390625
 #define USRP_TX_AMPL     0.3
 #define UMTRX_TX_AMPL    0.7
 #define LIMESDR_TX_AMPL  0.3
@@ -73,15 +68,6 @@ enum uhd_dev_type {
 	X3XX,
 	UMTRX,
 	LIMESDR,
-	NUM_USRP_TYPES,
-};
-
-struct uhd_dev_offset {
-	enum uhd_dev_type type;
-	size_t tx_sps;
-	size_t rx_sps;
-	double offset;
-	const std::string desc;
 };
 
 /*
@@ -109,76 +95,44 @@ struct uhd_dev_offset {
  * Notes:
  *   USRP1 with timestamps is not supported by UHD.
  */
-static struct uhd_dev_offset uhd_offsets[] = {
-	{ USRP1, 1, 1,       0.0, "USRP1 not supported" },
-	{ USRP1, 4, 1,       0.0, "USRP1 not supported"},
-	{ USRP2, 1, 1, 1.2184e-4, "N2XX 1 SPS" },
-	{ USRP2, 4, 1, 7.6547e-5, "N2XX 4/1 SPS" },
-	{ B100,  1, 1, 1.2104e-4, "B100 1 SPS" },
-	{ B100,  4, 1, 7.9307e-5, "B100 4 SPS" },
-	{ B200,  1, 1, B2XX_TIMING_1SPS, "B200 1 SPS" },
-	{ B200,  4, 1, B2XX_TIMING_4SPS, "B200 4/1 Tx/Rx SPS" },
-	{ B210,  1, 1, B2XX_TIMING_1SPS, "B210 1 SPS" },
-	{ B210,  4, 1, B2XX_TIMING_4SPS, "B210 4/1 Tx/Rx SPS" },
-	{ B2XX_MCBTS, 4, 4, B2XX_TIMING_MCBTS, "B200/B210 4 SPS Multi-ARFCN" },
-	{ E1XX,  1, 1, 9.5192e-5, "E1XX 1 SPS" },
-	{ E1XX,  4, 1, 6.5571e-5, "E1XX 4/1 Tx/Rx SPS" },
-	{ E3XX,  1, 1, 1.84616e-4, "E3XX 1 SPS" },
-	{ E3XX,  4, 1, 1.29231e-4, "E3XX 4/1 Tx/Rx SPS" },
-	{ X3XX,  1, 1, 1.5360e-4, "X3XX 1 SPS"},
-	{ X3XX,  4, 1, 1.1264e-4, "X3XX 4/1 Tx/Rx SPS"},
-	{ UMTRX, 1, 1, 9.9692e-5, "UmTRX 1 SPS" },
-	{ UMTRX, 4, 1, 7.3846e-5, "UmTRX 4/1 Tx/Rx SPS" },
-	{ USRP2, 4, 4, 4.6080e-5, "N2XX 4 SPS" },
-	{ B200,  4, 4, B2XX_TIMING_4_4SPS, "B200 4 SPS" },
-	{ B210,  4, 4, B2XX_TIMING_4_4SPS, "B210 4 SPS" },
-	{ X3XX,  4, 4, 5.6567e-5, "X3XX 4 SPS"},
-	{ UMTRX, 4, 4, 5.1503e-5, "UmTRX 4 SPS" },
-	{ LIMESDR, 4, 4, 16.5/GSMRATE, "STREAM/LimeSDR (4 SPS TX/RX)" },
+
+/* Device Type, Tx-SPS, Rx-SPS */
+typedef std::tuple<uhd_dev_type, int, int> dev_key;
+
+/* Device parameter descriptor */
+struct dev_desc {
+	unsigned channels;
+	double mcr;
+	double rate;
+	double offset;
+	std::string str;
 };
-#define NUM_UHD_OFFSETS (sizeof(uhd_offsets)/sizeof(uhd_offsets[0]))
 
-/*
- * Select sample rate based on device type and requested samples-per-symbol.
- * The base rate is either GSM symbol rate, 270.833 kHz, or the minimum
- * usable channel spacing of 400 kHz.
- */
-static double select_rate(uhd_dev_type type, int sps,
-			  RadioDevice::InterfaceType iface)
-{
-	if ((sps != 4) && (sps != 1))
-		return -9999.99;
-
-	if (iface == RadioDevice::MULTI_ARFCN) {
-		switch (type) {
-		case B2XX_MCBTS:
-			return  4 * MCBTS_SPACING;
-		default:
-			LOG(ALERT) << "Invalid device combination";
-			return -9999.99;
-		}
-	}
-
-	switch (type) {
-	case USRP2:
-	case X3XX:
-		return USRP2_BASE_RT * sps;
-	case B100:
-		return B100_BASE_RT * sps;
-	case B200:
-	case B210:
-	case E1XX:
-	case E3XX:
-	case UMTRX:
-	case LIMESDR:
-		return GSMRATE * sps;
-	default:
-		break;
-	}
-
-	LOG(ALERT) << "Unknown device type " << type;
-	return -9999.99;
-}
+static const std::map<dev_key, dev_desc> dev_param_map {
+	{ std::make_tuple(USRP2, 1, 1), { 1, 0.0,  390625,  1.2184e-4,  "N2XX 1 SPS"         } },
+	{ std::make_tuple(USRP2, 4, 1), { 1, 0.0,  390625,  7.6547e-5,  "N2XX 4/1 Tx/Rx SPS" } },
+	{ std::make_tuple(USRP2, 4, 4), { 1, 0.0,  390625,  4.6080e-5,  "N2XX 4 SPS"         } },
+	{ std::make_tuple(B100,  1, 1), { 1, 0.0,  400000,  1.2104e-4,  "B100 1 SPS"         } },
+	{ std::make_tuple(B100,  4, 1), { 1, 0.0,  400000,  7.9307e-5,  "B100 4/1 Tx/Rx SPS" } },
+	{ std::make_tuple(B200,  1, 1), { 1, 26e6, GSMRATE, B2XX_TIMING_1SPS, "B200 1 SPS"   } },
+	{ std::make_tuple(B200,  4, 1), { 1, 26e6, GSMRATE, B2XX_TIMING_4SPS, "B200 4/1 Tx/Rx SPS" } },
+	{ std::make_tuple(B200,  4, 4), { 1, 26e6, GSMRATE, B2XX_TIMING_4_4SPS, "B200 4 SPS" } },
+	{ std::make_tuple(B210,  1, 1), { 2, 26e6, GSMRATE, B2XX_TIMING_1SPS, "B210 1 SPS"    } },
+	{ std::make_tuple(B210,  4, 1), { 2, 26e6, GSMRATE, B2XX_TIMING_4SPS, "B210 4/1 Tx/Rx SPS" } },
+	{ std::make_tuple(B210,  4, 4), { 2, 26e6, GSMRATE, B2XX_TIMING_4_4SPS, "B210 4 SPS" } },
+	{ std::make_tuple(E1XX,  1, 1), { 1, 52e6, GSMRATE, 9.5192e-5,  "E1XX 1 SPS"         } },
+	{ std::make_tuple(E1XX,  4, 1), { 1, 52e6, GSMRATE, 6.5571e-5,  "E1XX 4/1 Tx/Rx SPS" } },
+	{ std::make_tuple(E3XX,  1, 1), { 2, 26e6, GSMRATE, 1.8462e-4,  "E3XX 1 SPS"         } },
+	{ std::make_tuple(E3XX,  4, 1), { 2, 26e6, GSMRATE, 1.2923e-4,  "E3XX 4/1 Tx/Rx SPS" } },
+	{ std::make_tuple(X3XX,  1, 1), { 2, 0.0,  390625,  1.5360e-4,  "X3XX 1 SPS"         } },
+	{ std::make_tuple(X3XX,  4, 1), { 2, 0.0,  390625,  1.1264e-4,  "X3XX 4/1 Tx/Rx SPS" } },
+	{ std::make_tuple(X3XX,  4, 4), { 2, 0.0,  390625,  5.6567e-5,  "X3XX 4 SPS"         } },
+	{ std::make_tuple(UMTRX, 1, 1), { 2, 0.0,  GSMRATE, 9.9692e-5,  "UmTRX 1 SPS"        } },
+	{ std::make_tuple(UMTRX, 4, 1), { 2, 0.0,  GSMRATE, 7.3846e-5,  "UmTRX 4/1 Tx/Rx SPS"} },
+	{ std::make_tuple(UMTRX, 4, 4), { 2, 0.0,  GSMRATE, 5.1503e-5,  "UmTRX 4 SPS"        } },
+	{ std::make_tuple(LIMESDR, 4, 4), { 1, GSMRATE*32, GSMRATE, 16.5/GSMRATE, "STREAM/LimeSDR (4 SPS TX/RX)" } },
+	{ std::make_tuple(B2XX_MCBTS, 4, 4), { 1, 51.2e6, MCBTS_SPACING*4, B2XX_TIMING_MCBTS, "B200/B210 4 SPS Multi-ARFCN" } },
+};
 
 /*
     Sample Buffer - Allows reading and writing of timed samples using osmo-trx
@@ -339,9 +293,7 @@ private:
 	std::vector<smpl_buf *> rx_buffers;
 
 	void init_gains();
-	double get_dev_offset();
-	int set_master_clk(double rate);
-	int set_rates(double tx_rate, double rx_rate);
+	void set_rates();
 	bool parse_dev_type();
 	bool flush_recv(size_t num_pkts);
 	int check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls);
@@ -470,105 +422,22 @@ void uhd_device::init_gains()
 
 }
 
-double uhd_device::get_dev_offset()
+void uhd_device::set_rates()
 {
-	struct uhd_dev_offset *offset = NULL;
+	dev_desc desc = dev_param_map.at(dev_key(dev_type, tx_sps, rx_sps));
+	if (desc.mcr != 0.0)
+		usrp_dev->set_master_clock_rate(desc.mcr);
 
-	/* Reject USRP1 */
-	if (dev_type == USRP1) {
-		LOG(ERR) << "Invalid device type";
-		return 0.0;
-	}
+	tx_rate = (dev_type != B2XX_MCBTS) ? desc.rate * tx_sps : desc.rate;
+	rx_rate = (dev_type != B2XX_MCBTS) ? desc.rate * rx_sps : desc.rate;
 
-	/* Search for matching offset value */
-	for (size_t i = 0; i < NUM_UHD_OFFSETS; i++) {
-		if ((dev_type == uhd_offsets[i].type) &&
-			(tx_sps == uhd_offsets[i].tx_sps) &&
-			(rx_sps == uhd_offsets[i].rx_sps)) {
-			offset = &uhd_offsets[i];
-			break;
-		}
-	}
+	usrp_dev->set_tx_rate(tx_rate);
+	usrp_dev->set_rx_rate(rx_rate);
+	tx_rate = usrp_dev->get_tx_rate();
+	rx_rate = usrp_dev->get_rx_rate();
 
-	if (!offset) {
-		LOG(ERR) << "Invalid device configuration";
-		return 0.0;
-	}
-
-	std::cout << "-- Setting " << offset->desc << std::endl;
-
-	return offset->offset;
-}
-
-int uhd_device::set_master_clk(double clk_rate)
-{
-	double actual, offset, limit = 1.0;
-
-	try {
-		usrp_dev->set_master_clock_rate(clk_rate);
-	} catch (const std::exception &ex) {
-		LOG(ALERT) << "UHD clock rate setting failed: " << clk_rate;
-		LOG(ALERT) << ex.what();
-		return -1;
-	}
-
-	actual = usrp_dev->get_master_clock_rate();
-	offset = fabs(clk_rate - actual);
-
-	if (offset > limit) {
-		LOG(ALERT) << "Failed to set master clock rate";
-		LOG(ALERT) << "Requested clock rate " << clk_rate;
-		LOG(ALERT) << "Actual clock rate " << actual;
-		return -1;
-	}
-
-	return 0;
-}
-
-int uhd_device::set_rates(double tx_rate, double rx_rate)
-{
-	double offset_limit = 1.0;
-	double tx_offset, rx_offset;
-
-	/* B2XX and E1xx are the only device where we set FPGA clocking */
-	if ((dev_type == B200) || (dev_type == B210) || (dev_type == E3XX)) {
-		if (set_master_clk(B2XX_CLK_RT) < 0)
-			return -1;
-	} else if (dev_type == E1XX) {
-		if (set_master_clk(E1XX_CLK_RT) < 0)
-			return -1;
-	} else if (dev_type == B2XX_MCBTS) {
-		if (set_master_clk(B2XX_MCBTS_CLK_RT) < 0)
-			return -1;
-	}
-	else if (dev_type == LIMESDR) {
-		if (set_master_clk(LIMESDR_CLK_RT) < 0)
-			return -1;
-	}
-
-
-	// Set sample rates
-	try {
-		usrp_dev->set_tx_rate(tx_rate);
-		usrp_dev->set_rx_rate(rx_rate);
-	} catch (const std::exception &ex) {
-		LOG(ALERT) << "UHD rate setting failed";
-		LOG(ALERT) << ex.what();
-		return -1;
-	}
-	this->tx_rate = usrp_dev->get_tx_rate();
-	this->rx_rate = usrp_dev->get_rx_rate();
-
-	tx_offset = fabs(this->tx_rate - tx_rate);
-	rx_offset = fabs(this->rx_rate - rx_rate);
-	if ((tx_offset > offset_limit) || (rx_offset > offset_limit)) {
-		LOG(ALERT) << "Actual sample rate differs from desired rate";
-		LOG(ALERT) << "Tx/Rx (" << this->tx_rate << "/"
-			   << this->rx_rate << ")";
-		return -1;
-	}
-
-	return 0;
+	ts_offset = (TIMESTAMP) desc.offset * rx_rate;
+	LOG(INFO) << "Rates configured for " << desc.str;
 }
 
 double uhd_device::setTxGain(double db, size_t chan)
@@ -641,85 +510,39 @@ double uhd_device::getRxGain(size_t chan)
  */
 bool uhd_device::parse_dev_type()
 {
-	std::string mboard_str, dev_str;
-	uhd::property_tree::sptr prop_tree;
-	size_t usrp1_str, usrp2_str, e100_str, e110_str, e310_str, e3xx_str,
-	       b100_str, b200_str, b210_str, x300_str, x310_str, umtrx_str, limesdr_str;
+	uhd::property_tree::sptr prop_tree = usrp_dev->get_device()->get_tree();
+	std::string devString = prop_tree->access<std::string>("/name").get();
+	std::string mboardString = usrp_dev->get_mboard_name();
 
-	prop_tree = usrp_dev->get_device()->get_tree();
-	dev_str = prop_tree->access<std::string>("/name").get();
-	mboard_str = usrp_dev->get_mboard_name();
+	const std::map<std::string, std::pair<uhd_dev_type, TxWindowType>> devStringMap {
+		{ "B100",     { B100,    TX_WINDOW_USRP1 } },
+		{ "B200",     { B200,    TX_WINDOW_USRP1 } },
+		{ "B200mini", { B200,    TX_WINDOW_USRP1 } },
+		{ "B210",     { B210,    TX_WINDOW_USRP1 } },
+		{ "E100",     { E1XX,    TX_WINDOW_FIXED } },
+		{ "E110",     { E1XX,    TX_WINDOW_FIXED } },
+		{ "E310",     { E3XX,    TX_WINDOW_FIXED } },
+		{ "E3XX",     { E3XX,    TX_WINDOW_FIXED } },
+		{ "X300",     { X3XX,    TX_WINDOW_FIXED } },
+		{ "X310",     { X3XX,    TX_WINDOW_FIXED } },
+		{ "UmTRX",    { UMTRX,   TX_WINDOW_FIXED } },
+		{ "STREAM",   { LIMESDR, TX_WINDOW_USRP1 } },
+	};
 
-	usrp1_str = dev_str.find("USRP1");
-	usrp2_str = dev_str.find("USRP2");
-	b100_str = mboard_str.find("B100");
-	b200_str = mboard_str.find("B200");
-	b210_str = mboard_str.find("B210");
-	e100_str = mboard_str.find("E100");
-	e110_str = mboard_str.find("E110");
-	e310_str = mboard_str.find("E310");
-	e3xx_str = mboard_str.find("E3XX");
-	x300_str = mboard_str.find("X300");
-	x310_str = mboard_str.find("X310");
-	umtrx_str = dev_str.find("UmTRX");
-	// LimeSDR is based on STREAM board, so it's advertized as such
-	limesdr_str = dev_str.find("STREAM");
+	// Compare UHD motherboard and device strings */
+	std::string found;
+	if (devStringMap.find(devString) != devStringMap.end())
+		found = devString;
+	else if (devStringMap.find(mboardString) != devStringMap.end())
+		found = mboardString;
 
-	if (usrp1_str != std::string::npos) {
-		LOG(ALERT) << "USRP1 is not supported using the UHD driver";
-		LOG(ALERT) << "Please compile with GNU Radio libusrp support";
-		dev_type = USRP1;
+	if (found.empty()) {
+		LOG(ALERT) << "Unsupported device " << devString;
 		return false;
 	}
 
-	if (b100_str != std::string::npos) {
-		tx_window = TX_WINDOW_USRP1;
-		dev_type = B100;
-	} else if (b200_str != std::string::npos) {
-		tx_window = TX_WINDOW_USRP1;
-		dev_type = B200;
-	} else if (b210_str != std::string::npos) {
-		tx_window = TX_WINDOW_USRP1;
-		dev_type = B210;
-	} else if (e100_str != std::string::npos) {
-		tx_window = TX_WINDOW_FIXED;
-		dev_type = E1XX;
-	} else if (e110_str != std::string::npos) {
-		tx_window = TX_WINDOW_FIXED;
-		dev_type = E1XX;
-	} else if (usrp2_str != std::string::npos) {
-		tx_window = TX_WINDOW_FIXED;
-		dev_type = USRP2;
-	} else if ((e310_str != std::string::npos) ||
-		   (e3xx_str != std::string::npos)) {
-		tx_window = TX_WINDOW_FIXED;
-		dev_type = E3XX;
-	} else if (x300_str != std::string::npos) {
-		tx_window = TX_WINDOW_FIXED;
-		dev_type = X3XX;
-	} else if (x310_str != std::string::npos) {
-		tx_window = TX_WINDOW_FIXED;
-		dev_type = X3XX;
-	} else if (umtrx_str != std::string::npos) {
-		tx_window = TX_WINDOW_FIXED;
-		dev_type = UMTRX;
-	} else if (limesdr_str != std::string::npos) {
-		tx_window = TX_WINDOW_USRP1;
-		dev_type = LIMESDR;
-	} else {
-		LOG(ALERT) << "Unknown UHD device type "
-			   << dev_str << " " << mboard_str;
-		return false;
-	}
-
-	if (tx_window == TX_WINDOW_USRP1) {
-		LOG(INFO) << "Using USRP1 type transmit window for "
-			  << dev_str << " " << mboard_str;
-	} else {
-		LOG(INFO) << "Using fixed transmit window for "
-			  << dev_str << " " << mboard_str;
-	}
-
+	dev_type = devStringMap.at(found).first;
+	tx_window = devStringMap.at(found).second;
 	return true;
 }
 
@@ -820,14 +643,12 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 
 	usrp_dev->set_clock_source(refstr);
 
-	// Set rates
-	double _rx_rate = select_rate(dev_type, rx_sps, iface);
-	double _tx_rate = select_rate(dev_type, tx_sps, iface);
-
-	if ((_tx_rate < 0.0) || (_rx_rate < 0.0))
+	try {
+		set_rates();
+        } catch (const std::exception &e) {
+		LOG(ALERT) << "UHD rate setting failed - " << e.what();
 		return -1;
-	if (set_rates(_tx_rate, _rx_rate) < 0)
-		return -1;
+	}
 
 	// Set RF frontend bandwidth
 	if (dev_type == UMTRX) {
@@ -859,17 +680,6 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	size_t buf_len = SAMPLE_BUF_SZ / sizeof(uint32_t);
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		rx_buffers[i] = new smpl_buf(buf_len, rx_rate);
-
-	// Set receive chain sample offset. Trigger the EDGE offset
-	// table by checking for 4 SPS on the receive path. No other
-	// configuration supports using 4 SPS.
-	double offset = get_dev_offset();
-	if (offset == 0.0) {
-		LOG(ERR) << "Unsupported configuration, no correction applied";
-		ts_offset = 0;
-	} else  {
-		ts_offset = (TIMESTAMP) (offset * rx_rate);
-	}
 
 	// Initialize and shadow gain values 
 	init_gains();
@@ -1236,7 +1046,7 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 
 	/* Find center frequency between channels */
 	rf_spread = fabs(freqs[!chan] - freq);
-	if (rf_spread > B2XX_CLK_RT) {
+	if (rf_spread > dev_param_map.at(dev_key(B210, 1, 1)).mcr) {
 		LOG(ALERT) << rf_spread << "Hz tuning spread not supported\n";
 		return treq;
 	}
