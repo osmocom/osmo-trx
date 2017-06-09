@@ -293,6 +293,7 @@ private:
 	std::vector<smpl_buf *> rx_buffers;
 
 	void init_gains();
+	void set_channels(bool swap);
 	void set_rates();
 	bool parse_dev_type();
 	bool flush_recv(size_t num_pkts);
@@ -566,6 +567,45 @@ static bool uhd_e3xx_version_chk()
 	return true;
 }
 
+void uhd_device::set_channels(bool swap)
+{
+	if (iface == MULTI_ARFCN) {
+		if (dev_type != B200 && dev_type != B210)
+			throw std::invalid_argument("Device does not support MCBTS");
+		dev_type = B2XX_MCBTS;
+		chans = 1;
+	}
+
+	if (chans > dev_param_map.at(dev_key(dev_type, 1, 1)).channels)
+		throw std::invalid_argument("Device does not support number of requested channels");
+
+	std::string subdev_string;
+	switch (dev_type) {
+	case B210:
+	case E3XX:
+		if (chans == 1)
+			subdev_string = swap ? "A:B" : "A:A";
+		else if (chans == 2)
+			subdev_string = swap ? "A:B A:A" : "A:A A:B";
+		break;
+	case X3XX:
+	case UMTRX:
+		if (chans == 1)
+			subdev_string = swap ? "B:0" : "A:0";
+		else if (chans == 2)
+			subdev_string = swap ? "B:0 A:0" : "A:0 B:0";
+		break;
+	default:
+		break;
+	}
+
+	if (!subdev_string.empty()) {
+		uhd::usrp::subdev_spec_t spec(subdev_string);
+		usrp_dev->set_tx_subdev_spec(spec);
+		usrp_dev->set_rx_subdev_spec(spec);
+	}
+}
+
 int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 {
 	const char *refstr;
@@ -596,27 +636,10 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 		return -1;
 	}
 
-	// Verify and set channels
-	if (iface == MULTI_ARFCN) {
-		if ((dev_type != B200) && (dev_type != B210)) {
-			LOG(ALERT) << "Unsupported device configuration";
-			return -1;
-		}
-
-		dev_type = B2XX_MCBTS;
-		chans = 1;
-	} else if (chans == 2) {
-		if (dev_type == B210) {
-		} else if (dev_type == UMTRX) {
-			uhd::usrp::subdev_spec_t subdev_spec(swap_channels?"B:0 A:0":"A:0 B:0");
-			usrp_dev->set_tx_subdev_spec(subdev_spec);
-			usrp_dev->set_rx_subdev_spec(subdev_spec);
-		} else {
-			LOG(ALERT) << "Invalid device configuration";
-			return -1;
-		}
-	} else if (chans != 1) {
-		LOG(ALERT) << "Invalid channel combination for device";
+	try {
+		set_channels(swap_channels);
+        } catch (const std::exception &e) {
+		LOG(ALERT) << "Channel setting failed - " << e.what();
 		return -1;
 	}
 
