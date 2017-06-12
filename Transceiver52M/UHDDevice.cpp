@@ -1,5 +1,5 @@
 /*
- * Device support for Ettus Research UHD driver 
+ * Device support for Ettus Research UHD driver
  *
  * Copyright 2010,2011 Free Software Foundation, Inc.
  * Copyright (C) 2015 Ettus Research LLC
@@ -134,7 +134,7 @@ static struct uhd_dev_offset uhd_offsets[] = {
 	{ B210,  4, 4, B2XX_TIMING_4_4SPS, "B210 4 SPS" },
 	{ X3XX,  4, 4, 5.6567e-5, "X3XX 4 SPS"},
 	{ UMTRX, 4, 4, 5.1503e-5, "UmTRX 4 SPS" },
-	{ LIMESDR, 4, 4, 16.5/GSMRATE, "STREAM/LimeSDR (4 SPS TX/RX)" },
+	{ LIMESDR, 4, 4, 8.9e-5, "LimeSDR 4 SPS" },
 };
 #define NUM_UHD_OFFSETS (sizeof(uhd_offsets)/sizeof(uhd_offsets[0]))
 
@@ -189,8 +189,8 @@ class smpl_buf {
 public:
 	/** Sample buffer constructor
 	    @param len number of 32-bit samples the buffer should hold
-	    @param rate sample clockrate 
-	    @param timestamp 
+	    @param rate sample clockrate
+	    @param timestamp
 	*/
 	smpl_buf(size_t len, double rate);
 	~smpl_buf();
@@ -218,7 +218,7 @@ public:
 	*/
 	std::string str_status(size_t ts) const;
 
-	/** Formatted error string 
+	/** Formatted error string
 	    @param code an error code
 	    @return a formatted error string
 	*/
@@ -662,8 +662,7 @@ bool uhd_device::parse_dev_type()
 	x300_str = mboard_str.find("X300");
 	x310_str = mboard_str.find("X310");
 	umtrx_str = dev_str.find("UmTRX");
-	// LimeSDR is based on STREAM board, so it's advertized as such
-	limesdr_str = dev_str.find("STREAM");
+	limesdr_str = mboard_str.find("LimeSDR");
 
 	if (usrp1_str != std::string::npos) {
 		LOG(ALERT) << "USRP1 is not supported using the UHD driver";
@@ -704,7 +703,7 @@ bool uhd_device::parse_dev_type()
 		tx_window = TX_WINDOW_FIXED;
 		dev_type = UMTRX;
 	} else if (limesdr_str != std::string::npos) {
-		tx_window = TX_WINDOW_USRP1;
+		tx_window = TX_WINDOW_FIXED;
 		dev_type = LIMESDR;
 	} else {
 		LOG(ALERT) << "Unknown UHD device type "
@@ -871,7 +870,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 		ts_offset = (TIMESTAMP) (offset * rx_rate);
 	}
 
-	// Initialize and shadow gain values 
+	// Initialize and shadow gain values
 	init_gains();
 
 	// Print configuration
@@ -1092,7 +1091,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 
 		rx_pkt_cnt++;
 
-		// Check for errors 
+		// Check for errors
 		rc = check_rx_md_err(metadata, num_smpls);
 		switch (rc) {
 		case ERROR_UNRECOVERABLE:
@@ -1352,7 +1351,7 @@ TIMESTAMP uhd_device::initialReadTimestamp()
 double uhd_device::fullScaleInputValue()
 {
 	if (dev_type == LIMESDR)
-		return (double) 2047 * LIMESDR_TX_AMPL;
+		return (double) 32767 * LIMESDR_TX_AMPL;
 	if (dev_type == UMTRX)
 		return (double) SHRT_MAX * UMTRX_TX_AMPL;
 	else
@@ -1361,7 +1360,7 @@ double uhd_device::fullScaleInputValue()
 
 double uhd_device::fullScaleOutputValue()
 {
-	if (dev_type == LIMESDR) return (double) 2047;
+	if (dev_type == LIMESDR) return (double) 32767.0;
 	return (double) SHRT_MAX;
 }
 
