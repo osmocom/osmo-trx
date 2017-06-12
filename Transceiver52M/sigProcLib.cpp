@@ -46,9 +46,9 @@ using namespace GSM;
 #define CLIP_THRESH		30000.0f
 
 /** Lookup tables for trigonometric approximation */
-float cosTable[TABLESIZE+1]; // add 1 element for wrap around
-float sinTable[TABLESIZE+1];
-float sincTable[TABLESIZE+1];
+static float cosTable[TABLESIZE+1]; // add 1 element for wrap around
+static float sinTable[TABLESIZE+1];
+static float sincTable[TABLESIZE+1];
 
 /** Constants */
 static const float M_PI_F = (float)M_PI;
@@ -64,7 +64,7 @@ static signalVector *GMSKReverseRotation1 = NULL;
 /* Precomputed fractional delay filters */
 static signalVector *delayFilters[DELAYFILTS];
 
-static Complex<float> psk8_table[8] = {
+static const Complex<float> psk8_table[8] = {
    Complex<float>(-0.70710678,  0.70710678),
    Complex<float>( 0.0, -1.0),
    Complex<float>( 0.0,  1.0),
@@ -172,67 +172,7 @@ void sigProcLibDestroy()
   GSMPulse4 = NULL;
 }
 
-// dB relative to 1.0.
-// if > 1.0, then return 0 dB
-float dB(float x) {
-  
-  float arg = 1.0F;
-  float dB = 0.0F;
-  
-  if (x >= 1.0F) return 0.0F;
-  if (x <= 0.0F) return -200.0F;
-
-  float prevArg = arg;
-  float prevdB = dB;
-  float stepSize = 16.0F;
-  float dBstepSize = 12.0F;
-  while (stepSize > 1.0F) {
-    do {
-      prevArg = arg;
-      prevdB = dB;
-      arg /= stepSize;
-      dB -= dBstepSize;
-    } while (arg > x);
-    arg = prevArg;
-    dB = prevdB;
-    stepSize *= 0.5F;
-    dBstepSize -= 3.0F;
-  }
- return ((arg-x)*(dB-3.0F) + (x-arg*0.5F)*dB)/(arg - arg*0.5F);
-
-}
-
-// 10^(-dB/10), inverse of dB func.
-float dBinv(float x) {
-  
-  float arg = 1.0F;
-  float dB = 0.0F;
-  
-  if (x >= 0.0F) return 1.0F;
-  if (x <= -200.0F) return 0.0F;
-
-  float prevArg = arg;
-  float prevdB = dB;
-  float stepSize = 16.0F;
-  float dBstepSize = 12.0F;
-  while (stepSize > 1.0F) {
-    do {
-      prevArg = arg;
-      prevdB = dB;
-      arg /= stepSize;
-      dB -= dBstepSize;
-    } while (dB > x);
-    arg = prevArg;
-    dB = prevdB;
-    stepSize *= 0.5F;
-    dBstepSize -= 3.0F;
-  }
-
-  return ((dB-x)*(arg*0.5F)+(x-(dB-3.0F))*(arg))/3.0F;
-
-}
-
-float vectorNorm2(const signalVector &x) 
+static float vectorNorm2(const signalVector &x)
 {
   signalVector::const_iterator xPtr = x.begin();
   float Energy = 0.0;
@@ -241,41 +181,6 @@ float vectorNorm2(const signalVector &x)
   }
   return Energy;
 }
-
-
-float vectorPower(const signalVector &x) 
-{
-  return vectorNorm2(x)/x.size();
-}
-
-/** compute cosine via lookup table */
-float cosLookup(const float x)
-{
-  float arg = x*M_1_2PI_F;
-  while (arg > 1.0F) arg -= 1.0F;
-  while (arg < 0.0F) arg += 1.0F;
-
-  const float argT = arg*((float)TABLESIZE);
-  const int argI = (int)argT;
-  const float delta = argT-argI;
-  const float iDelta = 1.0F-delta;
-  return iDelta*cosTable[argI] + delta*cosTable[argI+1];
-}
-
-/** compute sine via lookup table */
-float sinLookup(const float x) 
-{
-  float arg = x*M_1_2PI_F;
-  while (arg > 1.0F) arg -= 1.0F;
-  while (arg < 0.0F) arg += 1.0F;
-
-  const float argT = arg*((float)TABLESIZE);
-  const int argI = (int)argT;
-  const float delta = argT-argI;
-  const float iDelta = 1.0F-delta;
-  return iDelta*sinTable[argI] + delta*sinTable[argI+1];
-}
-
 
 /** compute e^(-jx) via lookup table. */
 static complex expjLookup(float x)
@@ -401,11 +306,18 @@ static bool GMSKReverseRotate(signalVector &x, int sps)
   return true;
 }
 
-signalVector *convolve(const signalVector *x,
-                        const signalVector *h,
-                        signalVector *y,
-                        ConvType spanType, size_t start,
-                        size_t len, size_t step, int offset)
+/** Convolution type indicator */
+enum ConvType {
+  START_ONLY,
+  NO_DELAY,
+  CUSTOM,
+  UNDEFINED,
+};
+
+static signalVector *convolve(const signalVector *x, const signalVector *h,
+                              signalVector *y, ConvType spanType,
+                              size_t start = 0, size_t len = 0,
+                              size_t step = 1, int offset = 0)
 {
   int rc;
   size_t head = 0, tail = 0;
@@ -652,29 +564,6 @@ static PulseSequence *generateGSMPulse(int sps)
   generateInvertC0Pulse(pulse);
 
   return pulse;
-}
-
-signalVector* reverseConjugate(signalVector *b)
-{
-    signalVector *tmp = new signalVector(b->size());
-    tmp->isReal(b->isReal());
-    signalVector::iterator bP = b->begin();
-    signalVector::iterator bPEnd = b->end();
-    signalVector::iterator tmpP = tmp->end()-1;
-    if (!b->isReal()) {
-      while (bP < bPEnd) {
-        *tmpP-- = bP->conj();
-        bP++;
-      }
-    }
-    else {
-      while (bP < bPEnd) {
-        *tmpP-- = bP->real();
-        bP++;
-      }
-    }
-
-    return tmp;
 }
 
 bool vectorSlicer(SoftVector *x)
@@ -1158,7 +1047,7 @@ static void generateSincTable()
   }
 }
 
-float sinc(float x)
+static float sinc(float x)
 {
   if (fabs(x) >= 8 * M_PI)
     return 0.0;
@@ -1173,7 +1062,7 @@ float sinc(float x)
  * sinc function generator. The number of filters generated is specified
  * by the DELAYFILTS value.
  */
-void generateDelayFilters()
+static void generateDelayFilters()
 {
   int h_len = 20;
   complex *data;
@@ -1268,31 +1157,8 @@ signalVector *delayVector(const signalVector *in, signalVector *out, float delay
   return out;
 }
 
-signalVector *gaussianNoise(int length, 
-			    float variance, 
-			    complex mean)
+static complex interpolatePoint(const signalVector &inSig, float ix)
 {
-
-  signalVector *noise = new signalVector(length);
-  signalVector::iterator nPtr = noise->begin();
-  float stddev = sqrtf(variance);
-  while (nPtr < noise->end()) {
-    float u1 = (float) rand()/ (float) RAND_MAX;
-    while (u1==0.0)
-      u1 = (float) rand()/ (float) RAND_MAX;
-    float u2 = (float) rand()/ (float) RAND_MAX;
-    float arg = 2.0*M_PI*u2;
-    *nPtr = mean + stddev*complex(cos(arg),sin(arg))*sqrtf(-2.0*log(u1));
-    nPtr++;
-  }
-
-  return noise;
-}
-
-complex interpolatePoint(const signalVector &inSig,
-			 float ix)
-{
-  
   int start = (int) (floor(ix) - 10);
   if (start < 0) start = 0;
   int end = (int) (floor(ix) + 11);
@@ -1332,12 +1198,9 @@ static complex fastPeakDetect(const signalVector &rxBurst, float *index)
   return amp;
 }
 
-complex peakDetect(const signalVector &rxBurst,
-		   float *peakIndex,
-		   float *avgPwr) 
+static complex peakDetect(const signalVector &rxBurst,
+                          float *peakIndex, float *avgPwr)
 {
-  
-
   complex maxVal = 0.0;
   float maxIndex = -1;
   float sumPower = 0.0;
@@ -1410,7 +1273,7 @@ void scaleVector(signalVector &x,
 }
 
 /** in-place conjugation */
-void conjugateVector(signalVector &x)
+static void conjugateVector(signalVector &x)
 {
   if (x.isReal()) return;
   signalVector::iterator xP = x.begin();
@@ -1419,37 +1282,6 @@ void conjugateVector(signalVector &x)
     *xP = xP->conj();
     xP++;
   }
-}
-
-
-// in-place addition!!
-bool addVector(signalVector &x,
-	       signalVector &y)
-{
-  signalVector::iterator xP = x.begin();
-  signalVector::iterator yP = y.begin();
-  signalVector::iterator xPEnd = x.end();
-  signalVector::iterator yPEnd = y.end();
-  while ((xP < xPEnd) && (yP < yPEnd)) {
-    *xP = *xP + *yP;
-    xP++; yP++;
-  }
-  return true;
-}
-
-// in-place multiplication!!
-bool multVector(signalVector &x,
-                 signalVector &y)
-{
-  signalVector::iterator xP = x.begin();
-  signalVector::iterator yP = y.begin();
-  signalVector::iterator xPEnd = x.end();
-  signalVector::iterator yPEnd = y.end();
-  while ((xP < xPEnd) && (yP < yPEnd)) {
-    *xP = (*xP) * (*yP);
-    xP++; yP++;
-  }
-  return true;
 }
 
 static bool generateMidamble(int sps, int tsc)
@@ -1528,7 +1360,7 @@ release:
   return status;
 }
 
-CorrelationSequence *generateEdgeMidamble(int tsc)
+static CorrelationSequence *generateEdgeMidamble(int tsc)
 {
   complex *data = NULL;
   signalVector *midamble = NULL, *_midamble = NULL;
@@ -1682,6 +1514,24 @@ float energyDetect(const signalVector &rxBurst, unsigned windowLength)
   return energy/windowLength;
 }
 
+static signalVector *downsampleBurst(const signalVector &burst)
+{
+  signalVector *in, *out;
+
+  in = new signalVector(DOWNSAMPLE_IN_LEN, dnsampler->len());
+  out = new signalVector(DOWNSAMPLE_OUT_LEN);
+  memcpy(in->begin(), burst.begin(), DOWNSAMPLE_IN_LEN * 2 * sizeof(float));
+
+  if (dnsampler->rotate((float *) in->begin(), DOWNSAMPLE_IN_LEN,
+                        (float *) out->begin(), DOWNSAMPLE_OUT_LEN) < 0) {
+    delete out;
+    out = NULL;
+  }
+
+  delete in;
+  return out;
+};
+
 /*
  * Detect a burst based on correlation and peak-to-average ratio
  *
@@ -1816,12 +1666,8 @@ static int detectGeneralBurst(const signalVector &rxBurst,
  *   head: Search 8 symbols before target
  *   tail: Search 8 symbols + maximum expected delay
  */
-int detectRACHBurst(const signalVector &burst,
-            float threshold,
-            int sps,
-            complex &amplitude,
-            float &toa,
-            unsigned max_toa)
+static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
+                           complex &amplitude, float &toa, unsigned max_toa)
 {
   int rc, target, head, tail;
   CorrelationSequence *sync;
@@ -1845,8 +1691,8 @@ int detectRACHBurst(const signalVector &burst,
  *   head: Search 6 symbols before target
  *   tail: Search 6 symbols + maximum expected delay
  */
-int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float threshold,
-                        int sps, complex &amplitude, float &toa, unsigned max_toa)
+static int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float threshold,
+                               int sps, complex &amplitude, float &toa, unsigned max_toa)
 {
   int rc, target, head, tail;
   CorrelationSequence *sync;
@@ -1864,8 +1710,8 @@ int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float threshold
   return rc;
 }
 
-int detectEdgeBurst(const signalVector &burst, unsigned tsc, float threshold,
-                    int sps, complex &amplitude, float &toa, unsigned max_toa)
+static int detectEdgeBurst(const signalVector &burst, unsigned tsc, float threshold,
+                           int sps, complex &amplitude, float &toa, unsigned max_toa)
 {
   int rc, target, head, tail;
   CorrelationSequence *sync;
@@ -1913,41 +1759,6 @@ int detectAnyBurst(const signalVector &burst, unsigned tsc, float threshold,
     return type;
 
   return rc;
-}
-
-signalVector *downsampleBurst(const signalVector &burst)
-{
-  signalVector *in, *out;
-
-  in = new signalVector(DOWNSAMPLE_IN_LEN, dnsampler->len());
-  out = new signalVector(DOWNSAMPLE_OUT_LEN);
-  memcpy(in->begin(), burst.begin(), DOWNSAMPLE_IN_LEN * 2 * sizeof(float));
-
-  if (dnsampler->rotate((float *) in->begin(), DOWNSAMPLE_IN_LEN,
-                        (float *) out->begin(), DOWNSAMPLE_OUT_LEN) < 0) {
-    delete out;
-    out = NULL;
-  }
-
-  delete in;
-  return out;
-};
-
-signalVector *decimateVector(signalVector &wVector, size_t factor)
-{
-  signalVector *dec;
-
-  if (factor <= 1)
-    return NULL;
-
-  dec = new signalVector(wVector.size() / factor);
-  dec->isReal(wVector.isReal());
-
-  signalVector::iterator itr = dec->begin();
-  for (size_t i = 0; i < wVector.size(); i += factor)
-    *itr++ = wVector[i];
-
-  return dec;
 }
 
 /*
@@ -2046,8 +1857,8 @@ static signalVector *demodCommon(const signalVector &burst, int sps,
  * 4 SPS (if activated) to minimize distortion through the fractional
  * delay filters. Symbol rotation and after always operates at 1 SPS.
  */
-SoftVector *demodGmskBurst(const signalVector &rxBurst, int sps,
-                           complex channel, float TOA)
+static SoftVector *demodGmskBurst(const signalVector &rxBurst,
+                                  int sps, complex channel, float TOA)
 {
   SoftVector *bits;
   signalVector *dec;
@@ -2075,8 +1886,8 @@ SoftVector *demodGmskBurst(const signalVector &rxBurst, int sps,
  * through the fractional delay filters at 1 SPS renders signal
  * nearly unrecoverable.
  */
-SoftVector *demodEdgeBurst(const signalVector &burst, int sps,
-                           complex chan, float toa)
+static SoftVector *demodEdgeBurst(const signalVector &burst,
+                                  int sps, complex chan, float toa)
 {
   SoftVector *bits;
   signalVector *dec, *rot, *eq;
@@ -2136,27 +1947,4 @@ bool sigProcLibSetup()
 fail:
   sigProcLibDestroy();
   return false;
-}
-
-std::string corrTypeToString(CorrType corr) {
-  switch (corr) {
-  case OFF:
-    return "OFF";
-  case TSC:
-    return "TSC";
-  case RACH:
-    return "RACH";
-  case EDGE:
-    return "EDGE";
-  case IDLE:
-    return "IDLE";
-  default:
-    return "unknown";
-  }
-}
-
-std::ostream& operator<<(std::ostream& os, CorrType corr)
-{
-  os << corrTypeToString(corr);
-  return os;
 }
