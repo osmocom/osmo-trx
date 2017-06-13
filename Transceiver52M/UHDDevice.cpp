@@ -528,7 +528,7 @@ bool uhd_device::parse_dev_type()
 		{ "X310",     { X3XX,    TX_WINDOW_FIXED } },
 		{ "USRP2",    { USRP2,   TX_WINDOW_FIXED } },
 		{ "UmTRX",    { UMTRX,   TX_WINDOW_FIXED } },
-		{ "LimeSDR",  { LIMESDR, TX_WINDOW_USRP1 } },
+		{ "LimeSDR",  { LIMESDR, TX_WINDOW_FIXED } },
 	};
 
 	// Compare UHD motherboard and device strings */
