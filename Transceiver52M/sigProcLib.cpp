@@ -585,7 +585,7 @@ static signalVector *rotateBurst(const BitVector &wBurst,
                                  int guardPeriodLength, int sps)
 {
   int burst_len;
-  signalVector *pulse, rotated, *shaped;
+  signalVector *pulse, rotated;
   signalVector::iterator itr;
 
   pulse = GSMPulse1->empty;
@@ -602,11 +602,7 @@ static signalVector *rotateBurst(const BitVector &wBurst,
   rotated.isReal(false);
 
   /* Dummy filter operation */
-  shaped = convolve(&rotated, pulse, NULL, START_ONLY);
-  if (!shaped)
-    return NULL;
-
-  return shaped;
+  return convolve(&rotated, pulse, NULL, START_ONLY);
 }
 
 static void rotateBurst2(signalVector &burst, double phase)
@@ -626,8 +622,7 @@ static signalVector *modulateBurstLaurent(const BitVector &bits)
 {
   int burst_len, sps = 4;
   float phase;
-  signalVector *c0_pulse, *c1_pulse, *c0_burst;
-  signalVector *c1_burst, *c0_shaped, *c1_shaped;
+  signalVector *c0_pulse, *c1_pulse, *c0_shaped, *c1_shaped;
   signalVector::iterator c0_itr, c1_itr;
 
   c0_pulse = GSMPulse4->c0;
@@ -638,12 +633,12 @@ static signalVector *modulateBurstLaurent(const BitVector &bits)
 
   burst_len = 625;
 
-  c0_burst = new signalVector(burst_len, c0_pulse->size());
-  c0_burst->isReal(true);
-  c0_itr = c0_burst->begin();
+  signalVector c0_burst(burst_len, c0_pulse->size());
+  c0_burst.isReal(true);
+  c0_itr = c0_burst.begin();
 
-  c1_burst = new signalVector(burst_len, c1_pulse->size());
-  c1_itr = c1_burst->begin();
+  signalVector c1_burst(burst_len, c1_pulse->size());
+  c1_itr = c1_burst.begin();
 
   /* Padded differential tail bits */
   *c0_itr = 2.0 * (0x00 & 0x01) - 1.0;
@@ -659,10 +654,10 @@ static signalVector *modulateBurstLaurent(const BitVector &bits)
   *c0_itr = 2.0 * (0x00 & 0x01) - 1.0;
 
   /* Generate C0 phase coefficients */
-  GMSKRotate(*c0_burst, sps);
-  c0_burst->isReal(false);
+  GMSKRotate(c0_burst, sps);
+  c0_burst.isReal(false);
 
-  c0_itr = c0_burst->begin();
+  c0_itr = c0_burst.begin();
   c0_itr += sps * 2;
   c1_itr += sps * 2;
 
@@ -687,8 +682,8 @@ static signalVector *modulateBurstLaurent(const BitVector &bits)
   *c1_itr = *c0_itr * Complex<float>(0, phase);
 
   /* Primary (C0) and secondary (C1) pulse shaping */
-  c0_shaped = convolve(c0_burst, c0_pulse, NULL, START_ONLY);
-  c1_shaped = convolve(c1_burst, c1_pulse, NULL, START_ONLY);
+  c0_shaped = convolve(&c0_burst, c0_pulse, NULL, START_ONLY);
+  c1_shaped = convolve(&c1_burst, c1_pulse, NULL, START_ONLY);
 
   /* Sum shaped outputs into C0 */
   c0_itr = c0_shaped->begin();
@@ -696,10 +691,7 @@ static signalVector *modulateBurstLaurent(const BitVector &bits)
   for (unsigned i = 0; i < c0_shaped->size(); i++ )
     *c0_itr++ += *c1_itr++;
 
-  delete c0_burst;
-  delete c1_burst;
   delete c1_shaped;
-
   return c0_shaped;
 }
 
@@ -773,7 +765,6 @@ static signalVector *mapEdgeSymbols(const BitVector &bits)
 static signalVector *shapeEdgeBurst(const signalVector &symbols)
 {
   size_t nsyms, nsamps = 625, sps = 4;
-  signalVector *burst, *shape;
   signalVector::iterator burst_itr;
 
   nsyms = symbols.size();
@@ -781,10 +772,10 @@ static signalVector *shapeEdgeBurst(const signalVector &symbols)
   if (nsyms * sps > nsamps)
     nsyms = 156;
 
-  burst = new signalVector(nsamps, GSMPulse4->c0->size());
+  signalVector burst(nsamps, GSMPulse4->c0->size());
 
   /* Delay burst by 1 symbol */
-  burst_itr = burst->begin() + sps;
+  burst_itr = burst.begin() + sps;
   for (size_t i = 0; i < nsyms; i++) {
     float phase = i * 3.0f * M_PI / 8.0f;
     Complex<float> rot = Complex<float>(cos(phase), sin(phase));
@@ -794,10 +785,7 @@ static signalVector *shapeEdgeBurst(const signalVector &symbols)
   }
 
   /* Single Gaussian pulse approximation shaping */
-  shape = convolve(burst, GSMPulse4->c0, NULL, START_ONLY);
-  delete burst;
-
-  return shape;
+  return convolve(&burst, GSMPulse4->c0, NULL, START_ONLY);
 }
 
 /*
@@ -811,40 +799,36 @@ signalVector *genRandNormalBurst(int tsc, int sps, int tn)
     return NULL;
 
   int i = 0;
-  BitVector *bits = new BitVector(148);
-  signalVector *burst;
+  BitVector bits(148);
 
   /* Tail bits */
   for (; i < 3; i++)
-    (*bits)[i] = 0;
+    bits[i] = 0;
 
   /* Random bits */
   for (; i < 60; i++)
-    (*bits)[i] = rand() % 2;
+    bits[i] = rand() % 2;
 
   /* Stealing bit */
-  (*bits)[i++] = 0;
+  bits[i++] = 0;
 
   /* Training sequence */
   for (int n = 0; i < 87; i++, n++)
-    (*bits)[i] = gTrainingSequence[tsc][n];
+    bits[i] = gTrainingSequence[tsc][n];
 
   /* Stealing bit */
-  (*bits)[i++] = 0;
+  bits[i++] = 0;
 
   /* Random bits */
   for (; i < 145; i++)
-    (*bits)[i] = rand() % 2;
+    bits[i] = rand() % 2;
 
   /* Tail bits */
   for (; i < 148; i++)
-    (*bits)[i] = 0;
+    bits[i] = 0;
 
   int guard = 8 + !(tn % 4);
-  burst = modulateBurst(*bits, guard, sps);
-  delete bits;
-
-  return burst;
+  return modulateBurst(bits, guard, sps);
 }
 
 /*
@@ -860,30 +844,26 @@ signalVector *genRandAccessBurst(int delay, int sps, int tn)
     return NULL;
 
   int i = 0;
-  BitVector *bits = new BitVector(88+delay);
-  signalVector *burst;
+  BitVector bits(88 + delay);
 
   /* delay */
   for (; i < delay; i++)
-    (*bits)[i] = 0;
+    bits[i] = 0;
 
   /* head and synch bits */
   for (int n = 0; i < 49+delay; i++, n++)
-    (*bits)[i] = gRACHBurst[n];
+    bits[i] = gRACHBurst[n];
 
   /* Random bits */
   for (; i < 85+delay; i++)
-    (*bits)[i] = rand() % 2;
+    bits[i] = rand() % 2;
 
   /* Tail bits */
   for (; i < 88+delay; i++)
-    (*bits)[i] = 0;
+    bits[i] = 0;
 
   int guard = 68-delay + !(tn % 4);
-  burst = modulateBurst(*bits, guard, sps);
-  delete bits;
-
-  return burst;
+  return modulateBurst(bits, guard, sps);
 }
 
 signalVector *generateEmptyBurst(int sps, int tn)
@@ -920,17 +900,17 @@ signalVector *generateEdgeBurst(int tsc)
   if ((tsc < 0) || (tsc > 7))
     return NULL;
 
-  signalVector *shape, *burst = new signalVector(148);
+  signalVector burst(148);
   const BitVector *midamble = &gEdgeTrainingSequence[tsc];
 
   /* Tail */
   int n, i = 0;
   for (; i < tail; i++)
-    (*burst)[i] = psk8_table[7];
+    burst[i] = psk8_table[7];
 
   /* Body */
   for (; i < tail + data; i++)
-    (*burst)[i] = psk8_table[rand() % 8];
+    burst[i] = psk8_table[rand() % 8];
 
   /* TSC */
   for (n = 0; i < tail + data + train; i++, n++) {
@@ -938,21 +918,18 @@ signalVector *generateEdgeBurst(int tsc)
                      (((unsigned) (*midamble)[3 * n + 1] & 0x01) << 1) |
                      (((unsigned) (*midamble)[3 * n + 2] & 0x01) << 2);
 
-    (*burst)[i] = psk8_table[index];
+    burst[i] = psk8_table[index];
   }
 
   /* Body */
   for (; i < tail + data + train + data; i++)
-    (*burst)[i] = psk8_table[rand() % 8];
+    burst[i] = psk8_table[rand() % 8];
 
   /* Tail */
   for (; i < tail + data + train + data + tail; i++)
-    (*burst)[i] = psk8_table[7];
+    burst[i] = psk8_table[7];
 
-  shape = shapeEdgeBurst(*burst);
-  delete burst;
-
-  return shape;
+  return shapeEdgeBurst(burst);
 }
 
 /*
@@ -988,7 +965,7 @@ static signalVector *modulateBurstBasic(const BitVector &bits,
 					int guard_len, int sps)
 {
   int burst_len;
-  signalVector *pulse, *burst, *shaped;
+  signalVector *pulse;
   signalVector::iterator burst_itr;
 
   if (sps == 1)
@@ -998,9 +975,9 @@ static signalVector *modulateBurstBasic(const BitVector &bits,
 
   burst_len = sps * (bits.size() + guard_len);
 
-  burst = new signalVector(burst_len, pulse->size());
-  burst->isReal(true);
-  burst_itr = burst->begin();
+  signalVector burst(burst_len, pulse->size());
+  burst.isReal(true);
+  burst_itr = burst.begin();
 
   /* Raw bits are not differentially encoded */
   for (unsigned i = 0; i < bits.size(); i++) {
@@ -1008,15 +985,11 @@ static signalVector *modulateBurstBasic(const BitVector &bits,
     burst_itr += sps;
   }
 
-  GMSKRotate(*burst, sps);
-  burst->isReal(false);
+  GMSKRotate(burst, sps);
+  burst.isReal(false);
 
   /* Single Gaussian pulse approximation shaping */
-  shaped = convolve(burst, pulse, NULL, START_ONLY);
-
-  delete burst;
-
-  return shaped;
+  return convolve(&burst, pulse, NULL, START_ONLY);
 }
 
 /* Assume input bits are not differentially encoded */
@@ -1515,19 +1488,16 @@ float energyDetect(const signalVector &rxBurst, unsigned windowLength)
 
 static signalVector *downsampleBurst(const signalVector &burst)
 {
-  signalVector *in, *out;
+  signalVector in(DOWNSAMPLE_IN_LEN, dnsampler->len());
+  signalVector *out = new signalVector(DOWNSAMPLE_OUT_LEN);
+  memcpy(in.begin(), burst.begin(), DOWNSAMPLE_IN_LEN * 2 * sizeof(float));
 
-  in = new signalVector(DOWNSAMPLE_IN_LEN, dnsampler->len());
-  out = new signalVector(DOWNSAMPLE_OUT_LEN);
-  memcpy(in->begin(), burst.begin(), DOWNSAMPLE_IN_LEN * 2 * sizeof(float));
-
-  if (dnsampler->rotate((float *) in->begin(), DOWNSAMPLE_IN_LEN,
+  if (dnsampler->rotate((float *) in.begin(), DOWNSAMPLE_IN_LEN,
                         (float *) out->begin(), DOWNSAMPLE_OUT_LEN) < 0) {
     delete out;
     out = NULL;
   }
 
-  delete in;
   return out;
 };
 
@@ -1620,7 +1590,6 @@ static int detectGeneralBurst(const signalVector &rxBurst,
 {
   int rc, start, len;
   bool clipping = false;
-  signalVector *corr;
 
   if ((sps != 1) && (sps != 4))
     return -SIGERR_UNSUPPORTED;
@@ -1636,12 +1605,10 @@ static int detectGeneralBurst(const signalVector &rxBurst,
 
   start = target - head - 1;
   len = head + tail;
-  corr = new signalVector(len);
+  signalVector corr(len);
 
-  rc = detectBurst(rxBurst, *corr, sync,
+  rc = detectBurst(rxBurst, corr, sync,
                    thresh, sps, &amp, &toa, start, len);
-  delete corr;
-
   if (rc < 0) {
     return -SIGERR_INTERNAL;
   } else if (!rc) {
