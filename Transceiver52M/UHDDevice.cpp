@@ -437,7 +437,7 @@ void uhd_device::set_rates()
 	tx_rate = usrp_dev->get_tx_rate();
 	rx_rate = usrp_dev->get_rx_rate();
 
-	ts_offset = (TIMESTAMP) desc.offset * rx_rate;
+	ts_offset = static_cast<TIMESTAMP>(desc.offset * rx_rate);
 	LOG(INFO) << "Rates configured for " << desc.str;
 }
 
