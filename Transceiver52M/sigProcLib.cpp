@@ -643,7 +643,6 @@ static signalVector *modulateBurstLaurent(const BitVector &bits)
   c0_itr = c0_burst->begin();
 
   c1_burst = new signalVector(burst_len, c1_pulse->size());
-  c1_burst->isReal(true);
   c1_itr = c1_burst->begin();
 
   /* Padded differential tail bits */
