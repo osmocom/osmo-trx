@@ -526,25 +526,25 @@ bool uhd_device::parse_dev_type()
 		{ "E3XX",     { E3XX,    TX_WINDOW_FIXED } },
 		{ "X300",     { X3XX,    TX_WINDOW_FIXED } },
 		{ "X310",     { X3XX,    TX_WINDOW_FIXED } },
+		{ "USRP2",    { USRP2,   TX_WINDOW_FIXED } },
 		{ "UmTRX",    { UMTRX,   TX_WINDOW_FIXED } },
 		{ "STREAM",   { LIMESDR, TX_WINDOW_USRP1 } },
 	};
 
 	// Compare UHD motherboard and device strings */
-	std::string found;
-	if (devStringMap.find(devString) != devStringMap.end())
-		found = devString;
-	else if (devStringMap.find(mboardString) != devStringMap.end())
-		found = mboardString;
-
-	if (found.empty()) {
-		LOG(ALERT) << "Unsupported device " << devString;
-		return false;
+	auto mapIter = devStringMap.begin();
+	while (mapIter != devStringMap.end()) {
+		if (devString.find(mapIter->first) != std::string::npos ||
+		    mboardString.find(mapIter->first) != std::string::npos) {
+			dev_type = std::get<0>(mapIter->second);
+			tx_window = std::get<1>(mapIter->second);
+			return true;
+		}
+		mapIter++;
 	}
 
-	dev_type = devStringMap.at(found).first;
-	tx_window = devStringMap.at(found).second;
-	return true;
+	LOG(ALERT) << "Unsupported device " << devString;
+	return false;
 }
 
 /*
