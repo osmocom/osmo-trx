@@ -297,6 +297,10 @@ void Transceiver::stop()
   LOG(NOTICE) << "Stopping the transceiver";
   mTxLowerLoopThread->cancel();
   mRxLowerLoopThread->cancel();
+  mTxLowerLoopThread->join();
+  mRxLowerLoopThread->join();
+  delete mTxLowerLoopThread;
+  delete mRxLowerLoopThread;
 
   for (size_t i = 0; i < mChans; i++) {
     mRxServiceLoopThreads[i]->cancel();
@@ -314,11 +318,6 @@ void Transceiver::stop()
 
     mTxPriorityQueues[i].clear();
   }
-
-  mTxLowerLoopThread->join();
-  mRxLowerLoopThread->join();
-  delete mTxLowerLoopThread;
-  delete mRxLowerLoopThread;
 
   mOn = false;
   LOG(NOTICE) << "Transceiver stopped";
