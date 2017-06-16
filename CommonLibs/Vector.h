@@ -118,8 +118,8 @@ template <class T> class Vector {
 	/** Build an empty Vector of a given size. */
 	Vector(size_t wSize=0):mData(NULL) { resize(wSize); }
 
-	/** Build a Vector by shifting the data block. */
-	Vector(Vector<T>& other)
+	/** Build a Vector by moving another. */
+	Vector(Vector<T>&& other)
 		:mData(other.mData),mStart(other.mStart),mEnd(other.mEnd)
 	{ other.mData=NULL; }
 
