@@ -979,16 +979,10 @@ signalVector *modulateBurst(const BitVector &wBurst, int guardPeriodLength,
 
 static void generateSincTable()
 {
-  float x;
-
   for (int i = 0; i < TABLESIZE; i++) {
-    x = (float) i / TABLESIZE * 8 * M_PI;
-    if (fabs(x) < 0.01) {
-      sincTable[i] = 1.0f;
-      continue;
-    }
-
-    sincTable[i] = sinf(x) / x;
+    auto x = (double) i / TABLESIZE * 8 * M_PI;
+    auto y = sin(x) / x;
+    sincTable[i] = isnan(y) ? 1.0 : y;
   }
 }
 
