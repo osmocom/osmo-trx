@@ -46,14 +46,10 @@ using namespace GSM;
 #define CLIP_THRESH		30000.0f
 
 /** Lookup tables for trigonometric approximation */
-static float cosTable[TABLESIZE+1]; // add 1 element for wrap around
-static float sinTable[TABLESIZE+1];
-static float sincTable[TABLESIZE+1];
+static float sincTable[TABLESIZE+1]; // add 1 element for wrap around
 
 /** Constants */
 static const float M_PI_F = (float)M_PI;
-static const float M_2PI_F = (float)(2.0*M_PI);
-static const float M_1_2PI_F = 1/M_2PI_F;
 
 /* Precomputed rotation vectors */
 static signalVector *GMSKRotation4 = NULL;
@@ -182,29 +178,6 @@ static float vectorNorm2(const signalVector &x)
   return Energy;
 }
 
-/** compute e^(-jx) via lookup table. */
-static complex expjLookup(float x)
-{
-  float arg = x*M_1_2PI_F;
-  while (arg > 1.0F) arg -= 1.0F;
-  while (arg < 0.0F) arg += 1.0F;
-
-  const float argT = arg*((float)TABLESIZE);
-  const int argI = (int)argT;
-  const float delta = argT-argI;
-  const float iDelta = 1.0F-delta;
-   return complex(iDelta*cosTable[argI] + delta*cosTable[argI+1],
-		   iDelta*sinTable[argI] + delta*sinTable[argI+1]);
-}
-
-/** Library setup functions */
-static void initTrigTables() {
-  for (int i = 0; i < TABLESIZE+1; i++) {
-    cosTable[i] = cos(2.0*M_PI*i/TABLESIZE);
-    sinTable[i] = sin(2.0*M_PI*i/TABLESIZE);
-  }
-}
-
 /*
  * Initialize 4 sps and 1 sps rotation tables
  */
@@ -216,11 +189,11 @@ static void initGMSKRotationTables()
   GMSKReverseRotation4 = new signalVector(len4);
   signalVector::iterator rotPtr = GMSKRotation4->begin();
   signalVector::iterator revPtr = GMSKReverseRotation4->begin();
-  float phase = 0.0;
+  auto phase = 0.0;
   while (rotPtr != GMSKRotation4->end()) {
-    *rotPtr++ = expjLookup(phase);
-    *revPtr++ = expjLookup(-phase);
-    phase += M_PI_F / 2.0F / 4.0;
+    *rotPtr++ = complex(cos(phase), sin(phase));
+    *revPtr++ = complex(cos(-phase), sin(-phase));
+    phase += M_PI / 2.0 / 4.0;
   }
 
   GMSKRotation1 = new signalVector(len1);
@@ -229,9 +202,9 @@ static void initGMSKRotationTables()
   revPtr = GMSKReverseRotation1->begin();
   phase = 0.0;
   while (rotPtr != GMSKRotation1->end()) {
-    *rotPtr++ = expjLookup(phase);
-    *revPtr++ = expjLookup(-phase);
-    phase += M_PI_F / 2.0F;
+    *rotPtr++ = complex(cos(phase), sin(phase));
+    *revPtr++ = complex(cos(-phase), sin(-phase));
+    phase += M_PI / 2.0;
   }
 }
 
@@ -1887,7 +1860,6 @@ SoftVector *demodAnyBurst(const signalVector &burst, int sps, complex amp,
 
 bool sigProcLibSetup()
 {
-  initTrigTables();
   generateSincTable();
   initGMSKRotationTables();
 
