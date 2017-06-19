@@ -982,7 +982,7 @@ static void generateSincTable()
   for (int i = 0; i < TABLESIZE; i++) {
     auto x = (double) i / TABLESIZE * 8 * M_PI;
     auto y = sin(x) / x;
-    sincTable[i] = isnan(y) ? 1.0 : y;
+    sincTable[i] = std::isnan(y) ? 1.0 : y;
   }
 }
 
