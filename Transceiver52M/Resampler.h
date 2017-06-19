@@ -20,6 +20,9 @@
 #ifndef _RESAMPLER_H_
 #define _RESAMPLER_H_
 
+#include <vector>
+#include <complex>
+
 class Resampler {
 public:
 	/* Constructor for rational sample rate conversion
@@ -63,14 +66,11 @@ private:
 	size_t p;
 	size_t q;
 	size_t filt_len;
-	size_t *in_index;
-	size_t *out_path;
+	std::vector<size_t> in_index;
+	std::vector<size_t> out_path;
+	std::vector<std::complex<float> *> partitions;
 
-	float **partitions;
-
-	bool initFilters(float bw);
-	void releaseFilters();
-	void computePath();
+	void initFilters(float bw);
 };
 
 #endif /* _RESAMPLER_H_ */

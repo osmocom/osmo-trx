@@ -22,6 +22,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <iostream>
+#include <algorithm>
 
 #include "Resampler.h"
 
@@ -35,6 +36,8 @@ extern "C" {
 
 #define MAX_OUTPUT_LEN		4096
 
+using namespace std;
+
 static float sinc(float x)
 {
 	if (x == 0.0)
@@ -43,32 +46,19 @@ static float sinc(float x)
 	return sin(M_PI * x) / (M_PI * x);
 }
 
-bool Resampler::initFilters(float bw)
+void Resampler::initFilters(float bw)
 {
-	size_t proto_len = p * filt_len;
-	float *proto, val, cutoff;
+	float cutoff;
 	float sum = 0.0f, scale = 0.0f;
-	float midpt = (float) (proto_len - 1.0) / 2.0;
 
 	/* 
 	 * Allocate partition filters and the temporary prototype filter
 	 * according to numerator of the rational rate. Coefficients are
 	 * real only and must be 16-byte memory aligned for SSE usage.
 	 */
-	proto = new float[proto_len];
-	if (!proto)
-		return false;
-
-	partitions = (float **) malloc(sizeof(float *) * p);
-	if (!partitions) {
-		delete[] proto;
-		return false;
-	}
-
-	for (size_t i = 0; i < p; i++) {
-		partitions[i] = (float *)
-				memalign(16, filt_len * 2 * sizeof(float));
-	}
+	auto proto = vector<float>(p * filt_len);
+	for (auto &part : partitions)
+		part = (complex<float> *) memalign(16, filt_len * sizeof(complex<float>));
 
 	/* 
 	 * Generate the prototype filter with a Blackman-harris window.
@@ -85,47 +75,26 @@ bool Resampler::initFilters(float bw)
 	else
 		cutoff = (float) q;
 
-	for (size_t i = 0; i < proto_len; i++) {
+	float midpt = (proto.size() - 1) / 2.0;
+	for (size_t i = 0; i < proto.size(); i++) {
 		proto[i] = sinc(((float) i - midpt) / cutoff * bw);
 		proto[i] *= a0 -
-			    a1 * cos(2 * M_PI * i / (proto_len - 1)) +
-			    a2 * cos(4 * M_PI * i / (proto_len - 1)) -
-			    a3 * cos(6 * M_PI * i / (proto_len - 1));
+			    a1 * cos(2 * M_PI * i / (proto.size() - 1)) +
+			    a2 * cos(4 * M_PI * i / (proto.size() - 1)) -
+			    a3 * cos(6 * M_PI * i / (proto.size() - 1));
 		sum += proto[i];
 	}
 	scale = p / sum;
 
 	/* Populate filter partitions from the prototype filter */
 	for (size_t i = 0; i < filt_len; i++) {
-		for (size_t n = 0; n < p; n++) {
-			partitions[n][2 * i + 0] = proto[i * p + n] * scale;
-			partitions[n][2 * i + 1] = 0.0f;
-		}
+		for (size_t n = 0; n < p; n++)
+			partitions[n][i] = complex<float>(proto[i * p + n] * scale);
 	}
 
-	/* For convolution, we store the filter taps in reverse */ 
-	for (size_t n = 0; n < p; n++) {
-		for (size_t i = 0; i < filt_len / 2; i++) {
-			val = partitions[n][2 * i];
-			partitions[n][2 * i] = partitions[n][2 * (filt_len - 1 - i)];
-			partitions[n][2 * (filt_len - 1 - i)] = val;
-		}
-	}
-
-	delete[] proto;
-
-	return true;
-}
-
-void Resampler::releaseFilters()
-{
-	if (partitions) {
-		for (size_t i = 0; i < p; i++)
-			free(partitions[i]);
-	}
-
-	free(partitions);
-	partitions = NULL;
+	/* Store filter taps in reverse */
+	for (auto &part : partitions)
+		reverse(&part[0], &part[filt_len]);
 }
 
 static bool check_vec_len(int in_len, int out_len, int p, int q)
@@ -159,14 +128,6 @@ static bool check_vec_len(int in_len, int out_len, int p, int q)
 	return true;
 }
 
-void Resampler::computePath()
-{
-	for (int i = 0; i < MAX_OUTPUT_LEN; i++) {
-		in_index[i] = (q * i) / p;
-		out_path[i] = (q * i) % p;
-	}
-}
-
 int Resampler::rotate(const float *in, size_t in_len, float *out, size_t out_len)
 {
 	int n, path;
@@ -180,8 +141,8 @@ int Resampler::rotate(const float *in, size_t in_len, float *out, size_t out_len
 		path = out_path[i]; 
 
 		convolve_real(in, in_len,
-			      partitions[path], filt_len,
-			      &out[2 * i], out_len - i,
+			      reinterpret_cast<float *>(partitions[path]),
+			      filt_len, &out[2 * i], out_len - i,
 			      n, 1, 1, 0);
 	}
 
@@ -190,14 +151,18 @@ int Resampler::rotate(const float *in, size_t in_len, float *out, size_t out_len
 
 bool Resampler::init(float bw)
 {
+	if (p == 0 || q == 0 || filt_len == 0) return false;
+
 	/* Filterbank filter internals */
-	if (!initFilters(bw))
-		return false;
+	initFilters(bw);
 
 	/* Precompute filterbank paths */
-	in_index = new size_t[MAX_OUTPUT_LEN];
-	out_path = new size_t[MAX_OUTPUT_LEN];
-	computePath();
+	int i = 0;
+	for (auto &index : in_index)
+		index = (q * i++) / p;
+	i = 0;
+	for (auto &path : out_path)
+		path = (q * i++) % p;
 
 	return true;
 }
@@ -208,7 +173,7 @@ size_t Resampler::len()
 }
 
 Resampler::Resampler(size_t p, size_t q, size_t filt_len)
-	: in_index(NULL), out_path(NULL), partitions(NULL)
+	: in_index(MAX_OUTPUT_LEN), out_path(MAX_OUTPUT_LEN), partitions(p)
 {
 	this->p = p;
 	this->q = q;
@@ -217,8 +182,6 @@ Resampler::Resampler(size_t p, size_t q, size_t filt_len)
 
 Resampler::~Resampler()
 {
-	releaseFilters();
-
-	delete in_index;
-	delete out_path;
+	for (auto &part : partitions)
+		free(part);
 }
