@@ -130,7 +130,7 @@ static const std::map<dev_key, dev_desc> dev_param_map {
 	{ std::make_tuple(UMTRX, 1, 1), { 2, 0.0,  GSMRATE, 9.9692e-5,  "UmTRX 1 SPS"        } },
 	{ std::make_tuple(UMTRX, 4, 1), { 2, 0.0,  GSMRATE, 7.3846e-5,  "UmTRX 4/1 Tx/Rx SPS"} },
 	{ std::make_tuple(UMTRX, 4, 4), { 2, 0.0,  GSMRATE, 5.1503e-5,  "UmTRX 4 SPS"        } },
-	{ std::make_tuple(LIMESDR, 4, 4), { 1, GSMRATE*32, GSMRATE, 16.5/GSMRATE, "STREAM/LimeSDR (4 SPS TX/RX)" } },
+	{ std::make_tuple(LIMESDR, 4, 4), { 1, GSMRATE*32, GSMRATE, 8.9e-5, "LimeSDR 4 SPS"  } },
 	{ std::make_tuple(B2XX_MCBTS, 4, 4), { 1, 51.2e6, MCBTS_SPACING*4, B2XX_TIMING_MCBTS, "B200/B210 4 SPS Multi-ARFCN" } },
 };
 
