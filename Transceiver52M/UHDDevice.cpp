@@ -576,7 +576,7 @@ void uhd_device::set_channels(bool swap)
 		chans = 1;
 	}
 
-	if (chans > dev_param_map.at(dev_key(dev_type, 1, 1)).channels)
+	if (chans > dev_param_map.at(dev_key(dev_type, tx_sps, rx_sps)).channels)
 		throw std::invalid_argument("Device does not support number of requested channels");
 
 	std::string subdev_string;
@@ -1069,7 +1069,7 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 
 	/* Find center frequency between channels */
 	rf_spread = fabs(freqs[!chan] - freq);
-	if (rf_spread > dev_param_map.at(dev_key(B210, 1, 1)).mcr) {
+	if (rf_spread > dev_param_map.at(dev_key(B210, tx_sps, rx_sps)).mcr) {
 		LOG(ALERT) << rf_spread << "Hz tuning spread not supported\n";
 		return treq;
 	}
