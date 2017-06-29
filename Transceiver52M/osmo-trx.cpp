@@ -27,6 +27,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sched.h>
 
 #include <GSMCommon.h>
 #include <Logger.h>
@@ -77,6 +78,7 @@ struct trx_config {
 	double rssi_offset;
 	bool swap_channels;
 	bool edge;
+	int sched_rr;
 };
 
 ConfigurationTable gConfig;
@@ -259,7 +261,8 @@ static void print_help()
 		"  -r    Random Normal Burst test mode with TSC\n"
 		"  -A    Random Access Burst test mode with delay\n"
 		"  -R    RSSI to dBm offset in dB (default=0)\n"
-		"  -S    Swap channels (UmTRX only)\n",
+		"  -S    Swap channels (UmTRX only)\n"
+		"  -t    SCHED_RR real-time priority (1..32)\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
 }
 
@@ -283,8 +286,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->rssi_offset = 0.0;
 	config->swap_channels = false;
 	config->edge = false;
+	config->sched_rr = -1;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dmxgfo:s:b:r:A:R:Se")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:p:c:dmxgfo:s:b:r:A:R:Set:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -343,6 +347,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		case 'e':
 			config->edge = true;
 			break;
+		case 't':
+			config->sched_rr = atoi(optarg);
+			break;
 		default:
 			print_help();
 			exit(0);
@@ -386,6 +393,21 @@ bad_config:
 	exit(0);
 }
 
+static int set_sched_rr(int prio)
+{
+	struct sched_param param;
+	int rc;
+	memset(&param, 0, sizeof(param));
+	param.sched_priority = prio;
+	printf("Setting SCHED_RR priority(%d)\n", param.sched_priority);
+	rc = sched_setscheduler(getpid(), SCHED_RR, &param);
+	if (rc != 0) {
+		std::cerr << "Config: Setting SCHED_RR failed" << std::endl;
+		return -1;
+	}
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int type, chans, ref;
@@ -423,6 +445,11 @@ int main(int argc, char *argv[])
 	convert_init();
 
 	handle_options(argc, argv, &config);
+
+	if (config.sched_rr != -1) {
+		if (set_sched_rr(config.sched_rr) < 0)
+			return EXIT_FAILURE;
+	}
 
 	setup_signal_handlers();
 
