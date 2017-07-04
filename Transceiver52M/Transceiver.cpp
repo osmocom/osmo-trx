@@ -429,7 +429,7 @@ void Transceiver::setModulus(size_t timeslot, size_t chan)
   case V:
     state->fillerModulus[timeslot] = 51;
     break;
-    //case V: 
+    //case V:
   case VII:
     state->fillerModulus[timeslot] = 102;
     break;
@@ -544,7 +544,7 @@ void writeToFile(radioVector *radio_burst, size_t chan)
 
 /*
  * Pull bursts from the FIFO and handle according to the slot
- * and burst correlation type. Equalzation is currently disabled. 
+ * and burst correlation type. Equalzation is currently disabled.
  */
 SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &isRssiValid,
                                          double &timingOffset, double &noise,
@@ -655,7 +655,7 @@ void Transceiver::reset()
     mTxPriorityQueues[i].clear();
 }
 
-  
+
 void Transceiver::driveControl(size_t chan)
 {
   int MAX_PACKET_LENGTH = 100;
@@ -804,7 +804,7 @@ void Transceiver::driveControl(size_t chan)
       LOG(WARNING) << "bogus message on control interface";
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
       return;
-    }     
+    }
     mStates[chan].chanType[timeslot] = (ChannelCombination) corrCode;
     setModulus(timeslot, chan);
     sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
@@ -852,14 +852,14 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
     frameNum = (frameNum << 8) | (0x0ff & buffer[i+1]);
 
   LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(frameNum,timeSlot);
-  
+
   int RSSI = (int) buffer[5];
   BitVector newBurst(burstLen);
   BitVector::iterator itr = newBurst.begin();
   char *bufferItr = buffer+6;
-  while (itr < newBurst.end()) 
+  while (itr < newBurst.end())
     *itr++ = *bufferItr++;
-  
+
   GSM::Time currTime = GSM::Time(frameNum,timeSlot);
 
   addRadioVector(chan, newBurst, RSSI, currTime);
@@ -945,7 +945,7 @@ void Transceiver::driveTxFIFO()
 {
 
   /**
-      Features a carefully controlled latency mechanism, to 
+      Features a carefully controlled latency mechanism, to
       assure that transmit packets arrive at the radio/USRP
       before they need to be transmitted.
 
@@ -956,7 +956,7 @@ void Transceiver::driveTxFIFO()
 
 
   RadioClock *radioClock = (mRadioInterface->getClock());
-  
+
   if (mOn) {
     //radioClock->wait(); // wait until clock updates
     LOG(DEBUG) << "radio clock " << radioClock->get();

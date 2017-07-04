@@ -89,7 +89,7 @@ struct TransceiverState {
 /** The Transceiver class, responsible for physical layer of basestation */
 class Transceiver {
 public:
-  /** Transceiver constructor 
+  /** Transceiver constructor
       @param wBasePort base port number of UDP sockets
       @param TRXAddress IP address of the TRX manager, as a string
       @param wSPS number of samples per GSM symbol
@@ -169,7 +169,7 @@ private:
 
   GSM::Time mTransmitLatency;             ///< latency between basestation clock and transmit deadline clock
   GSM::Time mLatencyUpdateTime;           ///< last time latency was updated
-  GSM::Time mTransmitDeadlineClock;       ///< deadline for pushing bursts into transmit FIFO 
+  GSM::Time mTransmitDeadlineClock;       ///< deadline for pushing bursts into transmit FIFO
   GSM::Time mLastClockUpdateTime;         ///< last time clock update was sent up to core
 
   RadioInterface *mRadioInterface;	  ///< associated radioInterface object
@@ -275,4 +275,3 @@ void *ControlServiceLoopAdapter(TransceiverChannel *);
 
 /** transmit queueing thread loop */
 void *TxUpperLoopAdapter(TransceiverChannel *);
-
