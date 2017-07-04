@@ -121,7 +121,7 @@ Transceiver::Transceiver(int wBasePort,
     mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
-    mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false),
+    mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false), mForceClockInterface(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
     mWriteBurstToDiskMask(0)
 {
@@ -273,7 +273,7 @@ bool Transceiver::start()
                             TxUpperLoopAdapter, (void*) chan);
   }
 
-  writeClockInterface();
+  mForceClockInterface = true;
   mOn = true;
   return true;
 }
@@ -677,9 +677,6 @@ void Transceiver::driveControl(size_t chan)
 
   sscanf(buffer,"%3s %s",cmdcheck,command);
 
-  if (!chan)
-    writeClockInterface();
-
   if (strcmp(cmdcheck,"CMD")!=0) {
     LOG(WARNING) << "bogus message on control interface";
     return;
@@ -873,9 +870,9 @@ void Transceiver::driveReceiveRadio()
 {
   if (!mRadioInterface->driveReceiveRadio()) {
     usleep(100000);
-  } else {
-    if (mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0))
-      writeClockInterface();
+  } else if (mForceClockInterface || mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0)) {
+    mForceClockInterface = false;
+    writeClockInterface();
   }
 }
 

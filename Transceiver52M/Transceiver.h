@@ -208,6 +208,7 @@ private:
 
   bool mEdge;
   bool mOn;	                           ///< flag to indicate that transceiver is powered on
+  bool mForceClockInterface;           ///< flag to indicate whether IND CLOCK shall be sent unconditionally after transceiver is started
   bool mHandover[8][8];                ///< expect handover to the timeslot/subslot
   double mTxFreq;                      ///< the transmit frequency
   double mRxFreq;                      ///< the receive frequency
