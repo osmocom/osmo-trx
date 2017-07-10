@@ -19,7 +19,7 @@ Homepage: https://projects.osmocom.org/projects/osmotrx
 
 Package: osmo-trx
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libsqlite3-0
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: SDR transceiver that implements Layer 1 of a GSM BTS
  OsmoTRX is a software-defined radio transceiver that implements the Layer 1
  physical layer of a BTS comprising the following 3GPP specifications:
