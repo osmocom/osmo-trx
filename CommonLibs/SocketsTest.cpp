@@ -37,7 +37,7 @@ static const int gNumToSend = 10;
 
 void *testReaderIP(void *)
 {
-	UDPSocket readSocket(5934, "localhost", 5061);
+	UDPSocket readSocket("127.0.0.1", 5934, "localhost", 5061);
 	readSocket.nonblocking();
 	int rc = 0;
 	while (rc<gNumToSend) {
@@ -82,7 +82,7 @@ int main(int argc, char * argv[] )
   Thread readerThreadUnix;
   readerThreadUnix.start(testReaderUnix,NULL);
 
-  UDPSocket socket1(5061, "127.0.0.1",5934);
+  UDPSocket socket1("127.0.0.1", 5061, "127.0.0.1", 5934);
   UDDSocket socket1U("testSource","testDestination");
   
   COUT("socket1: " << socket1.port());

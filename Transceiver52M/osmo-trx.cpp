@@ -62,7 +62,8 @@ extern "C" {
 
 struct trx_config {
 	std::string log_level;
-	std::string addr;
+	std::string local_addr;
+	std::string remote_addr;
 	std::string dev_args;
 	unsigned port;
 	unsigned tx_sps;
@@ -134,7 +135,8 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   Log Level............... " << config->log_level << std::endl;
 	ost << "   Device args............. " << config->dev_args << std::endl;
 	ost << "   TRX Base Port........... " << config->port << std::endl;
-	ost << "   TRX Address............. " << config->addr << std::endl;
+	ost << "   TRX Address............. " << config->local_addr << std::endl;
+	ost << "   GSM Core Address........." << config->remote_addr << std::endl;
 	ost << "   Channels................ " << config->chans << std::endl;
 	ost << "   Tx Samples-per-Symbol... " << config->tx_sps << std::endl;
 	ost << "   Rx Samples-per-Symbol... " << config->rx_sps << std::endl;
@@ -200,9 +202,10 @@ Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
 	Transceiver *trx;
 	VectorFIFO *fifo;
 
-	trx = new Transceiver(config->port, config->addr.c_str(),
-			      config->tx_sps, config->rx_sps, config->chans,
-			      GSM::Time(3,0), radio, config->rssi_offset);
+	trx = new Transceiver(config->port, config->local_addr.c_str(),
+			      config->remote_addr.c_str(), config->tx_sps,
+			      config->rx_sps, config->chans, GSM::Time(3,0),
+			      radio, config->rssi_offset);
 	if (!trx->init(config->filler, config->rtsc,
 		       config->rach_delay, config->edge)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
@@ -248,6 +251,7 @@ static void print_help()
 		"  -a    UHD device args\n"
 		"  -l    Logging level (%s)\n"
 		"  -i    IP address of GSM core\n"
+		"  -j    IP address of osmo-trx\n"
 		"  -p    Base port number\n"
 		"  -e    Enable EDGE receiver\n"
 		"  -m    Enable multi-ARFCN transceiver (default=disabled)\n"
@@ -271,7 +275,8 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	int option;
 
 	config->log_level = "NOTICE";
-	config->addr = DEFAULT_TRX_IP;
+	config->local_addr = DEFAULT_TRX_IP;
+	config->remote_addr = DEFAULT_TRX_IP;
 	config->port = DEFAULT_TRX_PORT;
 	config->tx_sps = DEFAULT_TX_SPS;
 	config->rx_sps = DEFAULT_RX_SPS;
@@ -288,7 +293,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->edge = false;
 	config->sched_rr = -1;
 
-	while ((option = getopt(argc, argv, "ha:l:i:p:c:dmxgfo:s:b:r:A:R:Set:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -301,7 +306,10 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			config->log_level = optarg;
 			break;
 		case 'i':
-			config->addr = optarg;
+			config->remote_addr = optarg;
+			break;
+		case 'j':
+			config->local_addr = optarg;
 			break;
 		case 'p':
 			config->port = atoi(optarg);

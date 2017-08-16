@@ -112,13 +112,14 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc, un
 }
 
 Transceiver::Transceiver(int wBasePort,
-                         const char *wTRXAddress,
+                         const char *TRXAddress,
+                         const char *GSMcoreAddress,
                          size_t tx_sps, size_t rx_sps, size_t chans,
                          GSM::Time wTransmitLatency,
                          RadioInterface *wRadioInterface,
                          double wRssiOffset)
-  : mBasePort(wBasePort), mAddr(wTRXAddress),
-    mClockSocket(wBasePort, wTRXAddress, mBasePort + 100),
+  : mBasePort(wBasePort), mLocalAddr(TRXAddress), mRemoteAddr(GSMcoreAddress),
+    mClockSocket(TRXAddress, wBasePort, GSMcoreAddress, wBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset),
     mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false), mForceClockInterface(false),
@@ -197,8 +198,8 @@ bool Transceiver::init(int filler, size_t rtsc, unsigned rach_delay, bool edge)
     d_srcport = mBasePort + 2 * i + 2;
     d_dstport = mBasePort + 2 * i + 102;
 
-    mCtrlSockets[i] = new UDPSocket(c_srcport, mAddr.c_str(), c_dstport);
-    mDataSockets[i] = new UDPSocket(d_srcport, mAddr.c_str(), d_dstport);
+    mCtrlSockets[i] = new UDPSocket(mLocalAddr.c_str(), c_srcport, mRemoteAddr.c_str(), c_dstport);
+    mDataSockets[i] = new UDPSocket(mLocalAddr.c_str(), d_srcport, mRemoteAddr.c_str(), d_dstport);
   }
 
   /* Randomize the central clock */

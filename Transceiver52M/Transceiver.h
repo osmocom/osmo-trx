@@ -91,13 +91,15 @@ class Transceiver {
 public:
   /** Transceiver constructor
       @param wBasePort base port number of UDP sockets
-      @param TRXAddress IP address of the TRX manager, as a string
+      @param TRXAddress IP address of the TRX, as a string
+      @param GSMcoreAddress IP address of the GSM core, as a string
       @param wSPS number of samples per GSM symbol
       @param wTransmitLatency initial setting of transmit latency
       @param radioInterface associated radioInterface object
   */
   Transceiver(int wBasePort,
               const char *TRXAddress,
+              const char *GSMcoreAddress,
               size_t tx_sps, size_t rx_sps, size_t chans,
               GSM::Time wTransmitLatency,
               RadioInterface *wRadioInterface,
@@ -152,7 +154,8 @@ public:
 
 private:
   int mBasePort;
-  std::string mAddr;
+  std::string mLocalAddr;
+  std::string mRemoteAddr;
 
   std::vector<UDPSocket *> mDataSockets;  ///< socket for writing to/reading from GSM core
   std::vector<UDPSocket *> mCtrlSockets;  ///< socket for writing/reading control commands from GSM core

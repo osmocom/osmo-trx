@@ -223,18 +223,18 @@ int DatagramSocket::read(char* buffer, size_t length, unsigned timeout)
 
 
 
-UDPSocket::UDPSocket(unsigned short wSrcPort)
+UDPSocket::UDPSocket(const char *wSrcIP, unsigned short wSrcPort)
 	:DatagramSocket()
 {
-	open(wSrcPort);
+	open(wSrcPort, wSrcIP);
 }
 
 
-UDPSocket::UDPSocket(unsigned short wSrcPort,
-          	 const char * wDestIP, unsigned short wDestPort )
+UDPSocket::UDPSocket(const char *wSrcIP, unsigned short wSrcPort,
+		     const char *wDestIP, unsigned short wDestPort)
 	:DatagramSocket()
 {
-	open(wSrcPort);
+	open(wSrcPort, wSrcIP);
 	destination(wDestPort, wDestIP);
 }
 
@@ -246,7 +246,7 @@ void UDPSocket::destination( unsigned short wDestPort, const char * wDestIP )
 }
 
 
-void UDPSocket::open(unsigned short localPort)
+void UDPSocket::open(unsigned short localPort, const char *wlocalIP)
 {
 	// create
 	mSocketFD = socket(AF_INET,SOCK_DGRAM,0);
@@ -265,7 +265,7 @@ void UDPSocket::open(unsigned short localPort)
 	size_t length = sizeof(address);
 	bzero(&address,length);
 	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	address.sin_addr.s_addr = inet_addr(wlocalIP);
 	address.sin_port = htons(localPort);
 	if (bind(mSocketFD,(struct sockaddr*)&address,length)<0) {
 		perror("bind() failed");
