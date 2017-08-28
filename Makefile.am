@@ -39,6 +39,7 @@ EXTRA_DIST = \
 	COPYING \
 	README
 
+@RELMAKE@
 
 dox: FORCE
 	doxygen doxconfig

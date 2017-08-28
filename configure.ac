@@ -34,6 +34,10 @@ AM_INIT_AUTOMAKE([subdir-objects])
 dnl Linux kernel KBuild style compile messages
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
+dnl include release helper
+RELMAKE='-include osmo-release.mk'
+AC_SUBST([RELMAKE])
+
 AM_PROG_AS
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX_11
