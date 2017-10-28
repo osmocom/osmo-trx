@@ -1,3 +1,170 @@
+osmo-trx (0.2.0) unstable; urgency=medium
+
+  [ Alexander Chemeris ]
+  * EDGE: Add support for UmTRX.
+  * Common: Get rid of a compilation warning.
+  * Common: Make sure gLogEarly() log to the same facilities as the normal log.
+  * transceiver: Properly handle MAXDLY.
+  * transceiver: Add an option to generate random Access Bursts.
+  * osmo-trx: Output Rx SPS as a part of configuration output.
+  * transceiver: Do not pass transceiver state struct to function where it's not used.
+  * makefile: Fix build from an external path.
+  * radioDevice: GSMRATE macro must have parentheses around its definition.
+  * uhd: Fix comment.
+  * radioInterface: Initialize power scale with a meaningful default.
+  * transceiver: Log channel number in DEBUG output of demoded bursts.
+  * transceiver: Add an option to emulate a RACH delay in random filler mode.
+  * UHD: Initial LimeSDR support.
+  * CommonLibs: Remove unused files.
+  * sigProcLib: Typo sybols -> symbols
+  * radioBuffer: Remove extra ; at the end of inline function definitions.
+  * sigProcLib: Fix documentation, sync argument names in .cpp and .h files.
+  * sigProcLib: make energyDetect() simpler by returning actual energy.
+  * sigProcLib: Rename demodulateBurst() to demodGmskBurst() for clarity.
+  * sigProcLib: Slice SoftVector instead of signalVector for GMSK demod.
+  * Call vectorSlicer() right before packing bits for transmission to osmo-bts.
+  * CommonLibs: Print soft bits with less confidence to console when printing a soft vector.
+  * BitVector: Remove convolutional codec - we don't use it in osmo-trx.
+  * BitVector: Convert SoftVector from 0..1 to -1..+1 soft bits.
+  * signalVector: Implement segment().
+  * vector: Introduce segmentMove() method to move data inside of a vector.
+  * vector: Introduce shrink() function to shrink vector size without loosing data.
+  * Move CorrType type from Transceiver to sigProcLib.
+  * sigProcLib: rename signalError type to SignalError.
+  * Move Transceiver::detectBurst() to sigProcLib to make it reusable.
+  * Move BURST_THRESH from Transceiver.cpp to sigProcLib.h to make it reusable.
+  * sigProcLib: Add operator<< to print CorrType to a string.
+  * sigProcLib.h: Fix whitespaces. No non-whitespace changes.
+  * Move Transceiver::demodulate() to sigProcLib to make it reusable.
+  * sigProcLib: constify signalVector arguments for detectBurst() functions.
+  * sigProcLib: Constify demodulation functions burst argument.
+  * sigProcLib: Fix number of tail bits in random Normal Bursts and zero Stealing Bits.
+  * Configuration: Variables allocated with 'new' must be freed with 'delete'.
+  * BitVector: Remove Generator class.
+  * PRBS: a Pseudo-random binary sequence (PRBS) generator class.
+
+  [ Tom Tsou ]
+  * EDGE: Fix USRP B210 device support
+  * uhd: Correct timing alignment in 8-PSK and GMSK downlink bursts
+  * EDGE: Fix demodulation slicer input
+  * common: Restrict UDP binding to localhost only
+  * common: Add mandatory length field to UDP receive calls
+  * uhd: Update default E3XX settings
+  * uhd: Set default Tx sampling to 4 sps
+  * uhd: Make device offset check a private method
+  * uhd: Set minimum UHD version requirement for E3XX
+  * sigproc: Expand RACH, TSC, and EDGE correlation windows
+  * transceiver: Do not report error on SETTSC when radio is on
+  * transceiver: Add Rx samples-per-symbol option
+  * radioInterface: Convert diversity argument to general type
+  * iface: Add inner ring-buffer implementation
+  * mcbts: Add multi-ARFCN channelizing filters
+  * mcbts: Add multi-ARFCN radio support
+  * sigproc: Adjust burst detection threshold criteria
+  * egprs: Enable 8-PSK length vectors on the Tx interface
+  * egprs: Enable 8-PSK burst detection when EDGE is enabled
+  * transceiver: Remove HANDOVER warnings
+  * mcbts: Allow out of order channel setup
+  * radioInterface: Fix multi-channel buffer index bug
+  * uhd: Add command line option for GPS reference
+  * transceiver: Fix mixed GSMK / 8-PSK transmission
+  * transceiver: Fix 4 SPS receive TOA value
+  * sigproc: Fix missing 8-PSK tail symbols
+  * uhd: Update USRP2/N200/N210 for 4 SPS Rx
+  * sigproc: Match differential GMSK start/end bits to tail bits
+  * uhd: Add missing B200 sample timing for 4 SPS receive
+  * transceiver: Fix command build warning
+  * uhd: Set minimum supported version to 3.9.0
+  * uhd: Add X300 sample timing for 4 SPS
+  * Revert "uhd: Set minimum supported version to 3.9.0"
+  * uhd: Add support for UHD-3.11 logging control
+  * uhd: Increase MC-BTS FPGA clock rate to 51.2 MHz
+  * Resampler: Fix initialization return checking
+  * sigProcLib: Remove unreachable code and no-effect checks
+  * sigProcLib: Check return status on downsampling
+  * sigProcLib: Fix negative value check on unsigned value
+  * Resampler: Fix non-array delete for filter taps
+  * Transceiver: Remove unsigned negative compares
+  * Configuration: Fix const and signedness compile warnings
+  * config: Remove OpenBTS style sqlite configuration
+  * radioInterface: Remove UmTRX 'diversity' option
+  * build: Require and check for gcc C++11 support
+  * uhd: Use map container for for device parameter access
+  * sigProcLib: Remove unused functions from public interface
+  * uhd: Add non-UmTRX channel swap support
+  * uhd: Fix Tx-RX timing offset setting
+  * uhd: Fix USRP2/N200/N210 device detection
+  * transceiver: Fix POWEROFF crash on USRP2/N200/X300 devices
+  * sigProcLib: Fix complex/real vector flag in Laurent modulator
+  * sigProcLib: Remove heap based signal vector allocations
+  * common: Declare explicit Vector move constructor
+  * sigProcLib: Remove trigonometric tables
+  * sigProcLib: Use explicit NaN check in sinc table generation
+  * sigProcLib: Replace dynamically allocated resampling buffers
+  * sigProcLib: Specify standard namespace for isnan()
+  * uhd: Always specify samples-per-symbol for device lookup
+  * LimeSDR: set approximate tx offset value to make GSM work
+
+  [ Neels Hofmeyr ]
+  * add basic .gitignore
+  * configure.ac: check for boost/config.hpp header
+  * The INSTALL file is being overwritten by autoreconf, but it is committed as empty file. As a result, the INSTALL file always shows as modified. Instead, remove INSTALL from git and ignore it.
+  * add contrib/jenkins.sh, for gerrit build bot
+
+  [ pierre.baudry ]
+  * transceiver: Fix mismatched allocations and deallocations
+
+  [ Holger Hans Peter Freyther ]
+  * debian: Require fftw3 header files for osmo-trx
+
+  [ Max ]
+  * Add gerrit settings
+  * Integrate Debian packaging changes
+  * Remove embedded sqlite3
+  * Fix building against sqlite3
+  * Add autoconf-archive to dependencies
+  * debian: remove obsolete dependency
+  * deb: remove unused dependency
+  * Remove redundant explicit dependency
+  * Use release helper from libosmocore
+
+  [ Ruben Undheim ]
+  * Do not embed sqlite3 when building
+
+  [ Philipp Maier ]
+  * buildenv: Turn off native architecture builds
+  * cosmetic: Make parameter lists uniform
+  * Add test program to verify convolution implementation
+  * ssedetect: Add runtime CPU detection
+  * cosmetic: remove code duplication
+  * buildenv: Make build CPU invariant
+  * buildenv: Split up SSE3 and SSE4.1 code
+  * cosmetic: Add info about SSE support
+
+  [ Vadim Yanitskiy ]
+  * buildenv: correct the ax_sse macro description
+  * buildenv: actually strip unused cpuid functionality
+  * buildenv: fix build on systems without SIMD support
+  * buildenv: cosmetic changes
+  * buildenv: check for __builtin_cpu_supports call support
+  * ssedetect: call __builtin_cpu_supports() only if supported
+
+  [ Pau Espin Pedrol ]
+  * cosmetic: transciever: Remove trailing whitespaces
+  * transceiver: Avoid sending clock indications when trx is not powered on
+  * Add -j option to bind to specific address
+
+  [ ignasj ]
+  * LimeSDR: Change device detection to work with USB and PCIe versions
+  * LimeSDR: change tx window type to TX_WINDOW_FIXED
+  * LimeSDR: Fix sample value range
+
+  [ Harald Welte ]
+  * Add '-t' command line option to enable SCHED_RR
+  * Import git-version-gen and update AC_INIT()
+
+ -- Harald Welte <laforge@gnumonks.org>  Sat, 28 Oct 2017 17:52:32 +0200
+
 osmo-trx (0.1.9) trusty; urgency=medium
 
   * Ask Ivan, really
