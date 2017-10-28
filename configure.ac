@@ -18,7 +18,9 @@ dnl You should have received a copy of the GNU General Public License
 dnl along with this program.  If not, see <http://www.gnu.org/licenses/>.
 dnl
 
-AC_INIT(openbts,P2.8TRUNK)
+AC_INIT([osmo-trx],
+	m4_esyscmd([./git-version-gen .tarball-veresion]),
+	[openbsc@lists.osmocom.org])
 AC_PREREQ(2.57)
 AC_CONFIG_SRCDIR([Transceiver52M/Makefile.am])
 AC_CONFIG_AUX_DIR([.])	
