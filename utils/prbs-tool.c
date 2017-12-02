@@ -55,7 +55,7 @@ struct trx_ul_msg {
 	uint32_t	fn;
 	uint8_t		rssi;
 	uint16_t	t_offs;
-	sbit_t		bits[148];
+	uint8_t		bits[148];	/* 0..255, *NOT* sbit_t */
 } __attribute__((packed));
 
 struct trx_dl_msg {
@@ -134,6 +134,26 @@ struct pchan_data {
 	unsigned int burst_nr;
 	/* training sequence code */
 	unsigned int tsc;
+
+	/* loose 'count' bursts every 'nth_mframe' on TRX-BTS interface */
+	struct {
+		unsigned int count;
+		unsigned int nth_mframe;
+	} sim_lost_bursts;
+
+	/* zero 'count' bursts every 'nth_mframe' on TRX-BTS interface */
+	struct {
+		unsigned int count;
+		unsigned int nth_mframe;
+	} sim_zero_bursts;
+
+	/* flip every 'nth_bit' of the PRNG oudput before encoding */
+	struct {
+		unsigned int nth_bit;
+		unsigned int i;
+	} sim_flip_codec_bits;
+
+	unsigned int i;
 };
 
 struct ts_data {
@@ -164,6 +184,18 @@ static void trx_data_init(struct trx_data *trx)
 	}
 }
 
+/* apply any intentional errors to the output of the PRBS sequence */
+static void apply_errors_prbs(struct pchan_data *pchan)
+{
+	for (int i = 0; i < sizeof(pchan->prbs_u)-4; i++) {
+		pchan->sim_flip_codec_bits.i++;
+		if (pchan->sim_flip_codec_bits.i == pchan->sim_flip_codec_bits.nth_bit) {
+			pchan->sim_flip_codec_bits.i = 0;
+			pchan->prbs_u[4+i] ^= 0x01;
+		}
+	}
+}
+
 /*! obtain the next to-be-transmitted burst for the given pchan
  *  \param pchan physical channel on which we operate
  *  \param[in] fn frame number
@@ -188,6 +220,9 @@ static int pchan_get_next_burst(struct pchan_data *pchan, uint32_t fn, ubit_t *b
 		osmo_pbit2ubit(pchan->prbs_u, prefix, 4);
 		rc = osmo_prbs_get_ubits(pchan->prbs_u+4, sizeof(pchan->prbs_u)-4, &pchan->st);
 		OSMO_ASSERT(rc == sizeof(pchan->prbs_u)-4);
+
+		apply_errors_prbs(pchan);
+
 		/* pack to PBIT format */
 		rc = osmo_ubit2pbit(pchan->tch_data, pchan->prbs_u, sizeof(pchan->prbs_u));
 		//memset(pchan->tch_data, 0xff, sizeof(pchan->tch_data));
@@ -201,16 +236,17 @@ static int pchan_get_next_burst(struct pchan_data *pchan, uint32_t fn, ubit_t *b
 		/* encode block (codec frame) into four bursts */
 		rc = gsm0503_tch_fr_encode(pchan->bursts, pchan->tch_data, GSM_FR_BYTES, 1);
 		OSMO_ASSERT(rc == 0);
-
+#if 0
 		for (int i = 0; i < sizeof(pchan->bursts); i += GSM_BURST_BITS)
 			printf("\t%s\n", osmo_ubit_dump(pchan->bursts + i, GSM_BURST_BITS));
 
-//		dec(pchan->bursts);
+		dec(pchan->bursts);
+#endif
 	}
 
 	/* for all bursts: format 148 symbols from 116 input bits */
 	ubit_t *burst = pchan->bursts  + pchan->burst_nr * GSM_BURST_BITS;
-	printf("TX(%u): %s\n", pchan->burst_nr, osmo_ubit_dump(burst, GSM_BURST_BITS));
+//	printf("TX(%u): %s\n", pchan->burst_nr, osmo_ubit_dump(burst, GSM_BURST_BITS));
 	memset(burst_out, 0, 3);		/* guard bits */
 	memcpy(burst_out+3, burst, 58);		/* firrst half */
 	memcpy(burst_out+61, _sched_tsc[pchan->tsc], 26);	/* midamble */
@@ -219,10 +255,6 @@ static int pchan_get_next_burst(struct pchan_data *pchan, uint32_t fn, ubit_t *b
 
 	/* increment burst number for next call */
 	pchan->burst_nr += 1;
-#if 0
-	if (pchan->burst_nr == 4)
-		pchan->burst_nr = 0;
-#endif
 
 	return GSM_BURST_LEN;
 }
@@ -252,6 +284,7 @@ static int read_and_process(int fd)
 	struct trx_ul_msg *ul_msg = (struct trx_ul_msg *) tx_ul_buf;
 	/* other variables */
 	struct pchan_data *pchan;
+	uint32_t fn;
 	uint8_t rc;
 
 	/* do a blocking read on the socket and receive DL from BTS */
@@ -259,7 +292,7 @@ static int read_and_process(int fd)
 	if (rc < sizeof(*dl_msg))
 		return rc;
 
-	dl_msg->fn = ntohl(dl_msg->fn);
+	fn = ntohl(dl_msg->fn);
 
 	if (dl_msg->ts >= ARRAY_SIZE(g_trx_data.ts))
 		return -ENODEV;
@@ -267,17 +300,47 @@ static int read_and_process(int fd)
 	if (dl_msg->ts != 2)
 		return 0;
 
-	printf("FN=%s TS=%u\n", gsm_fn_as_gsmtime_str(dl_msg->fn), dl_msg->ts);
+	printf("FN=%s TS=%u\n", gsm_fn_as_gsmtime_str(fn), dl_msg->ts);
 
 	/* FIXME: second pchan for TCH/H */
 	pchan = &g_trx_data.ts[dl_msg->ts].pchan[0];
 
-	rc = pchan_process_ts_fn(pchan, dl_msg->fn, (uint8_t *) ul_msg->bits);
+	rc = pchan_process_ts_fn(pchan, fn, (uint8_t *) ul_msg->bits);
 	OSMO_ASSERT(rc == sizeof(ul_msg->bits));
 
 	/* copy over timeslot and frame number */
-	ul_msg->fn = htonl(dl_msg->fn);
+	ul_msg->fn = htonl(fn);
 	ul_msg->ts = dl_msg->ts;
+
+	/* simulate lost frames on TRX <-> BTS interface */
+	if (pchan->sim_lost_bursts.count) {
+		/* count number of 26-multiframes */
+		static int count = 0;
+		if (fn % 26 == 0)
+			count++;
+
+		/* every 10th multiframe, drop two entire block of 8 bursts */
+		if (count % pchan->sim_lost_bursts.nth_mframe == 0 &&
+		    (fn % 26) <= pchan->sim_lost_bursts.count) {
+			printf("===> SKIPPING BURST\n");
+			return 0;
+		}
+	}
+
+	/* simulate zero-ed frames on TRX <-> BTS interface */
+	if (pchan->sim_zero_bursts.count) {
+		/* count number of 26-multiframes */
+		static int count = 0;
+		if (fn % 26 == 0)
+			count++;
+
+		/* every 10th multiframe, drop two entire block of 8 bursts */
+		if (count % pchan->sim_zero_bursts.nth_mframe == 0 &&
+		    (fn % 26) <= pchan->sim_zero_bursts.count) {
+			memset(ul_msg->bits, 0, sizeof(ul_msg->bits));
+			printf("===> ZEROING BURST\n");
+		}
+	}
 
 	/* write uplink message towards BTS */
 	rc = write(fd, tx_ul_buf, sizeof(*ul_msg));
@@ -303,6 +366,10 @@ int main(int argc, char **argv)
 	int fd;
 
 	trx_data_init(&g_trx_data);
+
+	//g_trx_data.ts[2].pchan[0].sim_zero_bursts.count = 8;
+	//g_trx_data.ts[2].pchan[0].sim_zero_bursts.nth_mframe = 10;
+	g_trx_data.ts[2].pchan[0].sim_flip_codec_bits.nth_bit = 260*4;
 
 	fd = open_trx_data_sock(0, "127.0.0.1");
 	if (fd < 0)
