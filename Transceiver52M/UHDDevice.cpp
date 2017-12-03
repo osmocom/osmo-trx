@@ -519,6 +519,7 @@ bool uhd_device::parse_dev_type()
 		{ "B100",     { B100,    TX_WINDOW_USRP1 } },
 		{ "B200",     { B200,    TX_WINDOW_USRP1 } },
 		{ "B200mini", { B200,    TX_WINDOW_USRP1 } },
+		{ "B205mini", { B200,    TX_WINDOW_USRP1 } },
 		{ "B210",     { B210,    TX_WINDOW_USRP1 } },
 		{ "E100",     { E1XX,    TX_WINDOW_FIXED } },
 		{ "E110",     { E1XX,    TX_WINDOW_FIXED } },
