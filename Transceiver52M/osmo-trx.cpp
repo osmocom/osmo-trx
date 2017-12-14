@@ -169,15 +169,19 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
 		radio = new RadioInterface(usrp, config->tx_sps,
 					   config->rx_sps, config->chans);
 		break;
+#ifndef NO_RESAMPLER
 	case RadioDevice::RESAMP_64M:
 	case RadioDevice::RESAMP_100M:
 		radio = new RadioInterfaceResamp(usrp, config->tx_sps,
 						 config->rx_sps);
 		break;
+#endif
+#ifndef NO_MULTIARFCN
 	case RadioDevice::MULTI_ARFCN:
 		radio = new RadioInterfaceMulti(usrp, config->tx_sps,
 						config->rx_sps, config->chans);
 		break;
+#endif
 	default:
 		LOG(ALERT) << "Unsupported radio interface configuration";
 		return NULL;
