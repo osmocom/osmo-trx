@@ -19,7 +19,7 @@ add_definitions(-Wall -g)
 #set(BUILD_SHARED_LIBS ON)
 
 CONFIGURE_FILE(
-    ${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake_config.in.h
     ${CMAKE_CURRENT_BINARY_DIR}/config.h
 @ONLY)
 
