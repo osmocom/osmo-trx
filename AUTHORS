@@ -90,9 +90,6 @@ David A. Burgess, dburgess@kestrelsp.com:
     SMS/SMSTransfer.h
     TRXManager/TRXManager.cpp
     Transceiver/Complex.h
-    apps/OpenBTS900.cpp
-    apps/OpenBTS850.cpp
-    apps/OpenBTS25c3.cpp
     tests/AGCHTest.cpp
     tests/BeaconTest.cpp
     tests/CallTest.cpp
