@@ -673,16 +673,16 @@ on the AGPLv3 text.
 =========================================================================
 
 
-ADDITIONAL TERMS TO THE AGPLv3 LICENSE FOR OPENBTS
+ADDITIONAL TERMS TO THE AGPLv3 LICENSE FOR OsmoTRX
 
 
 Permissive Terms Supplementing the License
 
 1. Remote Interaction Through IP Networks.
 
-OpenBTS includes an implementation of the GSM network cellular air interface,
+OsmoTRX is an implementation of the GSM network cellular air interface,
 as well as other interfaces to IP networks.  The interaction of cellular
-handsets with the OpenBTS software is considered "remote network interaction"
+handsets with the OsmoTRX software is considered "remote network interaction"
 for the purposes of the Affero General Public License and cellular users are
 subject to the source code access requirements of Section 13 of AGPLv3 ("Remote
 Network Interaction; Use with the GNU General Public License").
@@ -694,17 +694,6 @@ interfaces other than the GSM air interface from the requirements of Section 13
 is an additional permission granted to you.  
 
 
-Non-Permissive Terms Supplementing The License
-
-1. Trademarks.
-
-"OpenBTS" is a trademark of Range Networks, Inc., registered with
-the US Patent and Trademark Office.  Your use of OpenBTS software under a GPL
-license does not include the right to use the OpenBTS trademark in commerce.
-This additional non-permissive term is consistent with Section 7 of the AGPLv3
-license.
-
-
 END OF ADDITIONAL TERMS
 
 
@@ -712,13 +701,8 @@ END OF ADDITIONAL TERMS
 How to comply with Section 13 of the AGPLv3 license.
 
 The recommended method for compliance with Section 13 of the AGPLv3 license is
-to deliver a text message to each handset that attaches to the OpenBTS cellular
-network.  At a minimum, that text message should include the string "OpenBTS
-AGPLv3" and a URL that can be used to access the OpenBTS source code.  This
+to deliver a text message to each handset that attaches to the cellular
+network which uses OsmoTRX.  At a minimum, that text message should include the string
+"OsmoTRX AGPLv3" and a URL that can be used to access the OsmoBTS source code.  This
 message need not be delivered to handsets that are denied registration with the
 network, since those handsets have been denied service.
-
-In OpenBTS 2.6, such text messages can be delivered with the "Welcome Message"
-feature.  See the OpenBTS.config.example file for more information on the use of
-this feature for AGPLv3 compliance.
-
