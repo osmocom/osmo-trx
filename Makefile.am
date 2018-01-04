@@ -39,6 +39,8 @@ EXTRA_DIST = \
 	COPYING \
 	README
 
+.PHONY: release
+
 @RELMAKE@
 
 dox: FORCE
