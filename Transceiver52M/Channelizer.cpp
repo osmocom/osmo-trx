@@ -25,7 +25,6 @@
 #include <string.h>
 #include <cstdio>
 
-#include "Logger.h"
 #include "Channelizer.h"
 
 extern "C" {

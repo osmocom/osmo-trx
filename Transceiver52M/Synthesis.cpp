@@ -24,8 +24,8 @@
 #include <assert.h>
 #include <string.h>
 #include <cstdio>
+#include <iostream>
 
-#include "Logger.h"
 #include "Synthesis.h"
 
 extern "C" {
