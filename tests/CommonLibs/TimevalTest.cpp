@@ -28,18 +28,31 @@
 
 #include "Timeval.h"
 #include <iostream>
+#include <assert.h>
 
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-
 	Timeval then(10000);
-	cout << then.elapsed() << endl;
+	assert(then.elapsed() == -10000);
+	cerr << then << " elapsed: " << then.elapsed() << endl;
+	double then_seconds = then.seconds();
+	double last_now = Timeval().seconds();
+	long last_remaining = 10000;
+	int loops = 0;
 
 	while (!then.passed()) {
-		cout << "now: " << Timeval() << " then: " << then << " remaining: " << then.remaining() << endl;
+		double tnow = Timeval().seconds();
+		cerr << "now: " << tnow << " then: " << then << " remaining: " << then.remaining() << endl;
+		assert(last_now <= tnow && last_remaining >= then.remaining());
+		assert(then_seconds == then.seconds());
 		usleep(500000);
+		loops++;
 	}
-	cout << "now: " << Timeval() << " then: " << then << " remaining: " << then.remaining() << endl;
+	cerr << "now: " << Timeval() << " then: " << then << " remaining: " << then.remaining() << endl;
+	assert(then.remaining() <= 0);
+	assert(loops >= 18);
+
+	printf("Done\n");
 }

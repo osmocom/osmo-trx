@@ -32,11 +32,11 @@ AT_CLEANUP
 #AT_CHECK([$abs_top_builddir/tests/CommonLibs/SocketsTest], [], [expout], [])
 #AT_CLEANUP
 
-#AT_SETUP([TimevalTest])
-#AT_KEYWORDS([TimevalTest])
-#cat $abs_srcdir/CommonLibs/TimevalTest.ok > expout
-#AT_CHECK([$abs_top_builddir/tests/CommonLibs/TimevalTest], [], [expout], [])
-#AT_CLEANUP
+AT_SETUP([TimevalTest])
+AT_KEYWORDS([TimevalTest])
+cat $abs_srcdir/CommonLibs/TimevalTest.ok > expout
+AT_CHECK([$abs_top_builddir/tests/CommonLibs/TimevalTest], [], [expout], [ignore])
+AT_CLEANUP
 
 AT_SETUP([VectorTest])
 AT_KEYWORDS([VectorTest])
