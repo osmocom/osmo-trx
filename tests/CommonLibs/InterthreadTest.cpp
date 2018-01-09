@@ -35,14 +35,20 @@ using namespace std;
 InterthreadQueue<int> gQ;
 InterthreadMap<int,int> gMap;
 
+int q_last_read_val = -1;
+int q_last_write_val;
+int m_last_read_val;
+int m_last_write_val;
+
 void* qWriter(void*)
 {
 	int *p;
 	for (int i=0; i<20; i++) {
 		p = new int;
 		*p = i;
-		COUT("queue write " << *p);
+		CERR("queue write " << *p);
 		gQ.write(p);
+		q_last_write_val = i;
 		if (random()%2) sleep(1);
 	}
 	p = new int;
@@ -56,8 +62,14 @@ void* qReader(void*)
 	bool done = false;
 	while (!done) {
 		int *p = gQ.read();
-		COUT("queue read " << *p);
-		if (*p<0) done=true;
+		CERR("queue read " << *p);
+		if (*p<0) {
+			assert(q_last_read_val == 19 && *p == -1);
+			done = true;
+		} else {
+			assert(q_last_read_val == *p - 1);
+			q_last_read_val = *p;
+		}
 		delete p;
 	}
 	return NULL;
@@ -70,8 +82,9 @@ void* mapWriter(void*)
 	for (int i=0; i<20; i++) {
 		p = new int;
 		*p = i;
-		COUT("map write " << *p);
+		CERR("map write " << *p);
 		gMap.write(i,p);
+		m_last_write_val = i;
 		if (random()%2) sleep(1);
 	}
 	return NULL;
@@ -81,7 +94,9 @@ void* mapReader(void*)
 {
 	for (int i=0; i<20; i++) {
 		int *p = gMap.read(i);
-		COUT("map read " << *p);
+		CERR("map read " << *p);
+		assert(*p == i);
+		m_last_read_val = *p;
 		// InterthreadMap will delete the pointers
 		// delete p;
 	}
@@ -109,6 +124,13 @@ int main(int argc, char *argv[])
 	qWriterThread.join();
 	mapReaderThread.join();
 	mapWriterThread.join();
+
+	assert(q_last_write_val == 19);
+	assert(q_last_read_val == 19);
+	assert(m_last_write_val == 19);
+	assert(m_last_read_val == 19);
+
+	printf("Done\n");
 }
 
 

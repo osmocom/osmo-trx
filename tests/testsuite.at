@@ -7,11 +7,11 @@ cat $abs_srcdir/CommonLibs/BitVectorTest.ok > expout
 AT_CHECK([$abs_top_builddir/tests/CommonLibs/BitVectorTest], [], [expout], [])
 AT_CLEANUP
 
-#AT_SETUP([InterthreadTest])
-#AT_KEYWORDS([InterthreadTest])
-#cat $abs_srcdir/CommonLibs/InterthreadTest.ok > expout
-#AT_CHECK([$abs_top_builddir/tests/CommonLibs/InterthreadTest], [], [expout], [])
-#AT_CLEANUP
+AT_SETUP([InterthreadTest])
+AT_KEYWORDS([InterthreadTest])
+cat $abs_srcdir/CommonLibs/InterthreadTest.ok > expout
+AT_CHECK([$abs_top_builddir/tests/CommonLibs/InterthreadTest], [], [expout], [ignore])
+AT_CLEANUP
 
 #AT_SETUP([LogTest])
 #AT_KEYWORDS([LogTest])
