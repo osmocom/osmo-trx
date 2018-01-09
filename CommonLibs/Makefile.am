@@ -36,9 +36,7 @@ libcommon_la_SOURCES = \
 	Sockets.cpp \
 	Threads.cpp \
 	Timeval.cpp \
-	Logger.cpp \
-	Configuration.cpp \
-	sqlite3util.cpp
+	Logger.cpp
 
 noinst_PROGRAMS = \
 	BitVectorTest \
@@ -47,7 +45,6 @@ noinst_PROGRAMS = \
 	SocketsTest \
 	TimevalTest \
 	VectorTest \
-	ConfigurationTest \
 	LogTest
 
 #	ReportingTest
@@ -61,12 +58,10 @@ noinst_HEADERS = \
 	Threads.h \
 	Timeval.h \
 	Vector.h \
-	Configuration.h \
-	Logger.h \
-	sqlite3util.h
+	Logger.h
 
 BitVectorTest_SOURCES = BitVectorTest.cpp
-BitVectorTest_LDADD = libcommon.la $(SQLITE3_LIBS)
+BitVectorTest_LDADD = libcommon.la
 
 PRBSTest_SOURCES = PRBSTest.cpp
 
@@ -82,15 +77,12 @@ TimevalTest_SOURCES = TimevalTest.cpp
 TimevalTest_LDADD = libcommon.la
 
 VectorTest_SOURCES = VectorTest.cpp
-VectorTest_LDADD = libcommon.la $(SQLITE3_LIBS)
-
-ConfigurationTest_SOURCES = ConfigurationTest.cpp
-ConfigurationTest_LDADD = libcommon.la 	$(SQLITE3_LIBS)
+VectorTest_LDADD = libcommon.la
 
 # ReportingTest_SOURCES = ReportingTest.cpp
-# ReportingTest_LDADD = libcommon.la $(SQLITE_LA)
+# ReportingTest_LDADD = libcommon.la
 
 LogTest_SOURCES = LogTest.cpp
-LogTest_LDADD = libcommon.la $(SQLITE3_LIBS)
+LogTest_LDADD = libcommon.la
 
 MOSTLYCLEANFILES += testSource testDestination

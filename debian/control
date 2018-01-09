@@ -5,7 +5,6 @@ Maintainer: Ivan Klyuchnikov <ivan.kluchnikov@fairwaves.ru>
 Build-Depends: debhelper (>= 9),
                autotools-dev,
                autoconf-archive,
-               libsqlite3-dev,
                pkg-config,
                dh-autoreconf,
                libuhd-dev,

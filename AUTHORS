@@ -24,9 +24,6 @@ David A. Burgess, dburgess@kestrelsp.com:
     CommonLibs/Assert.h
     CommonLibs/BitVector.cpp
     CommonLibs/BitVectorTest.cpp
-    CommonLibs/Configuration.cpp
-    CommonLibs/Configuration.h
-    CommonLibs/ConfigurationTest.cpp
     CommonLibs/Interthread.h
     CommonLibs/InterthreadTest.cpp
     CommonLibs/LinkedLists.cpp

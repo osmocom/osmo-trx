@@ -97,7 +97,7 @@ osmo_trx_LDADD = \
 	libtransceiver.la \
 	$(ARCH_LA) \
 	$(GSM_LA) \
-	$(COMMON_LA) $(SQLITE3_LIBS)
+	$(COMMON_LA)
 
 if USRP1
 libtransceiver_la_SOURCES += USRPDevice.cpp

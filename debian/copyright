@@ -52,20 +52,6 @@ Copyright: 2005-2009 United States Government as represented by
                      the U.S. Army Research Laboratory.
 License: BSD-3-clause
 
-Files: CommonLibs/sqlite3util.cpp
-Copyright: 2010 Kestrel Signal Processing Inc.
-License: none
- No license described for file.
-Comment: In the previous version of the file in the git repository
- at upstream it is written:
-   Written by David A. Burgess, Kestrel Signal Processing, Inc., 2010
-   The author disclaims copyright to this source code.
- In the git log, this is written:
-   I do not claim any copyright over this change, as it's very basic.
-   Looking forward to see it merged into mainline.
- See revision e766abbf82f02473038a83fd2f78befd08544cab at
- https://github.com/osmocom/osmo-trx
-
 Files: debian/*
 Copyright: 2015 Ruben Undheim <ruben.undheim@gmail.com>
 License: GPL-3+
