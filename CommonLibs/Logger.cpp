@@ -50,7 +50,8 @@ Mutex gLogToLock;
 
 // Reference to a global config table, used all over the system.
 extern ConfigurationTable gConfig;
-
+// Global log level threshold:
+int config_log_level;
 
 /**@ The global alarms table. */
 //@{
@@ -97,22 +98,6 @@ int levelStringToInt(const string& name)
 	return -1;
 }
 
-/** Given a string, return the corresponding level name. */
-int lookupLevel(const string& key)
-{
-	string val = gConfig.getStr(key);
-	int level = levelStringToInt(val);
-
-	if (level == -1) {
-		string defaultLevel = gConfig.mSchema["Log.Level"].getDefaultValue();
-		level = levelStringToInt(defaultLevel);
-		_LOG(CRIT) << "undefined logging level (" << key << " = \"" << val << "\") defaulting to \"" << defaultLevel << ".\" Valid levels are: EMERG, ALERT, CRIT, ERR, WARNING, NOTICE, INFO or DEBUG";
-		gConfig.set(key, defaultLevel);
-	}
-
-	return level;
-}
-
 static std::string format(const char *fmt, ...)
 {
 	va_list ap;
@@ -138,62 +123,6 @@ std::ostream& operator<<(std::ostream& os, std::ostringstream& ss)
 {
 	return os << ss.str();
 }
-
-int getLoggingLevel(const char* filename)
-{
-	// Default level?
-	if (!filename) return lookupLevel("Log.Level");
-
-	// This can afford to be inefficient since it is not called that often.
-	const string keyName = string("Log.Level.") + string(filename);
-	if (gConfig.defines(keyName)) return lookupLevel(keyName);
-	return lookupLevel("Log.Level");
-}
-
-
-
-int gGetLoggingLevel(const char* filename)
-{
-	// This is called a lot and needs to be efficient.
-
-	static Mutex sLogCacheLock;
-	static map<uint64_t,int>  sLogCache;
-	static unsigned sCacheCount;
-	static const unsigned sCacheRefreshCount = 1000;
-
-	if (filename==NULL) return gGetLoggingLevel("");
-
-	HashString hs(filename);
-	uint64_t key = hs.hash();
-
-	sLogCacheLock.lock();
-	// Time for a cache flush?
-	if (sCacheCount>sCacheRefreshCount) {
-		sLogCache.clear();
-		sCacheCount=0;
-	}
-	// Is it cached already?
-	map<uint64_t,int>::const_iterator where = sLogCache.find(key);
-	sCacheCount++;
-	if (where!=sLogCache.end()) {
-		int retVal = where->second;
-		sLogCacheLock.unlock();
-		return retVal;
-	}
-	// Look it up in the config table and cache it.
-	// FIXME: Figure out why unlock and lock below fix the config table deadlock.
-	// (pat) Probably because getLoggingLevel may call LOG recursively via lookupLevel().
-	sLogCacheLock.unlock();
-	int level = getLoggingLevel(filename);
-	sLogCacheLock.lock();
-	sLogCache.insert(pair<uint64_t,int>(key,level));
-	sLogCacheLock.unlock();
-	return level;
-}
-
-
-
-
 
 // copies the alarm list and returns it. list supposed to be small.
 list<string> gGetLoggerAlarms()
@@ -268,26 +197,21 @@ ostringstream& Log::get()
 
 
 
-void gLogInit(const char* name, const char* level, int facility)
+void gLogInit(const char* name, const char* level, int facility, char* fn)
 {
 	// Set the level if one has been specified.
-	if (level) {
-		gConfig.set("Log.Level",level);
-	}
+	if (level)
+		config_log_level = levelStringToInt(level);
 
 	// Both the transceiver and OpenBTS use this same facility, but only OpenBTS/OpenNodeB may use this log file:
-	string str = gConfig.getStr("Log.File");
-	if (gLogToFile==NULL && str.length() && 0==strncmp(gCmdName,"Open",4)) {
-		const char *fn = str.c_str();
-		if (fn && *fn && strlen(fn)>3) {	// strlen because a garbage char is getting in sometimes.
-			gLogToFile = fopen(fn,"w"); // New log file each time we start.
-			if (gLogToFile) {
-				time_t now;
-				time(&now);
-				fprintf(gLogToFile,"Starting at %s",ctime(&now));
-				fflush(gLogToFile);
-				std::cout << "Logging to file: " << fn << "\n";
-			}
+	if (!gLogToFile && fn) {
+		gLogToFile = fopen(fn,"w"); // New log file each time we start.
+		if (gLogToFile) {
+			time_t now;
+			time(&now);
+			fprintf(gLogToFile,"Starting at %s",ctime(&now));
+			fflush(gLogToFile);
+			std::cout << "Logging to file: " << fn << "\n";
 		}
 	}
 
