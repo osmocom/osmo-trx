@@ -324,6 +324,7 @@ void UDDSocket::open(const char* localPath)
 void UDDSocket::destination(const char* remotePath)
 {
 	struct sockaddr_un* unAddr = (struct sockaddr_un*)mDestination;
+	unAddr->sun_family = AF_UNIX;
 	strcpy(unAddr->sun_path,remotePath);
 }
 
