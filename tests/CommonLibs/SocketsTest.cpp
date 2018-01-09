@@ -44,7 +44,7 @@ void *testReaderIP(void *)
 		char buf[MAX_UDP_LENGTH];
 		int count = readSocket.read(buf, MAX_UDP_LENGTH);
 		if (count>0) {
-			COUT("read: " << buf);
+			CERR("read: " << buf);
 			rc++;
 		} else {
 			sleep(2);
@@ -65,7 +65,7 @@ void *testReaderUnix(void *)
 		buf[MAX_UDP_LENGTH] =  '\0';
 		int count = readSocket.read(buf, MAX_UDP_LENGTH);
 		if (count>0) {
-			COUT("read: " << buf);
+			CERR("read: " << buf);
 			rc++;
 		} else {
 			sleep(2);
@@ -85,20 +85,22 @@ int main(int argc, char * argv[] )
 
   UDPSocket socket1("127.0.0.1", 5061, "127.0.0.1", 5934);
   UDDSocket socket1U("testSource","testDestination");
-  
-  COUT("socket1: " << socket1.port());
+
+  CERR("socket1: " << socket1.port());
 
   // give the readers time to open
   sleep(1);
 
   for (int i=0; i<gNumToSend; i++) {
-    socket1.write("Hello IP land");	
+    socket1.write("Hello IP land");
 	socket1U.write("Hello Unix domain");
 	sleep(1);
   }
 
   readerThreadIP.join();
   readerThreadUnix.join();
+
+  printf("Done\n");
 }
 
 // vim: ts=4 sw=4
