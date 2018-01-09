@@ -38,17 +38,6 @@ libcommon_la_SOURCES = \
 	Timeval.cpp \
 	Logger.cpp
 
-noinst_PROGRAMS = \
-	BitVectorTest \
-	PRBSTest \
-	InterthreadTest \
-	SocketsTest \
-	TimevalTest \
-	VectorTest \
-	LogTest
-
-#	ReportingTest
-
 noinst_HEADERS = \
 	BitVector.h \
 	PRBS.h \
@@ -59,30 +48,3 @@ noinst_HEADERS = \
 	Timeval.h \
 	Vector.h \
 	Logger.h
-
-BitVectorTest_SOURCES = BitVectorTest.cpp
-BitVectorTest_LDADD = libcommon.la
-
-PRBSTest_SOURCES = PRBSTest.cpp
-
-InterthreadTest_SOURCES = InterthreadTest.cpp
-InterthreadTest_LDADD = libcommon.la
-InterthreadTest_LDFLAGS = -lpthread
-
-SocketsTest_SOURCES = SocketsTest.cpp
-SocketsTest_LDADD = libcommon.la
-SocketsTest_LDFLAGS = -lpthread
-
-TimevalTest_SOURCES = TimevalTest.cpp
-TimevalTest_LDADD = libcommon.la
-
-VectorTest_SOURCES = VectorTest.cpp
-VectorTest_LDADD = libcommon.la
-
-# ReportingTest_SOURCES = ReportingTest.cpp
-# ReportingTest_LDADD = libcommon.la
-
-LogTest_SOURCES = LogTest.cpp
-LogTest_LDADD = libcommon.la
-
-MOSTLYCLEANFILES += testSource testDestination

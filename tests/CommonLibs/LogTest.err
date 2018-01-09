@@ -1,0 +1,24 @@
+EMERG 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:44:main:  testing the logger.
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:45:main:  testing the logger.
+CRIT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:46:main:  testing the logger.
+ERR 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:47:main:  testing the logger.
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 0
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 1
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 2
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 3
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 4
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 5
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 6
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 7
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 8
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 9
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 10
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 11
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 12
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 13
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 14
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 15
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 16
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 17
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 18
+ALERT 140239160588096 17:32:27.2 /home/pespin/dev/sysmocom/git/osmo-trx/tests/CommonLibs/LogTest.cpp:58:main: 19

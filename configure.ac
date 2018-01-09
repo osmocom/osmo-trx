@@ -26,6 +26,7 @@ AC_CONFIG_SRCDIR([Transceiver52M/Makefile.am])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([config])
 AM_CONFIG_HEADER(config.h)
+AC_CONFIG_TESTDIR(tests)
 
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
@@ -171,6 +172,8 @@ AC_CONFIG_FILES([\
     Transceiver52M/Makefile \
     Transceiver52M/arm/Makefile \
     Transceiver52M/x86/Makefile \
+    tests/Makefile \
+    tests/CommonLibs/Makefile \
 ])
 
 AC_OUTPUT

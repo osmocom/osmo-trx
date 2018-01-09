@@ -1,0 +1,45 @@
+AT_INIT
+AT_BANNER([Regression tests.])
+
+AT_SETUP([BitVectorTest])
+AT_KEYWORDS([BitVectorTest])
+cat $abs_srcdir/CommonLibs/BitVectorTest.ok > expout
+AT_CHECK([$abs_top_builddir/tests/CommonLibs/BitVectorTest], [], [expout], [])
+AT_CLEANUP
+
+#AT_SETUP([InterthreadTest])
+#AT_KEYWORDS([InterthreadTest])
+#cat $abs_srcdir/CommonLibs/InterthreadTest.ok > expout
+#AT_CHECK([$abs_top_builddir/tests/CommonLibs/InterthreadTest], [], [expout], [])
+#AT_CLEANUP
+
+#AT_SETUP([LogTest])
+#AT_KEYWORDS([LogTest])
+#cat $abs_srcdir/CommonLibs/LogTest.ok > expout
+#cat $abs_srcdir/CommonLibs/LogTest.err > experr
+#AT_CHECK([$abs_top_builddir/tests/CommonLibs/LogTest], [], [expout], [experr])
+#AT_CLEANUP
+
+AT_SETUP([PRBSTest])
+AT_KEYWORDS([PRBSTest])
+cat $abs_srcdir/CommonLibs/PRBSTest.ok > expout
+AT_CHECK([$abs_top_builddir/tests/CommonLibs/PRBSTest], [], [expout], [])
+AT_CLEANUP
+
+#AT_SETUP([SocketsTest])
+#AT_KEYWORDS([SocketsTest])
+#cat $abs_srcdir/CommonLibs/SocketsTest.ok > expout
+#AT_CHECK([$abs_top_builddir/tests/CommonLibs/SocketsTest], [], [expout], [])
+#AT_CLEANUP
+
+#AT_SETUP([TimevalTest])
+#AT_KEYWORDS([TimevalTest])
+#cat $abs_srcdir/CommonLibs/TimevalTest.ok > expout
+#AT_CHECK([$abs_top_builddir/tests/CommonLibs/TimevalTest], [], [expout], [])
+#AT_CLEANUP
+
+AT_SETUP([VectorTest])
+AT_KEYWORDS([VectorTest])
+cat $abs_srcdir/CommonLibs/VectorTest.ok > expout
+AT_CHECK([$abs_top_builddir/tests/CommonLibs/VectorTest], [], [expout], [])
+AT_CLEANUP

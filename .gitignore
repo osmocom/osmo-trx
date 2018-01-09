@@ -5,17 +5,16 @@
 Transceiver52M/osmo-trx
 
 # tests
-CommonLibs/BitVectorTest
-CommonLibs/ConfigurationTest
-CommonLibs/F16Test
-CommonLibs/InterthreadTest
-CommonLibs/LogTest
-CommonLibs/RegexpTest
-CommonLibs/SocketsTest
-CommonLibs/TimevalTest
-CommonLibs/URLEncodeTest
-CommonLibs/VectorTest
-CommonLibs/PRBSTest
+tests/CommonLibs/BitVectorTest
+tests/CommonLibs/F16Test
+tests/CommonLibs/InterthreadTest
+tests/CommonLibs/LogTest
+tests/CommonLibs/RegexpTest
+tests/CommonLibs/SocketsTest
+tests/CommonLibs/TimevalTest
+tests/CommonLibs/URLEncodeTest
+tests/CommonLibs/VectorTest
+tests/CommonLibs/PRBSTest
 
 # automake/autoconf
 *.in
@@ -41,6 +40,8 @@ ltmain.sh
 missing
 stamp-h1
 INSTALL
+tests/package.m4
+tests/testsuite
 
 # vim
 *.sw?

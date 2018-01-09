@@ -30,7 +30,8 @@ AM_CXXFLAGS = -Wall -pthread -ldl
 SUBDIRS = \
 	CommonLibs \
 	GSM \
-	Transceiver52M
+	Transceiver52M \
+	tests
 
 EXTRA_DIST = \
 	autogen.sh \
