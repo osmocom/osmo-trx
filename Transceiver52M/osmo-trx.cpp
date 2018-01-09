@@ -31,7 +31,6 @@
 
 #include <GSMCommon.h>
 #include <Logger.h>
-#include <Configuration.h>
 
 extern "C" {
 #include "convolve.h"
@@ -81,8 +80,6 @@ struct trx_config {
 	bool edge;
 	int sched_rr;
 };
-
-ConfigurationTable gConfig;
 
 volatile bool gshutdown = false;
 

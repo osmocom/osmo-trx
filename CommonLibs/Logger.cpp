@@ -32,7 +32,6 @@
 #include <stdarg.h>
 #include <sys/time.h>	// For gettimeofday
 
-#include "Configuration.h"
 #include "Logger.h"
 #include "Threads.h"	// pat added
 
@@ -41,15 +40,11 @@
 using namespace std;
 
 // Switches to enable/disable logging targets
-// MUST BE DEFINED BEFORE gConfig FOR gLogEarly() TO WORK CORRECTLY
 bool gLogToConsole = true;
 bool gLogToSyslog = false;
 FILE *gLogToFile = NULL;
 Mutex gLogToLock;
 
-
-// Reference to a global config table, used all over the system.
-extern ConfigurationTable gConfig;
 // Global log level threshold:
 int config_log_level;
 

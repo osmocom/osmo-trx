@@ -28,10 +28,6 @@
 #include <iterator>
 
 #include "Logger.h"
-#include "Configuration.h"
-
-ConfigurationTable gConfig;
-//ConfigurationTable gConfig("example.config");
 
 void printAlarms()
 {
