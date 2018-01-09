@@ -104,17 +104,6 @@ ConfigurationTable::ConfigurationTable(const char* filename, const char *wCmdNam
 
 	// Build CommonLibs schema
 	ConfigurationKey *tmp;
-	tmp = new ConfigurationKey("Log.Alarms.Max","20",
-		"alarms",
-		ConfigurationKey::CUSTOMER,
-		ConfigurationKey::VALRANGE,
-		"10:20",// educated guess
-		false,
-		"Maximum number of alarms to remember inside the application."
-	);
-	mSchema[tmp->getName()] = *tmp;
-	delete tmp;
-
 	tmp = new ConfigurationKey("Log.File","",
 		"",
 		ConfigurationKey::DEVELOPER,

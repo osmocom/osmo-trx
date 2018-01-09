@@ -36,6 +36,7 @@
 #include "Logger.h"
 #include "Threads.h"	// pat added
 
+#define MAX_ALARMS 20
 
 using namespace std;
 
@@ -212,8 +213,7 @@ void addAlarm(const string& s)
 {
     alarmsLock.lock();
     alarmsList.push_back(s);
-	unsigned maxAlarms = gConfig.getNum("Log.Alarms.Max");
-    while (alarmsList.size() > maxAlarms) alarmsList.pop_front();
+    while (alarmsList.size() > MAX_ALARMS) alarmsList.pop_front();
     alarmsLock.unlock();
 }
 
