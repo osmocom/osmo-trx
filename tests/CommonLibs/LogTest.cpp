@@ -41,21 +41,21 @@ int main(int argc, char *argv[])
 {
 	gLogInit("LogTest","NOTICE",LOG_LOCAL7);
 
-	LOG(EMERG) << " testing the logger.";
-	LOG(ALERT) << " testing the logger.";
-	LOG(CRIT) << " testing the logger.";
-	LOG(ERR) << " testing the logger.";
-	LOG(WARNING) << " testing the logger.";
-	LOG(NOTICE) << " testing the logger.";
-	LOG(INFO) << " testing the logger.";
-	LOG(DEBUG) << " testing the logger.";
+	Log(LOG_EMERG).get() << " testing the logger.";
+	Log(LOG_ALERT).get() << " testing the logger.";
+	Log(LOG_CRIT).get() << " testing the logger.";
+	Log(LOG_ERR).get() << " testing the logger.";
+	Log(LOG_WARNING).get() << " testing the logger.";
+	Log(LOG_NOTICE).get() << " testing the logger.";
+	Log(LOG_INFO).get() << " testing the logger.";
+        Log(LOG_DEBUG).get() << " testing the logger.";
     std::cout << "\n\n\n";
     std::cout << "testing Alarms\n";
     std::cout << "you should see three lines:" << std::endl;
     printAlarms();
     std::cout << "----------- generating 20 alarms ----------" << std::endl;
     for (int i = 0 ; i < 20 ; ++i) {
-        LOG(ALERT) << i;
+        Log(LOG_ALERT).get() << i;
     }
     std::cout << "you should see ten lines with the numbers 10..19:" << std::endl;
     printAlarms();

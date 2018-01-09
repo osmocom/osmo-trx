@@ -13,12 +13,12 @@ cat $abs_srcdir/CommonLibs/InterthreadTest.ok > expout
 AT_CHECK([$abs_top_builddir/tests/CommonLibs/InterthreadTest], [], [expout], [ignore])
 AT_CLEANUP
 
-#AT_SETUP([LogTest])
-#AT_KEYWORDS([LogTest])
-#cat $abs_srcdir/CommonLibs/LogTest.ok > expout
-#cat $abs_srcdir/CommonLibs/LogTest.err > experr
-#AT_CHECK([$abs_top_builddir/tests/CommonLibs/LogTest], [], [expout], [experr])
-#AT_CLEANUP
+AT_SETUP([LogTest])
+AT_KEYWORDS([LogTest])
+cat $abs_srcdir/CommonLibs/LogTest.ok > expout
+cat $abs_srcdir/CommonLibs/LogTest.err > experr
+AT_CHECK([$abs_top_builddir/tests/CommonLibs/LogTest], [], [expout], [experr])
+AT_CLEANUP
 
 AT_SETUP([PRBSTest])
 AT_KEYWORDS([PRBSTest])
