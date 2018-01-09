@@ -64,6 +64,3 @@ int main(int argc, char *argv[])
     std::cout << "you should see ten lines with the numbers 10..19:" << std::endl;
     printAlarms();
 }
-
-
-

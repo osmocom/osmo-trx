@@ -50,7 +50,7 @@ noinst_PROGRAMS = \
 	ConfigurationTest \
 	LogTest
 
-#	ReportingTest 
+#	ReportingTest
 
 noinst_HEADERS = \
 	BitVector.h \
@@ -94,5 +94,3 @@ LogTest_SOURCES = LogTest.cpp
 LogTest_LDADD = libcommon.la $(SQLITE3_LIBS)
 
 MOSTLYCLEANFILES += testSource testDestination
-
-

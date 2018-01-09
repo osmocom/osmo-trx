@@ -32,7 +32,7 @@ else
 ARCH_LA = x86/libarch.la
 endif
 
-if USRP1 
+if USRP1
 AM_CPPFLAGS += $(USRP_CFLAGS)
 else
 AM_CPPFLAGS += $(UHD_CFLAGS)
@@ -99,7 +99,7 @@ osmo_trx_LDADD = \
 	$(GSM_LA) \
 	$(COMMON_LA) $(SQLITE3_LIBS)
 
-if USRP1 
+if USRP1
 libtransceiver_la_SOURCES += USRPDevice.cpp
 osmo_trx_LDADD += $(USRP_LIBS)
 else

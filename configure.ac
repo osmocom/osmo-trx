@@ -23,7 +23,7 @@ AC_INIT([osmo-trx],
 	[openbsc@lists.osmocom.org])
 AC_PREREQ(2.57)
 AC_CONFIG_SRCDIR([Transceiver52M/Makefile.am])
-AC_CONFIG_AUX_DIR([.])	
+AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([config])
 AM_CONFIG_HEADER(config.h)
 
