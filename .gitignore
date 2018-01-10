@@ -15,6 +15,7 @@ tests/CommonLibs/TimevalTest
 tests/CommonLibs/URLEncodeTest
 tests/CommonLibs/VectorTest
 tests/CommonLibs/PRBSTest
+tests/Transceiver52M/convolve_test
 
 # automake/autoconf
 *.in

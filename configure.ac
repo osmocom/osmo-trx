@@ -174,6 +174,7 @@ AC_CONFIG_FILES([\
     Transceiver52M/x86/Makefile \
     tests/Makefile \
     tests/CommonLibs/Makefile \
+    tests/Transceiver52M/Makefile \
 ])
 
 AC_OUTPUT

@@ -43,3 +43,9 @@ AT_KEYWORDS([VectorTest])
 cat $abs_srcdir/CommonLibs/VectorTest.ok > expout
 AT_CHECK([$abs_top_builddir/tests/CommonLibs/VectorTest], [], [expout], [])
 AT_CLEANUP
+
+AT_SETUP([convolve_test])
+AT_KEYWORDS([convolve_test])
+cat $abs_srcdir/Transceiver52M/convolve_test.ok > expout
+AT_CHECK([$abs_top_builddir/tests/Transceiver52M/convolve_test], [], [expout], [])
+AT_CLEANUP
