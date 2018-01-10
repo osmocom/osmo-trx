@@ -26,12 +26,6 @@ AM_CXXFLAGS = -ldl -lpthread
 
 SUBDIRS = arm x86
 
-if ARCH_ARM
-ARCH_LA = arm/libarch.la
-else
-ARCH_LA = x86/libarch.la
-endif
-
 if USRP1
 AM_CPPFLAGS += $(USRP_CFLAGS)
 else
