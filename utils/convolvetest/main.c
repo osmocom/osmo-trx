@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include <osmocom/core/utils.h>
+#include <stdlib.h>
 #include "../../Transceiver52M/common/convolve.h"
 
 #define TESTVEC_LEN 1000

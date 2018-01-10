@@ -1,5 +1,5 @@
 all: main.o convolve_base.o convolve.o convolve_sse_3.o
-	gcc -g -Wall ./*.o -o convtest -losmocore
+	gcc -g -Wall ./*.o -o convtest
 
 clean:
 	rm -f ./*.o
