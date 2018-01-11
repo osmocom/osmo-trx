@@ -54,7 +54,6 @@ static void neon_convert_ps_si16(short *out,
 	for (int i = 0; i < len % 4; i++)
 		out[start + i] = (short) (in[start + i] * (*scale));
 }
-#endif
 
 void convert_float_short(short *out, const float *in, float scale, int len)
 {
