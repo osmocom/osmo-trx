@@ -53,38 +53,13 @@ void *testReaderIP(void *)
 	return NULL;
 }
 
-
-
-void *testReaderUnix(void *)
-{
-	UDDSocket readSocket("testDestination");
-	readSocket.nonblocking();
-	int rc = 0;
-	while (rc<gNumToSend) {
-		char buf[MAX_UDP_LENGTH+1];
-		buf[MAX_UDP_LENGTH] =  '\0';
-		int count = readSocket.read(buf, MAX_UDP_LENGTH);
-		if (count>0) {
-			CERR("read: " << buf);
-			rc++;
-		} else {
-			sleep(2);
-		}
-	}
-	return NULL;
-}
-
-
 int main(int argc, char * argv[] )
 {
 
   Thread readerThreadIP;
   readerThreadIP.start(testReaderIP,NULL);
-  Thread readerThreadUnix;
-  readerThreadUnix.start(testReaderUnix,NULL);
 
   UDPSocket socket1("127.0.0.1", 5061, "127.0.0.1", 5934);
-  UDDSocket socket1U("testSource","testDestination");
 
   CERR("socket1: " << socket1.port());
 
@@ -93,12 +68,10 @@ int main(int argc, char * argv[] )
 
   for (int i=0; i<gNumToSend; i++) {
     socket1.write("Hello IP land");
-	socket1U.write("Hello Unix domain");
-	sleep(1);
+    sleep(1);
   }
 
   readerThreadIP.join();
-  readerThreadUnix.join();
 
   printf("Done\n");
 }

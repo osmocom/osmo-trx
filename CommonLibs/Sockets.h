@@ -166,26 +166,6 @@ public:
 
 };
 
-
-/** Unix Domain Datagram Socket */
-class UDDSocket : public DatagramSocket {
-
-public:
-
-	UDDSocket(const char* localPath=NULL, const char* remotePath=NULL);
-
-	void destination(const char* remotePath);
-
-	void open(const char* localPath);
-
-	/** Give the return address of the most recently received packet. */
-	const struct sockaddr_un* source() const { return (const struct sockaddr_un*)mSource; }
-
-	size_t addressSize() const { return sizeof(struct sockaddr_un); }
-
-};
-
-
 #endif
 
 
