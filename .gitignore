@@ -43,6 +43,9 @@ stamp-h1
 INSTALL
 tests/package.m4
 tests/testsuite
+tests/atconfig
+tests/testsuite.dir
+tests/testsuite.log
 
 # vim
 *.sw?
