@@ -28,6 +28,9 @@
 void neon_convert_ps_si16_4n(short *, const float *, const float *, int);
 void neon_convert_si16_ps_4n(float *, const short *, int);
 
+void convert_init(void) {
+}
+
 /* 4*N 16-bit signed integer conversion with remainder */
 static void neon_convert_si16_ps(float *out,
 				 const short *in,
