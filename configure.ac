@@ -113,7 +113,6 @@ AS_IF([test "x$with_usrp1" != "xyes"],[
         )]
     )
     AC_DEFINE(USE_UHD, 1, All UHD versions)
-    PKG_CHECK_MODULES(FFTWF, fftw3f)
 ])
 
 AS_IF([test "x$with_singledb" = "xyes"], [
@@ -160,6 +159,7 @@ AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4
 AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
 
 PKG_CHECK_MODULES(LIBUSB, libusb-1.0)
+PKG_CHECK_MODULES(FFTWF, fftw3f)
 
 AC_CHECK_HEADER([boost/config.hpp],[],
     [AC_MSG_ERROR([boost/config.hpp not found, install e.g. libboost-dev])])

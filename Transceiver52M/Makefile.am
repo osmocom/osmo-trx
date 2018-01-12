@@ -91,12 +91,13 @@ osmo_trx_LDADD = \
 	libtransceiver.la \
 	$(ARCH_LA) \
 	$(GSM_LA) \
-	$(COMMON_LA)
+	$(COMMON_LA) \
+	$(FFTWF_LIBS)
 
 if USRP1
 libtransceiver_la_SOURCES += USRPDevice.cpp
 osmo_trx_LDADD += $(USRP_LIBS)
 else
 libtransceiver_la_SOURCES += UHDDevice.cpp
-osmo_trx_LDADD += $(UHD_LIBS) $(FFTWF_LIBS)
+osmo_trx_LDADD += $(UHD_LIBS)
 endif

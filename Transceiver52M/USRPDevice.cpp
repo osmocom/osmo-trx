@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include "Logger.h"
 #include "Threads.h"
 #include "USRPDevice.h"
 
@@ -599,7 +600,7 @@ bool USRPDevice::setRxFreq(double wFreq) { return true;};
 #endif
 
 RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       size_t chans, double)
+			       RadioDevice::InterfaceType, size_t chans, double)
 {
 	return new USRPDevice(tx_sps);
 }
