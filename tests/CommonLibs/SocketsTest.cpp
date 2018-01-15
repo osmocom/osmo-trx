@@ -61,6 +61,7 @@ void *testReaderIP(void *param)
 
 int main(int argc, char * argv[] )
 {
+  int count;
 
   if (signal(SIGALRM, sigalarm_handler) == SIG_ERR) {
     perror("signal");
@@ -82,7 +83,12 @@ int main(int argc, char * argv[] )
   sleep(1);
 
   for (int i=0; i<gNumToSend; i++) {
-    socket1.write("Hello IP land");
+    CERR("write");
+    count = socket1.write("Hello IP land");
+    if (count < 0) {
+      COUT("FAIL: write");
+      exit(EXIT_FAILURE);
+    }
     sleep(1);
   }
 
