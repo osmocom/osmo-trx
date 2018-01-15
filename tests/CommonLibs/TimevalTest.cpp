@@ -29,24 +29,30 @@
 #include "Timeval.h"
 #include <iostream>
 #include <assert.h>
+#include <sys/time.h>
 
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-	Timeval then(10000);
-	assert(then.elapsed() == -10000);
-	cerr << then << " elapsed: " << then.elapsed() << endl;
-	double then_seconds = then.seconds();
-	double last_now = Timeval().seconds();
 	long last_remaining = 10000;
+	Timeval then(last_remaining);
+	assert(then.elapsed() == -last_remaining);
+	cerr << then << " elapsed: " << then.elapsed() << endl;
+
+	/* Check that last_remaining parameter affects setting time in the future */
+	usleep(10000);
+	double increased_time_secs = Timeval().seconds();
+	assert(increased_time_secs <= then.seconds());
+
+	struct timespec invariant_time  = then.timespec();
 	int loops = 0;
 
 	while (!then.passed()) {
-		double tnow = Timeval().seconds();
-		cerr << "now: " << tnow << " then: " << then << " remaining: " << then.remaining() << endl;
-		assert(last_now <= tnow && last_remaining >= then.remaining());
-		assert(then_seconds == then.seconds());
+		struct timespec tspecnow = then.timespec();
+		cerr << "now: " << Timeval().seconds() << " then: " << then << " remaining: " << then.remaining() << endl;
+		assert(last_remaining >= then.remaining());
+		assert(tspecnow.tv_sec == invariant_time.tv_sec && tspecnow.tv_nsec == invariant_time.tv_nsec);
 		usleep(500000);
 		loops++;
 	}
