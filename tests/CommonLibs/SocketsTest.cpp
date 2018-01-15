@@ -35,14 +35,14 @@
 static const int gNumToSend = 10;
 
 
-void *testReaderIP(void *)
+void *testReaderIP(void *param)
 {
-	UDPSocket readSocket("127.0.0.1", 5934, "localhost", 5061);
-	readSocket.nonblocking();
+	UDPSocket *readSocket = (UDPSocket *)param;
+	readSocket->nonblocking();
 	int rc = 0;
 	while (rc<gNumToSend) {
 		char buf[MAX_UDP_LENGTH];
-		int count = readSocket.read(buf, MAX_UDP_LENGTH);
+		int count = readSocket->read(buf, MAX_UDP_LENGTH);
 		if (count>0) {
 			CERR("read: " << buf);
 			rc++;
@@ -56,12 +56,13 @@ void *testReaderIP(void *)
 int main(int argc, char * argv[] )
 {
 
+  UDPSocket readSocket("127.0.0.1", 0);
+  UDPSocket socket1("127.0.0.1", 0, "localhost", readSocket.port());
+
+  CERR("socket1: " << socket1.port() << ", readSocket: " << readSocket.port());
+
   Thread readerThreadIP;
-  readerThreadIP.start(testReaderIP,NULL);
-
-  UDPSocket socket1("127.0.0.1", 5061, "127.0.0.1", 5934);
-
-  CERR("socket1: " << socket1.port());
+  readerThreadIP.start(testReaderIP, &readSocket);
 
   // give the readers time to open
   sleep(1);
