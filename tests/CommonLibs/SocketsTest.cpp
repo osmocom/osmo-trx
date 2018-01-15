@@ -30,10 +30,16 @@
 #include "Threads.h"
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <unistd.h>
+#include <signal.h>
 
 static const int gNumToSend = 10;
 
+static void sigalarm_handler(int foo)
+{
+	printf("FAIL: test did not run successfully\n");
+	exit(EXIT_FAILURE);
+}
 
 void *testReaderIP(void *param)
 {
@@ -55,6 +61,14 @@ void *testReaderIP(void *param)
 
 int main(int argc, char * argv[] )
 {
+
+  if (signal(SIGALRM, sigalarm_handler) == SIG_ERR) {
+    perror("signal");
+    exit(EXIT_FAILURE);
+  }
+
+  /* If the test takes longer than 2*gNumToSend seconds, abort it */
+  alarm(2* gNumToSend);
 
   UDPSocket readSocket("127.0.0.1", 0);
   UDPSocket socket1("127.0.0.1", 0, "localhost", readSocket.port());
