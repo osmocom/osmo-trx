@@ -46,8 +46,8 @@ AT_CLEANUP
 
 AT_SETUP([convolve_test])
 AT_KEYWORDS([convolve_test])
-# Disabled for ARM builds as it gives different output than x86, see  OS#2826
-AT_SKIP_IF(! uname -m | grep x86)
+# Different results for i686, x86_64 and ARM. see  OS#2826, OS#2828, and https://lists.osmocom.org/pipermail/openbsc/2018-January/011655.html
+AT_SKIP_IF(true)
 cat $abs_srcdir/Transceiver52M/convolve_test.ok > expout
 AT_CHECK([$abs_top_builddir/tests/Transceiver52M/convolve_test], [], [expout], [])
 AT_CLEANUP
