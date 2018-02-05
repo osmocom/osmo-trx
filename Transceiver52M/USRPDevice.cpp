@@ -27,7 +27,7 @@
 	Compilation Flags
 
 	SWLOOPBACK	compile for software loopback testing
-*/ 
+*/
 
 
 #include <stdint.h>
@@ -80,7 +80,7 @@ USRPDevice::USRPDevice(size_t sps)
   else
     pingOffset = 0;
 
-#ifdef SWLOOPBACK 
+#ifdef SWLOOPBACK
   samplePeriod = 1.0e6/actualSampleRate;
   loopbackBufferSize = 0;
   gettimeofday(&lastReadTime,NULL);
@@ -93,9 +93,9 @@ int USRPDevice::open(const std::string &, int, bool)
   writeLock.unlock();
 
   LOG(INFO) << "opening USRP device..";
-#ifndef SWLOOPBACK 
+#ifndef SWLOOPBACK
   string rbf = "std_inband.rbf";
-  //string rbf = "inband_1rxhb_1tx.rbf"; 
+  //string rbf = "inband_1rxhb_1tx.rbf";
   m_uRx.reset();
   if (!skipRx) {
   try {
@@ -144,7 +144,7 @@ int USRPDevice::open(const std::string &, int, bool)
 
   if (!skipRx) m_uRx->stop();
   m_uTx->stop();
-  
+
 #endif
 
   switch (dboardConfig) {
@@ -175,19 +175,19 @@ int USRPDevice::open(const std::string &, int, bool)
   samplesRead = 0;
   samplesWritten = 0;
   started = false;
-  
+
   return NORMAL;
 }
 
 
 
-bool USRPDevice::start() 
+bool USRPDevice::start()
 {
   LOG(INFO) << "starting USRP...";
-#ifndef SWLOOPBACK 
+#ifndef SWLOOPBACK
   if (!m_uRx && !skipRx) return false;
   if (!m_uTx) return false;
-  
+
   if (!skipRx) m_uRx->stop();
   m_uTx->stop();
 
@@ -217,8 +217,8 @@ bool USRPDevice::start()
   hi32Timestamp = 0;
   isAligned = false;
 
- 
-  if (!skipRx) 
+
+  if (!skipRx)
   started = (m_uRx->start() && m_uTx->start());
   else
   started = m_uTx->start();
@@ -229,14 +229,14 @@ bool USRPDevice::start()
 #endif
 }
 
-bool USRPDevice::stop() 
+bool USRPDevice::stop()
 {
-#ifndef SWLOOPBACK 
+#ifndef SWLOOPBACK
   if (!m_uRx) return false;
   if (!m_uTx) return false;
-  
+
   delete[] currData;
-  
+
   started = !(m_uRx->stop() && m_uTx->stop());
   return !started;
 #else
@@ -257,7 +257,7 @@ double USRPDevice::minTxGain()
 double USRPDevice::maxRxGain()
 {
   return m_dbRx->gain_max();
-} 
+}
 
 double USRPDevice::minRxGain()
 {
@@ -318,23 +318,23 @@ double USRPDevice::setRxGain(double dB, size_t chan)
 int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
                             TIMESTAMP timestamp, bool *underrun, unsigned *RSSI)
 {
-#ifndef SWLOOPBACK 
+#ifndef SWLOOPBACK
   if (!m_uRx)
     return 0;
 
   short *buf = bufs[0];
 
   timestamp += timestampOffset;
-  
+
   if (timestamp + len < timeStart) {
     memset(buf,0,len*2*sizeof(short));
     return len;
   }
 
   if (underrun) *underrun = false;
- 
+
   uint32_t readBuf[2000];
- 
+
   while (1) {
     //guestimate USB read size
     int readLen=0;
@@ -344,7 +344,7 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
       readLen = 512 * ((int) ceil((float) numSamplesNeeded/126.0));
       if (readLen > 8000) readLen= (8000/512)*512;
     }
-    
+
     // read USRP packets, parse and save A/D data as needed
     readLen = m_uRx->read((void *)readBuf,readLen,overrun);
     for(int pktNum = 0; pktNum < (readLen/512); pktNum++) {
@@ -381,13 +381,13 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	continue;
       }
       if ((word0 >> 28) & 0x04) {
-	if (underrun) *underrun = true; 
+	if (underrun) *underrun = true;
 	LOG(DEBUG) << "UNDERRUN in TRX->USRP interface";
       }
       if (RSSI) *RSSI = (word0 >> 21) & 0x3f;
-      
+
       if (!isAligned) continue;
-      
+
       unsigned cursorStart = pktTimestamp - timeStart + dataStart;
       while (cursorStart*2 > currDataSize) {
 	cursorStart -= currDataSize/2;
@@ -400,17 +400,17 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
       else {
 	memcpy(data+cursorStart*2,tmpBuf+2,payloadSz);
       }
-      if (pktTimestamp + payloadSz/2/sizeof(short) > timeEnd) 
+      if (pktTimestamp + payloadSz/2/sizeof(short) > timeEnd)
 	timeEnd = pktTimestamp+payloadSz/2/sizeof(short);
 
       LOG(DEBUG) << "timeStart: " << timeStart << ", timeEnd: " << timeEnd << ", pktTimestamp: " << pktTimestamp;
 
-    }	
-  }     
- 
+    }
+  }
+
   // copy desired data to buf
   unsigned bufStart = dataStart+(timestamp-timeStart);
-  if (bufStart + len < currDataSize/2) { 
+  if (bufStart + len < currDataSize/2) {
     LOG(DEBUG) << "bufStart: " << bufStart;
     memcpy(buf,data+bufStart*2,len*2*sizeof(short));
     memset(data+bufStart*2,0,len*2*sizeof(short));
@@ -428,21 +428,21 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
   timeStart = timestamp + len;
 
   return len;
-  
+
 #else
   if (loopbackBufferSize < 2) return 0;
   int numSamples = 0;
   struct timeval currTime;
   gettimeofday(&currTime,NULL);
-  double timeElapsed = (currTime.tv_sec - lastReadTime.tv_sec)*1.0e6 + 
+  double timeElapsed = (currTime.tv_sec - lastReadTime.tv_sec)*1.0e6 +
     (currTime.tv_usec - lastReadTime.tv_usec);
   if (timeElapsed < samplePeriod) {return 0;}
   int numSamplesToRead = (int) floor(timeElapsed/samplePeriod);
   if (numSamplesToRead < len) return 0;
-  
+
   if (numSamplesToRead > len) numSamplesToRead = len;
   if (numSamplesToRead > loopbackBufferSize/2) {
-    firstRead =false; 
+    firstRead =false;
     numSamplesToRead = loopbackBufferSize/2;
   }
   memcpy(buf,loopbackBuffer,sizeof(short)*2*numSamplesToRead);
@@ -460,7 +460,7 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
     firstRead = true;
   }
   samplesRead += numSamples;
-  
+
   return numSamples;
 #endif
 }
@@ -471,7 +471,7 @@ int USRPDevice::writeSamples(std::vector<short *> &bufs, int len,
 {
   writeLock.lock();
 
-#ifndef SWLOOPBACK 
+#ifndef SWLOOPBACK
   if (!m_uTx)
     return 0;
 
@@ -518,14 +518,14 @@ int USRPDevice::writeSamples(std::vector<short *> &bufs, int len,
   memcpy(loopbackBuffer+loopbackBufferSize,buf,sizeof(short)*2*len);
   samplesWritten += retVal;
   loopbackBufferSize += retVal*2;
-   
+
   return retVal;
 #endif
 }
 
-bool USRPDevice::updateAlignment(TIMESTAMP timestamp) 
+bool USRPDevice::updateAlignment(TIMESTAMP timestamp)
 {
-#ifndef SWLOOPBACK 
+#ifndef SWLOOPBACK
   short data[] = {0x00,0x02,0x00,0x00};
   uint32_t *wordPtr = (uint32_t *) data;
   *wordPtr = host_to_usrp_u32(*wordPtr);
@@ -542,7 +542,7 @@ bool USRPDevice::updateAlignment(TIMESTAMP timestamp)
 #endif
 }
 
-#ifndef SWLOOPBACK 
+#ifndef SWLOOPBACK
 bool USRPDevice::setTxFreq(double wFreq, size_t chan)
 {
   usrp_tune_result result;

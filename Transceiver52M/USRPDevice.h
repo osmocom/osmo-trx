@@ -83,10 +83,10 @@ private:
 
   double rxGain;
 
-#ifdef SWLOOPBACK 
+#ifdef SWLOOPBACK
   short loopbackBuffer[1000000];
   int loopbackBufferSize;
-  double samplePeriod; 
+  double samplePeriod;
 
   struct timeval startTime;
   struct timeval lastReadTime;
@@ -189,4 +189,3 @@ private:
 };
 
 #endif // _USRP_DEVICE_H_
-

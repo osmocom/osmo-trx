@@ -1,5 +1,5 @@
 /*
- * Device support for Ettus Research UHD driver 
+ * Device support for Ettus Research UHD driver
  *
  * Copyright 2010,2011 Free Software Foundation, Inc.
  * Copyright (C) 2015 Ettus Research LLC
@@ -143,8 +143,8 @@ class smpl_buf {
 public:
 	/** Sample buffer constructor
 	    @param len number of 32-bit samples the buffer should hold
-	    @param rate sample clockrate 
-	    @param timestamp 
+	    @param rate sample clockrate
+	    @param timestamp
 	*/
 	smpl_buf(size_t len, double rate);
 	~smpl_buf();
@@ -172,7 +172,7 @@ public:
 	*/
 	std::string str_status(size_t ts) const;
 
-	/** Formatted error string 
+	/** Formatted error string
 	    @param code an error code
 	    @return a formatted error string
 	*/
@@ -705,7 +705,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		rx_buffers[i] = new smpl_buf(buf_len, rx_rate);
 
-	// Initialize and shadow gain values 
+	// Initialize and shadow gain values
 	init_gains();
 
 	// Print configuration
@@ -926,7 +926,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 
 		rx_pkt_cnt++;
 
-		// Check for errors 
+		// Check for errors
 		rc = check_rx_md_err(metadata, num_smpls);
 		switch (rc) {
 		case ERROR_UNRECOVERABLE:
