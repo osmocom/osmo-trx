@@ -208,7 +208,9 @@ private:
 class uhd_device : public RadioDevice {
 public:
 	uhd_device(size_t tx_sps, size_t rx_sps, InterfaceType type,
-		   size_t chans, double offset);
+		   size_t chans, double offset,
+		   const std::vector<std::string>& tx_paths,
+		   const std::vector<std::string>& rx_paths);
 	~uhd_device();
 
 	int open(const std::string &args, int ref, bool swap_channels);
@@ -248,6 +250,11 @@ public:
 	double getRxFreq(size_t chan);
 	double getRxFreq();
 
+	bool setRxAntenna(const std::string &ant, size_t chan);
+	std::string getRxAntenna(size_t chan);
+	bool setTxAntenna(const std::string &ant, size_t chan);
+	std::string getTxAntenna(size_t chan);
+
 	inline double getSampleRate() { return tx_rate; }
 	inline double numberRead() { return rx_pkt_cnt; }
 	inline double numberWritten() { return 0; }
@@ -280,6 +287,7 @@ private:
 
 	std::vector<double> tx_gains, rx_gains;
 	std::vector<double> tx_freqs, rx_freqs;
+	std::vector<std::string> tx_paths, rx_paths;
 	size_t tx_spp, rx_spp;
 
 	bool started;
@@ -295,6 +303,7 @@ private:
 	void init_gains();
 	void set_channels(bool swap);
 	void set_rates();
+	bool set_antennas();
 	bool parse_dev_type();
 	bool flush_recv(size_t num_pkts);
 	int check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls);
@@ -353,7 +362,9 @@ static void thread_enable_cancel(bool cancel)
 }
 
 uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
-		       InterfaceType iface, size_t chans, double offset)
+		       InterfaceType iface, size_t chans, double offset,
+		       const std::vector<std::string>& tx_paths,
+		       const std::vector<std::string>& rx_paths)
 	: tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),
@@ -365,6 +376,8 @@ uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
 	this->chans = chans;
 	this->offset = offset;
 	this->iface = iface;
+	this->tx_paths = tx_paths;
+	this->rx_paths = rx_paths;
 }
 
 uhd_device::~uhd_device()
@@ -439,6 +452,33 @@ void uhd_device::set_rates()
 
 	ts_offset = static_cast<TIMESTAMP>(desc.offset * rx_rate);
 	LOG(INFO) << "Rates configured for " << desc.str;
+}
+
+bool uhd_device::set_antennas()
+{
+	unsigned int i;
+
+	for (i = 0; i < tx_paths.size(); i++) {
+		if (tx_paths[i] == "")
+			continue;
+		LOG(DEBUG) << "Configuring channel " << i << " with antenna " << tx_paths[i];
+		if (!setTxAntenna(tx_paths[i], i)) {
+			LOG(ALERT) << "Failed configuring channel " << i << " with antenna " << tx_paths[i];
+			return false;
+		}
+	}
+
+	for (i = 0; i < rx_paths.size(); i++) {
+		if (rx_paths[i] == "")
+			continue;
+		LOG(DEBUG) << "Configuring channel " << i << " with antenna " << rx_paths[i];
+		if (!setRxAntenna(rx_paths[i], i)) {
+			LOG(ALERT) << "Failed configuring channel " << i << " with antenna " << rx_paths[i];
+			return false;
+		}
+	}
+	LOG(INFO) << "Antennas configured successfully";
+	return true;
 }
 
 double uhd_device::setTxGain(double db, size_t chan)
@@ -641,6 +681,11 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 		set_channels(swap_channels);
         } catch (const std::exception &e) {
 		LOG(ALERT) << "Channel setting failed - " << e.what();
+		return -1;
+	}
+
+	if (!set_antennas()) {
+		LOG(ALERT) << "UHD antenna setting failed";
 		return -1;
 	}
 
@@ -1165,6 +1210,78 @@ double uhd_device::getRxFreq(size_t chan)
 	return rx_freqs[chan];
 }
 
+bool uhd_device::setRxAntenna(const std::string &ant, size_t chan)
+{
+	std::vector<std::string> avail;
+	if (chan >= rx_paths.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return false;
+	}
+
+	avail = usrp_dev->get_rx_antennas(chan);
+	if (std::find(avail.begin(), avail.end(), ant) == avail.end()) {
+		LOG(ALERT) << "Requested non-existent Rx antenna " << ant << " on channel " << chan;
+		LOG(INFO) << "Available Rx antennas: ";
+		for (std::vector<std::string>::const_iterator i = avail.begin(); i != avail.end(); ++i)
+			LOG(INFO) << "- '" << *i << "'";
+		return false;
+	}
+	usrp_dev->set_rx_antenna(ant, chan);
+	rx_paths[chan] = usrp_dev->get_rx_antenna(chan);
+
+	if (ant != rx_paths[chan]) {
+		LOG(ALERT) << "Failed setting antenna " << ant << " on channel " << chan << ", got instead " << rx_paths[chan];
+		return false;
+	}
+
+	return true;
+}
+
+std::string uhd_device::getRxAntenna(size_t chan)
+{
+	if (chan >= rx_paths.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return "";
+	}
+	return usrp_dev->get_rx_antenna(chan);
+}
+
+bool uhd_device::setTxAntenna(const std::string &ant, size_t chan)
+{
+	std::vector<std::string> avail;
+	if (chan >= tx_paths.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return false;
+	}
+
+	avail = usrp_dev->get_tx_antennas(chan);
+	if (std::find(avail.begin(), avail.end(), ant) == avail.end()) {
+		LOG(ALERT) << "Requested non-existent Tx antenna " << ant << " on channel " << chan;
+		LOG(INFO) << "Available Tx antennas: ";
+		for (std::vector<std::string>::const_iterator i = avail.begin(); i != avail.end(); ++i)
+			LOG(INFO) << "- '" << *i << "'";
+		return false;
+	}
+	usrp_dev->set_tx_antenna(ant, chan);
+	tx_paths[chan] = usrp_dev->get_tx_antenna(chan);
+
+	if (ant != tx_paths[chan]) {
+		LOG(ALERT) << "Failed setting antenna " << ant << " on channel " << chan << ", got instead " << tx_paths[chan];
+		return false;
+	}
+
+	return true;
+}
+
+std::string uhd_device::getTxAntenna(size_t chan)
+{
+	if (chan >= tx_paths.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return "";
+	}
+	return usrp_dev->get_tx_antenna(chan);
+}
+
 /*
  * Only allow sampling the Rx path lower than Tx and not vice-versa.
  * Using Tx with 4 SPS and Rx at 1 SPS is the only allowed mixed
@@ -1451,7 +1568,9 @@ std::string smpl_buf::str_code(ssize_t code)
 }
 
 RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       InterfaceType iface, size_t chans, double offset)
+			       InterfaceType iface, size_t chans, double offset,
+			       const std::vector<std::string>& tx_paths,
+			       const std::vector<std::string>& rx_paths)
 {
-	return new uhd_device(tx_sps, rx_sps, iface, chans, offset);
+	return new uhd_device(tx_sps, rx_sps, iface, chans, offset, tx_paths, rx_paths);
 }

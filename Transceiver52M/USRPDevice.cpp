@@ -313,6 +313,46 @@ double USRPDevice::setRxGain(double dB, size_t chan)
   return dB;
 }
 
+bool USRPDevice::setRxAntenna(const std::string &ant, size_t chan)
+{
+	if (chan >= rx_paths.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return false;
+	}
+	LOG(ALERT) << "Not implemented";
+	return true;
+}
+
+std::string USRPDevice::getRxAntenna(size_t chan)
+{
+	if (chan >= rx_paths.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return "";
+	}
+	LOG(ALERT) << "Not implemented";
+	return "";
+}
+
+bool USRPDevice::setTxAntenna(const std::string &ant, size_t chan)
+{
+	if (chan >= tx_paths.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return false;
+	}
+	LOG(ALERT) << "Not implemented";
+	return true;
+}
+
+std::string USRPDevice::getTxAntenna(size_t chan)
+{
+	if (chan >= tx_paths.size()) {
+		LOG(ALERT) << "Requested non-existent channel " << chan;
+		return "";
+	}
+	LOG(ALERT) << "Not implemented";
+	return "";
+}
+
 
 // NOTE: Assumes sequential reads
 int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
@@ -600,7 +640,9 @@ bool USRPDevice::setRxFreq(double wFreq) { return true;};
 #endif
 
 RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       RadioDevice::InterfaceType, size_t chans, double)
+			       InterfaceType iface, size_t chans, double offset,
+			       const std::vector<std::string>& tx_paths,
+			       const std::vector<std::string>& rx_paths)
 {
 	return new USRPDevice(tx_sps);
 }

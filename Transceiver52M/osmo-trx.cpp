@@ -28,6 +28,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sched.h>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <iostream>
 
 #include <GSMCommon.h>
 #include <Logger.h>
@@ -79,6 +83,8 @@ struct trx_config {
 	bool swap_channels;
 	bool edge;
 	int sched_rr;
+	std::vector<std::string> rx_paths;
+	std::vector<std::string> tx_paths;
 };
 
 volatile bool gshutdown = false;
@@ -93,6 +99,7 @@ volatile bool gshutdown = false;
 bool trx_setup_config(struct trx_config *config)
 {
 	std::string refstr, fillstr, divstr, mcstr, edgestr;
+	std::vector<std::string>::const_iterator si;
 
 	if (config->mcbts && config->chans > 5) {
 		std::cout << "Unsupported number of channels" << std::endl;
@@ -144,8 +151,16 @@ bool trx_setup_config(struct trx_config *config)
 	ost << "   Tuning offset........... " << config->offset << std::endl;
 	ost << "   RSSI to dBm offset...... " << config->rssi_offset << std::endl;
 	ost << "   Swap channels........... " << config->swap_channels << std::endl;
-	std::cout << ost << std::endl;
+	ost << "   Tx Antennas.............";
+		for (si = config->tx_paths.begin(); si != config->tx_paths.end(); ++si)
+			ost << " '" << ((*si != "") ? *si : "<default>") <<  "'";
+		ost << std::endl;
+	ost << "   Rx Antennas.............";
+		for (si = config->rx_paths.begin(); si != config->rx_paths.end(); ++si)
+			ost << " '" << ((*si != "") ? *si : "<default>") <<  "'";
+		ost << std::endl;
 
+	std::cout << ost << std::endl;
 	return true;
 }
 
@@ -241,6 +256,21 @@ static void setup_signal_handlers()
 	}
 }
 
+
+static std::vector<std::string> comma_delimited_to_vector(char* opt) {
+	std::string str = std::string(opt);
+	std::vector<std::string> result;
+	std::stringstream ss(str);
+
+	while( ss.good() )
+	{
+	    std::string substr;
+	    getline(ss, substr, ',');
+	    result.push_back(substr);
+	}
+	return result;
+}
+
 static void print_help()
 {
 	fprintf(stdout, "Options:\n"
@@ -263,13 +293,16 @@ static void print_help()
 		"  -A    Random Access Burst test mode with delay\n"
 		"  -R    RSSI to dBm offset in dB (default=0)\n"
 		"  -S    Swap channels (UmTRX only)\n"
-		"  -t    SCHED_RR real-time priority (1..32)\n",
+		"  -t    SCHED_RR real-time priority (1..32)\n"
+		"  -y    comma-delimited list of Tx paths (num elements matches -c)\n"
+		"  -z    comma-delimited list of Rx paths (num elements matches -c)\n",
 		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
 }
 
 static void handle_options(int argc, char **argv, struct trx_config *config)
 {
 	int option;
+	bool tx_path_set = false, rx_path_set = false;
 
 	config->log_level = "NOTICE";
 	config->local_addr = DEFAULT_TRX_IP;
@@ -289,8 +322,10 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->swap_channels = false;
 	config->edge = false;
 	config->sched_rr = -1;
+	config->tx_paths = std::vector<std::string>(DEFAULT_CHANS, "");
+	config->rx_paths = std::vector<std::string>(DEFAULT_CHANS, "");
 
-	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -355,6 +390,14 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		case 't':
 			config->sched_rr = atoi(optarg);
 			break;
+		case 'y':
+			config->tx_paths = comma_delimited_to_vector(optarg);
+			tx_path_set = true;
+			break;
+		case 'z':
+			config->rx_paths = comma_delimited_to_vector(optarg);
+			rx_path_set = true;
+			break;
 		default:
 			print_help();
 			exit(0);
@@ -388,6 +431,19 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 
 	if (config->rach_delay > 68) {
 		printf("RACH delay is too big %i\n\n", config->rach_delay);
+		goto bad_config;
+	}
+
+	if (!tx_path_set) {
+		config->tx_paths = std::vector<std::string>(config->chans, "");
+	} else if (config->tx_paths.size() != config->chans) {
+		printf("Num of channels and num of Tx Antennas doesn't match\n\n");
+		goto bad_config;
+	}
+	if (!rx_path_set) {
+		config->rx_paths = std::vector<std::string>(config->chans, "");
+	} else if (config->rx_paths.size() != config->chans) {
+		printf("Num of channels and num of Rx Antennas doesn't match\n\n");
 		goto bad_config;
 	}
 
@@ -480,7 +536,7 @@ int main(int argc, char *argv[])
 		ref = RadioDevice::REF_INTERNAL;
 
 	usrp = RadioDevice::make(config.tx_sps, config.rx_sps, iface,
-				 config.chans, config.offset);
+				 config.chans, config.offset, config.tx_paths, config.rx_paths);
 	type = usrp->open(config.dev_args, ref, config.swap_channels);
 	if (type < 0) {
 		LOG(ALERT) << "Failed to create radio device" << std::endl;

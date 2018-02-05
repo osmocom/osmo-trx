@@ -50,7 +50,9 @@ class RadioDevice {
   };
 
   static RadioDevice *make(size_t tx_sps, size_t rx_sps, InterfaceType type,
-                           size_t chans = 1, double offset = 0.0);
+                           size_t chans = 1, double offset = 0.0,
+                           const std::vector<std::string>& tx_paths = std::vector<std::string>(1, ""),
+                           const std::vector<std::string>& rx_paths = std::vector<std::string>(1, ""));
 
   /** Initialize the USRP */
   virtual int open(const std::string &args, int ref, bool swap_channels)=0;
@@ -135,6 +137,18 @@ class RadioDevice {
 
   /** return minimum Tx Gain **/
   virtual double minTxGain(void) = 0;
+
+  /** sets the RX path to use, returns true if successful and false otherwise */
+  virtual bool setRxAntenna(const std::string &ant, size_t chan = 0) = 0;
+
+  /** return the used RX path */
+  virtual std::string getRxAntenna(size_t chan = 0) = 0;
+
+  /** sets the RX path to use, returns true if successful and false otherwise */
+  virtual bool setTxAntenna(const std::string &ant, size_t chan = 0) = 0;
+
+  /** return the used RX path */
+  virtual std::string getTxAntenna(size_t chan = 0) = 0;
 
   /** Return internal status values */
   virtual double getTxFreq(size_t chan = 0) = 0;

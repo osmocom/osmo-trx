@@ -179,6 +179,18 @@ private:
   /** return minimum Rx Gain **/
   double minTxGain(void);
 
+  /** sets the RX path to use, returns true if successful and false otherwise */
+  bool setRxAntenna(const std::string &ant, size_t chan = 0);
+
+  /* return the used RX path */
+  std::string getRxAntenna(size_t chan = 0);
+
+  /** sets the RX path to use, returns true if successful and false otherwise */
+  bool setTxAntenna(const std::string &ant, size_t chan = 0);
+
+  /* return the used RX path */
+  std::string getTxAntenna(size_t chan = 0);
+
   /** Return internal status values */
   inline double getTxFreq(size_t chan = 0) { return 0; }
   inline double getRxFreq(size_t chan = 0) { return 0; }
