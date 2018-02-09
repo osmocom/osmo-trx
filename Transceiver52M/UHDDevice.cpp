@@ -369,7 +369,7 @@ uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),
 	  started(false), aligned(false), rx_pkt_cnt(0), drop_cnt(0),
-	  prev_ts(0,0), ts_initial(0), ts_offset(0)
+	  prev_ts(0,0), ts_initial(0), ts_offset(0), async_event_thrd(NULL)
 {
 	this->tx_sps = tx_sps;
 	this->rx_sps = rx_sps;
