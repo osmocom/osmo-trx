@@ -15,6 +15,11 @@ mychroot() {
         mychroot_nocwd -w / "$@"
 }
 
+base="$PWD"
+deps="$base/deps"
+inst="$deps/install"
+export deps inst
+
 if [ -z "${INSIDE_CHROOT}" ]; then
 
         osmo-clean-workspace.sh
@@ -41,16 +46,36 @@ if [ -z "${INSIDE_CHROOT}" ]; then
                                 echo "nameserver 8.8.8.8" > "$ROOTFS/etc/resolv.conf"
                         fi
                         mychroot -b /dev apt-get update
-                        mychroot apt-get -y install build-essential dh-autoreconf pkg-config libuhd-dev libusb-1.0-0-dev libusb-dev git
+                        mychroot apt-get -y install build-essential dh-autoreconf pkg-config libuhd-dev libusb-1.0-0-dev libusb-dev git libtalloc-dev libgnutls28-dev stow
                 fi
                 # Run jenkins.sh inside the chroot:
-                INSIDE_CHROOT=1 mychroot_nocwd -w /osmo-trx -b "$OSMOTRX_DIR:/osmo-trx" -b "$(which osmo-clean-workspace.sh):/usr/bin/osmo-clean-workspace.sh" ./contrib/jenkins.sh
+                INSIDE_CHROOT=1 mychroot_nocwd \
+                 -w /osmo-trx \
+                 -b "$OSMOTRX_DIR:/osmo-trx" \
+                 -b "$(which osmo-clean-workspace.sh):/usr/bin/osmo-clean-workspace.sh" \
+                 -b "$(which osmo-build-dep.sh):/usr/bin/osmo-build-dep.sh" \
+                 -b "$(which osmo-deps.sh):/usr/bin/osmo-deps.sh" \
+                  ./contrib/jenkins.sh
                 exit 0
         fi
 fi
 
-### BUILD osmo-trx
+mkdir "$deps" || true
 
+osmo-build-dep.sh libosmocore "" "--disable-doxygen --disable-pcsc"
+
+export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
+export LD_LIBRARY_PATH="$inst/lib"
+
+set +x
+echo
+echo
+echo
+echo " =============================== osmo-trx ==============================="
+echo
+set -x
+
+cd "$base"
 autoreconf --install --force
 ./configure $INSTR
 $MAKE $PARALLEL_MAKE
