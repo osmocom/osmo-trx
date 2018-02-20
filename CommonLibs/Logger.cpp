@@ -35,8 +35,6 @@
 #include "Logger.h"
 #include "Threads.h"	// pat added
 
-#define MAX_ALARMS 20
-
 using namespace std;
 
 // Switches to enable/disable logging targets
@@ -47,26 +45,6 @@ Mutex gLogToLock;
 
 // Global log level threshold:
 int config_log_level;
-
-/**@ The global alarms table. */
-//@{
-Mutex           alarmsLock;
-list<string>    alarmsList;
-void            addAlarm(const string&);
-//@}
-
-
-
-// (pat) If Log messages are printed before the classes in this module are inited
-// (which happens when static classes have constructors that do work)
-// the OpenBTS just crashes.
-// Prevent that by setting sLoggerInited to true when this module is inited.
-static bool sLoggerInited = 0;
-static struct CheckLoggerInitStatus {
-	CheckLoggerInitStatus() { sLoggerInited = 1; }
-} sCheckloggerInitStatus;
-
-
 
 /** Names of the logging levels. */
 const char *levelNames[] = {
@@ -119,36 +97,11 @@ std::ostream& operator<<(std::ostream& os, std::ostringstream& ss)
 	return os << ss.str();
 }
 
-// copies the alarm list and returns it. list supposed to be small.
-list<string> gGetLoggerAlarms()
-{
-    alarmsLock.lock();
-    list<string> ret;
-    // excuse the "complexity", but to use std::copy with a list you need
-    // an insert_iterator - copy technically overwrites, doesn't insert.
-    insert_iterator< list<string> > ii(ret, ret.begin());
-    copy(alarmsList.begin(), alarmsList.end(), ii);
-    alarmsLock.unlock();
-    return ret;
-}
-
-/** Add an alarm to the alarm list. */
-void addAlarm(const string& s)
-{
-    alarmsLock.lock();
-    alarmsList.push_back(s);
-    while (alarmsList.size() > MAX_ALARMS) alarmsList.pop_front();
-    alarmsLock.unlock();
-}
-
-
 Log::~Log()
 {
 	if (mDummyInit) return;
 	// Anything at or above LOG_CRIT is an "alarm".
-	// Save alarms in the local list and echo them to stderr.
 	if (mPriority <= LOG_ERR) {
-		if (sLoggerInited) addAlarm(mStream.str().c_str());
 		cerr << mStream.str() << endl;
 	}
 	// Current logging level was already checked by the macro. So just log.

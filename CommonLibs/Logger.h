@@ -103,10 +103,6 @@ class Log {
 extern bool gLogToConsole;	// Output log messages to stdout
 extern bool gLogToSyslog;	// Output log messages to syslog
 
-
-
-std::list<std::string> gGetLoggerAlarms();		///< Get a copy of the recent alarm list.
-
 const std::string timestr();		// A timestamp to print in messages.
 std::ostream& operator<<(std::ostream& os, std::ostringstream& ss);
 

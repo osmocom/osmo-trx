@@ -29,14 +29,6 @@
 
 #include "Logger.h"
 
-void printAlarms()
-{
-    std::ostream_iterator<std::string> output( std::cout, "\n" );
-    std::list<std::string> alarms = gGetLoggerAlarms();
-    std::cout << "# alarms = " << alarms.size() << std::endl;
-    std::copy( alarms.begin(), alarms.end(), output );
-}
-
 int main(int argc, char *argv[])
 {
 	gLogInit("LogTest","NOTICE",LOG_LOCAL7);
@@ -49,14 +41,8 @@ int main(int argc, char *argv[])
 	Log(LOG_NOTICE).get() << " testing the logger.";
 	Log(LOG_INFO).get() << " testing the logger.";
         Log(LOG_DEBUG).get() << " testing the logger.";
-    std::cout << "\n\n\n";
-    std::cout << "testing Alarms\n";
-    std::cout << "you should see three lines:" << std::endl;
-    printAlarms();
     std::cout << "----------- generating 20 alarms ----------" << std::endl;
     for (int i = 0 ; i < 20 ; ++i) {
         Log(LOG_ALERT).get() << i;
     }
-    std::cout << "you should see ten lines with the numbers 10..19:" << std::endl;
-    printAlarms();
 }
