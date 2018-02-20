@@ -66,23 +66,6 @@ extern int config_log_level;
 // LOG_INFO    6  informational message
 // LOG_DEBUG   7  debug-level message
 
-// (pat) added - print out a var and its name.
-// Use like this: int descriptive_name; LOG(INFO)<<LOGVAR(descriptive_name);
-#define LOGVAR2(name,val) " " << name << "=" << (val)
-#define LOGVAR(var) (" " #var "=") << var
-#define LOGHEX(var) (" " #var "=0x") << hex << ((unsigned)var) << dec
-#define LOGHEX2(name,val) " " << name << "=0x" << hex << ((unsigned)(val)) << dec
-// These are kind of cheesy, but you can use for bitvector
-#define LOGBV2(name,val) " " << name << "=(" << val<<" size:"<<val.size()<<")"
-#define LOGBV(bv) LOGBV2(#bv,bv)
-#define LOGVARRANGE(name,cur,lo,hi) " "<<name <<"=("<<(cur) << " range:"<<(lo) << " to "<<(hi) <<")"
-
-
-#define OBJLOG(wLevel) \
-	LOG(wLevel) << "obj: " << this << ' '
-
-#define LOG_ASSERT(x) { if (!(x)) LOG(EMERG) << "assertion " #x " failed"; } assert(x);
-
 
 #include "Threads.h"		// must be after defines above, if these files are to be allowed to use LOG()
 
