@@ -35,8 +35,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sstream>
-#include <list>
-#include <map>
 #include <string>
 
 extern int config_log_level;
@@ -63,8 +61,6 @@ extern int config_log_level;
 #define LOG(wLevel) \
 	if (IS_LOG_LEVEL(wLevel)) _LOG(wLevel)
 #endif
-
-#include "Threads.h"		// must be after defines above, if these files are to be allowed to use LOG()
 
 /**
 	A C++ stream-based thread-safe logger.
