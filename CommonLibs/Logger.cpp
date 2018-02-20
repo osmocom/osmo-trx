@@ -39,7 +39,6 @@ using namespace std;
 
 // Switches to enable/disable logging targets
 bool gLogToConsole = true;
-FILE *gLogToFile = NULL;
 Mutex gLogToLock;
 
 // Global log level threshold:
@@ -103,7 +102,7 @@ Log::~Log()
 		cerr << mStream.str() << endl;
 	}
 	// Log to file and console
-	if (gLogToConsole||gLogToFile) {
+	if (gLogToConsole) {
 		int mlen = mStream.str().size();
 		int neednl = (mlen==0 || mStream.str()[mlen-1] != '\n');
 		ScopedLock lock(gLogToLock);
@@ -112,11 +111,6 @@ Log::~Log()
 			// so just use std::cout.
 			std::cout << mStream.str();
 			if (neednl) std::cout<<"\n";
-		}
-		if (gLogToFile) {
-			fputs(mStream.str().c_str(),gLogToFile);
-			if (neednl) {fputc('\n',gLogToFile);}
-			fflush(gLogToFile);
 		}
 	}
 }
@@ -135,18 +129,6 @@ void gLogInit(const char* level, char *fn)
 	// Set the level if one has been specified.
 	if (level)
 		config_log_level = levelStringToInt(level);
-
-	// Both the transceiver and OpenBTS use this same facility, but only OpenBTS/OpenNodeB may use this log file:
-	if (!gLogToFile && fn) {
-		gLogToFile = fopen(fn,"w"); // New log file each time we start.
-		if (gLogToFile) {
-			time_t now;
-			time(&now);
-			fprintf(gLogToFile,"Starting at %s",ctime(&now));
-			fflush(gLogToFile);
-			std::cout << "Logging to file: " << fn << "\n";
-		}
-	}
 }
 
 // vim: ts=4 sw=4
