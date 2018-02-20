@@ -23,12 +23,6 @@
 
 */
 
-// (pat) WARNING is stupidly defined in /usr/local/include/osipparser2/osip_const.h.
-// This must be outside the #ifndef LOGGER_H to fix it as long as Logger.h included after the above file.
-#ifdef WARNING
-#undef WARNING
-#endif
-
 #ifndef LOGGER_H
 #define LOGGER_H
 
@@ -37,30 +31,27 @@
 #include <sstream>
 #include <string>
 
-extern int config_log_level;
+extern "C" {
+#include <osmocom/core/logging.h>
+#include "debug.h"
+}
 
-#define LOG_EMERG       0       /* system is unusable */
-#define LOG_ALERT       1       /* action must be taken immediately */
-#define LOG_CRIT        2       /* critical conditions */
-#define LOG_ERR         3       /* error conditions */
-#define LOG_WARNING     4       /* warning conditions */
-#define LOG_NOTICE      5       /* normal but significant condition */
-#define LOG_INFO        6       /* informational */
-#define LOG_DEBUG       7       /* debug-level messages */
-
-#define _LOG(level) \
-	Log(LOG_##level).get() << pthread_self() \
-	<< timestr() << " " __FILE__  ":"  << __LINE__ << ":" << __FUNCTION__ << ": "
-
-#define IS_LOG_LEVEL(wLevel) (config_log_level>=LOG_##wLevel)
-
-#ifdef NDEBUG
-#define LOG(wLevel) \
-	if (LOG_##wLevel!=LOG_DEBUG && IS_LOG_LEVEL(wLevel)) _LOG(wLevel)
-#else
-#define LOG(wLevel) \
-	if (IS_LOG_LEVEL(wLevel)) _LOG(wLevel)
+/* Translation for old log statements */
+#ifndef LOGL_ALERT
+#define LOGL_ALERT LOGL_FATAL
 #endif
+#ifndef LOGL_ERR
+#define LOGL_ERR LOGL_ERROR
+#endif
+#ifndef LOGL_WARNING
+#define LOGL_WARNING LOGL_NOTICE
+#endif
+
+#define LOG(level) \
+	Log(DMAIN, LOGL_##level).get() <<  "[tid=" << pthread_self() << "] "
+
+#define LOGC(category, level) \
+	Log(category, LOGL_##level).get() <<  "[tid=" << pthread_self() << "] "
 
 /**
 	A C++ stream-based thread-safe logger.
@@ -73,13 +64,14 @@ class Log {
 
 	protected:
 
-	std::ostringstream mStream;		///< This is where we buffer up the log entry.
-	int mPriority;					///< Priority of current report.
+	std::ostringstream mStream;	///< This is where we buffer up the log entry.
+	int mCategory;			///< Priority of current report.
+	int mPriority;			///< Category of current report.
 
 	public:
 
-	Log(int wPriority)
-		:mPriority(wPriority)
+	Log(int wCategory, int wPriority)
+		: mCategory(wCategory), mPriority(wPriority)
 	{ }
 
 	// Most of the work is in the destructor.
@@ -89,15 +81,7 @@ class Log {
 	std::ostringstream& get();
 };
 
-const std::string timestr();		// A timestamp to print in messages.
 std::ostream& operator<<(std::ostream& os, std::ostringstream& ss);
-
-/**@ Global control and initialization of the logging system. */
-//@{
-/** Initialize the global logging system. */
-void gLogInit(const char* level=NULL, char* fn=NULL);
-//@}
-
 
 #endif
 

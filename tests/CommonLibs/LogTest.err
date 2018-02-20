@@ -1,24 +1,3 @@
-EMERG  testing the logger.
-ALERT  testing the logger.
-CRIT  testing the logger.
-ERR  testing the logger.
-ALERT 0
-ALERT 1
-ALERT 2
-ALERT 3
-ALERT 4
-ALERT 5
-ALERT 6
-ALERT 7
-ALERT 8
-ALERT 9
-ALERT 10
-ALERT 11
-ALERT 12
-ALERT 13
-ALERT 14
-ALERT 15
-ALERT 16
-ALERT 17
-ALERT 18
-ALERT 19
+FATAL testing the logger.
+ERROR testing the logger.
+NOTICE testing the logger.

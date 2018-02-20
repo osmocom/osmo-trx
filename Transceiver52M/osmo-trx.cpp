@@ -79,7 +79,6 @@ extern "C" {
 #define DEFAULT_CONFIG_FILE	"osmo-trx.cfg"
 
 struct trx_config {
-	std::string log_level;
 	std::string local_addr;
 	std::string remote_addr;
 	std::string dev_args;
@@ -156,7 +155,6 @@ bool trx_setup_config(struct trx_config *config)
 
 	std::ostringstream ost("");
 	ost << "Config Settings" << std::endl;
-	ost << "   Log Level............... " << config->log_level << std::endl;
 	ost << "   Device args............. " << config->dev_args << std::endl;
 	ost << "   TRX Base Port........... " << config->port << std::endl;
 	ost << "   TRX Address............. " << config->local_addr << std::endl;
@@ -311,7 +309,6 @@ static void print_help()
 	fprintf(stdout, "Options:\n"
 		"  -h    This text\n"
 		"  -a    UHD device args\n"
-		"  -l    Logging level (%s)\n"
 		"  -i    IP address of GSM core\n"
 		"  -j    IP address of osmo-trx\n"
 		"  -p    Base port number\n"
@@ -330,8 +327,8 @@ static void print_help()
 		"  -S    Swap channels (UmTRX only)\n"
 		"  -t    SCHED_RR real-time priority (1..32)\n"
 		"  -y    comma-delimited list of Tx paths (num elements matches -c)\n"
-		"  -z    comma-delimited list of Rx paths (num elements matches -c)\n",
-		"EMERG, ALERT, CRT, ERR, WARNING, NOTICE, INFO, DEBUG");
+		"  -z    comma-delimited list of Rx paths (num elements matches -c)\n"
+		);
 }
 
 static void handle_options(int argc, char **argv, struct trx_config *config)
@@ -339,7 +336,6 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	int option;
 	bool tx_path_set = false, rx_path_set = false;
 
-	config->log_level = "NOTICE";
 	config->local_addr = DEFAULT_TRX_IP;
 	config->remote_addr = DEFAULT_TRX_IP;
 	config->config_file = (char *)DEFAULT_CONFIG_FILE;
@@ -361,7 +357,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->tx_paths = std::vector<std::string>(DEFAULT_CHANS, "");
 	config->rx_paths = std::vector<std::string>(DEFAULT_CHANS, "");
 
-	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -369,9 +365,6 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'a':
 			config->dev_args = optarg;
-			break;
-		case 'l':
-			config->log_level = optarg;
 			break;
 		case 'i':
 			config->remote_addr = optarg;
@@ -593,8 +586,6 @@ int main(int argc, char *argv[])
 		std::cerr << "Config: Database failure - exiting" << std::endl;
 		return EXIT_FAILURE;
 	}
-
-	gLogInit(config.log_level.c_str());
 
 	srandom(time(NULL));
 

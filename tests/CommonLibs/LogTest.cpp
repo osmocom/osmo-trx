@@ -28,21 +28,37 @@
 #include <iterator>
 
 #include "Logger.h"
+extern "C" {
+#include <osmocom/core/application.h>
+#include <osmocom/core/utils.h>
+#include "debug.h"
+}
+
+#define MYCAT 0
 
 int main(int argc, char *argv[])
 {
-	gLogInit("NOTICE");
+	struct log_info_cat categories[1];
+	struct log_info linfo;
+	categories[MYCAT] = {
+		"MYCAT",
+		NULL,
+		"Whatever",
+		LOGL_NOTICE,
+		1,
+	};
+	linfo.cat = categories;
+	linfo.num_cat = ARRAY_SIZE(categories);
 
-	Log(LOG_EMERG).get() << " testing the logger.";
-	Log(LOG_ALERT).get() << " testing the logger.";
-	Log(LOG_CRIT).get() << " testing the logger.";
-	Log(LOG_ERR).get() << " testing the logger.";
-	Log(LOG_WARNING).get() << " testing the logger.";
-	Log(LOG_NOTICE).get() << " testing the logger.";
-	Log(LOG_INFO).get() << " testing the logger.";
-        Log(LOG_DEBUG).get() << " testing the logger.";
-    std::cout << "----------- generating 20 alarms ----------" << std::endl;
-    for (int i = 0 ; i < 20 ; ++i) {
-        Log(LOG_ALERT).get() << i;
-    }
+	osmo_init_logging(&linfo);
+
+	log_set_use_color(osmo_stderr_target, 0);
+	log_set_print_filename(osmo_stderr_target, 0);
+	log_set_print_level(osmo_stderr_target, 1);
+
+	Log(MYCAT, LOGL_FATAL).get() << "testing the logger.";
+	Log(MYCAT, LOGL_ERROR).get() << "testing the logger.";
+	Log(MYCAT, LOGL_NOTICE).get() << "testing the logger.";
+	Log(MYCAT, LOGL_INFO).get() << "testing the logger.";
+	Log(MYCAT, LOGL_DEBUG).get() << "testing the logger.";
 }
