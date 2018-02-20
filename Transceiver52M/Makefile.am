@@ -22,7 +22,7 @@
 include $(top_srcdir)/Makefile.common
 
 AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/common
-AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS)
+AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
 
 SUBDIRS = arm x86
 
@@ -93,7 +93,9 @@ osmo_trx_LDADD = \
 	$(GSM_LA) \
 	$(COMMON_LA) \
 	$(FFTWF_LIBS) \
-	$(LIBOSMOCORE_LIBS)
+	$(LIBOSMOCORE_LIBS) \
+	$(LIBOSMOCTRL_LIBS) \
+	$(LIBOSMOVTY_LIBS)
 
 if USRP1
 libtransceiver_la_SOURCES += USRPDevice.cpp

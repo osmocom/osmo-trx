@@ -40,8 +40,19 @@ extern "C" {
 #include <osmocom/core/talloc.h>
 #include <osmocom/core/application.h>
 #include <osmocom/core/msgb.h>
+#include <osmocom/core/stats.h>
+#include <osmocom/vty/logging.h>
+#include <osmocom/vty/ports.h>
+#include <osmocom/vty/misc.h>
+#include <osmocom/vty/telnet_interface.h>
+#include <osmocom/ctrl/control_vty.h>
+#include <osmocom/ctrl/ports.h>
+#include <osmocom/ctrl/control_if.h>
+#include <osmocom/vty/stats.h>
 #include "convolve.h"
 #include "convert.h"
+#include "trx_vty.h"
+#include "debug.h"
 }
 
 /* Samples-per-symbol for downlink path
@@ -65,12 +76,14 @@ extern "C" {
 #define DEFAULT_TRX_PORT	5700
 #define DEFAULT_TRX_IP		"127.0.0.1"
 #define DEFAULT_CHANS		1
+#define DEFAULT_CONFIG_FILE	"osmo-trx.cfg"
 
 struct trx_config {
 	std::string log_level;
 	std::string local_addr;
 	std::string remote_addr;
 	std::string dev_args;
+	char* config_file;
 	unsigned port;
 	unsigned tx_sps;
 	unsigned rx_sps;
@@ -93,6 +106,8 @@ struct trx_config {
 volatile bool gshutdown = false;
 
 static void *tall_trx_ctx;
+static struct trx_ctx *g_trx_ctx;
+static struct ctrl_handle *g_ctrlh;
 
 /* Setup configuration values
  *     Don't query the existence of the Log.Level because it's a
@@ -327,6 +342,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->log_level = "NOTICE";
 	config->local_addr = DEFAULT_TRX_IP;
 	config->remote_addr = DEFAULT_TRX_IP;
+	config->config_file = (char *)DEFAULT_CONFIG_FILE;
 	config->port = DEFAULT_TRX_PORT;
 	config->tx_sps = DEFAULT_TX_SPS;
 	config->rx_sps = DEFAULT_RX_SPS;
@@ -345,7 +361,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->tx_paths = std::vector<std::string>(DEFAULT_CHANS, "");
 	config->rx_paths = std::vector<std::string>(DEFAULT_CHANS, "");
 
-	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -417,6 +433,9 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		case 'z':
 			config->rx_paths = comma_delimited_to_vector(optarg);
 			rx_path_set = true;
+			break;
+		case 'C':
+			config->config_file = optarg;
 			break;
 		default:
 			print_help();
@@ -497,10 +516,15 @@ int main(int argc, char *argv[])
 	Transceiver *trx = NULL;
 	RadioDevice::InterfaceType iface = RadioDevice::NORMAL;
 	struct trx_config config;
+	int rc;
 
 	tall_trx_ctx = talloc_named_const(NULL, 0, "OsmoTRX");
 	msgb_talloc_ctx_init(tall_trx_ctx, 0);
+	g_vty_info.tall_ctx = tall_trx_ctx;
+
 	setup_signal_handlers();
+
+	g_trx_ctx = talloc_zero(tall_trx_ctx, struct trx_ctx);
 
 #ifdef HAVE_SSE3
 	printf("Info: SSE3 support compiled in");
@@ -529,7 +553,35 @@ int main(int argc, char *argv[])
 	convolve_init();
 	convert_init();
 
+	osmo_init_logging(&log_info);
+	osmo_stats_init(tall_trx_ctx);
+	vty_init(&g_vty_info);
+	ctrl_vty_init(tall_trx_ctx);
+	trx_vty_init(g_trx_ctx);
+
+	logging_vty_add_cmds();
+	osmo_talloc_vty_add_cmds();
+	osmo_stats_vty_add_cmds();
+
 	handle_options(argc, argv, &config);
+
+	rate_ctr_init(tall_trx_ctx);
+
+	rc = vty_read_config_file(config.config_file, NULL);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to open config file: '%s'\n", config.config_file);
+		exit(2);
+	}
+
+	rc = telnet_init_dynif(tall_trx_ctx, NULL, vty_get_bind_addr(), OSMO_VTY_PORT_TRX);
+	if (rc < 0)
+		exit(1);
+
+	g_ctrlh = ctrl_interface_setup(NULL, OSMO_CTRL_PORT_TRX, NULL);
+	if (!g_ctrlh) {
+		fprintf(stderr, "Failed to create CTRL interface.\n");
+		exit(1);
+	}
 
 	if (config.sched_rr != -1) {
 		if (set_sched_rr(config.sched_rr) < 0)
@@ -580,7 +632,7 @@ int main(int argc, char *argv[])
 		  << chans << " channel(s)" << std::endl;
 
 	while (!gshutdown)
-		sleep(1);
+		osmo_select_main(0);
 
 shutdown:
 	std::cout << "Shutting down transceiver..." << std::endl;

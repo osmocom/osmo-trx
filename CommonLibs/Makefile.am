@@ -23,6 +23,7 @@ include $(top_srcdir)/Makefile.common
 
 AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
 AM_CXXFLAGS = -Wall -O3 -g -lpthread
+AM_CFLAGS = $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
 
 EXTRA_DIST = \
 	example.config \
@@ -36,7 +37,9 @@ libcommon_la_SOURCES = \
 	Sockets.cpp \
 	Threads.cpp \
 	Timeval.cpp \
-	Logger.cpp
+	Logger.cpp \
+	trx_vty.c \
+	debug.c
 
 noinst_HEADERS = \
 	BitVector.h \
@@ -47,4 +50,6 @@ noinst_HEADERS = \
 	Threads.h \
 	Timeval.h \
 	Vector.h \
-	Logger.h
+	Logger.h \
+	trx_vty.h \
+	debug.h
