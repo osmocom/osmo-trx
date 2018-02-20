@@ -520,7 +520,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	gLogInit("transceiver", config.log_level.c_str(), LOG_LOCAL7);
+	gLogInit(config.log_level.c_str());
 
 	srandom(time(NULL));
 

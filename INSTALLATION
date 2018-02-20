@@ -12,14 +12,8 @@ To run osmo-trx, the following should be installed:
 	libuhd (https://gnuradio.org).
 	This is part of the GNURadio installation.
 
-
-osmo-trx logs to syslogd as facility LOG_LOCAL7.  Please set your /etc/syslog.conf
-accordingly.
-
-
 For information on specific executables, see tests/README.tests and
 apps/README.apps.
 
 See https://osmocom.org/projects/osmotrx/wiki/OsmoTRX for more
 information.
-

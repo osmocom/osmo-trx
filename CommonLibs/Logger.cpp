@@ -39,7 +39,6 @@ using namespace std;
 
 // Switches to enable/disable logging targets
 bool gLogToConsole = true;
-bool gLogToSyslog = false;
 FILE *gLogToFile = NULL;
 Mutex gLogToLock;
 
@@ -99,15 +98,9 @@ std::ostream& operator<<(std::ostream& os, std::ostringstream& ss)
 
 Log::~Log()
 {
-	if (mDummyInit) return;
 	// Anything at or above LOG_CRIT is an "alarm".
 	if (mPriority <= LOG_ERR) {
 		cerr << mStream.str() << endl;
-	}
-	// Current logging level was already checked by the macro. So just log.
-	// Log to syslog
-	if (gLogToSyslog) {
-		syslog(mPriority, "%s", mStream.str().c_str());
 	}
 	// Log to file and console
 	if (gLogToConsole||gLogToFile) {
@@ -128,14 +121,6 @@ Log::~Log()
 	}
 }
 
-
-Log::Log(const char* name, const char* level, int facility)
-{
-	mDummyInit = true;
-	gLogInit(name, level, facility);
-}
-
-
 ostringstream& Log::get()
 {
 	assert(mPriority<numLevels);
@@ -145,7 +130,7 @@ ostringstream& Log::get()
 
 
 
-void gLogInit(const char* name, const char* level, int facility, char* fn)
+void gLogInit(const char* level, char *fn)
 {
 	// Set the level if one has been specified.
 	if (level)
@@ -162,9 +147,6 @@ void gLogInit(const char* name, const char* level, int facility, char* fn)
 			std::cout << "Logging to file: " << fn << "\n";
 		}
 	}
-
-	// Open the log connection.
-	openlog(name,0,facility);
 }
 
 // vim: ts=4 sw=4

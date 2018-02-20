@@ -32,7 +32,6 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <syslog.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <sstream>
@@ -41,6 +40,15 @@
 #include <string>
 
 extern int config_log_level;
+
+#define LOG_EMERG       0       /* system is unusable */
+#define LOG_ALERT       1       /* action must be taken immediately */
+#define LOG_CRIT        2       /* critical conditions */
+#define LOG_ERR         3       /* error conditions */
+#define LOG_WARNING     4       /* warning conditions */
+#define LOG_NOTICE      5       /* normal but significant condition */
+#define LOG_INFO        6       /* informational */
+#define LOG_DEBUG       7       /* debug-level messages */
 
 #define _LOG(level) \
 	Log(LOG_##level).get() << pthread_self() \
@@ -56,23 +64,10 @@ extern int config_log_level;
 	if (IS_LOG_LEVEL(wLevel)) _LOG(wLevel)
 #endif
 
-// pat: And for your edification here are the 'levels' as defined in syslog.h:
-// LOG_EMERG   0  system is unusable
-// LOG_ALERT   1  action must be taken immediately
-// LOG_CRIT    2  critical conditions
-// LOG_ERR     3  error conditions
-// LOG_WARNING 4  warning conditions
-// LOG_NOTICE  5  normal, but significant, condition
-// LOG_INFO    6  informational message
-// LOG_DEBUG   7  debug-level message
-
-
 #include "Threads.h"		// must be after defines above, if these files are to be allowed to use LOG()
 
 /**
 	A C++ stream-based thread-safe logger.
-	Derived from Dr. Dobb's Sept. 2007 issue.
-	Updated to use syslog.
 	This object is NOT the global logger;
 	every log record is an object of this class.
 */
@@ -84,15 +79,12 @@ class Log {
 
 	std::ostringstream mStream;		///< This is where we buffer up the log entry.
 	int mPriority;					///< Priority of current report.
-	bool mDummyInit;
 
 	public:
 
 	Log(int wPriority)
-		:mPriority(wPriority), mDummyInit(false)
+		:mPriority(wPriority)
 	{ }
-
-	Log(const char* name, const char* level=NULL, int facility=LOG_USER);
 
 	// Most of the work is in the destructor.
 	/** The destructor actually generates the log entry. */
@@ -101,7 +93,6 @@ class Log {
 	std::ostringstream& get();
 };
 extern bool gLogToConsole;	// Output log messages to stdout
-extern bool gLogToSyslog;	// Output log messages to syslog
 
 const std::string timestr();		// A timestamp to print in messages.
 std::ostream& operator<<(std::ostream& os, std::ostringstream& ss);
@@ -109,7 +100,7 @@ std::ostream& operator<<(std::ostream& os, std::ostringstream& ss);
 /**@ Global control and initialization of the logging system. */
 //@{
 /** Initialize the global logging system. */
-void gLogInit(const char* name, const char* level=NULL, int facility=LOG_USER, char* fn=NULL);
+void gLogInit(const char* level=NULL, char* fn=NULL);
 //@}
 
 

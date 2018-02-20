@@ -31,7 +31,7 @@
 
 int main(int argc, char *argv[])
 {
-	gLogInit("LogTest","NOTICE",LOG_LOCAL7);
+	gLogInit("NOTICE");
 
 	Log(LOG_EMERG).get() << " testing the logger.";
 	Log(LOG_ALERT).get() << " testing the logger.";
