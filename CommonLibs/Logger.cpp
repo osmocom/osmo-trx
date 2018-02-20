@@ -37,8 +37,6 @@
 
 using namespace std;
 
-// Switches to enable/disable logging targets
-bool gLogToConsole = true;
 Mutex gLogToLock;
 
 // Global log level threshold:
@@ -101,18 +99,14 @@ Log::~Log()
 	if (mPriority <= LOG_ERR) {
 		cerr << mStream.str() << endl;
 	}
-	// Log to file and console
-	if (gLogToConsole) {
-		int mlen = mStream.str().size();
-		int neednl = (mlen==0 || mStream.str()[mlen-1] != '\n');
-		ScopedLock lock(gLogToLock);
-		if (gLogToConsole) {
-			// The COUT() macro prevents messages from stomping each other but adds uninteresting thread numbers,
-			// so just use std::cout.
-			std::cout << mStream.str();
-			if (neednl) std::cout<<"\n";
-		}
-	}
+
+	int mlen = mStream.str().size();
+	int neednl = (mlen==0 || mStream.str()[mlen-1] != '\n');
+	ScopedLock lock(gLogToLock);
+	// The COUT() macro prevents messages from stomping each other but adds uninteresting thread numbers,
+	// so just use std::cout.
+	std::cout << mStream.str();
+	if (neednl) std::cout<<"\n";
 }
 
 ostringstream& Log::get()

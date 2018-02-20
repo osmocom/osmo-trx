@@ -88,7 +88,6 @@ class Log {
 
 	std::ostringstream& get();
 };
-extern bool gLogToConsole;	// Output log messages to stdout
 
 const std::string timestr();		// A timestamp to print in messages.
 std::ostream& operator<<(std::ostream& os, std::ostringstream& ss);
