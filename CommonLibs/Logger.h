@@ -131,8 +131,6 @@ std::ostream& operator<<(std::ostream& os, std::ostringstream& ss);
 //@{
 /** Initialize the global logging system. */
 void gLogInit(const char* name, const char* level=NULL, int facility=LOG_USER, char* fn=NULL);
-/** Allow early logging when still in constructors */
-void gLogEarly(int level, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 //@}
 
 

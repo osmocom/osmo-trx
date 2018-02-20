@@ -214,37 +214,4 @@ void gLogInit(const char* name, const char* level, int facility, char* fn)
 	openlog(name,0,facility);
 }
 
-
-void gLogEarly(int level, const char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-
-	if (gLogToSyslog) {
-		va_list args_copy;
-		va_copy(args_copy, args);
-		vsyslog(level | LOG_USER, fmt, args_copy);
-		va_end(args_copy);
-	}
-
-	if (gLogToConsole) {
-		va_list args_copy;
-		va_copy(args_copy, args);
-		vprintf(fmt, args_copy);
-		printf("\n");
-		va_end(args_copy);
-	}
-
-	if (gLogToFile) {
-		va_list args_copy;
-		va_copy(args_copy, args);
-		vfprintf(gLogToFile, fmt, args_copy);
-		fprintf(gLogToFile, "\n");
-		va_end(args_copy);
-	}
-
-	va_end(args);
-}
-
 // vim: ts=4 sw=4
