@@ -55,52 +55,11 @@ extern "C" {
 #include "debug.h"
 }
 
-/* Samples-per-symbol for downlink path
- *     4 - Uses precision modulator (more computation, less distortion)
- *     1 - Uses minimized modulator (less computation, more distortion)
- *
- *     Other values are invalid. Receive path (uplink) is always
- *     downsampled to 1 sps. Default to 4 sps for all cases.
- */
-#define DEFAULT_TX_SPS		4
-
-/*
- * Samples-per-symbol for uplink (receiver) path
- *     Do not modify this value. EDGE configures 4 sps automatically on
- *     B200/B210 devices only. Use of 4 sps on the receive path for other
- *     configurations is not supported.
- */
-#define DEFAULT_RX_SPS		1
-
-/* Default configuration parameters */
-#define DEFAULT_TRX_PORT	5700
-#define DEFAULT_TRX_IP		"127.0.0.1"
-#define DEFAULT_CHANS		1
 #define DEFAULT_CONFIG_FILE	"osmo-trx.cfg"
 
-struct trx_config {
-	std::string local_addr;
-	std::string remote_addr;
-	std::string dev_args;
-	char* config_file;
-	unsigned port;
-	unsigned tx_sps;
-	unsigned rx_sps;
-	unsigned chans;
-	unsigned rtsc;
-	unsigned rach_delay;
-	bool extref;
-	bool gpsref;
-	FillerType filler;
-	bool mcbts;
-	double offset;
-	double rssi_offset;
-	bool swap_channels;
-	bool edge;
-	int sched_rr;
-	std::vector<std::string> rx_paths;
-	std::vector<std::string> tx_paths;
-};
+#define charp2str(a) ((a) ? std::string(a) : std::string(""))
+
+static char* config_file = (char*)DEFAULT_CONFIG_FILE;
 
 volatile bool gshutdown = false;
 
@@ -112,80 +71,6 @@ static RadioDevice *usrp;
 static RadioInterface *radio;
 static Transceiver *transceiver;
 
-/* Setup configuration values
- *     Don't query the existence of the Log.Level because it's a
- *     mandatory value. That is, if it doesn't exist, the configuration
- *     table will crash or will have already crashed. Everything else we
- *     can survive without and use default values if the database entries
- *     are empty.
- */
-bool trx_setup_config(struct trx_config *config)
-{
-	std::string refstr, fillstr, divstr, mcstr, edgestr;
-	std::vector<std::string>::const_iterator si;
-
-	if (config->mcbts && config->chans > 5) {
-		std::cout << "Unsupported number of channels" << std::endl;
-		return false;
-	}
-
-	edgestr = config->edge ? "Enabled" : "Disabled";
-	mcstr = config->mcbts ? "Enabled" : "Disabled";
-
-	if (config->extref)
-		refstr = "External";
-	else if (config->gpsref)
-		refstr = "GPS";
-	else
-		refstr = "Internal";
-
-	switch (config->filler) {
-	case FILLER_DUMMY:
-		fillstr = "Dummy bursts";
-		break;
-	case FILLER_ZERO:
-		fillstr = "Disabled";
-		break;
-	case FILLER_NORM_RAND:
-		fillstr = "Normal busrts with random payload";
-		break;
-	case FILLER_EDGE_RAND:
-		fillstr = "EDGE busrts with random payload";
-		break;
-	case FILLER_ACCESS_RAND:
-		fillstr = "Access busrts with random payload";
-		break;
-	}
-
-	std::ostringstream ost("");
-	ost << "Config Settings" << std::endl;
-	ost << "   Device args............. " << config->dev_args << std::endl;
-	ost << "   TRX Base Port........... " << config->port << std::endl;
-	ost << "   TRX Address............. " << config->local_addr << std::endl;
-	ost << "   GSM Core Address........." << config->remote_addr << std::endl;
-	ost << "   Channels................ " << config->chans << std::endl;
-	ost << "   Tx Samples-per-Symbol... " << config->tx_sps << std::endl;
-	ost << "   Rx Samples-per-Symbol... " << config->rx_sps << std::endl;
-	ost << "   EDGE support............ " << edgestr << std::endl;
-	ost << "   Reference............... " << refstr << std::endl;
-	ost << "   C0 Filler Table......... " << fillstr << std::endl;
-	ost << "   Multi-Carrier........... " << mcstr << std::endl;
-	ost << "   Tuning offset........... " << config->offset << std::endl;
-	ost << "   RSSI to dBm offset...... " << config->rssi_offset << std::endl;
-	ost << "   Swap channels........... " << config->swap_channels << std::endl;
-	ost << "   Tx Antennas.............";
-		for (si = config->tx_paths.begin(); si != config->tx_paths.end(); ++si)
-			ost << " '" << ((*si != "") ? *si : "<default>") <<  "'";
-		ost << std::endl;
-	ost << "   Rx Antennas.............";
-		for (si = config->rx_paths.begin(); si != config->rx_paths.end(); ++si)
-			ost << " '" << ((*si != "") ? *si : "<default>") <<  "'";
-		ost << std::endl;
-
-	std::cout << ost << std::endl;
-	return true;
-}
-
 /* Create radio interface
  *     The interface consists of sample rate changes, frequency shifts,
  *     channel multiplexing, and other conversions. The transceiver core
@@ -193,24 +78,24 @@ bool trx_setup_config(struct trx_config *config)
  *     The radio interface connects the main transceiver with the device
  *     object, which may be operating some other rate.
  */
-RadioInterface *makeRadioInterface(struct trx_config *config,
+RadioInterface *makeRadioInterface(struct trx_ctx *trx,
                                    RadioDevice *usrp, int type)
 {
 	RadioInterface *radio = NULL;
 
 	switch (type) {
 	case RadioDevice::NORMAL:
-		radio = new RadioInterface(usrp, config->tx_sps,
-					   config->rx_sps, config->chans);
+		radio = new RadioInterface(usrp, trx->cfg.tx_sps,
+					   trx->cfg.rx_sps, trx->cfg.num_chans);
 		break;
 	case RadioDevice::RESAMP_64M:
 	case RadioDevice::RESAMP_100M:
-		radio = new RadioInterfaceResamp(usrp, config->tx_sps,
-						 config->rx_sps);
+		radio = new RadioInterfaceResamp(usrp, trx->cfg.tx_sps,
+						 trx->cfg.rx_sps);
 		break;
 	case RadioDevice::MULTI_ARFCN:
-		radio = new RadioInterfaceMulti(usrp, config->tx_sps,
-						config->rx_sps, config->chans);
+		radio = new RadioInterfaceMulti(usrp, trx->cfg.tx_sps,
+						trx->cfg.rx_sps, trx->cfg.num_chans);
 		break;
 	default:
 		LOG(ALERT) << "Unsupported radio interface configuration";
@@ -231,21 +116,21 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
  *     and decoding schemes. Also included are the socket interfaces for
  *     connecting to the upper layer stack.
  */
-int makeTransceiver(struct trx_config *config, RadioInterface *radio)
+int makeTransceiver(struct trx_ctx *trx, RadioInterface *radio)
 {
 	VectorFIFO *fifo;
 
-	transceiver = new Transceiver(config->port, config->local_addr.c_str(),
-			      config->remote_addr.c_str(), config->tx_sps,
-			      config->rx_sps, config->chans, GSM::Time(3,0),
-			      radio, config->rssi_offset);
-	if (!transceiver->init(config->filler, config->rtsc,
-		       config->rach_delay, config->edge)) {
+	transceiver = new Transceiver(trx->cfg.base_port, trx->cfg.bind_addr,
+			      trx->cfg.remote_addr, trx->cfg.tx_sps,
+			      trx->cfg.rx_sps, trx->cfg.num_chans, GSM::Time(3,0),
+			      radio, trx->cfg.rssi_offset);
+	if (!transceiver->init(trx->cfg.filler, trx->cfg.rtsc,
+		       trx->cfg.rach_delay, trx->cfg.egprs)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
 		return -1;
 	}
 
-	for (size_t i = 0; i < config->chans; i++) {
+	for (size_t i = 0; i < trx->cfg.num_chans; i++) {
 		fifo = radio->receiveFIFO(i);
 		if (fifo && transceiver->receiveFIFO(fifo, i))
 			continue;
@@ -253,7 +138,6 @@ int makeTransceiver(struct trx_config *config, RadioInterface *radio)
 		LOG(ALERT) << "Could not attach FIFO to channel " << i;
 		return -1;
 	}
-
 	return 0;
 }
 
@@ -290,8 +174,8 @@ static void setup_signal_handlers()
 	osmo_init_ignore_signals();
 }
 
-
-static std::vector<std::string> comma_delimited_to_vector(char* opt) {
+static std::vector<std::string> comma_delimited_to_vector(char* opt)
+{
 	std::string str = std::string(opt);
 	std::vector<std::string> result;
 	std::stringstream ss(str);
@@ -309,54 +193,23 @@ static void print_help()
 {
 	fprintf(stdout, "Options:\n"
 		"  -h    This text\n"
-		"  -a    UHD device args\n"
-		"  -i    IP address of GSM core\n"
-		"  -j    IP address of osmo-trx\n"
-		"  -p    Base port number\n"
-		"  -e    Enable EDGE receiver\n"
-		"  -m    Enable multi-ARFCN transceiver (default=disabled)\n"
-		"  -x    Enable external 10 MHz reference\n"
-		"  -g    Enable GPSDO reference\n"
-		"  -s    Tx samples-per-symbol (1 or 4)\n"
-		"  -b    Rx samples-per-symbol (1 or 4)\n"
-		"  -c    Number of ARFCN channels (default=1)\n"
-		"  -f    Enable C0 filler table\n"
-		"  -o    Set baseband frequency offset (default=auto)\n"
-		"  -r    Random Normal Burst test mode with TSC\n"
-		"  -A    Random Access Burst test mode with delay\n"
-		"  -R    RSSI to dBm offset in dB (default=0)\n"
-		"  -S    Swap channels (UmTRX only)\n"
-		"  -t    SCHED_RR real-time priority (1..32)\n"
-		"  -y    comma-delimited list of Tx paths (num elements matches -c)\n"
-		"  -z    comma-delimited list of Rx paths (num elements matches -c)\n"
+		"  -C    Filename The config file to use\n"
 		);
 }
 
-static void handle_options(int argc, char **argv, struct trx_config *config)
+static void print_deprecated(char opt)
+{
+	LOG(WARNING) << "Cmd line option '" << opt << "' is deprecated and will be soon removed."
+		<< " Please use VTY cfg option instead."
+		<< " All cmd line options are already being overriden by VTY options if set.";
+}
+
+static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 {
 	int option;
-	bool tx_path_set = false, rx_path_set = false;
-
-	config->local_addr = DEFAULT_TRX_IP;
-	config->remote_addr = DEFAULT_TRX_IP;
-	config->config_file = (char *)DEFAULT_CONFIG_FILE;
-	config->port = DEFAULT_TRX_PORT;
-	config->tx_sps = DEFAULT_TX_SPS;
-	config->rx_sps = DEFAULT_RX_SPS;
-	config->chans = DEFAULT_CHANS;
-	config->rtsc = 0;
-	config->rach_delay = 0;
-	config->extref = false;
-	config->gpsref = false;
-	config->filler = FILLER_ZERO;
-	config->mcbts = false;
-	config->offset = 0.0;
-	config->rssi_offset = 0.0;
-	config->swap_channels = false;
-	config->edge = false;
-	config->sched_rr = -1;
-	config->tx_paths = std::vector<std::string>(DEFAULT_CHANS, "");
-	config->rx_paths = std::vector<std::string>(DEFAULT_CHANS, "");
+	unsigned int i;
+	std::vector<std::string> rx_paths, tx_paths;
+	bool rx_paths_set = false, tx_paths_set = false;
 
 	while ((option = getopt(argc, argv, "ha:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:")) != -1) {
 		switch (option) {
@@ -365,119 +218,118 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			exit(0);
 			break;
 		case 'a':
-			config->dev_args = optarg;
+			print_deprecated(option);
+			osmo_talloc_replace_string(trx, &trx->cfg.dev_args, optarg);
 			break;
 		case 'i':
-			config->remote_addr = optarg;
+			print_deprecated(option);
+			osmo_talloc_replace_string(trx, &trx->cfg.remote_addr, optarg);
 			break;
 		case 'j':
-			config->local_addr = optarg;
+			print_deprecated(option);
+			osmo_talloc_replace_string(trx, &trx->cfg.bind_addr, optarg);
 			break;
 		case 'p':
-			config->port = atoi(optarg);
+			print_deprecated(option);
+			trx->cfg.base_port = atoi(optarg);
 			break;
 		case 'c':
-			config->chans = atoi(optarg);
+			print_deprecated(option);
+			trx->cfg.num_chans = atoi(optarg);
 			break;
 		case 'm':
-			config->mcbts = true;
+			print_deprecated(option);
+			trx->cfg.multi_arfcn = true;
 			break;
 		case 'x':
-			config->extref = true;
+			print_deprecated(option);
+			trx->cfg.clock_ref = REF_EXTERNAL;
 			break;
 		case 'g':
-			config->gpsref = true;
+			print_deprecated(option);
+			trx->cfg.clock_ref = REF_GPS;
 			break;
 		case 'f':
-			config->filler = FILLER_DUMMY;
+			print_deprecated(option);
+			trx->cfg.filler = FILLER_DUMMY;
 			break;
 		case 'o':
-			config->offset = atof(optarg);
+			print_deprecated(option);
+			trx->cfg.offset = atof(optarg);
 			break;
 		case 's':
-			config->tx_sps = atoi(optarg);
+			print_deprecated(option);
+			trx->cfg.tx_sps = atoi(optarg);
 			break;
 		case 'b':
-			config->rx_sps = atoi(optarg);
+			print_deprecated(option);
+			trx->cfg.rx_sps = atoi(optarg);
 			break;
 		case 'r':
-			config->rtsc = atoi(optarg);
-			config->filler = FILLER_NORM_RAND;
+			print_deprecated(option);
+			trx->cfg.rtsc_set = true;
+			trx->cfg.rtsc = atoi(optarg);
+			if (!trx->cfg.egprs) /* Don't override egprs which sets different filler */
+				trx->cfg.filler = FILLER_NORM_RAND;
 			break;
 		case 'A':
-			config->rach_delay = atoi(optarg);
-			config->filler = FILLER_ACCESS_RAND;
+			print_deprecated(option);
+			trx->cfg.rach_delay_set = true;
+			trx->cfg.rach_delay = atoi(optarg);
+			trx->cfg.filler = FILLER_ACCESS_RAND;
 			break;
 		case 'R':
-			config->rssi_offset = atof(optarg);
+			print_deprecated(option);
+			trx->cfg.rssi_offset = atof(optarg);
 			break;
 		case 'S':
-			config->swap_channels = true;
+			print_deprecated(option);
+			trx->cfg.swap_channels = true;
 			break;
 		case 'e':
-			config->edge = true;
+			print_deprecated(option);
+			trx->cfg.egprs = true;
 			break;
 		case 't':
-			config->sched_rr = atoi(optarg);
+			print_deprecated(option);
+			trx->cfg.sched_rr = atoi(optarg);
 			break;
 		case 'y':
-			config->tx_paths = comma_delimited_to_vector(optarg);
-			tx_path_set = true;
+			print_deprecated(option);
+			tx_paths = comma_delimited_to_vector(optarg);
+			tx_paths_set = true;
 			break;
 		case 'z':
-			config->rx_paths = comma_delimited_to_vector(optarg);
-			rx_path_set = true;
+			print_deprecated(option);
+			rx_paths = comma_delimited_to_vector(optarg);
+			rx_paths_set = true;
 			break;
 		case 'C':
-			config->config_file = optarg;
+			config_file = optarg;
 			break;
 		default:
-			print_help();
-			exit(0);
+			goto bad_config;
 		}
 	}
 
-	/* Force 4 SPS for EDGE or multi-ARFCN configurations */
-	if ((config->edge) || (config->mcbts)) {
-		config->tx_sps = 4;
-		config->rx_sps = 4;
-	}
+	/* Cmd line option specific validation & setup */
 
-	if (config->gpsref && config->extref) {
-		printf("External and GPSDO references unavailable at the same time\n\n");
+	if (trx->cfg.num_chans > TRX_CHAN_MAX) {
+		LOG(ERROR) << "Too many channels requested, maximum is " <<  TRX_CHAN_MAX;
 		goto bad_config;
 	}
-
-	if (config->edge && (config->filler == FILLER_NORM_RAND))
-		config->filler = FILLER_EDGE_RAND;
-
-	if ((config->tx_sps != 1) && (config->tx_sps != 4) &&
-	    (config->rx_sps != 1) && (config->rx_sps != 4)) {
-		printf("Unsupported samples-per-symbol %i\n\n", config->tx_sps);
+	if ((tx_paths_set && tx_paths.size() != trx->cfg.num_chans) ||
+	    (rx_paths_set && rx_paths.size() != trx->cfg.num_chans)) {
+		LOG(ERROR) << "Num of channels and num of Rx/Tx Antennas doesn't match";
 		goto bad_config;
 	}
-
-	if (config->rtsc > 7) {
-		printf("Invalid training sequence %i\n\n", config->rtsc);
-		goto bad_config;
-	}
-
-	if (config->rach_delay > 68) {
-		printf("RACH delay is too big %i\n\n", config->rach_delay);
-		goto bad_config;
-	}
-
-	if (!tx_path_set) {
-		config->tx_paths = std::vector<std::string>(config->chans, "");
-	} else if (config->tx_paths.size() != config->chans) {
-		printf("Num of channels and num of Tx Antennas doesn't match\n\n");
-		goto bad_config;
-	}
-	if (!rx_path_set) {
-		config->rx_paths = std::vector<std::string>(config->chans, "");
-	} else if (config->rx_paths.size() != config->chans) {
-		printf("Num of channels and num of Rx Antennas doesn't match\n\n");
-		goto bad_config;
+	for (i = 0; i < trx->cfg.num_chans; i++) {
+		trx->cfg.chans[i].trx = trx;
+		trx->cfg.chans[i].idx = i;
+		if (tx_paths_set)
+			osmo_talloc_replace_string(trx, &trx->cfg.chans[i].tx_path, tx_paths[i].c_str());
+		if (rx_paths_set)
+			osmo_talloc_replace_string(trx, &trx->cfg.chans[i].rx_path, rx_paths[i].c_str());
 	}
 
 	return;
@@ -487,7 +339,24 @@ bad_config:
 	exit(0);
 }
 
-static int set_sched_rr(int prio)
+int trx_validate_config(struct trx_ctx *trx)
+{
+	if (trx->cfg.multi_arfcn && trx->cfg.num_chans > 5) {
+		LOG(ERROR) << "Unsupported number of channels";
+		return -1;
+	}
+
+	/* Force 4 SPS for EDGE or multi-ARFCN configurations */
+	if ((trx->cfg.egprs || trx->cfg.multi_arfcn) &&
+	    (trx->cfg.tx_sps!=4 || trx->cfg.tx_sps!=4)) {
+		LOG(ERROR) << "EDGE and Multi-Carrier options require 4 tx and rx sps. Check you config.";
+		return -1;
+	}
+
+	return 0;
+}
+
+static int set_sched_rr(unsigned int prio)
 {
 	struct sched_param param;
 	int rc;
@@ -496,10 +365,46 @@ static int set_sched_rr(int prio)
 	printf("Setting SCHED_RR priority(%d)\n", param.sched_priority);
 	rc = sched_setscheduler(getpid(), SCHED_RR, &param);
 	if (rc != 0) {
-		std::cerr << "Config: Setting SCHED_RR failed" << std::endl;
+		LOG(ERROR) << "Config: Setting SCHED_RR failed";
 		return -1;
 	}
 	return 0;
+}
+
+static void print_config(struct trx_ctx *trx)
+{
+	unsigned int i;
+	std::ostringstream ost("");
+
+	ost << "Config Settings" << std::endl;
+	ost << "   Device args............. " << charp2str(trx->cfg.dev_args) << std::endl;
+	ost << "   TRX Base Port........... " << trx->cfg.base_port << std::endl;
+	ost << "   TRX Address............. " << charp2str(trx->cfg.bind_addr) << std::endl;
+	ost << "   GSM Core Address........." << charp2str(trx->cfg.remote_addr) << std::endl;
+	ost << "   Channels................ " << trx->cfg.num_chans << std::endl;
+	ost << "   Tx Samples-per-Symbol... " << trx->cfg.tx_sps << std::endl;
+	ost << "   Rx Samples-per-Symbol... " << trx->cfg.rx_sps << std::endl;
+	ost << "   EDGE support............ " << trx->cfg.egprs << std::endl;
+	ost << "   Reference............... " << trx->cfg.clock_ref << std::endl;
+	ost << "   C0 Filler Table......... " << trx->cfg.filler << std::endl;
+	ost << "   Multi-Carrier........... " << trx->cfg.multi_arfcn << std::endl;
+	ost << "   Tuning offset........... " << trx->cfg.offset << std::endl;
+	ost << "   RSSI to dBm offset...... " << trx->cfg.rssi_offset << std::endl;
+	ost << "   Swap channels........... " << trx->cfg.swap_channels << std::endl;
+	ost << "   Tx Antennas.............";
+	for (i = 0; i < trx->cfg.num_chans; i++) {
+		std::string p = charp2str(trx->cfg.chans[i].tx_path);
+		ost << " '" << ((p != "") ? p : "<default>") <<  "'";
+	}
+	ost << std::endl;
+	ost << "   Rx Antennas.............";
+	for (i = 0; i < trx->cfg.num_chans; i++) {
+		std::string p = charp2str(trx->cfg.chans[i].rx_path);
+		ost << " '" << ((p != "") ? p : "<default>") <<  "'";
+	}
+	ost << std::endl;
+
+	std::cout << ost << std::endl;
 }
 
 static void trx_stop()
@@ -511,37 +416,39 @@ static void trx_stop()
 	delete usrp;
 }
 
-static int trx_start(struct trx_config *config)
+static int trx_start(struct trx_ctx *trx)
 {
-	int type, chans, ref;
+	int type, chans;
+	unsigned int i;
+	std::vector<std::string> rx_paths, tx_paths;
 	RadioDevice::InterfaceType iface = RadioDevice::NORMAL;
 
 	/* Create the low level device object */
-	if (config->mcbts)
+	if (trx->cfg.multi_arfcn)
 		iface = RadioDevice::MULTI_ARFCN;
 
-	if (config->extref)
-		ref = REF_EXTERNAL;
-	else if (config->gpsref)
-		ref = REF_GPS;
-	else
-		ref = REF_INTERNAL;
+	/* Generate vector of rx/tx_path: */
+	for (i = 0; i < trx->cfg.num_chans; i++) {
+		rx_paths.push_back(charp2str(trx->cfg.chans[i].rx_path));
+		tx_paths.push_back(charp2str(trx->cfg.chans[i].tx_path));
+	}
 
-	usrp = RadioDevice::make(config->tx_sps, config->rx_sps, iface,
-				 config->chans, config->offset, config->tx_paths, config->rx_paths);
-	type = usrp->open(config->dev_args, ref, config->swap_channels);
+	usrp = RadioDevice::make(trx->cfg.tx_sps, trx->cfg.rx_sps, iface,
+				 trx->cfg.num_chans, trx->cfg.offset,
+				 tx_paths, rx_paths);
+	type = usrp->open(charp2str(trx->cfg.dev_args), trx->cfg.clock_ref, trx->cfg.swap_channels);
 	if (type < 0) {
 		LOG(ALERT) << "Failed to create radio device" << std::endl;
 		goto shutdown;
 	}
 
 	/* Setup the appropriate device interface */
-	radio = makeRadioInterface(config, usrp, type);
+	radio = makeRadioInterface(trx, usrp, type);
 	if (!radio)
 		goto shutdown;
 
 	/* Create the transceiver core */
-	if(makeTransceiver(config, radio) < 0)
+	if (makeTransceiver(trx, radio) < 0)
 		goto shutdown;
 
 	chans = transceiver->numChans();
@@ -557,7 +464,6 @@ shutdown:
 
 int main(int argc, char *argv[])
 {
-	struct trx_config config;
 	int rc;
 
 	tall_trx_ctx = talloc_named_const(NULL, 0, "OsmoTRX");
@@ -605,13 +511,13 @@ int main(int argc, char *argv[])
 	osmo_talloc_vty_add_cmds();
 	osmo_stats_vty_add_cmds();
 
-	handle_options(argc, argv, &config);
+	handle_options(argc, argv, g_trx_ctx);
 
 	rate_ctr_init(tall_trx_ctx);
 
-	rc = vty_read_config_file(config.config_file, NULL);
+	rc = vty_read_config_file(config_file, NULL);
 	if (rc < 0) {
-		fprintf(stderr, "Failed to open config file: '%s'\n", config.config_file);
+		fprintf(stderr, "Failed to open config file: '%s'\n", config_file);
 		exit(2);
 	}
 
@@ -625,20 +531,32 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (config.sched_rr != -1) {
-		if (set_sched_rr(config.sched_rr) < 0)
-			return EXIT_FAILURE;
+	/* Backward compatibility: Hack to have 1 channel allocated by default.
+	 * Can be Dropped once we * get rid of "-c" cmdline param */
+	if (g_trx_ctx->cfg.num_chans == 0) {
+		g_trx_ctx->cfg.num_chans = 1;
+		g_trx_ctx->cfg.chans[0].trx = g_trx_ctx;
+		g_trx_ctx->cfg.chans[0].idx = 0;
+		LOG(ERROR) << "No explicit channel config found. Make sure you" \
+			" configure channels in VTY config. Using 1 channel as default," \
+			" but expect your config to break in the future.";
 	}
 
-	/* Check database sanity */
-	if (!trx_setup_config(&config)) {
-		std::cerr << "Config: Database failure - exiting" << std::endl;
+	print_config(g_trx_ctx);
+
+	if (trx_validate_config(g_trx_ctx) < 0) {
+		LOG(ERROR) << "Config failure - exiting";
 		return EXIT_FAILURE;
+	}
+
+	if (g_trx_ctx->cfg.sched_rr) {
+		if (set_sched_rr(g_trx_ctx->cfg.sched_rr) < 0)
+			return EXIT_FAILURE;
 	}
 
 	srandom(time(NULL));
 
-	if(trx_start(&config) < 0)
+	if(trx_start(g_trx_ctx) < 0)
 		return EXIT_FAILURE;
 
 	while (!gshutdown)
