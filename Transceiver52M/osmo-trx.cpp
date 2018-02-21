@@ -37,6 +37,7 @@
 #include <Logger.h>
 
 extern "C" {
+#include <osmocom/core/application.h>
 #include "convolve.h"
 #include "convert.h"
 }
@@ -240,20 +241,27 @@ Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
 
 static void sig_handler(int signo)
 {
-	fprintf(stdout, "Received shutdown signal");
-	gshutdown = true;
+	fprintf(stdout, "signal %d received\n", signo);
+	switch (signo) {
+	case SIGINT:
+	case SIGTERM:
+		fprintf(stdout, "shutting down\n");
+		gshutdown = true;
+		break;
+	default:
+		break;
+	}
 }
 
 static void setup_signal_handlers()
 {
-	if (signal(SIGINT, sig_handler) == SIG_ERR) {
-		fprintf(stderr, "Failed to install SIGINT signal handler\n");
-		exit(EXIT_FAILURE);
-	}
-	if (signal(SIGTERM, sig_handler) == SIG_ERR) {
-		fprintf(stderr, "Couldn't install SIGTERM signal handler\n");
-		exit( EXIT_FAILURE);
-	}
+	/* Handle keyboard interrupt SIGINT */
+	signal(SIGINT, &sig_handler);
+	signal(SIGTERM, &sig_handler);
+	signal(SIGABRT, &sig_handler);
+	signal(SIGUSR1, &sig_handler);
+	signal(SIGUSR2, &sig_handler);
+	osmo_init_ignore_signals();
 }
 
 
@@ -478,6 +486,8 @@ int main(int argc, char *argv[])
 	RadioDevice::InterfaceType iface = RadioDevice::NORMAL;
 	struct trx_config config;
 
+	setup_signal_handlers();
+
 #ifdef HAVE_SSE3
 	printf("Info: SSE3 support compiled in");
 #ifdef HAVE___BUILTIN_CPU_SUPPORTS
@@ -511,8 +521,6 @@ int main(int argc, char *argv[])
 		if (set_sched_rr(config.sched_rr) < 0)
 			return EXIT_FAILURE;
 	}
-
-	setup_signal_handlers();
 
 	/* Check database sanity */
 	if (!trx_setup_config(&config)) {
