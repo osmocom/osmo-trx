@@ -18,6 +18,10 @@
 #include <string>
 #include <vector>
 
+extern "C" {
+#include "config_defs.h"
+}
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -41,12 +45,6 @@ class RadioDevice {
     RESAMP_64M,
     RESAMP_100M,
     MULTI_ARFCN,
-  };
-
-  enum ReferenceType {
-    REF_INTERNAL,
-    REF_EXTERNAL,
-    REF_GPS,
   };
 
   static RadioDevice *make(size_t tx_sps, size_t rx_sps, InterfaceType type,

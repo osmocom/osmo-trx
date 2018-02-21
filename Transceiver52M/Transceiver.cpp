@@ -71,7 +71,7 @@ TransceiverState::~TransceiverState()
   }
 }
 
-bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc, unsigned rach_delay)
+bool TransceiverState::init(FillerType filler, size_t sps, float scale, size_t rtsc, unsigned rach_delay)
 {
   signalVector *burst;
 
@@ -81,19 +81,19 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc, un
   for (size_t n = 0; n < 8; n++) {
     for (size_t i = 0; i < 102; i++) {
       switch (filler) {
-      case Transceiver::FILLER_DUMMY:
+      case FILLER_DUMMY:
         burst = generateDummyBurst(sps, n);
         break;
-      case Transceiver::FILLER_NORM_RAND:
+      case FILLER_NORM_RAND:
         burst = genRandNormalBurst(rtsc, sps, n);
         break;
-      case Transceiver::FILLER_EDGE_RAND:
+      case FILLER_EDGE_RAND:
         burst = generateEdgeBurst(rtsc);
         break;
-      case Transceiver::FILLER_ACCESS_RAND:
+      case FILLER_ACCESS_RAND:
         burst = genRandAccessBurst(rach_delay, sps, n);
         break;
-      case Transceiver::FILLER_ZERO:
+      case FILLER_ZERO:
       default:
         burst = generateEmptyBurst(sps, n);
       }
@@ -102,8 +102,8 @@ bool TransceiverState::init(int filler, size_t sps, float scale, size_t rtsc, un
       fillerTable[i][n] = burst;
     }
 
-    if ((filler == Transceiver::FILLER_NORM_RAND) ||
-        (filler == Transceiver::FILLER_EDGE_RAND)) {
+    if ((filler == FILLER_NORM_RAND) ||
+        (filler == FILLER_EDGE_RAND)) {
         chanType[n] = TSC;
     }
   }
@@ -161,7 +161,7 @@ Transceiver::~Transceiver()
  * are still expected to report clock indications through control channel
  * activity.
  */
-bool Transceiver::init(int filler, size_t rtsc, unsigned rach_delay, bool edge)
+bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay, bool edge)
 {
   int d_srcport, d_dstport, c_srcport, c_dstport;
 

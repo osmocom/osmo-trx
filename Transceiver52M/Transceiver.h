@@ -30,6 +30,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+extern "C" {
+#include "config_defs.h"
+}
+
 class Transceiver;
 
 /** Channel descriptor for transceiver object and channel number pair */
@@ -54,7 +58,7 @@ struct TransceiverState {
   ~TransceiverState();
 
   /* Initialize a multiframe slot in the filler table */
-  bool init(int filler, size_t sps, float scale, size_t rtsc, unsigned rach_delay);
+  bool init(FillerType filler, size_t sps, float scale, size_t rtsc, unsigned rach_delay);
 
   int chanType[8];
 
@@ -109,7 +113,7 @@ public:
   ~Transceiver();
 
   /** Start the control loop */
-  bool init(int filler, size_t rtsc, unsigned rach_delay, bool edge);
+  bool init(FillerType filler, size_t rtsc, unsigned rach_delay, bool edge);
 
   /** attach the radioInterface receive FIFO */
   bool receiveFIFO(VectorFIFO *wFIFO, size_t chan)
@@ -143,14 +147,6 @@ public:
     NONE,               ///< Channel is inactive, default
     LOOPBACK            ///< similar go VII, used in loopback testing
   } ChannelCombination;
-
-  enum FillerType {
-    FILLER_DUMMY,
-    FILLER_ZERO,
-    FILLER_NORM_RAND,
-    FILLER_EDGE_RAND,
-    FILLER_ACCESS_RAND,
-  };
 
 private:
   int mBasePort;

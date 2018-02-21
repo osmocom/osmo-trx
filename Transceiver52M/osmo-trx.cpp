@@ -91,7 +91,7 @@ struct trx_config {
 	unsigned rach_delay;
 	bool extref;
 	bool gpsref;
-	Transceiver::FillerType filler;
+	FillerType filler;
 	bool mcbts;
 	double offset;
 	double rssi_offset;
@@ -140,19 +140,19 @@ bool trx_setup_config(struct trx_config *config)
 		refstr = "Internal";
 
 	switch (config->filler) {
-	case Transceiver::FILLER_DUMMY:
+	case FILLER_DUMMY:
 		fillstr = "Dummy bursts";
 		break;
-	case Transceiver::FILLER_ZERO:
+	case FILLER_ZERO:
 		fillstr = "Disabled";
 		break;
-	case Transceiver::FILLER_NORM_RAND:
+	case FILLER_NORM_RAND:
 		fillstr = "Normal busrts with random payload";
 		break;
-	case Transceiver::FILLER_EDGE_RAND:
+	case FILLER_EDGE_RAND:
 		fillstr = "EDGE busrts with random payload";
 		break;
-	case Transceiver::FILLER_ACCESS_RAND:
+	case FILLER_ACCESS_RAND:
 		fillstr = "Access busrts with random payload";
 		break;
 	}
@@ -348,7 +348,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 	config->rach_delay = 0;
 	config->extref = false;
 	config->gpsref = false;
-	config->filler = Transceiver::FILLER_ZERO;
+	config->filler = FILLER_ZERO;
 	config->mcbts = false;
 	config->offset = 0.0;
 	config->rssi_offset = 0.0;
@@ -389,7 +389,7 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			config->gpsref = true;
 			break;
 		case 'f':
-			config->filler = Transceiver::FILLER_DUMMY;
+			config->filler = FILLER_DUMMY;
 			break;
 		case 'o':
 			config->offset = atof(optarg);
@@ -402,11 +402,11 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 			break;
 		case 'r':
 			config->rtsc = atoi(optarg);
-			config->filler = Transceiver::FILLER_NORM_RAND;
+			config->filler = FILLER_NORM_RAND;
 			break;
 		case 'A':
 			config->rach_delay = atoi(optarg);
-			config->filler = Transceiver::FILLER_ACCESS_RAND;
+			config->filler = FILLER_ACCESS_RAND;
 			break;
 		case 'R':
 			config->rssi_offset = atof(optarg);
@@ -448,8 +448,8 @@ static void handle_options(int argc, char **argv, struct trx_config *config)
 		goto bad_config;
 	}
 
-	if (config->edge && (config->filler == Transceiver::FILLER_NORM_RAND))
-		config->filler = Transceiver::FILLER_EDGE_RAND;
+	if (config->edge && (config->filler == FILLER_NORM_RAND))
+		config->filler = FILLER_EDGE_RAND;
 
 	if ((config->tx_sps != 1) && (config->tx_sps != 4) &&
 	    (config->rx_sps != 1) && (config->rx_sps != 4)) {
@@ -521,11 +521,11 @@ static int trx_start(struct trx_config *config)
 		iface = RadioDevice::MULTI_ARFCN;
 
 	if (config->extref)
-		ref = RadioDevice::REF_EXTERNAL;
+		ref = REF_EXTERNAL;
 	else if (config->gpsref)
-		ref = RadioDevice::REF_GPS;
+		ref = REF_GPS;
 	else
-		ref = RadioDevice::REF_INTERNAL;
+		ref = REF_INTERNAL;
 
 	usrp = RadioDevice::make(config->tx_sps, config->rx_sps, iface,
 				 config->chans, config->offset, config->tx_paths, config->rx_paths);

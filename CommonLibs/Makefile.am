@@ -52,4 +52,5 @@ noinst_HEADERS = \
 	Vector.h \
 	Logger.h \
 	trx_vty.h \
-	debug.h
+	debug.h \
+	config_defs.h
