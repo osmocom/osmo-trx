@@ -37,7 +37,9 @@
 #include <Logger.h>
 
 extern "C" {
+#include <osmocom/core/talloc.h>
 #include <osmocom/core/application.h>
+#include <osmocom/core/msgb.h>
 #include "convolve.h"
 #include "convert.h"
 }
@@ -89,6 +91,8 @@ struct trx_config {
 };
 
 volatile bool gshutdown = false;
+
+static void *tall_trx_ctx;
 
 /* Setup configuration values
  *     Don't query the existence of the Log.Level because it's a
@@ -247,6 +251,14 @@ static void sig_handler(int signo)
 	case SIGTERM:
 		fprintf(stdout, "shutting down\n");
 		gshutdown = true;
+		break;
+	case SIGABRT:
+	case SIGUSR1:
+		talloc_report(tall_trx_ctx, stderr);
+		talloc_report_full(tall_trx_ctx, stderr);
+		break;
+	case SIGUSR2:
+		talloc_report_full(tall_trx_ctx, stderr);
 		break;
 	default:
 		break;
@@ -486,6 +498,8 @@ int main(int argc, char *argv[])
 	RadioDevice::InterfaceType iface = RadioDevice::NORMAL;
 	struct trx_config config;
 
+	tall_trx_ctx = talloc_named_const(NULL, 0, "OsmoTRX");
+	msgb_talloc_ctx_init(tall_trx_ctx, 0);
 	setup_signal_handlers();
 
 #ifdef HAVE_SSE3
