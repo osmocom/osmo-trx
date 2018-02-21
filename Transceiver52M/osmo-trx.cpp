@@ -108,6 +108,10 @@ static void *tall_trx_ctx;
 static struct trx_ctx *g_trx_ctx;
 static struct ctrl_handle *g_ctrlh;
 
+static RadioDevice *usrp;
+static RadioInterface *radio;
+static Transceiver *transceiver;
+
 /* Setup configuration values
  *     Don't query the existence of the Log.Level because it's a
  *     mandatory value. That is, if it doesn't exist, the configuration
@@ -227,33 +231,30 @@ RadioInterface *makeRadioInterface(struct trx_config *config,
  *     and decoding schemes. Also included are the socket interfaces for
  *     connecting to the upper layer stack.
  */
-Transceiver *makeTransceiver(struct trx_config *config, RadioInterface *radio)
+int makeTransceiver(struct trx_config *config, RadioInterface *radio)
 {
-	Transceiver *trx;
 	VectorFIFO *fifo;
 
-	trx = new Transceiver(config->port, config->local_addr.c_str(),
+	transceiver = new Transceiver(config->port, config->local_addr.c_str(),
 			      config->remote_addr.c_str(), config->tx_sps,
 			      config->rx_sps, config->chans, GSM::Time(3,0),
 			      radio, config->rssi_offset);
-	if (!trx->init(config->filler, config->rtsc,
+	if (!transceiver->init(config->filler, config->rtsc,
 		       config->rach_delay, config->edge)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
-		delete trx;
-		return NULL;
+		return -1;
 	}
 
 	for (size_t i = 0; i < config->chans; i++) {
 		fifo = radio->receiveFIFO(i);
-		if (fifo && trx->receiveFIFO(fifo, i))
+		if (fifo && transceiver->receiveFIFO(fifo, i))
 			continue;
 
 		LOG(ALERT) << "Could not attach FIFO to channel " << i;
-		delete trx;
-		return NULL;
+		return -1;
 	}
 
-	return trx;
+	return 0;
 }
 
 static void sig_handler(int signo)
@@ -501,13 +502,61 @@ static int set_sched_rr(int prio)
 	return 0;
 }
 
-int main(int argc, char *argv[])
+static void trx_stop()
+{
+	std::cout << "Shutting down transceiver..." << std::endl;
+
+	delete transceiver;
+	delete radio;
+	delete usrp;
+}
+
+static int trx_start(struct trx_config *config)
 {
 	int type, chans, ref;
-	RadioDevice *usrp;
-	RadioInterface *radio = NULL;
-	Transceiver *trx = NULL;
 	RadioDevice::InterfaceType iface = RadioDevice::NORMAL;
+
+	/* Create the low level device object */
+	if (config->mcbts)
+		iface = RadioDevice::MULTI_ARFCN;
+
+	if (config->extref)
+		ref = RadioDevice::REF_EXTERNAL;
+	else if (config->gpsref)
+		ref = RadioDevice::REF_GPS;
+	else
+		ref = RadioDevice::REF_INTERNAL;
+
+	usrp = RadioDevice::make(config->tx_sps, config->rx_sps, iface,
+				 config->chans, config->offset, config->tx_paths, config->rx_paths);
+	type = usrp->open(config->dev_args, ref, config->swap_channels);
+	if (type < 0) {
+		LOG(ALERT) << "Failed to create radio device" << std::endl;
+		goto shutdown;
+	}
+
+	/* Setup the appropriate device interface */
+	radio = makeRadioInterface(config, usrp, type);
+	if (!radio)
+		goto shutdown;
+
+	/* Create the transceiver core */
+	if(makeTransceiver(config, radio) < 0)
+		goto shutdown;
+
+	chans = transceiver->numChans();
+	std::cout << "-- Transceiver active with "
+		  << chans << " channel(s)" << std::endl;
+
+	return 0;
+
+shutdown:
+	trx_stop();
+	return -1;
+}
+
+int main(int argc, char *argv[])
+{
 	struct trx_config config;
 	int rc;
 
@@ -589,48 +638,13 @@ int main(int argc, char *argv[])
 
 	srandom(time(NULL));
 
-	/* Create the low level device object */
-	if (config.mcbts)
-		iface = RadioDevice::MULTI_ARFCN;
-
-	if (config.extref)
-		ref = RadioDevice::REF_EXTERNAL;
-	else if (config.gpsref)
-		ref = RadioDevice::REF_GPS;
-	else
-		ref = RadioDevice::REF_INTERNAL;
-
-	usrp = RadioDevice::make(config.tx_sps, config.rx_sps, iface,
-				 config.chans, config.offset, config.tx_paths, config.rx_paths);
-	type = usrp->open(config.dev_args, ref, config.swap_channels);
-	if (type < 0) {
-		LOG(ALERT) << "Failed to create radio device" << std::endl;
-		goto shutdown;
-	}
-
-	/* Setup the appropriate device interface */
-	radio = makeRadioInterface(&config, usrp, type);
-	if (!radio)
-		goto shutdown;
-
-	/* Create the transceiver core */
-	trx = makeTransceiver(&config, radio);
-	if (!trx)
-		goto shutdown;
-
-	chans = trx->numChans();
-	std::cout << "-- Transceiver active with "
-		  << chans << " channel(s)" << std::endl;
+	if(trx_start(&config) < 0)
+		return EXIT_FAILURE;
 
 	while (!gshutdown)
 		osmo_select_main(0);
 
-shutdown:
-	std::cout << "Shutting down transceiver..." << std::endl;
-
-	delete trx;
-	delete radio;
-	delete usrp;
+	trx_stop();
 
 	return 0;
 }
