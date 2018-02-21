@@ -566,7 +566,7 @@ int main(int argc, char *argv[])
 
 	setup_signal_handlers();
 
-	g_trx_ctx = talloc_zero(tall_trx_ctx, struct trx_ctx);
+	g_trx_ctx = vty_trx_ctx_alloc(tall_trx_ctx);
 
 #ifdef HAVE_SSE3
 	printf("Info: SSE3 support compiled in");
