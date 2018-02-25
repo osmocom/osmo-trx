@@ -28,7 +28,7 @@ if [ -z "${INSIDE_CHROOT}" ]; then
         if ! $(substr "arm" "$(uname -m)") && [ "x${INSTR}" = "x--with-neon" -o "x${INSTR}" = "x--with-neon-vfpv4" ]; then
 
                 OSMOTRX_DIR="$PWD" # we assume we are called as contrib/jenkins.sh
-                ROOTFS_PREFIX="${ROOTFS_PREFIX:-/opt}"
+                ROOTFS_PREFIX="${ROOTFS_PREFIX:-$HOME}"
                 ROOTFS="${ROOTFS_PREFIX}/qemu-img"
                 mkdir -p "${ROOTFS_PREFIX}"
 
