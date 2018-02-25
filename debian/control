@@ -10,7 +10,9 @@ Build-Depends: debhelper (>= 9),
                libuhd-dev,
                libusb-1.0-0-dev,
                libboost-all-dev,
-               libfftw3-dev
+               libfftw3-dev,
+               libtalloc-dev,
+               libosmocore-dev (>= 0.10.0)
 Standards-Version: 3.9.6
 Vcs-Browser: http://cgit.osmocom.org/osmo-trx
 Vcs-Git: git://git.osmocom.org/osmo-trx
