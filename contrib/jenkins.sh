@@ -83,6 +83,4 @@ $MAKE $PARALLEL_MAKE
 $MAKE check \
   || cat-testlogs.sh
 
-if [ -z "x${INSIDE_CHROOT}" ]; then
-        osmo-clean-workspace.sh
-fi
+osmo-clean-workspace.sh
