@@ -36,7 +36,8 @@ if [ -z "${INSIDE_CHROOT}" ]; then
                                 sed -i "s/setup_proc//g" "$ROOTFS/debootstrap/suite-script"
                                 mychroot /debootstrap/debootstrap --second-stage --verbose http://ftp.de.debian.org/debian/
                         else
-                                wget -nc -q "https://uk.images.linuxcontainers.org/images/debian/stretch/armhf/default/20180114_22:42/rootfs.tar.xz"
+                                YESTERDAY=$(python -c 'import datetime ; print((datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%Y%m%d"))')
+                                wget -nc -q "https://uk.images.linuxcontainers.org/images/debian/stretch/armhf/default/${YESTERDAY}_22:42/rootfs.tar.xz"
                                 tar -xf rootfs.tar.xz -C "$ROOTFS/" || true
                                 echo "nameserver 8.8.8.8" > "$ROOTFS/etc/resolv.conf"
                         fi
