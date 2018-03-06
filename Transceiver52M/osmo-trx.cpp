@@ -211,7 +211,7 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 	std::vector<std::string> rx_paths, tx_paths;
 	bool rx_paths_set = false, tx_paths_set = false;
 
-	while ((option = getopt(argc, argv, "ha:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -220,6 +220,10 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 		case 'a':
 			print_deprecated(option);
 			osmo_talloc_replace_string(trx, &trx->cfg.dev_args, optarg);
+			break;
+		case 'l':
+			print_deprecated(option);
+			log_set_log_level(osmo_stderr_target, atoi(optarg));
 			break;
 		case 'i':
 			print_deprecated(option);
@@ -377,6 +381,7 @@ static void print_config(struct trx_ctx *trx)
 	std::ostringstream ost("");
 
 	ost << "Config Settings" << std::endl;
+	ost << "   Log Level............... " << (unsigned int) osmo_stderr_target->loglevel << std::endl;
 	ost << "   Device args............. " << charp2str(trx->cfg.dev_args) << std::endl;
 	ost << "   TRX Base Port........... " << trx->cfg.base_port << std::endl;
 	ost << "   TRX Address............. " << charp2str(trx->cfg.bind_addr) << std::endl;
