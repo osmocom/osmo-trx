@@ -1,0 +1,12 @@
+[[control]]
+== Control interface
+
+The actual protocol is described in <<common-control-if>>, the variables
+common to all programs using it are described in <<ctrl_common_vars>>. Here we
+describe variables specific to OsmoTRX.
+
+.Variables available over control interface
+[options="header",width="100%",cols="20%,5%,5%,50%,20%"]
+|===
+|Name|Access|Trap|Value|Comment
+|===

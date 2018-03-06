@@ -1,0 +1,36 @@
+== Configuring OsmTRX
+
+OsmoTRX will read the configuration at startup time and configure the
+transceiver accordingly after validating the configuration.
+
+OsmoTRX can handle several TRX channels, but at least one must be configured in
+order to be able to start it successfully. Channels must be present in the
+configuration file in incremental order, starting from 0 and be consecutive.
+
+Example configuration files for different devices and setups can be found in
+`doc/examples/` in 'osmo-trx' git repository.
+
+=== Documented example
+
+.Example: Static GGSN/APN configuration (single catch-all GGSN)
+----
+trx
+ bind-ip 127.0.0.1 <1>
+ remote-ip 127.0.0.1 <2>
+ base-port 5700 <3>
+ egprs disable <4>
+ tx-sps 4 <5>
+ rx-sps 4 <6>
+ chan 0 <7>
+  tx-path BAND1 <8>
+  rx-path LNAW <9>
+----
+<1> Configure the local IP address at the TRX used for the connection against `osmo-bts-trx`.
+<2> Specify the IP address of `osmo-bts-trx` to connect to.
+<3> Specify the reference base UDP port to use for communication.
+<4> Don't enable EDGE support.
+<5> Use 4 TX samples per symbol. This is device specific.
+<6> Use 4 RX samples per symbol. This is device specific.
+<7> Configure the first channel. As no other channels are specified, `osmo-trx` assumes it is using only one channel.
+<8> Configure the device to use `BAND1` Tx antenna path from all the available ones (device specific).
+<9> Configure the device to use `LNAW` Rx antenna path from all the available ones (device specific).

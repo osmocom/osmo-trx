@@ -1,0 +1,59 @@
+[[chapter_introduction]]
+== Overview
+
+[[intro_overview]]
+=== About OsmoTRX
+
+OsmoTRX is a C/C++ language implementation of the GSM radio modem,
+originally developed as the 'Transceiver' part of OpenBTS. This radio
+modem offers an interface based on top of UDP streams.
+
+
+The OsmoBTS bts_model code for OsmoTRX is called
+`osmo-bts-trx`.  It implements the UDP stream interface of
+OsmoTRX, so both parts can be used together to implement a complete GSM
+BTS based on general-purpose computing SDR.
+
+As OsmoTRX is general-purpose software running on top of Linux, it is
+thus not tied to any specific physical hardware. At the time of this
+writing, OsmoTRX supports a variety of Lime Microsystems and Ettus USRP SDRs via
+the UHD driver, as well as the Fairwaves UmTRX and derived products.
+
+OsmoTRX is not a complete GSM PHY but 'just' the radio modem.  This
+means that all of the Layer 1 functionality such as scheduling,
+convolutional coding, etc. is actually also implemented inside OsmoBTS.
+OsmoTRX is a software-defined radio transceiver that implements the Layer 1
+physical layer of a BTS comprising the following 3GPP specifications:
+
+* TS 05.01 "Physical layer on the radio path"
+* TS 05.02 "Multiplexing and Multiple Access on the Radio Path"
+* TS 05.04 "Modulation"
+* TS 05.10 "Radio subsystem synchronization
+
+As such, the boundary between OsmoTRX and `osmo-bts-trx` is at
+a much lower interface, which is an internal interface of other more
+traditional GSM PHY implementations.
+
+Besides OsmoTRX, there are also other implementations (both Free
+Software and proprietary) that implement the same UDP stream based radio
+modem interface.
+
+[[fig-gprs-pcubts]]
+.GSM network architecture with OsmoTRX and OsmoBTS
+[graphviz]
+----
+digraph G {
+        rankdir=LR;
+        MS0 [label="MS"];
+        MS1 [label="MS"];
+        MS0->SDR[label="Um"];
+        MS1->SDR [label="Um"];
+        SDR -> OsmoTRX [label="Raw Samples"];
+        OsmoTRX->BTS [label="bursts over UDP"];
+        BTS->BSC [label="Abis"];
+        BSC->MSC [label="A"];
+        BTS->PCU [label="pcu_sock"];
+        PCU->SGSN [label="Gb"];
+        OsmoTRX [color=red];
+}
+----
