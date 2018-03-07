@@ -24,10 +24,11 @@ include $(top_srcdir)/Makefile.common
 AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/common
 AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
 
+SUBDIRS = common
 if ARCH_ARM
-SUBDIRS = arm
+SUBDIRS += arm
 else
-SUBDIRS = x86
+SUBDIRS += x86
 endif
 
 if USRP1
@@ -58,8 +59,7 @@ COMMON_SOURCES = \
 	Transceiver.cpp \
 	ChannelizerBase.cpp \
 	Channelizer.cpp \
-	Synthesis.cpp \
-	common/fft.c
+	Synthesis.cpp
 
 libtransceiver_la_SOURCES = \
 	$(COMMON_SOURCES) \
@@ -83,12 +83,7 @@ noinst_HEADERS = \
 	Resampler.h \
 	ChannelizerBase.h \
 	Channelizer.h \
-	Synthesis.h \
-	common/convolve.h \
-	common/convert.h \
-	common/scale.h \
-	common/mult.h \
-	common/fft.h
+	Synthesis.h
 
 osmo_trx_SOURCES = osmo-trx.cpp
 osmo_trx_LDADD = \

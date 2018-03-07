@@ -9,8 +9,9 @@ AM_CCASFLAGS = $(ARCH_FLAGS)
 
 noinst_LTLIBRARIES = libarch.la
 
+libarch_la_LIBADD = $(top_builddir)/Transceiver52M/common/libarch_common.la
+
 libarch_la_SOURCES = \
-	../common/convolve_base.c \
 	convert.c \
 	convert_neon.S \
 	convolve.c \

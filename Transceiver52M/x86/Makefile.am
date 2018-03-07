@@ -4,7 +4,7 @@ noinst_LTLIBRARIES = libarch.la
 noinst_LTLIBRARIES += libarch_sse_3.la
 noinst_LTLIBRARIES += libarch_sse_4_1.la
 
-libarch_la_LIBADD =
+libarch_la_LIBADD = $(top_builddir)/Transceiver52M/common/libarch_common.la
 
 # SSE 3 specific code
 if HAVE_SSE3
@@ -24,7 +24,5 @@ libarch_la_LIBADD += libarch_sse_4_1.la
 endif
 
 libarch_la_SOURCES = \
-	../common/convolve_base.c \
-	../common/convert_base.c \
 	convert.c \
 	convolve.c

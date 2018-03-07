@@ -182,6 +182,7 @@ AC_CONFIG_FILES([\
     CommonLibs/Makefile \
     GSM/Makefile \
     Transceiver52M/Makefile \
+    Transceiver52M/common/Makefile \
     Transceiver52M/arm/Makefile \
     Transceiver52M/x86/Makefile \
     tests/Makefile \
