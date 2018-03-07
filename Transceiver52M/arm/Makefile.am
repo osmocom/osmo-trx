@@ -1,4 +1,3 @@
-if ARCH_ARM
 if ARCH_ARM_A15
 ARCH_FLAGS = -mfpu=neon-vfpv4
 else
@@ -20,4 +19,3 @@ libarch_la_SOURCES = \
 	scale_neon.S \
 	mult.c \
 	mult_neon.S
-endif

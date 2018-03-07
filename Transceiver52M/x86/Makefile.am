@@ -1,4 +1,3 @@
-if !ARCH_ARM
 AM_CFLAGS = -Wall -std=gnu99 -I${srcdir}/../common
 
 noinst_LTLIBRARIES = libarch.la
@@ -29,4 +28,3 @@ libarch_la_SOURCES = \
 	../common/convert_base.c \
 	convert.c \
 	convolve.c
-endif

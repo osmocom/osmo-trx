@@ -24,7 +24,11 @@ include $(top_srcdir)/Makefile.common
 AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/common
 AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
 
-SUBDIRS = arm x86
+if ARCH_ARM
+SUBDIRS = arm
+else
+SUBDIRS = x86
+endif
 
 if USRP1
 AM_CPPFLAGS += $(USRP_CFLAGS)
