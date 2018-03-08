@@ -661,20 +661,20 @@ void Transceiver::reset()
 
 void Transceiver::driveControl(size_t chan)
 {
-  // check control socket
-  char buffer[MAX_PACKET_LENGTH];
-  int msgLen = -1;
-  buffer[0] = '\0';
+  char buffer[MAX_PACKET_LENGTH + 1];
+  char response[MAX_PACKET_LENGTH + 1];
+  int msgLen;
 
-  msgLen = mCtrlSockets[chan]->read(buffer, sizeof(buffer));
-
-  if (msgLen < 1) {
+  /* Attempt to read from control socket */
+  msgLen = mCtrlSockets[chan]->read(buffer, MAX_PACKET_LENGTH);
+  if (msgLen < 1)
     return;
-  }
+
+  /* Zero-terminate received string */
+  buffer[msgLen] = '\0';
 
   char cmdcheck[4];
   char command[MAX_PACKET_LENGTH];
-  char response[MAX_PACKET_LENGTH];
 
   sscanf(buffer,"%3s %s",cmdcheck,command);
 
