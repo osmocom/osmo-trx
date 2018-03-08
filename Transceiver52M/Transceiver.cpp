@@ -727,15 +727,23 @@ void Transceiver::driveControl(size_t chan)
       }
     }
   } else if (match_cmd(command, "HANDOVER", &params)) {
-    int ts=0,ss=0;
-    sscanf(params, "%d %d", &ts, &ss);
-    mHandover[ts][ss] = true;
-    sprintf(response,"RSP HANDOVER 0 %d %d",ts,ss);
+    unsigned ts = 0, ss = 0;
+    sscanf(params, "%u %u", &ts, &ss);
+    if (ts > 7 || ss > 7) {
+      sprintf(response, "RSP NOHANDOVER 1 %u %u", ts, ss);
+    } else {
+      mHandover[ts][ss] = true;
+      sprintf(response, "RSP HANDOVER 0 %u %u", ts, ss);
+    }
   } else if (match_cmd(command, "NOHANDOVER", &params)) {
-    int ts=0,ss=0;
-    sscanf(params, "%d %d", &ts, &ss);
-    mHandover[ts][ss] = false;
-    sprintf(response,"RSP NOHANDOVER 0 %d %d",ts,ss);
+    unsigned ts = 0, ss = 0;
+    sscanf(params, "%u %u", &ts, &ss);
+    if (ts > 7 || ss > 7) {
+      sprintf(response, "RSP NOHANDOVER 1 %u %u", ts, ss);
+    } else {
+      mHandover[ts][ss] = false;
+      sprintf(response, "RSP NOHANDOVER 0 %u %u", ts, ss);
+    }
   } else if (match_cmd(command, "SETMAXDLY", &params)) {
     //set expected maximum time-of-arrival
     int maxDelay;
