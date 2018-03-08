@@ -657,10 +657,10 @@ void Transceiver::reset()
 }
 
 
+#define MAX_PACKET_LENGTH 100
+
 void Transceiver::driveControl(size_t chan)
 {
-  int MAX_PACKET_LENGTH = 100;
-
   // check control socket
   char buffer[MAX_PACKET_LENGTH];
   int msgLen = -1;
