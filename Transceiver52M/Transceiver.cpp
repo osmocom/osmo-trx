@@ -659,10 +659,40 @@ void Transceiver::reset()
 
 #define MAX_PACKET_LENGTH 100
 
+/**
+ * Matches a buffer with a command.
+ * @param  buf    a buffer to look command in
+ * @param  cmd    a command to look in buffer
+ * @param  params pointer to arguments, or NULL
+ * @return        true if command matches, otherwise false
+ */
+static bool match_cmd(char *buf,
+  const char *cmd, char **params)
+{
+  size_t cmd_len = strlen(cmd);
+
+  /* Check a command itself */
+  if (strncmp(buf, cmd, cmd_len))
+    return false;
+
+  /* A command has arguments */
+  if (params != NULL) {
+    /* Make sure there is a space */
+    if (buf[cmd_len] != ' ')
+      return false;
+
+    /* Update external pointer */
+    *params = buf + cmd_len + 1;
+  }
+
+  return true;
+}
+
 void Transceiver::driveControl(size_t chan)
 {
   char buffer[MAX_PACKET_LENGTH + 1];
   char response[MAX_PACKET_LENGTH + 1];
+  char *command, *params;
   int msgLen;
 
   /* Attempt to read from control socket */
@@ -673,22 +703,20 @@ void Transceiver::driveControl(size_t chan)
   /* Zero-terminate received string */
   buffer[msgLen] = '\0';
 
-  char cmdcheck[4];
-  char command[MAX_PACKET_LENGTH];
-
-  sscanf(buffer,"%3s %s",cmdcheck,command);
-
-  if (strcmp(cmdcheck,"CMD")!=0) {
+  /* Verify a command signature */
+  if (strncmp(buffer, "CMD ", 4)) {
     LOG(WARNING) << "bogus message on control interface";
     return;
   }
-  LOG(INFO) << "command is " << buffer;
 
-  if (strcmp(command,"POWEROFF")==0) {
+  /* Set command pointer */
+  command = buffer + 4;
+  LOG(INFO) << "command is " << command;
+
+  if (match_cmd(command, "POWEROFF", NULL)) {
     stop();
     sprintf(response,"RSP POWEROFF 0");
-  }
-  else if (strcmp(command,"POWERON")==0) {
+  } else if (match_cmd(command, "POWERON", NULL)) {
     if (!start()) {
       sprintf(response,"RSP POWERON 1");
     } else {
@@ -698,41 +726,35 @@ void Transceiver::driveControl(size_t chan)
           mHandover[i][j] = false;
       }
     }
-  }
-  else if (strcmp(command,"HANDOVER")==0){
+  } else if (match_cmd(command, "HANDOVER", &params)) {
     int ts=0,ss=0;
-    sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&ts,&ss);
+    sscanf(params, "%d %d", &ts, &ss);
     mHandover[ts][ss] = true;
     sprintf(response,"RSP HANDOVER 0 %d %d",ts,ss);
-  }
-  else if (strcmp(command,"NOHANDOVER")==0){
+  } else if (match_cmd(command, "NOHANDOVER", &params)) {
     int ts=0,ss=0;
-    sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&ts,&ss);
+    sscanf(params, "%d %d", &ts, &ss);
     mHandover[ts][ss] = false;
     sprintf(response,"RSP NOHANDOVER 0 %d %d",ts,ss);
-  }
-  else if (strcmp(command,"SETMAXDLY")==0) {
+  } else if (match_cmd(command, "SETMAXDLY", &params)) {
     //set expected maximum time-of-arrival
     int maxDelay;
-    sscanf(buffer,"%3s %s %d",cmdcheck,command,&maxDelay);
+    sscanf(params, "%d", &maxDelay);
     mMaxExpectedDelayAB = maxDelay; // 1 GSM symbol is approx. 1 km
     sprintf(response,"RSP SETMAXDLY 0 %d",maxDelay);
-  }
-  else if (strcmp(command,"SETMAXDLYNB")==0) {
+  } else if (match_cmd(command, "SETMAXDLYNB", &params)) {
     //set expected maximum time-of-arrival
     int maxDelay;
-    sscanf(buffer,"%3s %s %d",cmdcheck,command,&maxDelay);
+    sscanf(params, "%d", &maxDelay);
     mMaxExpectedDelayNB = maxDelay; // 1 GSM symbol is approx. 1 km
     sprintf(response,"RSP SETMAXDLYNB 0 %d",maxDelay);
-  }
-  else if (strcmp(command,"SETRXGAIN")==0) {
+  } else if (match_cmd(command, "SETRXGAIN", &params)) {
     //set expected maximum time-of-arrival
     int newGain;
-    sscanf(buffer,"%3s %s %d",cmdcheck,command,&newGain);
+    sscanf(params, "%d", &newGain);
     newGain = mRadioInterface->setRxGain(newGain, chan);
     sprintf(response,"RSP SETRXGAIN 0 %d",newGain);
-  }
-  else if (strcmp(command,"NOISELEV")==0) {
+  } else if (match_cmd(command, "NOISELEV", NULL)) {
     if (mOn) {
       float lev = mStates[chan].mNoiseLev;
       sprintf(response,"RSP NOISELEV 0 %d",
@@ -741,26 +763,23 @@ void Transceiver::driveControl(size_t chan)
     else {
       sprintf(response,"RSP NOISELEV 1  0");
     }
-  }
-  else if (!strcmp(command, "SETPOWER")) {
+  } else if (match_cmd(command, "SETPOWER", &params)) {
     int power;
-    sscanf(buffer, "%3s %s %d", cmdcheck, command, &power);
+    sscanf(params, "%d", &power);
     power = mRadioInterface->setPowerAttenuation(power, chan);
     mStates[chan].mPower = power;
     sprintf(response, "RSP SETPOWER 0 %d", power);
-  }
-  else if (!strcmp(command,"ADJPOWER")) {
+  } else if (match_cmd(command, "ADJPOWER", &params)) {
     int power, step;
-    sscanf(buffer, "%3s %s %d", cmdcheck, command, &step);
+    sscanf(params, "%d", &step);
     power = mStates[chan].mPower + step;
     power = mRadioInterface->setPowerAttenuation(power, chan);
     mStates[chan].mPower = power;
     sprintf(response, "RSP ADJPOWER 0 %d", power);
-  }
-  else if (strcmp(command,"RXTUNE")==0) {
+  } else if (match_cmd(command, "RXTUNE", &params)) {
     // tune receiver
     int freqKhz;
-    sscanf(buffer,"%3s %s %d",cmdcheck,command,&freqKhz);
+    sscanf(params, "%d", &freqKhz);
     mRxFreq = freqKhz * 1e3;
     if (!mRadioInterface->tuneRx(mRxFreq, chan)) {
        LOG(ALERT) << "RX failed to tune";
@@ -768,11 +787,10 @@ void Transceiver::driveControl(size_t chan)
     }
     else
        sprintf(response,"RSP RXTUNE 0 %d",freqKhz);
-  }
-  else if (strcmp(command,"TXTUNE")==0) {
+  } else if (match_cmd(command, "TXTUNE", &params)) {
     // tune txmtr
     int freqKhz;
-    sscanf(buffer,"%3s %s %d",cmdcheck,command,&freqKhz);
+    sscanf(params, "%d", &freqKhz);
     mTxFreq = freqKhz * 1e3;
     if (!mRadioInterface->tuneTx(mTxFreq, chan)) {
        LOG(ALERT) << "TX failed to tune";
@@ -780,11 +798,10 @@ void Transceiver::driveControl(size_t chan)
     }
     else
        sprintf(response,"RSP TXTUNE 0 %d",freqKhz);
-  }
-  else if (!strcmp(command,"SETTSC")) {
+  } else if (match_cmd(command, "SETTSC", &params)) {
     // set TSC
     unsigned TSC;
-    sscanf(buffer, "%3s %s %d", cmdcheck, command, &TSC);
+    sscanf(params, "%d", &TSC);
     if (TSC > 7) {
       sprintf(response, "RSP SETTSC 1 %d", TSC);
     } else {
@@ -792,12 +809,11 @@ void Transceiver::driveControl(size_t chan)
       mTSC = TSC;
       sprintf(response,"RSP SETTSC 0 %d", TSC);
     }
-  }
-  else if (strcmp(command,"SETSLOT")==0) {
+  } else if (match_cmd(command, "SETSLOT", &params)) {
     // set slot type
     int  corrCode;
     int  timeslot;
-    sscanf(buffer,"%3s %s %d %d",cmdcheck,command,&timeslot,&corrCode);
+    sscanf(params, "%d %d", &timeslot, &corrCode);
     if ((timeslot < 0) || (timeslot > 7)) {
       LOG(WARNING) << "bogus message on control interface";
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
@@ -806,17 +822,14 @@ void Transceiver::driveControl(size_t chan)
     mStates[chan].chanType[timeslot] = (ChannelCombination) corrCode;
     setModulus(timeslot, chan);
     sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
-
-  }
-  else if (strcmp(command,"_SETBURSTTODISKMASK")==0) {
+  } else if (match_cmd(command, "_SETBURSTTODISKMASK", &params)) {
     // debug command! may change or disapear without notice
     // set a mask which bursts to dump to disk
     int mask;
-    sscanf(buffer,"%3s %s %d",cmdcheck,command,&mask);
+    sscanf(params, "%d", &mask);
     mWriteBurstToDiskMask = mask;
     sprintf(response,"RSP _SETBURSTTODISKMASK 0 %d",mask);
-  }
-  else {
+  } else {
     LOG(WARNING) << "bogus command " << command << " on control interface.";
     sprintf(response,"RSP ERR 1");
   }
