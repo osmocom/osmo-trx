@@ -19,7 +19,7 @@ dnl along with this program.  If not, see <http://www.gnu.org/licenses/>.
 dnl
 
 AC_INIT([osmo-trx],
-	m4_esyscmd([./git-version-gen .tarball-veresion]),
+	m4_esyscmd([./git-version-gen .tarball-version]),
 	[openbsc@lists.osmocom.org])
 AC_PREREQ(2.57)
 AC_CONFIG_SRCDIR([Transceiver52M/Makefile.am])
