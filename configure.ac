@@ -78,6 +78,18 @@ PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 0.10.0)
 PKG_CHECK_MODULES(LIBOSMOVTY, libosmovty >= 0.3.0)
 PKG_CHECK_MODULES(LIBOSMOCTRL, libosmoctrl >= 0.10.0)
 
+AC_ARG_ENABLE(sanitize,
+	[AS_HELP_STRING(
+		[--enable-sanitize],
+		[Compile with address sanitizer enabled],
+	)],
+	[sanitize=$enableval], [sanitize="no"])
+if test x"$sanitize" = x"yes"
+then
+	CPPFLAGS="$CPPFLAGS -fsanitize=address -fsanitize=undefined"
+	LDFLAGS="$LDFLAGS -fsanitize=address -fsanitize=undefined"
+fi
+
 AC_ARG_WITH(usrp1, [
     AS_HELP_STRING([--with-usrp1],
         [enable USRP1 gnuradio based transceiver])
@@ -175,6 +187,11 @@ PKG_CHECK_MODULES(FFTWF, fftw3f)
 
 AC_CHECK_HEADER([boost/config.hpp],[],
     [AC_MSG_ERROR([boost/config.hpp not found, install e.g. libboost-dev])])
+
+AC_MSG_RESULT([CPPFLAGS="$CPPFLAGS"])
+AC_MSG_RESULT([CFLAGS="$CFLAGS"])
+AC_MSG_RESULT([CXXFLAGS="$CXXFLAGS"])
+AC_MSG_RESULT([LDFLAGS="$LDFLAGS"])
 
 dnl Output files
 AC_CONFIG_FILES([\

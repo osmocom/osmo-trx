@@ -63,7 +63,7 @@ fi
 
 mkdir "$deps" || true
 
-osmo-build-dep.sh libosmocore "" "--disable-doxygen --disable-pcsc"
+osmo-build-dep.sh libosmocore "" "--enable-sanitize --disable-doxygen --disable-pcsc"
 
 export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="$inst/lib"
@@ -78,7 +78,7 @@ set -x
 
 cd "$base"
 autoreconf --install --force
-./configure $INSTR
+./configure --enable-sanitize $INSTR
 $MAKE $PARALLEL_MAKE
 $MAKE check \
   || cat-testlogs.sh
