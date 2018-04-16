@@ -506,7 +506,7 @@ int main(int argc, char *argv[])
 	convolve_init();
 	convert_init();
 
-	osmo_init_logging(&log_info);
+	osmo_init_logging2(tall_trx_ctx, &log_info);
 	osmo_stats_init(tall_trx_ctx);
 	vty_init(&g_vty_info);
 	ctrl_vty_init(tall_trx_ctx);
