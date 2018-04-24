@@ -21,16 +21,10 @@
 
 include $(top_srcdir)/Makefile.common
 
-SUBDIRS = arch
+SUBDIRS = arch device
 
-AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/arch/common
+AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/arch/common -I${srcdir}/device
 AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
-
-if USRP1
-AM_CPPFLAGS += $(USRP_CFLAGS)
-else
-AM_CPPFLAGS += $(UHD_CFLAGS)
-endif
 
 rev2dir = $(datadir)/usrp/rev2
 rev4dir = $(datadir)/usrp/rev4
@@ -42,7 +36,7 @@ EXTRA_DIST = \
 	README \
 	README.Talgorithm
 
-noinst_LTLIBRARIES = libtransceiver.la
+noinst_LTLIBRARIES = libtransceiver_common.la
 
 COMMON_SOURCES = \
 	radioInterface.cpp \
@@ -56,33 +50,28 @@ COMMON_SOURCES = \
 	Channelizer.cpp \
 	Synthesis.cpp
 
-libtransceiver_la_SOURCES = \
+libtransceiver_common_la_SOURCES = \
 	$(COMMON_SOURCES) \
 	Resampler.cpp \
 	radioInterfaceResamp.cpp \
 	radioInterfaceMulti.cpp
-
-bin_PROGRAMS = osmo-trx
 
 noinst_HEADERS = \
 	Complex.h \
 	radioInterface.h \
 	radioVector.h \
 	radioClock.h \
-	radioDevice.h \
 	radioBuffer.h \
 	sigProcLib.h \
 	signalVector.h \
 	Transceiver.h \
-	USRPDevice.h \
 	Resampler.h \
 	ChannelizerBase.h \
 	Channelizer.h \
 	Synthesis.h
 
-osmo_trx_SOURCES = osmo-trx.cpp
-osmo_trx_LDADD = \
-	libtransceiver.la \
+COMMON_LDADD = \
+	libtransceiver_common.la \
 	$(ARCH_LA) \
 	$(GSM_LA) \
 	$(COMMON_LA) \
@@ -91,10 +80,19 @@ osmo_trx_LDADD = \
 	$(LIBOSMOCTRL_LIBS) \
 	$(LIBOSMOVTY_LIBS)
 
+bin_PROGRAMS = osmo-trx
+osmo_trx_SOURCES = osmo-trx.cpp
+
 if USRP1
-libtransceiver_la_SOURCES += USRPDevice.cpp
-osmo_trx_LDADD += $(USRP_LIBS)
+osmo_trx_LDADD = \
+	$(COMMON_LDADD) \
+	$(USRP_LIBS) \
+	$(builddir)/device/usrp1/libdevice.la
+osmo_trx_CPPFLAGS  = $(AM_CPPFLAGS) $(USRP_CFLAGS)
 else
-libtransceiver_la_SOURCES += UHDDevice.cpp
-osmo_trx_LDADD += $(UHD_LIBS)
+osmo_trx_LDADD = \
+	$(COMMON_LDADD) \
+	$(UHD_LIBS) \
+	$(builddir)/device/uhd/libdevice.la
+osmo_trx_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
 endif
