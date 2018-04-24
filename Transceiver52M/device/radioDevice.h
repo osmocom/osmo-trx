@@ -148,6 +148,9 @@ class RadioDevice {
   /** return the used RX path */
   virtual std::string getTxAntenna(size_t chan = 0) = 0;
 
+  /** return whether user drives synchronization of Tx/Rx of USRP */
+  virtual bool requiresRadioAlign() = 0;
+
   /** Return internal status values */
   virtual double getTxFreq(size_t chan = 0) = 0;
   virtual double getRxFreq(size_t chan = 0) = 0;

@@ -191,6 +191,9 @@ private:
   /* return the used RX path */
   std::string getTxAntenna(size_t chan = 0);
 
+  /** return whether user drives synchronization of Tx/Rx of USRP */
+  bool requiresRadioAlign();
+
   /** Return internal status values */
   inline double getTxFreq(size_t chan = 0) { return 0; }
   inline double getRxFreq(size_t chan = 0) { return 0; }

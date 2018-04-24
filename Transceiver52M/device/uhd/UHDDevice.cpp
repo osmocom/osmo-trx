@@ -255,6 +255,8 @@ public:
 	bool setTxAntenna(const std::string &ant, size_t chan);
 	std::string getTxAntenna(size_t chan);
 
+	bool requiresRadioAlign();
+
 	inline double getSampleRate() { return tx_rate; }
 	inline double numberRead() { return rx_pkt_cnt; }
 	inline double numberWritten() { return 0; }
@@ -1280,6 +1282,11 @@ std::string uhd_device::getTxAntenna(size_t chan)
 		return "";
 	}
 	return usrp_dev->get_tx_antenna(chan);
+}
+
+bool uhd_device::requiresRadioAlign()
+{
+	return false;
 }
 
 /*

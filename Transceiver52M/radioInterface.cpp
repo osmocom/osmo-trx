@@ -145,16 +145,31 @@ bool RadioInterface::tuneRx(double freq, size_t chan)
   return mRadio->setRxFreq(freq, chan);
 }
 
+/** synchronization thread loop */
+void *AlignRadioServiceLoopAdapter(RadioInterface *radioInterface)
+{
+  while (1) {
+    sleep(60);
+    radioInterface->alignRadio();
+    pthread_testcancel();
+  }
+  return NULL;
+}
+
+void RadioInterface::alignRadio() {
+  mRadio->updateAlignment(writeTimestamp+ (TIMESTAMP) 10000);
+}
+
 bool RadioInterface::start()
 {
   if (mOn)
     return true;
 
   LOG(INFO) << "Starting radio device";
-#ifdef DEVICE_USRP1
-  mAlignRadioServiceLoopThread.start((void * (*)(void*))AlignRadioServiceLoopAdapter,
-                                     (void*)this);
-#endif
+  if (mRadio->requiresRadioAlign())
+        mAlignRadioServiceLoopThread.start(
+                                (void * (*)(void*))AlignRadioServiceLoopAdapter,
+                                (void*)this);
 
   if (!mRadio->start())
     return false;
@@ -190,22 +205,6 @@ bool RadioInterface::stop()
   mOn = false;
   return true;
 }
-
-#ifdef DEVICE_USRP1
-void *AlignRadioServiceLoopAdapter(RadioInterface *radioInterface)
-{
-  while (1) {
-    radioInterface->alignRadio();
-    pthread_testcancel();
-  }
-  return NULL;
-}
-
-void RadioInterface::alignRadio() {
-  sleep(60);
-  mRadio->updateAlignment(writeTimestamp+ (TIMESTAMP) 10000);
-}
-#endif
 
 void RadioInterface::driveTransmitRadio(std::vector<signalVector *> &bursts,
                                         std::vector<bool> &zeros)

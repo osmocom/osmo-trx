@@ -353,6 +353,10 @@ std::string USRPDevice::getTxAntenna(size_t chan)
 	return "";
 }
 
+bool USRPDevice::requiresRadioAlign()
+{
+	return true;
+}
 
 // NOTE: Assumes sequential reads
 int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
