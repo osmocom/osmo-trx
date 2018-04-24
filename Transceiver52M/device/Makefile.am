@@ -4,7 +4,7 @@ noinst_HEADERS = radioDevice.h
 
 SUBDIRS =
 
-if USRP1
+if DEVICE_USRP1
 SUBDIRS += usrp1
 else
 SUBDIRS += uhd

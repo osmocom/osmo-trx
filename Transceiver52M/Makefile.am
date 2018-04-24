@@ -83,7 +83,7 @@ COMMON_LDADD = \
 bin_PROGRAMS = osmo-trx
 osmo_trx_SOURCES = osmo-trx.cpp
 
-if USRP1
+if DEVICE_USRP1
 osmo_trx_LDADD = \
 	$(COMMON_LDADD) \
 	$(USRP_LIBS) \

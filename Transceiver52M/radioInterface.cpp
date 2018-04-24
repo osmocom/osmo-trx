@@ -151,7 +151,7 @@ bool RadioInterface::start()
     return true;
 
   LOG(INFO) << "Starting radio device";
-#ifdef USRP1
+#ifdef DEVICE_USRP1
   mAlignRadioServiceLoopThread.start((void * (*)(void*))AlignRadioServiceLoopAdapter,
                                      (void*)this);
 #endif
@@ -191,7 +191,7 @@ bool RadioInterface::stop()
   return true;
 }
 
-#ifdef USRP1
+#ifdef DEVICE_USRP1
 void *AlignRadioServiceLoopAdapter(RadioInterface *radioInterface)
 {
   while (1) {
