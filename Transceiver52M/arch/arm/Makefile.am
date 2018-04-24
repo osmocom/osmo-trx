@@ -9,7 +9,7 @@ AM_CCASFLAGS = $(ARCH_FLAGS)
 
 noinst_LTLIBRARIES = libarch.la
 
-libarch_la_LIBADD = $(top_builddir)/Transceiver52M/common/libarch_common.la
+libarch_la_LIBADD = $(top_builddir)/Transceiver52M/arch/common/libarch_common.la
 
 libarch_la_SOURCES = \
 	convert.c \

@@ -199,9 +199,10 @@ AC_CONFIG_FILES([\
     CommonLibs/Makefile \
     GSM/Makefile \
     Transceiver52M/Makefile \
-    Transceiver52M/common/Makefile \
-    Transceiver52M/arm/Makefile \
-    Transceiver52M/x86/Makefile \
+    Transceiver52M/arch/Makefile \
+    Transceiver52M/arch/common/Makefile \
+    Transceiver52M/arch/arm/Makefile \
+    Transceiver52M/arch/x86/Makefile \
     tests/Makefile \
     tests/CommonLibs/Makefile \
     tests/Transceiver52M/Makefile \

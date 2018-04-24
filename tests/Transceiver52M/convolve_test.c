@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../../Transceiver52M/common/convolve.h"
+#include "convolve.h"
 
 #define TESTVEC_LEN 1000
 #define DO_INIT 1

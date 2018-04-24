@@ -29,8 +29,8 @@
 #include "Synthesis.h"
 
 extern "C" {
-#include "common/fft.h"
-#include "common/convolve.h"
+#include "fft.h"
+#include "convolve.h"
 }
 
 static void interleave(float **in, size_t ilen,

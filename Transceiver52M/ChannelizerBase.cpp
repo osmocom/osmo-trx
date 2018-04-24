@@ -29,7 +29,7 @@
 #include "ChannelizerBase.h"
 
 extern "C" {
-#include "common/fft.h"
+#include "fft.h"
 }
 
 static float sinc(float x)

@@ -33,9 +33,9 @@ COMMON_LA = $(top_builddir)/CommonLibs/libcommon.la
 GSM_LA = $(top_builddir)/GSM/libGSM.la
 
 if ARCH_ARM
-ARCH_LA = $(top_builddir)/Transceiver52M/arm/libarch.la
+ARCH_LA = $(top_builddir)/Transceiver52M/arch/arm/libarch.la
 else
-ARCH_LA = $(top_builddir)/Transceiver52M/x86/libarch.la
+ARCH_LA = $(top_builddir)/Transceiver52M/arch/x86/libarch.la
 endif
 
 MOSTLYCLEANFILES = *~

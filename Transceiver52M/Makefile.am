@@ -21,15 +21,10 @@
 
 include $(top_srcdir)/Makefile.common
 
-AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/common
-AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
+SUBDIRS = arch
 
-SUBDIRS = common
-if ARCH_ARM
-SUBDIRS += arm
-else
-SUBDIRS += x86
-endif
+AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/arch/common
+AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
 
 if USRP1
 AM_CPPFLAGS += $(USRP_CFLAGS)

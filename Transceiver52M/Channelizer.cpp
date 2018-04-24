@@ -28,8 +28,8 @@
 #include "Channelizer.h"
 
 extern "C" {
-#include "common/fft.h"
-#include "common/convolve.h"
+#include "fft.h"
+#include "convolve.h"
 }
 
 static void deinterleave(const float *in, size_t ilen,
