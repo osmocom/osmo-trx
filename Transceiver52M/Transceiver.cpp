@@ -35,12 +35,6 @@ using namespace GSM;
 
 #define USB_LATENCY_INTRVL		10,0
 
-#if USE_UHD
-#  define USB_LATENCY_MIN		6,7
-#else
-#  define USB_LATENCY_MIN		1,1
-#endif
-
 /* Number of running values use in noise average */
 #define NOISE_CNT			20
 
@@ -994,7 +988,7 @@ void Transceiver::driveTxFIFO()
         else {
           // if underrun hasn't occurred in the last sec (216 frames) drop
           //    transmit latency by a timeslot
-          if (mTransmitLatency > GSM::Time(USB_LATENCY_MIN)) {
+          if (mTransmitLatency > mRadioInterface->minLatency()) {
               if (radioClock->get() > mLatencyUpdateTime + GSM::Time(216,0)) {
               mTransmitLatency.decTN();
               LOG(INFO) << "reduced latency: " << mTransmitLatency;

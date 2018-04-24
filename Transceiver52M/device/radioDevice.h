@@ -18,6 +18,8 @@
 #include <string>
 #include <vector>
 
+#include "GSMCommon.h"
+
 extern "C" {
 #include "config_defs.h"
 }
@@ -150,6 +152,9 @@ class RadioDevice {
 
   /** return whether user drives synchronization of Tx/Rx of USRP */
   virtual bool requiresRadioAlign() = 0;
+
+  /** Minimum latency that the device can achieve */
+  virtual GSM::Time minLatency() = 0;
 
   /** Return internal status values */
   virtual double getTxFreq(size_t chan = 0) = 0;

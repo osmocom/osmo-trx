@@ -358,6 +358,10 @@ bool USRPDevice::requiresRadioAlign()
 	return true;
 }
 
+GSM::Time USRPDevice::minLatency() {
+	return GSM::Time(1,1);
+}
+
 // NOTE: Assumes sequential reads
 int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
                             TIMESTAMP timestamp, bool *underrun, unsigned *RSSI)

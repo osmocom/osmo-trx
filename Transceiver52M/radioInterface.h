@@ -133,6 +133,9 @@ public:
   /** get transport window type of attached device */ 
   enum RadioDevice::TxWindowType getWindowType() { return mRadio->getWindowType(); }
 
+  /** Minimum latency that the device can achieve */
+  GSM::Time minLatency()  { return mRadio->minLatency(); }
+
 protected:
   /** drive synchronization of Tx/Rx of USRP */
   void alignRadio();

@@ -257,6 +257,8 @@ public:
 
 	bool requiresRadioAlign();
 
+	GSM::Time minLatency();
+
 	inline double getSampleRate() { return tx_rate; }
 	inline double numberRead() { return rx_pkt_cnt; }
 	inline double numberWritten() { return 0; }
@@ -1287,6 +1289,14 @@ std::string uhd_device::getTxAntenna(size_t chan)
 bool uhd_device::requiresRadioAlign()
 {
 	return false;
+}
+
+GSM::Time uhd_device::minLatency() {
+	/* Empirical data from a handful of
+	relatively recent machines shows that the B100 will underrun when
+	the transmit threshold is reduced to a time of 6 and a half frames,
+	so we set a minimum 7 frame threshold. */
+	return GSM::Time(6,7);
 }
 
 /*

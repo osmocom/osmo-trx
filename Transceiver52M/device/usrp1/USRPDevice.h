@@ -194,6 +194,9 @@ private:
   /** return whether user drives synchronization of Tx/Rx of USRP */
   bool requiresRadioAlign();
 
+  /** return whether user drives synchronization of Tx/Rx of USRP */
+  virtual GSM::Time minLatency();
+
   /** Return internal status values */
   inline double getTxFreq(size_t chan = 0) { return 0; }
   inline double getRxFreq(size_t chan = 0) { return 0; }
