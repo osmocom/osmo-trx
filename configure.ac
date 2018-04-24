@@ -90,6 +90,11 @@ then
 	LDFLAGS="$LDFLAGS -fsanitize=address -fsanitize=undefined"
 fi
 
+AC_ARG_WITH(uhd, [
+    AS_HELP_STRING([--with-uhd],
+        [enable UHD based transceiver])
+])
+
 AC_ARG_WITH(usrp1, [
     AS_HELP_STRING([--with-usrp1],
         [enable USRP1 gnuradio based transceiver])
@@ -128,7 +133,7 @@ AS_IF([test "x$with_usrp1" = "xyes"], [
     PKG_CHECK_MODULES(USRP, usrp >= 3.3)
 ])
 
-AS_IF([test "x$with_usrp1" != "xyes"],[
+AS_IF([test "x$with_uhd" != "xno"],[
     PKG_CHECK_MODULES(UHD, uhd >= 003.011,
         [AC_DEFINE(USE_UHD_3_11, 1, UHD version 3.11.0 or higher)],
         [PKG_CHECK_MODULES(UHD, uhd >= 003.009,
@@ -136,7 +141,6 @@ AS_IF([test "x$with_usrp1" != "xyes"],[
             [PKG_CHECK_MODULES(UHD, uhd >= 003.005)]
         )]
     )
-    AC_DEFINE(USE_UHD, 1, All UHD versions)
 ])
 
 AS_IF([test "x$with_singledb" = "xyes"], [
@@ -178,6 +182,7 @@ dnl Check if the compiler supports runtime SIMD detection
 CHECK_BUILTIN_SUPPORT([__builtin_cpu_supports],
   [Runtime SIMD detection will be disabled])
 
+AM_CONDITIONAL(DEVICE_UHD, [test "x$with_uhd" != "xno"])
 AM_CONDITIONAL(DEVICE_USRP1, [test "x$with_usrp1" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])

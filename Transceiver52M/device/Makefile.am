@@ -6,6 +6,8 @@ SUBDIRS =
 
 if DEVICE_USRP1
 SUBDIRS += usrp1
-else
+endif
+
+if DEVICE_UHD
 SUBDIRS += uhd
 endif

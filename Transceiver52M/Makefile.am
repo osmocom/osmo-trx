@@ -80,19 +80,24 @@ COMMON_LDADD = \
 	$(LIBOSMOCTRL_LIBS) \
 	$(LIBOSMOVTY_LIBS)
 
-bin_PROGRAMS = osmo-trx
-osmo_trx_SOURCES = osmo-trx.cpp
+bin_PROGRAMS =
 
-if DEVICE_USRP1
-osmo_trx_LDADD = \
-	$(COMMON_LDADD) \
-	$(USRP_LIBS) \
-	$(builddir)/device/usrp1/libdevice.la
-osmo_trx_CPPFLAGS  = $(AM_CPPFLAGS) $(USRP_CFLAGS)
-else
-osmo_trx_LDADD = \
+if DEVICE_UHD
+bin_PROGRAMS += osmo-trx-uhd
+osmo_trx_uhd_SOURCES = osmo-trx.cpp
+osmo_trx_uhd_LDADD = \
 	$(COMMON_LDADD) \
 	$(UHD_LIBS) \
 	$(builddir)/device/uhd/libdevice.la
-osmo_trx_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
+osmo_trx_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
+endif
+
+if DEVICE_USRP1
+bin_PROGRAMS += osmo-trx-usrp1
+osmo_trx_usrp1_SOURCES = osmo-trx.cpp
+osmo_trx_usrp1_LDADD = \
+	$(COMMON_LDADD) \
+	$(USRP_LIBS) \
+	$(builddir)/device/usrp1/libdevice.la
+osmo_trx_usrp1_CPPFLAGS  = $(AM_CPPFLAGS) $(USRP_CFLAGS)
 endif
