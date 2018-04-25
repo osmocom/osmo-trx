@@ -48,10 +48,10 @@ extern "C" {
 #endif
 
 #define LOG(level) \
-	Log(DMAIN, LOGL_##level).get() <<  "[tid=" << pthread_self() << "] "
+	Log(DMAIN, LOGL_##level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "] "
 
 #define LOGC(category, level) \
-	Log(category, LOGL_##level).get() <<  "[tid=" << pthread_self() << "] "
+	Log(category, LOGL_##level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "] "
 
 /**
 	A C++ stream-based thread-safe logger.
@@ -67,11 +67,14 @@ class Log {
 	std::ostringstream mStream;	///< This is where we buffer up the log entry.
 	int mCategory;			///< Priority of current report.
 	int mPriority;			///< Category of current report.
+	const char *filename;		///< Source File Name of current report.
+	int line;			///< Line number in source file of current report.
 
 	public:
 
-	Log(int wCategory, int wPriority)
-		: mCategory(wCategory), mPriority(wPriority)
+	Log(int wCategory, int wPriority, const char* filename, int line)
+		: mCategory(wCategory), mPriority(wPriority),
+		  filename(filename), line(line)
 	{ }
 
 	// Most of the work is in the destructor.

@@ -50,7 +50,7 @@ Log::~Log()
 	ScopedLock lock(gLogToLock);
 	// The COUT() macro prevents messages from stomping each other but adds uninteresting thread numbers,
 	// so just use std::cout.
-	LOGP(mCategory, mPriority, fmt, mStream.str().c_str());
+	LOGPSRC(mCategory, mPriority, filename, line, fmt, mStream.str().c_str());
 }
 
 ostringstream& Log::get()

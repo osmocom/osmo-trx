@@ -61,9 +61,9 @@ int main(int argc, char *argv[])
 	log_set_print_filename(osmo_stderr_target, 0);
 	log_set_print_level(osmo_stderr_target, 1);
 
-	Log(MYCAT, LOGL_FATAL).get() << "testing the logger.";
-	Log(MYCAT, LOGL_ERROR).get() << "testing the logger.";
-	Log(MYCAT, LOGL_NOTICE).get() << "testing the logger.";
-	Log(MYCAT, LOGL_INFO).get() << "testing the logger.";
-	Log(MYCAT, LOGL_DEBUG).get() << "testing the logger.";
+	Log(MYCAT, LOGL_FATAL, __BASE_FILE__, __LINE__).get() << "testing the logger.";
+	Log(MYCAT, LOGL_ERROR, __BASE_FILE__, __LINE__).get() << "testing the logger.";
+	Log(MYCAT, LOGL_NOTICE, __BASE_FILE__, __LINE__).get() << "testing the logger.";
+	Log(MYCAT, LOGL_INFO, __BASE_FILE__, __LINE__).get() << "testing the logger.";
+	Log(MYCAT, LOGL_DEBUG, __BASE_FILE__, __LINE__).get() << "testing the logger.";
 }
