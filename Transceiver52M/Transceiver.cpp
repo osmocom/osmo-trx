@@ -373,7 +373,8 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     state = &mStates[i];
 
     while ((burst = mTxPriorityQueues[i].getStaleBurst(nowTime))) {
-      LOG(NOTICE) << "dumping STALE burst in TRX->USRP interface";
+      LOG(NOTICE) << "chan " << i << " dumping STALE burst in TRX->USRP interface ("
+                  << burst->getTime() <<" vs " << nowTime << "), retrans=" << state->mRetrans;
       if (state->mRetrans)
         updateFillerTable(i, burst);
       delete burst;
