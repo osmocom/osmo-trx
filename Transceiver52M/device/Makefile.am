@@ -11,3 +11,7 @@ endif
 if DEVICE_UHD
 SUBDIRS += uhd
 endif
+
+if DEVICE_LMS
+SUBDIRS += lms
+endif
