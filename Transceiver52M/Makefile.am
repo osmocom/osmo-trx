@@ -99,3 +99,13 @@ osmo_trx_usrp1_LDADD = \
 	$(USRP_LIBS)
 osmo_trx_usrp1_CPPFLAGS  = $(AM_CPPFLAGS) $(USRP_CFLAGS)
 endif
+
+if DEVICE_LMS
+bin_PROGRAMS += osmo-trx-lms
+osmo_trx_lms_SOURCES = osmo-trx.cpp
+osmo_trx_lms_LDADD = \
+	$(COMMON_LDADD) \
+	$(LMS_LIBS) \
+	$(builddir)/device/lms/libdevice.la
+osmo_trx_lms_CPPFLAGS  = $(AM_CPPFLAGS) $(LMS_CFLAGS)
+endif
