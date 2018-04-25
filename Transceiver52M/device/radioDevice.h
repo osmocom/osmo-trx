@@ -39,7 +39,7 @@ class RadioDevice {
 
   public:
   /* Available transport bus types */
-  enum TxWindowType { TX_WINDOW_USRP1, TX_WINDOW_FIXED };
+  enum TxWindowType { TX_WINDOW_USRP1, TX_WINDOW_FIXED, TX_WINDOW_LMS1 };
 
   /* Radio interface types */
   enum InterfaceType {

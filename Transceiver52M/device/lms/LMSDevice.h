@@ -21,22 +21,33 @@
 
 #include "radioDevice.h"
 
-#include <lime/LMSDevice.h>
 #include <sys/time.h>
 #include <math.h>
+#include <limits.h>
 #include <string>
 #include <iostream>
+#include <lime/LimeSuite.h>
+
+#define LIMESDR_TX_AMPL  0.3
 
 /** A class to handle a LimeSuite supported device */
 class LMSDevice:public RadioDevice {
 
 private:
 
-	lms_device_t *m_lms_dev;
-	lms_stream_t m_lms_Stream_rx;
-	lms_stream_t m_lms_Stream_tx;
+	static constexpr double masterClockRate = 52.0e6;
 
-	int sps;
+	lms_device_t *m_lms_dev;
+	std::vector<lms_stream_t> m_lms_stream_rx;
+	std::vector<lms_stream_t> m_lms_stream_tx;
+
+	std::vector<uint32_t> m_last_rx_underruns;
+	std::vector<uint32_t> m_last_rx_overruns;
+	std::vector<uint32_t> m_last_tx_underruns;
+	std::vector<uint32_t> m_last_tx_overruns;
+
+	size_t sps, chans;
+	double actualSampleRate;	///< the actual USRP sampling rate
 
 	unsigned long long samplesRead;	///< number of samples read from LMS
 	unsigned long long samplesWritten;	///< number of samples sent to LMS
@@ -44,15 +55,20 @@ private:
 	bool started;		///< flag indicates LMS has started
 	bool skipRx;		///< set if LMS is transmit-only.
 
-	TIMESTAMP ts_offset;
+	TIMESTAMP ts_initial, ts_offset;
+
+	double rxGain;
+
+	int get_ant_idx(const std::string & name, bool dir_tx, size_t chan);
+	bool flush_recv(size_t num_pkts);
 
 public:
 
 	/** Object constructor */
-	LMSDevice(size_t sps);
+	LMSDevice(size_t sps, size_t chans);
 
 	/** Instantiate the LMS */
-	int open(const std::string &, int, bool);
+	int open(const std::string &args, int ref, bool swap_channels);
 
 	/** Start the LMS */
 	bool start();
@@ -62,7 +78,9 @@ public:
 
 	/** Set priority not supported */
 	void setPriority(float prio = 0.5) {
-	} enum TxWindowType getWindowType() {
+	}
+
+	enum TxWindowType getWindowType() {
 		return TX_WINDOW_LMS1;
 	}
 
@@ -103,22 +121,22 @@ public:
 
 	/** Returns the starting write Timestamp*/
 	TIMESTAMP initialWriteTimestamp(void) {
-		return 20000;
+		return ts_initial;
 	}
 
 	/** Returns the starting read Timestamp*/
 	TIMESTAMP initialReadTimestamp(void) {
-		return 20000;
+		return ts_initial;
 	}
 
 	/** returns the full-scale transmit amplitude **/
 	double fullScaleInputValue() {
-		return 13500.0;
+		return(double) SHRT_MAX * LIMESDR_TX_AMPL;
 	}
 
 	/** returns the full-scale receive amplitude **/
 	double fullScaleOutputValue() {
-		return 9450.0;
+		return (double) SHRT_MAX;
 	}
 
 	/** sets the receive chan gain, returns the gain setting **/
@@ -155,6 +173,12 @@ public:
 
 	/* return the used RX path */
 	std::string getTxAntenna(size_t chan = 0);
+
+	/** return whether user drives synchronization of Tx/Rx of USRP */
+        bool requiresRadioAlign();
+
+        /** return whether user drives synchronization of Tx/Rx of USRP */
+        virtual GSM::Time minLatency();
 
 	/** Return internal status values */
 	inline double getTxFreq(size_t chan = 0) {

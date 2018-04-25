@@ -10,6 +10,12 @@ static const struct log_info_cat default_categories[] = {
 		.color = NULL,
 		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
+	[DLMS] = {
+		.name = "DLMS",
+		.description = "LimeSuite category",
+		.color = NULL,
+		.enabled = 1, .loglevel = LOGL_NOTICE,
+	},
 };
 
 const struct log_info log_info = {
