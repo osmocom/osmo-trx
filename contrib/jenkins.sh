@@ -64,6 +64,7 @@ fi
 mkdir "$deps" || true
 
 osmo-build-dep.sh libosmocore "" "--enable-sanitize --disable-doxygen --disable-pcsc"
+osmo-build-dep.sh libusrp
 
 export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="$inst/lib"
@@ -78,7 +79,7 @@ set -x
 
 cd "$base"
 autoreconf --install --force
-./configure --enable-sanitize $INSTR
+./configure --enable-sanitize --with-uhd --with-usrp1 $INSTR
 $MAKE $PARALLEL_MAKE
 $MAKE check \
   || cat-testlogs.sh
