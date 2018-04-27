@@ -22,7 +22,15 @@ Package: osmo-trx
 Maintainer: Ivan Klyuchnikov <ivan.kluchnikov@fairwaves.ru>
 Depends: osmo-trx-uhd
 Architecture: all
-Description: Virtual package for osmo-trx-uhd
+Description: Metapackage for osmo-trx-uhd
+
+Package: osmo-trx-dbg
+Architecture: any
+Section: debug
+Priority: extra
+Depends: osmo-trx-uhd (= ${binary:Version}), osmo-trx-usrp1 (= ${binary:Version}), ${misc:Depends}
+Description: Debug symbols for the osmo-trx-*
+ Make debugging possible
 
 Package: osmo-trx-uhd
 Architecture: any
@@ -43,14 +51,6 @@ Description: SDR transceiver that implements Layer 1 of a GSM BTS (UHD)
  between different telecommunication associations for developing new
  generations of mobile phone networks. (post-2G/GSM)
 
-Package: osmo-trx-uhd-dbg
-Architecture: any
-Section: debug
-Priority: extra
-Depends: osmo-trx-uhd (= ${binary:Version}), ${misc:Depends}
-Description: Debug symbols for the osmo-trx-uhd
- Make debugging possible
-
 Package: osmo-trx-usrp1
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
@@ -69,11 +69,3 @@ Description: SDR transceiver that implements Layer 1 of a GSM BTS (USRP1)
  3GPP is the "3rd Generation Partnership Project" which is the collaboration
  between different telecommunication associations for developing new
  generations of mobile phone networks. (post-2G/GSM)
-
-Package: osmo-trx-usrp1-dbg
-Architecture: any
-Section: debug
-Priority: extra
-Depends: osmo-trx-usrp1 (= ${binary:Version}), ${misc:Depends}
-Description: Debug symbols for the osmo-trx-usrp1
- Make debugging possible
