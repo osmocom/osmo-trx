@@ -32,9 +32,7 @@ rev4dir = $(datadir)/usrp/rev4
 dist_rev2_DATA = std_inband.rbf
 dist_rev4_DATA = std_inband.rbf
 
-EXTRA_DIST = \
-	README \
-	README.Talgorithm
+EXTRA_DIST = README
 
 noinst_LTLIBRARIES = libtransceiver_common.la
 

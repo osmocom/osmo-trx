@@ -9,7 +9,8 @@ EXTRA_DIST = BitVectorTest.ok \
              SocketsTest.ok \
              TimevalTest.ok \
              VectorTest.ok \
-	     LogTest.ok
+             LogTest.ok \
+             LogTest.err
 
 noinst_PROGRAMS = \
 	BitVectorTest \

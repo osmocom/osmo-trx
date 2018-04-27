@@ -18,9 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-top_srcdir = $(abs_top_srcdir)
-top_builddir = $(abs_top_builddir)
-
 COMMON_INCLUDEDIR = $(top_srcdir)/CommonLibs
 GSM_INCLUDEDIR = $(top_srcdir)/GSM
 

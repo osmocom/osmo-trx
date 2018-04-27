@@ -4,7 +4,7 @@ else
 ARCH_FLAGS = -mfpu=neon
 endif
 
-AM_CFLAGS = -Wall $(ARCH_FLAGS) -std=gnu99 -I../common
+AM_CFLAGS = -Wall $(ARCH_FLAGS) -std=gnu99 -I${srcdir}/../common
 AM_CCASFLAGS = $(ARCH_FLAGS)
 
 noinst_LTLIBRARIES = libarch.la
