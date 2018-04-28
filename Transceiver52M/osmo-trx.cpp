@@ -385,7 +385,7 @@ static void print_config(struct trx_ctx *trx)
 	ost << "   Device args............. " << charp2str(trx->cfg.dev_args) << std::endl;
 	ost << "   TRX Base Port........... " << trx->cfg.base_port << std::endl;
 	ost << "   TRX Address............. " << charp2str(trx->cfg.bind_addr) << std::endl;
-	ost << "   GSM Core Address........." << charp2str(trx->cfg.remote_addr) << std::endl;
+	ost << "   GSM BTS Address......... " << charp2str(trx->cfg.remote_addr) << std::endl;
 	ost << "   Channels................ " << trx->cfg.num_chans << std::endl;
 	ost << "   Tx Samples-per-Symbol... " << trx->cfg.tx_sps << std::endl;
 	ost << "   Rx Samples-per-Symbol... " << trx->cfg.rx_sps << std::endl;
