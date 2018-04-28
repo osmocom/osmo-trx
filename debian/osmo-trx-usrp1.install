@@ -1,1 +1,3 @@
 /usr/bin/osmo-trx-usrp1
+/usr/share/usrp/rev2/std_inband.rbf
+/usr/share/usrp/rev4/std_inband.rbf
