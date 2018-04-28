@@ -8,5 +8,8 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 override_dh_shlibdeps:
 	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
 
+override_dh_auto_configure:
+	dh_auto_configure -- --with-usrp1
+
 override_dh_strip:
 	dh_strip --dbg-package=osmo-trx-dbg
