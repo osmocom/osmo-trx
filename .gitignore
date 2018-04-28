@@ -4,6 +4,7 @@
 *.la
 Transceiver52M/osmo-trx-uhd
 Transceiver52M/osmo-trx-usrp1
+Transceiver52M/osmo-trx-lms
 
 # tests
 tests/CommonLibs/BitVectorTest
