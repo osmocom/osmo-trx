@@ -118,9 +118,18 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		return -1;
 	}
 
+	lms_range_t range;
+	if (LMS_GetSampleRateRange(m_lms_dev, LMS_CH_RX, &range))
+		goto out_close;
+	LOG(DEBUG) << "Sample Rate: Min=" << range.min << " Max=" << range.max << " Step=" << range.step;
+
 	LOG(DEBUG) << "Setting sample rate to " << GSMRATE*sps << " " << sps;
 	if (LMS_SetSampleRate(m_lms_dev, GSMRATE*sps, 32) < 0)
 		goto out_close;
+	float_type sr_host, sr_rf;
+	if (LMS_GetSampleRate(m_lms_dev, LMS_CH_RX, 0, &sr_host, &sr_rf))
+		goto out_close;
+	LOG(DEBUG) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
 	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
 	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE);
 
