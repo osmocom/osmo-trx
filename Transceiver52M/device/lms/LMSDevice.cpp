@@ -131,7 +131,8 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	LOG(DEBUG) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
 	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
-	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE);
+	//ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE);
+	ts_offset = 0;
 
 	switch (ref) {
 	case REF_INTERNAL:
