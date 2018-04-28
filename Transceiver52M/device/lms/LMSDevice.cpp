@@ -112,6 +112,12 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 
 	delete [] info_list;
 
+	LOG(INFO) << "Init LMS device";
+	if (LMS_Init(m_lms_dev) != 0) {
+		LOG(ERROR) << "LMS_Init() failed";
+		return -1;
+	}
+
 	LOG(DEBUG) << "Setting sample rate to " << GSMRATE*sps << " " << sps;
 	if (LMS_SetSampleRate(m_lms_dev, GSMRATE*sps, 32) < 0)
 		goto out_close;
@@ -138,10 +144,6 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		LOG(ALERT) << "Invalid reference type";
 		goto out_close;
 	}
-
-	LOG(INFO) << "Init LMS device";
-	if (LMS_Init(m_lms_dev) < 0)
-		goto out_close;
 
 	/* Perform Rx and Tx calibration */
 	for (i=0; i<chans; i++) {
