@@ -144,7 +144,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 			goto out_close;
 		break;
 	case REF_EXTERNAL:
-		LOG(DEBUG) << "Setting Internal clock reference to " << 10000000.0;
+		LOG(DEBUG) << "Setting External clock reference to " << 10000000.0;
 		/* Assume an external 10 MHz reference clock */
 		if (LMS_SetClockFreq(m_lms_dev, LMS_CLOCK_EXTREF, 10000000.0) < 0)
 			goto out_close;
