@@ -19,7 +19,6 @@ Vcs-Git: git://git.osmocom.org/osmo-trx
 Homepage: https://projects.osmocom.org/projects/osmotrx
 
 Package: osmo-trx
-Maintainer: Ivan Klyuchnikov <ivan.kluchnikov@fairwaves.ru>
 Depends: osmo-trx-uhd
 Architecture: all
 Description: Metapackage for osmo-trx-uhd
