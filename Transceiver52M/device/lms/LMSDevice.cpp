@@ -345,7 +345,7 @@ bool LMSDevice::flush_recv(size_t num_pkts)
 			return false;
 		}
 
-		ts_initial = rx_metadata.timestamp;
+		ts_initial = rx_metadata.timestamp + len;
 	}
 
 	LOG(INFO) << "Initial timestamp " << ts_initial << std::endl;
