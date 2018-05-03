@@ -1,3 +1,125 @@
+osmo-trx (0.4.0) unstable; urgency=medium
+
+  [ Neels Hofmeyr ]
+  * jenkins: use osmo-clean-workspace.sh before and after build
+
+  [ Harald Welte ]
+  * SocketsTest: Fix printing of non-nul-terminated string
+  * Revert "debian: Remove osmo-trx-usrp1 until we can build libusrp1.deb"
+  * debian/control: Remove "Maintainer" from binary package section
+  * debian/rules: Make sure we always require libusrp
+  * debian: Ensure USRP1 firmware is part of osmo-trx-usrp1
+  * debian/control: Add build dependency to libusrp-dev
+  * update .gitignore for new executable names
+  * osmo-trx: s/GSM Core Address/GSM BTS Address/
+
+  [ Piotr Krysik ]
+  * UHDDevice.cpp: add USRP B205mini support
+
+  [ Max ]
+  * Mark release target as virtual
+  * Remove outdated references to OpenBTS
+  * Remove unused headers
+  * Update installation instructions
+  * Update legal disclaimer
+  * Update license notes
+  * tests: null-terminate buffer
+
+  [ Pau Espin Pedrol ]
+  * cosmetic: Remove trailing whitespace
+  * Logger: Stop using Log.Alarms.Max from config
+  * Logger: Stop using Log.File and Log.Level from config
+  * Drop use of ConfigurationTable gConfig
+  * Remove Configuration module and libsqlite dependency
+  * cosmetic: AUTHORS: fix trailing whitespace
+  * Set up GNU Autotest infrastructure
+  * tests: InterThread: adapt to have reproducible output and enable autotest
+  * tests: Timeval: adapt to have reproducible output and enable autotest
+  * tests: Log: adapt to have reproducible output and enable autotest
+  * Sockets.cpp: Fix initialization of UDD socket
+  * tests: Sockets: adapt to have reproducible output and enable autotest
+  * utils/convolvtest: Remove uneeded libosmocore dependency
+  * Move ARCH_LA to Makefile.common
+  * tests: Migrate convtest util to autotest infrastructure
+  * arm/convert.c: Fix compilation error
+  * arm/convert.c: Add missing convert_init implementation
+  * .gitignore: Add missing test related files
+  * Remove UDDSocket class
+  * tests: SocketTests: Pick OS-assigned instead of setting one manually
+  * tests: SocketsTest: Avoid hang forever if test fails
+  * tests: SocketsTest: Fail test on write fail
+  * tests: TimevalTest: refactor and avoid double comparison
+  * contrib/jenkins.sh: Use qemu+proot+debootstrap to run tests with ARM instruction set
+  * tests: convolve: Disable due to difference in output in different archs
+  * Remove unneeded libdl dependency
+  * Fix whitespace
+  * Add support to set Rx/TxAntenna
+  * UHDDevice: Initialize async_event_thrd in constructor
+  * Logger: Drop unused gLogEarly
+  * Logger: Remove unused logging macros
+  * Logger: get rid of alarm APIs
+  * Logger: Drop syslog support
+  * Logger: Drop support to log into file
+  * Logger: Remove unused includes
+  * Logger: Remove gLogToConsole flag
+  * configure.ac: Check for pkg-config
+  * Depend on libosmocore
+  * osmo-trx: set up signals using libosmocore helpers
+  * osmo-trx: Set up talloc ctx
+  * debian: Depend on libtalloc and libosmocore
+  * Add initial support for logging, vty, ctrl
+  * Logger: Use libosmocore logging system
+  * osmo-trx.cpp: Move trx start and stop to helper functions
+  * Move enums required by VTY to a separate header
+  * vty: Implement VTY cfg parsing for current parameters
+  * doc: Add sample cfg file for LimeSDR
+  * osmo-trx: Use VTY cfg structures while still allowing cmd line options
+  * osmo-trx: Re-introduce -l cmd line parameter
+  * Makefile.am: Avoid using subdir if arch is not required
+  * Build Transceiver52M/common as an .la lib
+  * use osmo_init_logging2()
+  * tests: Makefile.am: Fix typo in include path
+  * configure.ac: Add --enable-sanitize option
+  * Move arch specific fiels to arch subdir
+  * Move device specific files to device subdir
+  * Change configure define USRP1 to DEVICE_USRP1
+  * Move device specific code out of radioInterface
+  * Transceiver: Move device specific code to radioDevice class
+  * Build one osmo-trx binary for each device support enabled
+  * Logger: Print correct source file and line number
+  * Transceiver: log timing info of stale bursts
+  * build: Fix make distcheck
+  * build: More OBS build failure fixes
+  * jenkins.sh: Enable build of osmo-trx-usrp1
+  * debian: Remove osmo-trx-usrp1 until we can build libusrp1.deb
+  * debian: Fix OBS build
+  * build: Fix OBS build for ARM
+  * git-version-gen: Take into account tags not in master
+
+  [ Alexander Huemer ]
+  * Unbreak `./configure --with-usrp1` build
+  * Fix USRP1 build with support for setting Rx/TxAntenna
+
+  [ Alexander Couzens ]
+  * jenkins.sh: fix the download url if the qemu image wasn't setup
+  * jenkins.sh: cleanup always the workspace
+  * jenkins.sh: change qemu-img default location to $HOME/qemu-img instead of /opt/qemu-img
+
+  [ Vadim Yanitskiy ]
+  * Transceiver.cpp: use a define for the MAX_PACKET_LENGTH
+  * Transceiver.cpp: properly zero-terminate received commands
+  * Transceiver.cpp: use pointer arithmetics for CMD parsing
+  * Transceiver.cpp: fix incorrect format string for SETTSC
+  * Transceiver.cpp: prevent out-of-range array access
+
+  [ Martin Hauke ]
+  * configure.ac: Fix typo
+
+  [ Philipp Maier ]
+  * doc: add example config for usrp B200 series
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Thu, 03 May 2018 16:23:29 +0200
+
 osmo-trx (0.2.0) unstable; urgency=medium
 
   [ Alexander Chemeris ]
