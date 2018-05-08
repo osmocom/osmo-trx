@@ -104,8 +104,8 @@ if DEVICE_LMS
 bin_PROGRAMS += osmo-trx-lms
 osmo_trx_lms_SOURCES = osmo-trx.cpp
 osmo_trx_lms_LDADD = \
+	$(builddir)/device/lms/libdevice.la \
 	$(COMMON_LDADD) \
-	$(LMS_LIBS) \
-	$(builddir)/device/lms/libdevice.la
+	$(LMS_LIBS)
 osmo_trx_lms_CPPFLAGS  = $(AM_CPPFLAGS) $(LMS_CFLAGS)
 endif
