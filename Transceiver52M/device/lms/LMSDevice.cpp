@@ -159,7 +159,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	for (i=0; i<chans; i++) {
 		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_RX, i, 1.4001e6) < 0)
 			goto out_close;
-		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_TX, i, 5e6) < 0)
+		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_TX, i, 5.2e6) < 0)
 			goto out_close;
 		LOG(INFO) << "Calibrating chan " << i;
 		if (LMS_Calibrate(m_lms_dev, LMS_CH_RX, i, LMS_CALIBRATE_BW_HZ, 0) < 0)
