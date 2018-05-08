@@ -732,8 +732,8 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 		}
 	} else if (dev_type == LIMESDR) {
 		for (size_t i = 0; i < chans; i++) {
-			usrp_dev->set_tx_bandwidth(5e6, i);
-			usrp_dev->set_rx_bandwidth(5e6, i);
+			usrp_dev->set_tx_bandwidth(5.2e6, i);
+			usrp_dev->set_rx_bandwidth(1.4001e6, i);
 		}
 	}
 
