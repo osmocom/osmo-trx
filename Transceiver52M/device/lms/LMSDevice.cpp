@@ -250,7 +250,7 @@ bool LMSDevice::stop()
 
 double LMSDevice::maxTxGain()
 {
-	return 60.0;
+	return 73.0;
 }
 
 double LMSDevice::minTxGain()
@@ -260,7 +260,7 @@ double LMSDevice::minTxGain()
 
 double LMSDevice::maxRxGain()
 {
-	return 70.0;
+	return 73.0;
 }
 
 double LMSDevice::minRxGain()
