@@ -503,7 +503,9 @@ static int trx_vty_go_parent(struct vty *vty)
 		vty->index_sub = NULL;
 		break;
 	default:
-		OSMO_ASSERT(0);
+		vty->node = CONFIG_NODE;
+		vty->index = NULL;
+		vty->index_sub = NULL;
 	}
 
 	return vty->node;
