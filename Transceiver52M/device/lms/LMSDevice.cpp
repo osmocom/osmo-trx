@@ -77,10 +77,18 @@ static void thread_enable_cancel(bool cancel)
 		 pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 }
 
+static void print_range(const char* name, lms_range_t *range)
+{
+	LOG(DEBUG) << name << ": Min=" << range->min << " Max=" << range->max
+		   << " Step=" << range->step;
+}
+
 int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 {
 	//lms_info_str_t dev_str;
 	lms_info_str_t* info_list;
+	lms_range_t range_lpfbw_rx, range_lpfbw_tx, range_sr;
+	float_type sr_host, sr_rf, lpfbw_rx, lpfbw_tx;
 	uint16_t dac_val;
 	unsigned int i, n;
 	int rc;
@@ -118,18 +126,18 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		return -1;
 	}
 
-	lms_range_t range;
-	if (LMS_GetSampleRateRange(m_lms_dev, LMS_CH_RX, &range))
+	if (LMS_GetSampleRateRange(m_lms_dev, LMS_CH_RX, &range_sr))
 		goto out_close;
-	LOG(DEBUG) << "Sample Rate: Min=" << range.min << " Max=" << range.max << " Step=" << range.step;
+	print_range("Sample Rate", &range_sr);
 
 	LOG(DEBUG) << "Setting sample rate to " << GSMRATE*sps << " " << sps;
 	if (LMS_SetSampleRate(m_lms_dev, GSMRATE*sps, 32) < 0)
 		goto out_close;
-	float_type sr_host, sr_rf;
+
 	if (LMS_GetSampleRate(m_lms_dev, LMS_CH_RX, 0, &sr_host, &sr_rf))
 		goto out_close;
 	LOG(DEBUG) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
+
 	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
 	//ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE);
 	ts_offset = 0;
@@ -155,11 +163,23 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	}
 
+	if (LMS_GetLPFBWRange(m_lms_dev, LMS_CH_RX, &range_lpfbw_rx))
+		goto out_close;
+	print_range("LPFBWRange Rx", &range_lpfbw_rx);
+	if (LMS_GetLPFBWRange(m_lms_dev, LMS_CH_RX, &range_lpfbw_tx))
+		goto out_close;
+	print_range("LPFBWRange Tx", &range_lpfbw_tx);
+	lpfbw_rx = OSMO_MIN(OSMO_MAX(1.4001e6, range_lpfbw_rx.min), range_lpfbw_rx.max);
+	lpfbw_tx = OSMO_MIN(OSMO_MAX(5.2e6, range_lpfbw_tx.min), range_lpfbw_tx.max);
+
+	LOG(DEBUG) << "LPFBW: Rx=" << lpfbw_rx << " Tx=" << lpfbw_tx;
+
 	/* Perform Rx and Tx calibration */
 	for (i=0; i<chans; i++) {
-		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_RX, i, 1.4001e6) < 0)
+		LOG(INFO) << "Setting LPFBW chan " << i;
+		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_RX, i, lpfbw_rx) < 0)
 			goto out_close;
-		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_TX, i, 5.2e6) < 0)
+		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_TX, i, lpfbw_tx) < 0)
 			goto out_close;
 		LOG(INFO) << "Calibrating chan " << i;
 		if (LMS_Calibrate(m_lms_dev, LMS_CH_RX, i, LMS_CALIBRATE_BW_HZ, 0) < 0)
