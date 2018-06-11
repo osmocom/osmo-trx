@@ -139,8 +139,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	LOG(DEBUG) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
 
 	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
-	//ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE);
-	ts_offset = 0;
+	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE * sps); /* time * sample_rate */
 
 	switch (ref) {
 	case REF_INTERNAL:
@@ -489,8 +488,6 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 	lms_stream_meta_t rx_metadata = {};
 	rx_metadata.flushPartialPacket = false;
 	rx_metadata.waitForTimestamp = false;
-	/* Shift read time with respect to transmit clock */
-	timestamp += ts_offset;
 	rx_metadata.timestamp = 0;
 
 	if (bufs.size() != chans) {
@@ -539,7 +536,7 @@ int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
 	lms_stream_meta_t tx_metadata = {};
 	tx_metadata.flushPartialPacket = false;
 	tx_metadata.waitForTimestamp = true;
-	tx_metadata.timestamp = timestamp;
+	tx_metadata.timestamp = timestamp - ts_offset;	/* Shift Tx time by offset */
 
 	if (isControl) {
 		LOG(ERR) << "Control packets not supported";
