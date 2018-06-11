@@ -205,6 +205,7 @@ bool LMSDevice::start()
 
 	unsigned int i;
 
+	/* configure the channels/streams */
 	for (i=0; i<chans; i++) {
 		if (LMS_EnableChannel(m_lms_dev, LMS_CH_RX, i, true) < 0)
 			return false;
@@ -235,7 +236,11 @@ bool LMSDevice::start()
 
 		if (LMS_SetupStream(m_lms_dev, &m_lms_stream_tx[i]) < 0)
 			return false;
+	}
 
+	/* now start the streams in a second loop, as we can no longer call
+	 * LMS_SetupStream() after LMS_StartStream() of the first stream */
+	for (i = 0; i < chans; i++) {
 		if (LMS_StartStream(&m_lms_stream_rx[i]) < 0)
 			return false;
 
