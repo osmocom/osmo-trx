@@ -319,7 +319,7 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 		return 0.0;
 	}
 
-	dB = 47.0;
+	dB = 34.0;
 
 	if (dB > maxRxGain())
 		dB = maxRxGain();
