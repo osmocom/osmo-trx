@@ -551,7 +551,7 @@ int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
 	*underrun = false;
 
 	for (i = 0; i<chans; i++) {
-		LOG(ALERT) << "chan "<< i << " send buffer of len " << len << " timestamp " << std::hex << tx_metadata.timestamp;
+		LOG(DEBUG) << "chan "<< i << " send buffer of len " << len << " timestamp " << std::hex << tx_metadata.timestamp;
 		thread_enable_cancel(false);
 		rc = LMS_SendStream(&m_lms_stream_tx[i], bufs[i], len, &tx_metadata, 100);
 		if (rc != len) {
