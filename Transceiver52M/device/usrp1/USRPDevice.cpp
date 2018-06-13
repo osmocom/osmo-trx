@@ -58,12 +58,12 @@ const dboardConfigType dboardConfig = TXA_RXB;
 
 const double USRPDevice::masterClockRate = 52.0e6;
 
-USRPDevice::USRPDevice(size_t sps)
+USRPDevice::USRPDevice(size_t tx_sps)
 {
   LOG(INFO) << "creating USRP device...";
 
-  this->sps = sps;
-  decimRate = (unsigned int) round(masterClockRate/((GSMRATE) * (double) sps));
+  this->tx_sps = tx_sps;
+  decimRate = (unsigned int) round(masterClockRate/((GSMRATE) * (double) tx_sps));
   actualSampleRate = masterClockRate/decimRate;
   rxGain = 0;
 
@@ -73,9 +73,9 @@ USRPDevice::USRPDevice(size_t sps)
    * split sample rate Tx/Rx - 4/1 sps we need to need to
    * compensate for advance rather than delay.
    */
-  if (sps == 1)
+  if (tx_sps == 1)
     pingOffset = 272;
-  else if (sps == 4)
+  else if (tx_sps == 4)
     pingOffset = 269 - 7500;
   else
     pingOffset = 0;
@@ -100,7 +100,7 @@ int USRPDevice::open(const std::string &, int, bool)
   if (!skipRx) {
   try {
     m_uRx = usrp_standard_rx_sptr(usrp_standard_rx::make(
-                                        0, decimRate * sps, 1, -1,
+                                        0, decimRate * tx_sps, 1, -1,
                                         usrp_standard_rx::FPGA_MODE_NORMAL,
                                         1024, 16 * 8, rbf));
     m_uRx->set_fpga_master_clock_freq(masterClockRate);
