@@ -100,19 +100,19 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 
 	LMS_RegisterLogHandler(&lms_log_callback);
 
-        if ((n = LMS_GetDeviceList(NULL)) < 0)
-            LOG(ERROR) << "LMS_GetDeviceList(NULL) failed";
-        LOG(DEBUG) << "Devices found: " << n;
-        if (n < 1)
-            return -1;
+	if ((n = LMS_GetDeviceList(NULL)) < 0)
+		LOG(ERROR) << "LMS_GetDeviceList(NULL) failed";
+	LOG(DEBUG) << "Devices found: " << n;
+	if (n < 1)
+	    return -1;
 
-        info_list = new lms_info_str_t[n];
+	info_list = new lms_info_str_t[n];
 
-        if (LMS_GetDeviceList(info_list) < 0)                //Populate device list
-            LOG(ERROR) << "LMS_GetDeviceList(info_list) failed";
+	if (LMS_GetDeviceList(info_list) < 0)
+		LOG(ERROR) << "LMS_GetDeviceList(info_list) failed";
 
-        for (i = 0; i < n; i++)                     //print device list
-           LOG(DEBUG) << "Device [" << i << "]: " << info_list[i];
+	for (i = 0; i < n; i++)
+		LOG(DEBUG) << "Device [" << i << "]: " << info_list[i];
 
 	rc = LMS_Open(&m_lms_dev, info_list[0], NULL);
 	if (rc != 0) {
