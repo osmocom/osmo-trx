@@ -291,7 +291,6 @@ private:
 
 	std::vector<double> tx_gains, rx_gains;
 	std::vector<double> tx_freqs, rx_freqs;
-	std::vector<std::string> tx_paths, rx_paths;
 	size_t tx_spp, rx_spp;
 
 	bool started;
@@ -307,7 +306,6 @@ private:
 	void init_gains();
 	void set_channels(bool swap);
 	void set_rates();
-	bool set_antennas();
 	bool parse_dev_type();
 	bool flush_recv(size_t num_pkts);
 	int check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls);
@@ -456,33 +454,6 @@ void uhd_device::set_rates()
 
 	ts_offset = static_cast<TIMESTAMP>(desc.offset * rx_rate);
 	LOG(INFO) << "Rates configured for " << desc.str;
-}
-
-bool uhd_device::set_antennas()
-{
-	unsigned int i;
-
-	for (i = 0; i < tx_paths.size(); i++) {
-		if (tx_paths[i] == "")
-			continue;
-		LOG(DEBUG) << "Configuring channel " << i << " with antenna " << tx_paths[i];
-		if (!setTxAntenna(tx_paths[i], i)) {
-			LOG(ALERT) << "Failed configuring channel " << i << " with antenna " << tx_paths[i];
-			return false;
-		}
-	}
-
-	for (i = 0; i < rx_paths.size(); i++) {
-		if (rx_paths[i] == "")
-			continue;
-		LOG(DEBUG) << "Configuring channel " << i << " with antenna " << rx_paths[i];
-		if (!setRxAntenna(rx_paths[i], i)) {
-			LOG(ALERT) << "Failed configuring channel " << i << " with antenna " << rx_paths[i];
-			return false;
-		}
-	}
-	LOG(INFO) << "Antennas configured successfully";
-	return true;
 }
 
 double uhd_device::setTxGain(double db, size_t chan)

@@ -196,8 +196,6 @@ public:
 	inline double numberWritten() {
 		return samplesWritten;
 	}
-
-	std::vector < std::string > tx_paths, rx_paths;
 };
 
 #endif // _LMS_DEVICE_H_
