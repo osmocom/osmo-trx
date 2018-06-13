@@ -287,7 +287,6 @@ private:
 
 	double tx_gain_min, tx_gain_max;
 	double rx_gain_min, rx_gain_max;
-	double offset;
 
 	std::vector<double> tx_gains, rx_gains;
 	std::vector<double> tx_freqs, rx_freqs;
@@ -317,7 +316,6 @@ private:
 	bool set_freq(double freq, size_t chan, bool tx);
 
 	Thread *async_event_thrd;
-	InterfaceType iface;
 	Mutex tune_lock;
 };
 
@@ -364,22 +362,16 @@ static void thread_enable_cancel(bool cancel)
 }
 
 uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
-		       InterfaceType iface, size_t chans, double offset,
+		       InterfaceType iface, size_t chans, double lo_offset,
 		       const std::vector<std::string>& tx_paths,
 		       const std::vector<std::string>& rx_paths)
-	: tx_gain_min(0.0), tx_gain_max(0.0),
+	: RadioDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths),
+	  tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),
 	  started(false), aligned(false), rx_pkt_cnt(0), drop_cnt(0),
 	  prev_ts(0,0), ts_initial(0), ts_offset(0), async_event_thrd(NULL)
 {
-	this->tx_sps = tx_sps;
-	this->rx_sps = rx_sps;
-	this->chans = chans;
-	this->offset = offset;
-	this->iface = iface;
-	this->tx_paths = tx_paths;
-	this->rx_paths = rx_paths;
 }
 
 uhd_device::~uhd_device()
@@ -1057,8 +1049,8 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 	uhd::tune_request_t treq(freq);
 
 	if (dev_type == UMTRX) {
-		if (offset != 0.0)
-			return uhd::tune_request_t(freq, offset);
+		if (lo_offset != 0.0)
+			return uhd::tune_request_t(freq, lo_offset);
 
 		// Don't use DSP tuning, because LMS6002D PLL steps are small enough.
 		// We end up with DSP tuning just for 2-3Hz, which is meaningless and
@@ -1070,10 +1062,10 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 		treq.dsp_freq = 0.0;
 		return treq;
 	} else if (chans == 1) {
-		if (offset == 0.0)
+		if (lo_offset == 0.0)
 			return treq;
 
-		return uhd::tune_request_t(freq, offset);
+		return uhd::tune_request_t(freq, lo_offset);
 	} else if ((dev_type != B210) || (chans > 2) || (chan > 1)) {
 		LOG(ALERT) << chans << " channels unsupported";
 		return treq;
@@ -1556,9 +1548,9 @@ std::string smpl_buf::str_code(ssize_t code)
 }
 
 RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       InterfaceType iface, size_t chans, double offset,
+			       InterfaceType iface, size_t chans, double lo_offset,
 			       const std::vector<std::string>& tx_paths,
 			       const std::vector<std::string>& rx_paths)
 {
-	return new uhd_device(tx_sps, rx_sps, iface, chans, offset, tx_paths, rx_paths);
+	return new uhd_device(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
 }

@@ -58,11 +58,14 @@ const dboardConfigType dboardConfig = TXA_RXB;
 
 const double USRPDevice::masterClockRate = 52.0e6;
 
-USRPDevice::USRPDevice(size_t tx_sps)
+USRPDevice::USRPDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface,
+		       size_t chans, double lo_offset,
+		       const std::vector<std::string>& tx_paths,
+		       const std::vector<std::string>& rx_paths):
+		RadioDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths)
 {
   LOG(INFO) << "creating USRP device...";
 
-  this->tx_sps = tx_sps;
   decimRate = (unsigned int) round(masterClockRate/((GSMRATE) * (double) tx_sps));
   actualSampleRate = masterClockRate/decimRate;
   rxGain = 0;
@@ -648,9 +651,9 @@ bool USRPDevice::setRxFreq(double wFreq) { return true;};
 #endif
 
 RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       InterfaceType iface, size_t chans, double offset,
+			       InterfaceType iface, size_t chans, double lo_offset,
 			       const std::vector<std::string>& tx_paths,
 			       const std::vector<std::string>& rx_paths)
 {
-	return new USRPDevice(tx_sps);
+	return new USRPDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
 }
