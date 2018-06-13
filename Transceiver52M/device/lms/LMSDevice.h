@@ -46,7 +46,6 @@ private:
 	std::vector<uint32_t> m_last_tx_underruns;
 	std::vector<uint32_t> m_last_tx_overruns;
 
-	size_t chans;
 	double actualSampleRate;	///< the actual USRP sampling rate
 
 	unsigned long long samplesRead;	///< number of samples read from LMS
