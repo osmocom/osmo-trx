@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "GSMCommon.h"
+#include "Logger.h"
 
 extern "C" {
 #include "config_defs.h"
@@ -162,6 +163,34 @@ class RadioDevice {
   virtual double getSampleRate()=0;
   virtual double numberRead()=0;
   virtual double numberWritten()=0;
+
+  std::vector<std::string> tx_paths, rx_paths;
+  bool set_antennas() {
+	unsigned int i;
+
+	for (i = 0; i < tx_paths.size(); i++) {
+		if (tx_paths[i] == "")
+			continue;
+		LOG(DEBUG) << "Configuring channel " << i << " with antenna " << tx_paths[i];
+		if (!setTxAntenna(tx_paths[i], i)) {
+			LOG(ALERT) << "Failed configuring channel " << i << " with antenna " << tx_paths[i];
+			return false;
+		}
+	}
+
+	for (i = 0; i < rx_paths.size(); i++) {
+		if (rx_paths[i] == "")
+			continue;
+		LOG(DEBUG) << "Configuring channel " << i << " with antenna " << rx_paths[i];
+		if (!setRxAntenna(rx_paths[i], i)) {
+			LOG(ALERT) << "Failed configuring channel " << i << " with antenna " << rx_paths[i];
+			return false;
+		}
+	}
+	LOG(INFO) << "Antennas configured successfully";
+	return true;
+  }
+
 
 };
 

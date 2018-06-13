@@ -203,8 +203,6 @@ private:
   inline double getSampleRate() { return actualSampleRate; }
   inline double numberRead() { return samplesRead; }
   inline double numberWritten() { return samplesWritten; }
-
-  std::vector<std::string> tx_paths, rx_paths;
 };
 
 #endif // _USRP_DEVICE_H_
