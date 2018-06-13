@@ -178,6 +178,11 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 
 	LOG(DEBUG) << "LPFBW: Rx=" << lpfbw_rx << " Tx=" << lpfbw_tx;
 
+	if (!set_antennas()) {
+		LOG(ALERT) << "LMS antenna setting failed";
+		return -1;
+	}
+
 	/* Perform Rx and Tx calibration */
 	for (i=0; i<chans; i++) {
 		LOG(INFO) << "Setting LPFBW chan " << i;
