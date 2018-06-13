@@ -65,7 +65,9 @@ private:
 public:
 
 	/** Object constructor */
-	LMSDevice(size_t sps, size_t chans);
+	LMSDevice(size_t sps, size_t chans,
+		  const std::vector<std::string>& tx_paths,
+		  const std::vector<std::string>& rx_paths);
 
 	/** Instantiate the LMS */
 	int open(const std::string &args, int ref, bool swap_channels);
