@@ -40,16 +40,13 @@ constexpr double LMSDevice::masterClockRate;
 #define LMS_MIN_BW_SUPPORTED 2.5e6 /* 2.5mHz, minimum supported by LMS */
 #define LMS_CALIBRATE_BW_HZ OSMO_MAX(GSM_CARRIER_BW, LMS_MIN_BW_SUPPORTED)
 
-LMSDevice::LMSDevice(size_t tx_sps, size_t chans,
+LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chans, double lo_offset,
 		     const std::vector<std::string>& tx_paths,
 		     const std::vector<std::string>& rx_paths):
-	m_lms_dev(NULL), chans(chans)
+	RadioDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths),
+	m_lms_dev(NULL)
 {
 	LOG(INFO) << "creating LMS device...";
-
-	this->tx_sps = tx_sps;
-	this->tx_paths = tx_paths;
-	this->rx_paths = rx_paths;
 
 	m_lms_stream_rx.resize(chans);
 	m_lms_stream_tx.resize(chans);
@@ -624,9 +621,9 @@ bool LMSDevice::setRxFreq(double wFreq, size_t chan)
 }
 
 RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       InterfaceType iface, size_t chans, double offset,
+			       InterfaceType iface, size_t chans, double lo_offset,
 			       const std::vector < std::string > &tx_paths,
 			       const std::vector < std::string > &rx_paths)
 {
-	return new LMSDevice(tx_sps, chans, tx_paths, rx_paths);
+	return new LMSDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
 }

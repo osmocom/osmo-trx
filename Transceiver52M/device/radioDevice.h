@@ -164,8 +164,20 @@ class RadioDevice {
   virtual double numberRead()=0;
   virtual double numberWritten()=0;
 
+  protected:
+  size_t tx_sps, rx_sps;
+  InterfaceType iface;
+  size_t chans;
+  double lo_offset;
   std::vector<std::string> tx_paths, rx_paths;
-  size_t tx_sps;
+
+  RadioDevice(size_t tx_sps, size_t rx_sps, InterfaceType type, size_t chans, double offset,
+              const std::vector<std::string>& tx_paths,
+              const std::vector<std::string>& rx_paths):
+		tx_sps(tx_sps), rx_sps(rx_sps), iface(type), chans(chans), lo_offset(offset),
+		tx_paths(tx_paths), rx_paths(rx_paths)
+	{ }
+
   bool set_antennas() {
 	unsigned int i;
 
