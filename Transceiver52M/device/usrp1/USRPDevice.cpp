@@ -655,5 +655,17 @@ RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
 			       const std::vector<std::string>& tx_paths,
 			       const std::vector<std::string>& rx_paths)
 {
+	if (tx_sps != rx_sps) {
+		LOG(ERROR) << "USRP1 requires tx_sps == rx_sps";
+		return NULL;
+	}
+	if (chans != 1) {
+		LOG(ERROR) << "USRP1 supports only 1 channel";
+		return NULL;
+	}
+	if (lo_offset != 0.0) {
+		LOG(ERROR) << "USRP1 doesn't support lo_offset";
+		return NULL;
+	}
 	return new USRPDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
 }
