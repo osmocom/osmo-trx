@@ -282,7 +282,7 @@ private:
 	enum TxWindowType tx_window;
 	enum uhd_dev_type dev_type;
 
-	size_t tx_sps, rx_sps, chans;
+	size_t rx_sps, chans;
 	double tx_rate, rx_rate;
 
 	double tx_gain_min, tx_gain_max;

@@ -40,13 +40,14 @@ constexpr double LMSDevice::masterClockRate;
 #define LMS_MIN_BW_SUPPORTED 2.5e6 /* 2.5mHz, minimum supported by LMS */
 #define LMS_CALIBRATE_BW_HZ OSMO_MAX(GSM_CARRIER_BW, LMS_MIN_BW_SUPPORTED)
 
-LMSDevice::LMSDevice(size_t sps, size_t chans,
+LMSDevice::LMSDevice(size_t tx_sps, size_t chans,
 		     const std::vector<std::string>& tx_paths,
 		     const std::vector<std::string>& rx_paths):
-	m_lms_dev(NULL), sps(sps), chans(chans)
+	m_lms_dev(NULL), chans(chans)
 {
 	LOG(INFO) << "creating LMS device...";
 
+	this->tx_sps = tx_sps;
 	this->tx_paths = tx_paths;
 	this->rx_paths = rx_paths;
 
@@ -135,8 +136,8 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	print_range("Sample Rate", &range_sr);
 
-	LOG(DEBUG) << "Setting sample rate to " << GSMRATE*sps << " " << sps;
-	if (LMS_SetSampleRate(m_lms_dev, GSMRATE*sps, 32) < 0)
+	LOG(DEBUG) << "Setting sample rate to " << GSMRATE*tx_sps << " " << tx_sps;
+	if (LMS_SetSampleRate(m_lms_dev, GSMRATE*tx_sps, 32) < 0)
 		goto out_close;
 
 	if (LMS_GetSampleRate(m_lms_dev, LMS_CH_RX, 0, &sr_host, &sr_rf))
@@ -144,7 +145,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	LOG(DEBUG) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
 
 	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
-	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE * sps); /* time * sample_rate */
+	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE * tx_sps); /* time * sample_rate */
 
 	switch (ref) {
 	case REF_INTERNAL:
@@ -362,7 +363,7 @@ int LMSDevice::get_ant_idx(const std::string & name, bool dir_tx, size_t chan)
 bool LMSDevice::flush_recv(size_t num_pkts)
 {
 	#define CHUNK 625
-	int len = CHUNK * sps;
+	int len = CHUNK * tx_sps;
 	short *buffer = new short[len * 2];
 	int rc;
 	lms_stream_meta_t rx_metadata = {};

@@ -48,7 +48,6 @@ private:
   usrp_subdev_spec rxSubdevSpec;
   usrp_subdev_spec txSubdevSpec;
 
-  int sps;
   double actualSampleRate;	///< the actual USRP sampling rate
   unsigned int decimRate;	///< the USRP decimation rate
 
@@ -96,7 +95,7 @@ private:
  public:
 
   /** Object constructor */
-  USRPDevice(size_t sps);
+  USRPDevice(size_t tx_sps);
 
   /** Instantiate the USRP */
   int open(const std::string &, int, bool);

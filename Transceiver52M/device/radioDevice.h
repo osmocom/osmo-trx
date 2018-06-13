@@ -165,6 +165,7 @@ class RadioDevice {
   virtual double numberWritten()=0;
 
   std::vector<std::string> tx_paths, rx_paths;
+  size_t tx_sps;
   bool set_antennas() {
 	unsigned int i;
 

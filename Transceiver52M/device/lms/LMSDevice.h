@@ -46,7 +46,7 @@ private:
 	std::vector<uint32_t> m_last_tx_underruns;
 	std::vector<uint32_t> m_last_tx_overruns;
 
-	size_t sps, chans;
+	size_t chans;
 	double actualSampleRate;	///< the actual USRP sampling rate
 
 	unsigned long long samplesRead;	///< number of samples read from LMS
@@ -65,7 +65,7 @@ private:
 public:
 
 	/** Object constructor */
-	LMSDevice(size_t sps, size_t chans,
+	LMSDevice(size_t tx_sps, size_t chans,
 		  const std::vector<std::string>& tx_paths,
 		  const std::vector<std::string>& rx_paths);
 
