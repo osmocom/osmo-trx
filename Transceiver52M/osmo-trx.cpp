@@ -49,6 +49,8 @@ extern "C" {
 #include <osmocom/ctrl/ports.h>
 #include <osmocom/ctrl/control_if.h>
 #include <osmocom/vty/stats.h>
+#include <osmocom/vty/command.h>
+
 #include "convolve.h"
 #include "convert.h"
 #include "trx_vty.h"
@@ -194,6 +196,7 @@ static void print_help()
 	fprintf(stdout, "Options:\n"
 		"  -h    This text\n"
 		"  -C    Filename The config file to use\n"
+		"  -V    Print the version of OsmoTRX\n"
 		);
 }
 
@@ -211,7 +214,7 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 	std::vector<std::string> rx_paths, tx_paths;
 	bool rx_paths_set = false, tx_paths_set = false;
 
-	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:")) != -1) {
+	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:V")) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
@@ -310,6 +313,10 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 			break;
 		case 'C':
 			config_file = optarg;
+			break;
+		case 'V':
+			print_version(1);
+			exit(0);
 			break;
 		default:
 			goto bad_config;
