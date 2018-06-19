@@ -1,1 +1,4 @@
 /usr/bin/osmo-trx-uhd
+/usr/share/doc/osmo-trx-uhd/examples/osmo-trx-usrp_b200.cfg /usr/share/doc/osmo-trx-uhd/examples
+/usr/share/doc/osmo-trx-uhd/examples/osmo-trx-limesdr.cfg /usr/share/doc/osmo-trx-uhd/examples
+/usr/share/doc/osmo-trx-uhd/examples/osmo-trx-umtrx.cfg /usr/share/doc/osmo-trx-uhd/examples
