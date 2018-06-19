@@ -223,7 +223,7 @@ bool LMSDevice::start()
 
 		// Set gains to midpoint
 		setTxGain((minTxGain() + maxTxGain()) / 2, i);
-		setRxGain((minRxGain() + maxRxGain()) / 2, i);
+		setRxGain(34.0, i);
 
 		m_lms_stream_rx[i] = {};
 		m_lms_stream_rx[i].isTx = false;
@@ -326,8 +326,6 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 		LOG(ALERT) << "Invalid channel " << chan;
 		return 0.0;
 	}
-
-	dB = 34.0;
 
 	if (dB > maxRxGain())
 		dB = maxRxGain();
