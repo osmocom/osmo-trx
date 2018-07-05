@@ -23,6 +23,8 @@ include::chapters/counters.adoc[]
 
 include::chapters/configuration.adoc[]
 
+include::chapters/trx-architectures.adoc[]
+
 include::../common/chapters/trx_if.adoc[]
 
 include::../common/chapters/port_numbers.adoc[]

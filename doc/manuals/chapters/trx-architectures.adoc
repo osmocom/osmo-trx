@@ -1,0 +1,34 @@
+[[osmotrx_arch_support]]
+== OsmoTRX hardware architecture support
+
+OsmoTRX comes out-of-the-box with several algorithms and operations
+optimized for certain instruction-set architectures, as well as non-optimized
+fall-back algorithms in case required instruction sets are not supported by the
+compiler at compile time or by the executing machine at run-time. Support for
+these optimized algorithms can be enabled and disabled by means of configure
+flags. Accelerated operations include pulse shape filtering, resampling,
+sequence correlation, and many other signal processing operations.
+
+On Intel processors, OsmoTRX makes heavy use of the Streaming SIMD Extensions
+(SSE) instruction set.  SSE3 is the minimum requirement for accelerated use.
+SSE3 is present in the majority of Intel processors since later versions of the
+Pentium 4 architecture and is also present on low power Atom processors. Support
+is automatically detected at build time. SSE4.1 instruction set is supported
+too. This feature is enabled by default unless explicitly disabled by passing
+the configure flag _--with-sse=no_. When enabled, the compiler will build an
+extra version of each of the supported algorithms using each of the supported
+mentioned instruction sets. Then, at run-time, OsmoTRX will auto-detect
+capabilities of the executing machine and enable an optimized algorithm using
+the most suitable available (previously compiled) instruction set.
+
+On ARM processors, NEON and NEON FMA are supported. Different to the x86, there
+is no auto-detection in this case, nor difference between compile and runtime.
+NEON support is disabled by default and can be enabled by passing the flag
+_--with-neon=yes_ to the configure script; the used compiler must support NEON
+instruction set and the resulting binary will only run fine on an ARM board
+supporting NEON extensions. Running OsmoTRX built with flag _--with-neon_ on a
+board without NEON instruction set support, will most probably end up in the
+process being killed with a _SIGILL_ Illegal Instruction signal by the operating
+system. NEON FMA (Fused Multiply-Add) is an extension to the NEON instruction
+set, and its use in OsmoTRX can be enabled by passing the _--with_neon_vfpv4_
+flag, which will also implicitly enable NEON support (_--with_neon_).
