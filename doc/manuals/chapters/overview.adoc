@@ -57,3 +57,6 @@ digraph G {
         OsmoTRX [color=red];
 }
 ----
+
+For more information see
+https://osmocom.org/projects/osmotrx/wiki/OsmoTRX
