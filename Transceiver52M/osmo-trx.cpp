@@ -255,7 +255,7 @@ static void print_deprecated(char opt)
 {
 	LOG(WARNING) << "Cmd line option '" << opt << "' is deprecated and will be soon removed."
 		<< " Please use VTY cfg option instead."
-		<< " All cmd line options are already being overriden by VTY options if set.";
+		<< " All cmd line options are already being overridden by VTY options if set.";
 }
 
 static void handle_options(int argc, char **argv, struct trx_ctx* trx)
