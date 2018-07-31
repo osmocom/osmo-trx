@@ -424,9 +424,9 @@ static int config_write_trx(struct vty *vty)
 		chan = &trx->cfg.chans[i];
 		vty_out(vty, " chan %u%s", chan->idx, VTY_NEWLINE);
 		if (chan->rx_path)
-			vty_out(vty, " rx-path %s%s", chan->rx_path, VTY_NEWLINE);
+			vty_out(vty, "  rx-path %s%s", chan->rx_path, VTY_NEWLINE);
 		if (chan->tx_path)
-			vty_out(vty, " tx-path %s%s", chan->tx_path, VTY_NEWLINE);
+			vty_out(vty, "  tx-path %s%s", chan->tx_path, VTY_NEWLINE);
 	}
 
 	return CMD_SUCCESS;
