@@ -102,7 +102,7 @@ AC_ARG_WITH(usrp1, [
 
 AC_ARG_WITH(lms, [
     AS_HELP_STRING([--with-lms],
-        [enable LimeSuite gnuradio based transceiver])
+        [enable LimeSuite based transceiver])
 ])
 
 AC_ARG_WITH(singledb, [
