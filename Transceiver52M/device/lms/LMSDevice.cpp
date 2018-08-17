@@ -46,7 +46,7 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 	RadioDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths),
 	m_lms_dev(NULL)
 {
-	LOG(INFO) << "creating LMS device...";
+	LOGC(DDEV, INFO) << "creating LMS device...";
 
 	m_lms_stream_rx.resize(chans);
 	m_lms_stream_tx.resize(chans);
@@ -82,7 +82,7 @@ static void thread_enable_cancel(bool cancel)
 
 static void print_range(const char* name, lms_range_t *range)
 {
-	LOG(DEBUG) << name << ": Min=" << range->min << " Max=" << range->max
+	LOGC(DDEV, INFO) << name << ": Min=" << range->min << " Max=" << range->max
 		   << " Step=" << range->step;
 }
 
@@ -96,36 +96,36 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	unsigned int i, n;
 	int rc;
 
-	LOG(INFO) << "Opening LMS device..";
+	LOGC(DDEV, INFO) << "Opening LMS device..";
 
 	LMS_RegisterLogHandler(&lms_log_callback);
 
 	if ((n = LMS_GetDeviceList(NULL)) < 0)
-		LOG(ERROR) << "LMS_GetDeviceList(NULL) failed";
-	LOG(DEBUG) << "Devices found: " << n;
+		LOGC(DDEV, ERROR) << "LMS_GetDeviceList(NULL) failed";
+	LOGC(DDEV, INFO) << "Devices found: " << n;
 	if (n < 1)
 	    return -1;
 
 	info_list = new lms_info_str_t[n];
 
 	if (LMS_GetDeviceList(info_list) < 0)
-		LOG(ERROR) << "LMS_GetDeviceList(info_list) failed";
+		LOGC(DDEV, ERROR) << "LMS_GetDeviceList(info_list) failed";
 
 	for (i = 0; i < n; i++)
-		LOG(DEBUG) << "Device [" << i << "]: " << info_list[i];
+		LOGC(DDEV, INFO) << "Device [" << i << "]: " << info_list[i];
 
 	rc = LMS_Open(&m_lms_dev, info_list[0], NULL);
 	if (rc != 0) {
-		LOG(ERROR) << "LMS_GetDeviceList() failed)";
+		LOGC(DDEV, ERROR) << "LMS_GetDeviceList() failed)";
 		delete [] info_list;
 		return -1;
 	}
 
 	delete [] info_list;
 
-	LOG(INFO) << "Init LMS device";
+	LOGC(DDEV, INFO) << "Init LMS device";
 	if (LMS_Init(m_lms_dev) != 0) {
-		LOG(ERROR) << "LMS_Init() failed";
+		LOGC(DDEV, ERROR) << "LMS_Init() failed";
 		return -1;
 	}
 
@@ -133,35 +133,35 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	print_range("Sample Rate", &range_sr);
 
-	LOG(DEBUG) << "Setting sample rate to " << GSMRATE*tx_sps << " " << tx_sps;
+	LOGC(DDEV, INFO) << "Setting sample rate to " << GSMRATE*tx_sps << " " << tx_sps;
 	if (LMS_SetSampleRate(m_lms_dev, GSMRATE*tx_sps, 32) < 0)
 		goto out_close;
 
 	if (LMS_GetSampleRate(m_lms_dev, LMS_CH_RX, 0, &sr_host, &sr_rf))
 		goto out_close;
-	LOG(DEBUG) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
+	LOGC(DDEV, INFO) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
 
 	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
 	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE * tx_sps); /* time * sample_rate */
 
 	switch (ref) {
 	case REF_INTERNAL:
-		LOG(DEBUG) << "Setting Internal clock reference";
+		LOGC(DDEV, INFO) << "Setting Internal clock reference";
 		/* Ugly API: Selecting clock source implicit by writing to VCTCXO DAC ?!? */
 		if (LMS_VCTCXORead(m_lms_dev, &dac_val) < 0)
 			goto out_close;
-		LOG(DEBUG) << "Setting VCTCXO to " << dac_val;
+		LOGC(DDEV, INFO) << "Setting VCTCXO to " << dac_val;
 		if (LMS_VCTCXOWrite(m_lms_dev, dac_val) < 0)
 			goto out_close;
 		break;
 	case REF_EXTERNAL:
-		LOG(DEBUG) << "Setting External clock reference to " << 10000000.0;
+		LOGC(DDEV, INFO) << "Setting External clock reference to " << 10000000.0;
 		/* Assume an external 10 MHz reference clock */
 		if (LMS_SetClockFreq(m_lms_dev, LMS_CLOCK_EXTREF, 10000000.0) < 0)
 			goto out_close;
 		break;
 	default:
-		LOG(ALERT) << "Invalid reference type";
+		LOGC(DDEV, ALERT) << "Invalid reference type";
 		goto out_close;
 	}
 
@@ -174,21 +174,21 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	lpfbw_rx = OSMO_MIN(OSMO_MAX(1.4001e6, range_lpfbw_rx.min), range_lpfbw_rx.max);
 	lpfbw_tx = OSMO_MIN(OSMO_MAX(5.2e6, range_lpfbw_tx.min), range_lpfbw_tx.max);
 
-	LOG(DEBUG) << "LPFBW: Rx=" << lpfbw_rx << " Tx=" << lpfbw_tx;
+	LOGC(DDEV, INFO) << "LPFBW: Rx=" << lpfbw_rx << " Tx=" << lpfbw_tx;
 
 	if (!set_antennas()) {
-		LOG(ALERT) << "LMS antenna setting failed";
+		LOGC(DDEV, ALERT) << "LMS antenna setting failed";
 		return -1;
 	}
 
 	/* Perform Rx and Tx calibration */
 	for (i=0; i<chans; i++) {
-		LOG(INFO) << "Setting LPFBW chan " << i;
+		LOGC(DDEV, INFO) << "Setting LPFBW chan " << i;
 		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_RX, i, lpfbw_rx) < 0)
 			goto out_close;
 		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_TX, i, lpfbw_tx) < 0)
 			goto out_close;
-		LOG(INFO) << "Calibrating chan " << i;
+		LOGC(DDEV, INFO) << "Calibrating chan " << i;
 		if (LMS_Calibrate(m_lms_dev, LMS_CH_RX, i, LMS_CALIBRATE_BW_HZ, 0) < 0)
 			goto out_close;
 		if (LMS_Calibrate(m_lms_dev, LMS_CH_TX, i, LMS_CALIBRATE_BW_HZ, 0) < 0)
@@ -202,14 +202,14 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	return NORMAL;
 
 out_close:
-	LOG(ALERT) << "Error in LMS open, closing: " << LMS_GetLastErrorMessage();
+	LOGC(DDEV, ALERT) << "Error in LMS open, closing: " << LMS_GetLastErrorMessage();
 	LMS_Close(m_lms_dev);
 	return -1;
 }
 
 bool LMSDevice::start()
 {
-	LOG(INFO) << "starting LMS...";
+	LOGC(DDEV, INFO) << "starting LMS...";
 
 	unsigned int i;
 
@@ -303,7 +303,7 @@ double LMSDevice::minRxGain()
 double LMSDevice::setTxGain(double dB, size_t chan)
 {
 	if (chan) {
-		LOG(ALERT) << "Invalid channel " << chan;
+		LOGC(DDEV, ALERT) << "Invalid channel " << chan;
 		return 0.0;
 	}
 
@@ -312,10 +312,10 @@ double LMSDevice::setTxGain(double dB, size_t chan)
 	if (dB < minTxGain())
 		dB = minTxGain();
 
-	LOG(NOTICE) << "Setting TX gain to " << dB << " dB.";
+	LOGC(DDEV, NOTICE) << "Setting TX gain to " << dB << " dB.";
 
 	if (LMS_SetGaindB(m_lms_dev, LMS_CH_TX, chan, dB) < 0)
-		LOG(ERR) << "Error setting TX gain";
+		LOGC(DDEV, ERR) << "Error setting TX gain";
 
 	return dB;
 }
@@ -323,7 +323,7 @@ double LMSDevice::setTxGain(double dB, size_t chan)
 double LMSDevice::setRxGain(double dB, size_t chan)
 {
 	if (chan) {
-		LOG(ALERT) << "Invalid channel " << chan;
+		LOGC(DDEV, ALERT) << "Invalid channel " << chan;
 		return 0.0;
 	}
 
@@ -332,10 +332,10 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 	if (dB < minRxGain())
 		dB = minRxGain();
 
-	LOG(NOTICE) << "Setting RX gain to " << dB << " dB.";
+	LOGC(DDEV, NOTICE) << "Setting RX gain to " << dB << " dB.";
 
 	if (LMS_SetGaindB(m_lms_dev, LMS_CH_RX, chan, dB) < 0)
-		LOG(ERR) << "Error setting RX gain";
+		LOGC(DDEV, ERR) << "Error setting RX gain";
 
 	return dB;
 }
@@ -369,9 +369,9 @@ bool LMSDevice::flush_recv(size_t num_pkts)
 
 	while (!ts_initial || (num_pkts-- > 0)) {
 		rc = LMS_RecvStream(&m_lms_stream_rx[0], &buffer[0], len, &rx_metadata, 100);
-		LOG(DEBUG) << "Flush: Recv buffer of len " << rc << " at " << std::hex << rx_metadata.timestamp;
+		LOGC(DDEV, DEBUG) << "Flush: Recv buffer of len " << rc << " at " << std::hex << rx_metadata.timestamp;
 		if (rc != len) {
-			LOG(ALERT) << "LMS: Device receive timed out";
+			LOGC(DDEV, ALERT) << "LMS: Device receive timed out";
 			delete[] buffer;
 			return false;
 		}
@@ -379,7 +379,7 @@ bool LMSDevice::flush_recv(size_t num_pkts)
 		ts_initial = rx_metadata.timestamp + len;
 	}
 
-	LOG(INFO) << "Initial timestamp " << ts_initial << std::endl;
+	LOGC(DDEV, INFO) << "Initial timestamp " << ts_initial << std::endl;
 	delete[] buffer;
 	return true;
 }
@@ -389,18 +389,18 @@ bool LMSDevice::setRxAntenna(const std::string & ant, size_t chan)
 	int idx;
 
 	if (chan >= rx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 
 	idx = get_ant_idx(ant, LMS_CH_RX, chan);
 	if (idx < 0) {
-		LOG(ALERT) << "Invalid Rx Antenna";
+		LOGC(DDEV, ALERT) << "Invalid Rx Antenna";
 		return false;
 	}
 
 	if (LMS_SetAntenna(m_lms_dev, LMS_CH_RX, chan, idx) < 0) {
-		LOG(ALERT) << "Unable to set Rx Antenna";
+		LOGC(DDEV, ALERT) << "Unable to set Rx Antenna";
 	}
 
 	return true;
@@ -412,18 +412,18 @@ std::string LMSDevice::getRxAntenna(size_t chan)
 	int idx;
 
 	if (chan >= rx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return "";
 	}
 
 	idx = LMS_GetAntenna(m_lms_dev, LMS_CH_RX, chan);
 	if (idx < 0) {
-		LOG(ALERT) << "Error getting Rx Antenna";
+		LOGC(DDEV, ALERT) << "Error getting Rx Antenna";
 		return "";
 	}
 
 	if (LMS_GetAntennaList(m_lms_dev, LMS_CH_RX, chan, name_list) < idx) {
-		LOG(ALERT) << "Error getting Rx Antenna List";
+		LOGC(DDEV, ALERT) << "Error getting Rx Antenna List";
 		return "";
 	}
 
@@ -435,18 +435,18 @@ bool LMSDevice::setTxAntenna(const std::string & ant, size_t chan)
 	int idx;
 
 	if (chan >= tx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 
 	idx = get_ant_idx(ant, LMS_CH_TX, chan);
 	if (idx < 0) {
-		LOG(ALERT) << "Invalid Rx Antenna";
+		LOGC(DDEV, ALERT) << "Invalid Rx Antenna";
 		return false;
 	}
 
 	if (LMS_SetAntenna(m_lms_dev, LMS_CH_TX, chan, idx) < 0) {
-		LOG(ALERT) << "Unable to set Rx Antenna";
+		LOGC(DDEV, ALERT) << "Unable to set Rx Antenna";
 	}
 
 	return true;
@@ -458,18 +458,18 @@ std::string LMSDevice::getTxAntenna(size_t chan)
 	int idx;
 
 	if (chan >= tx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return "";
 	}
 
 	idx = LMS_GetAntenna(m_lms_dev, LMS_CH_TX, chan);
 	if (idx < 0) {
-		LOG(ALERT) << "Error getting Tx Antenna";
+		LOGC(DDEV, ALERT) << "Error getting Tx Antenna";
 		return "";
 	}
 
 	if (LMS_GetAntennaList(m_lms_dev, LMS_CH_TX, chan, name_list) < idx) {
-		LOG(ALERT) << "Error getting Tx Antenna List";
+		LOGC(DDEV, ALERT) << "Error getting Tx Antenna List";
 		return "";
 	}
 
@@ -502,7 +502,7 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 	rx_metadata.timestamp = 0;
 
 	if (bufs.size() != chans) {
-		LOG(ALERT) << "Invalid channel combination " << bufs.size();
+		LOGC(DDEV, ALERT) << "Invalid channel combination " << bufs.size();
 		return -1;
 	}
 
@@ -512,9 +512,9 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 		thread_enable_cancel(false);
 		rc = LMS_RecvStream(&m_lms_stream_rx[i], bufs[i], len, &rx_metadata, 100);
 		if (timestamp != (TIMESTAMP)rx_metadata.timestamp)
-			LOG(ALERT) << "chan "<< i << " recv buffer of len " << rc << " expect " << std::hex << timestamp << " got " << std::hex << (TIMESTAMP)rx_metadata.timestamp << " (" << std::hex << rx_metadata.timestamp <<") diff=" << rx_metadata.timestamp - timestamp;
+			LOGC(DDEV, ALERT) << "chan "<< i << " recv buffer of len " << rc << " expect " << std::hex << timestamp << " got " << std::hex << (TIMESTAMP)rx_metadata.timestamp << " (" << std::hex << rx_metadata.timestamp <<") diff=" << rx_metadata.timestamp - timestamp;
 		if (rc != len) {
-			LOG(ALERT) << "LMS: Device receive timed out";
+			LOGC(DDEV, ALERT) << "LMS: Device receive timed out";
 		}
 
 		if (LMS_GetStreamStatus(&m_lms_stream_rx[i], &status) == 0) {
@@ -550,23 +550,23 @@ int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
 	tx_metadata.timestamp = timestamp - ts_offset;	/* Shift Tx time by offset */
 
 	if (isControl) {
-		LOG(ERR) << "Control packets not supported";
+		LOGC(DDEV, ERR) << "Control packets not supported";
 		return 0;
 	}
 
 	if (bufs.size() != chans) {
-		LOG(ALERT) << "Invalid channel combination " << bufs.size();
+		LOGC(DDEV, ALERT) << "Invalid channel combination " << bufs.size();
 		return -1;
 	}
 
 	*underrun = false;
 
 	for (i = 0; i<chans; i++) {
-		LOG(DEBUG) << "chan "<< i << " send buffer of len " << len << " timestamp " << std::hex << tx_metadata.timestamp;
+		LOGC(DDEV, DEBUG) << "chan "<< i << " send buffer of len " << len << " timestamp " << std::hex << tx_metadata.timestamp;
 		thread_enable_cancel(false);
 		rc = LMS_SendStream(&m_lms_stream_tx[i], bufs[i], len, &tx_metadata, 100);
 		if (rc != len) {
-			LOG(ALERT) << "LMS: Device send timed out";
+			LOGC(DDEV, ALERT) << "LMS: Device send timed out";
 		}
 
 		if (LMS_GetStreamStatus(&m_lms_stream_tx[i], &status) == 0) {
@@ -591,12 +591,12 @@ bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 {
 
 	if (chan) {
-		LOG(ALERT) << "Invalid channel " << chan;
+		LOGC(DDEV, ALERT) << "Invalid channel " << chan;
 		return false;
 	}
 
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_TX, chan, wFreq) < 0) {
-		LOG(ALERT) << "set Tx: " << wFreq << " failed!";
+		LOGC(DDEV, ALERT) << "set Tx: " << wFreq << " failed!";
 		return false;
 	}
 
@@ -606,12 +606,12 @@ bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 bool LMSDevice::setRxFreq(double wFreq, size_t chan)
 {
 	if (chan) {
-		LOG(ALERT) << "Invalid channel " << chan;
+		LOGC(DDEV, ALERT) << "Invalid channel " << chan;
 		return false;
 	}
 
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_RX, chan, wFreq) < 0) {
-		LOG(ALERT) << "set Rx: " << wFreq << " failed!";
+		LOGC(DDEV, ALERT) << "set Rx: " << wFreq << " failed!";
 		return false;
 	}
 
@@ -624,11 +624,11 @@ RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
 			       const std::vector < std::string > &rx_paths)
 {
 	if (tx_sps != rx_sps) {
-		LOG(ERROR) << "LMS Requires tx_sps == rx_sps";
+		LOGC(DDEV, ERROR) << "LMS Requires tx_sps == rx_sps";
 		return NULL;
 	}
 	if (lo_offset != 0.0) {
-		LOG(ERROR) << "LMS doesn't support lo_offset";
+		LOGC(DDEV, ERROR) << "LMS doesn't support lo_offset";
 		return NULL;
 	}
 	return new LMSDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);

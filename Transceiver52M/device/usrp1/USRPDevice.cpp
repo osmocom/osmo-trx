@@ -64,7 +64,7 @@ USRPDevice::USRPDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface,
 		       const std::vector<std::string>& rx_paths):
 		RadioDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths)
 {
-  LOG(INFO) << "creating USRP device...";
+  LOGC(DDEV, INFO) << "creating USRP device...";
 
   decimRate = (unsigned int) round(masterClockRate/((GSMRATE) * (double) tx_sps));
   actualSampleRate = masterClockRate/decimRate;
@@ -95,7 +95,7 @@ int USRPDevice::open(const std::string &, int, bool)
 {
   writeLock.unlock();
 
-  LOG(INFO) << "opening USRP device..";
+  LOGC(DDEV, INFO) << "opening USRP device..";
 #ifndef SWLOOPBACK
   string rbf = "std_inband.rbf";
   //string rbf = "inband_1rxhb_1tx.rbf";
@@ -110,14 +110,14 @@ int USRPDevice::open(const std::string &, int, bool)
   }
 
   catch(...) {
-    LOG(ALERT) << "make failed on Rx";
+    LOGC(DDEV, ALERT) << "make failed on Rx";
     m_uRx.reset();
     return -1;
   }
 
   if (m_uRx->fpga_master_clock_freq() != masterClockRate)
   {
-    LOG(ALERT) << "WRONG FPGA clock freq = " << m_uRx->fpga_master_clock_freq()
+    LOGC(DDEV, ALERT) << "WRONG FPGA clock freq = " << m_uRx->fpga_master_clock_freq()
                << ", desired clock freq = " << masterClockRate;
     m_uRx.reset();
     return -1;
@@ -132,14 +132,14 @@ int USRPDevice::open(const std::string &, int, bool)
   }
 
   catch(...) {
-    LOG(ALERT) << "make failed on Tx";
+    LOGC(DDEV, ALERT) << "make failed on Tx";
     m_uTx.reset();
     return -1;
   }
 
   if (m_uTx->fpga_master_clock_freq() != masterClockRate)
   {
-    LOG(ALERT) << "WRONG FPGA clock freq = " << m_uTx->fpga_master_clock_freq()
+    LOGC(DDEV, ALERT) << "WRONG FPGA clock freq = " << m_uTx->fpga_master_clock_freq()
                << ", desired clock freq = " << masterClockRate;
     m_uTx.reset();
     return -1;
@@ -186,7 +186,7 @@ int USRPDevice::open(const std::string &, int, bool)
 
 bool USRPDevice::start()
 {
-  LOG(INFO) << "starting USRP...";
+  LOGC(DDEV, INFO) << "starting USRP...";
 #ifndef SWLOOPBACK
   if (!m_uRx && !skipRx) return false;
   if (!m_uTx) return false;
@@ -270,7 +270,7 @@ double USRPDevice::minRxGain()
 double USRPDevice::setTxGain(double dB, size_t chan)
 {
   if (chan) {
-    LOG(ALERT) << "Invalid channel " << chan;
+    LOGC(DDEV, ALERT) << "Invalid channel " << chan;
     return 0.0;
   }
 
@@ -280,10 +280,10 @@ double USRPDevice::setTxGain(double dB, size_t chan)
   if (dB < minTxGain())
     dB = minTxGain();
 
-  LOG(NOTICE) << "Setting TX gain to " << dB << " dB.";
+  LOGC(DDEV, NOTICE) << "Setting TX gain to " << dB << " dB.";
 
   if (!m_dbTx->set_gain(dB))
-    LOG(ERR) << "Error setting TX gain";
+    LOGC(DDEV, ERR) << "Error setting TX gain";
 
   writeLock.unlock();
 
@@ -294,7 +294,7 @@ double USRPDevice::setTxGain(double dB, size_t chan)
 double USRPDevice::setRxGain(double dB, size_t chan)
 {
   if (chan) {
-    LOG(ALERT) << "Invalid channel " << chan;
+    LOGC(DDEV, ALERT) << "Invalid channel " << chan;
     return 0.0;
   }
 
@@ -306,10 +306,10 @@ double USRPDevice::setRxGain(double dB, size_t chan)
   if (dB < minRxGain())
     dB = minRxGain();
 
-  LOG(NOTICE) << "Setting RX gain to " << dB << " dB.";
+  LOGC(DDEV, NOTICE) << "Setting RX gain to " << dB << " dB.";
 
   if (!m_dbRx->set_gain(dB))
-    LOG(ERR) << "Error setting RX gain";
+    LOGC(DDEV, ERR) << "Error setting RX gain";
 
   writeLock.unlock();
 
@@ -319,40 +319,40 @@ double USRPDevice::setRxGain(double dB, size_t chan)
 bool USRPDevice::setRxAntenna(const std::string &ant, size_t chan)
 {
 	if (chan >= rx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
-	LOG(ALERT) << "Not implemented";
+	LOGC(DDEV, ALERT) << "Not implemented";
 	return true;
 }
 
 std::string USRPDevice::getRxAntenna(size_t chan)
 {
 	if (chan >= rx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return "";
 	}
-	LOG(ALERT) << "Not implemented";
+	LOGC(DDEV, ALERT) << "Not implemented";
 	return "";
 }
 
 bool USRPDevice::setTxAntenna(const std::string &ant, size_t chan)
 {
 	if (chan >= tx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
-	LOG(ALERT) << "Not implemented";
+	LOGC(DDEV, ALERT) << "Not implemented";
 	return true;
 }
 
 std::string USRPDevice::getTxAntenna(size_t chan)
 {
 	if (chan >= tx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return "";
 	}
-	LOG(ALERT) << "Not implemented";
+	LOGC(DDEV, ALERT) << "Not implemented";
 	return "";
 }
 
@@ -405,11 +405,11 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
       uint32_t word0 = usrp_to_host_u32(tmpBuf[0]);
       uint32_t chan = (word0 >> 16) & 0x1f;
       unsigned payloadSz = word0 & 0x1ff;
-      LOG(DEBUG) << "first two bytes: " << hex << word0 << " " << dec << pktTimestamp;
+      LOGC(DDEV, DEBUG) << "first two bytes: " << hex << word0 << " " << dec << pktTimestamp;
 
       bool incrementHi32 = ((lastPktTimestamp & 0x0ffffffffll) > pktTimestamp);
       if (incrementHi32 && (timeStart!=0)) {
-           LOG(DEBUG) << "high 32 increment!!!";
+           LOGC(DDEV, DEBUG) << "high 32 increment!!!";
            hi32Timestamp++;
       }
       pktTimestamp = (((TIMESTAMP) hi32Timestamp) << 32) | pktTimestamp;
@@ -421,19 +421,19 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	if ((word2 >> 16) == ((0x01 << 8) | 0x02)) {
           timestamp -= timestampOffset;
 	  timestampOffset = pktTimestamp - pingTimestamp + pingOffset;
-	  LOG(DEBUG) << "updating timestamp offset to: " << timestampOffset;
+	  LOGC(DDEV, DEBUG) << "updating timestamp offset to: " << timestampOffset;
           timestamp += timestampOffset;
 	  isAligned = true;
 	}
 	continue;
       }
       if (chan != 0) {
-	LOG(DEBUG) << "chan: " << chan << ", timestamp: " << pktTimestamp << ", sz:" << payloadSz;
+	LOGC(DDEV, DEBUG) << "chan: " << chan << ", timestamp: " << pktTimestamp << ", sz:" << payloadSz;
 	continue;
       }
       if ((word0 >> 28) & 0x04) {
 	if (underrun) *underrun = true;
-	LOG(DEBUG) << "UNDERRUN in TRX->USRP interface";
+	LOGC(DDEV, DEBUG) << "UNDERRUN in TRX->USRP interface";
       }
       if (RSSI) *RSSI = (word0 >> 21) & 0x3f;
 
@@ -454,7 +454,7 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
       if (pktTimestamp + payloadSz/2/sizeof(short) > timeEnd)
 	timeEnd = pktTimestamp+payloadSz/2/sizeof(short);
 
-      LOG(DEBUG) << "timeStart: " << timeStart << ", timeEnd: " << timeEnd << ", pktTimestamp: " << pktTimestamp;
+      LOGC(DDEV, DEBUG) << "timeStart: " << timeStart << ", timeEnd: " << timeEnd << ", pktTimestamp: " << pktTimestamp;
 
     }
   }
@@ -462,14 +462,14 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
   // copy desired data to buf
   unsigned bufStart = dataStart+(timestamp-timeStart);
   if (bufStart + len < currDataSize/2) {
-    LOG(DEBUG) << "bufStart: " << bufStart;
+    LOGC(DDEV, DEBUG) << "bufStart: " << bufStart;
     memcpy(buf,data+bufStart*2,len*2*sizeof(short));
     memset(data+bufStart*2,0,len*2*sizeof(short));
   }
   else {
-    LOG(DEBUG) << "len: " << len << ", currDataSize/2: " << currDataSize/2 << ", bufStart: " << bufStart;
+    LOGC(DDEV, DEBUG) << "len: " << len << ", currDataSize/2: " << currDataSize/2 << ", bufStart: " << bufStart;
     unsigned firstLength = (currDataSize/2-bufStart);
-    LOG(DEBUG) << "firstLength: " << firstLength;
+    LOGC(DDEV, DEBUG) << "firstLength: " << firstLength;
     memcpy(buf,data+bufStart*2,firstLength*2*sizeof(short));
     memset(data+bufStart*2,0,firstLength*2*sizeof(short));
     memcpy(buf+firstLength*2,data,(len-firstLength)*2*sizeof(short));
@@ -599,19 +599,19 @@ bool USRPDevice::setTxFreq(double wFreq, size_t chan)
   usrp_tune_result result;
 
   if (chan) {
-    LOG(ALERT) << "Invalid channel " << chan;
+    LOGC(DDEV, ALERT) << "Invalid channel " << chan;
     return false;
   }
 
   if (m_uTx->tune(txSubdevSpec.side, m_dbTx, wFreq, &result)) {
-    LOG(INFO) << "set TX: " << wFreq << std::endl
+    LOGC(DDEV, INFO) << "set TX: " << wFreq << std::endl
               << "    baseband freq: " << result.baseband_freq << std::endl
               << "    DDC freq:      " << result.dxc_freq << std::endl
               << "    residual freq: " << result.residual_freq;
     return true;
   }
   else {
-    LOG(ALERT) << "set TX: " << wFreq << "failed" << std::endl
+    LOGC(DDEV, ALERT) << "set TX: " << wFreq << "failed" << std::endl
                << "    baseband freq: " << result.baseband_freq << std::endl
                << "    DDC freq:      " << result.dxc_freq << std::endl
                << "    residual freq: " << result.residual_freq;
@@ -624,19 +624,19 @@ bool USRPDevice::setRxFreq(double wFreq, size_t chan)
   usrp_tune_result result;
 
   if (chan) {
-    LOG(ALERT) << "Invalid channel " << chan;
+    LOGC(DDEV, ALERT) << "Invalid channel " << chan;
     return false;
   }
 
   if (m_uRx->tune(0, m_dbRx, wFreq, &result)) {
-    LOG(INFO) << "set RX: " << wFreq << std::endl
+    LOGC(DDEV, INFO) << "set RX: " << wFreq << std::endl
               << "    baseband freq: " << result.baseband_freq << std::endl
               << "    DDC freq:      " << result.dxc_freq << std::endl
               << "    residual freq: " << result.residual_freq;
     return true;
   }
   else {
-    LOG(ALERT) << "set RX: " << wFreq << "failed" << std::endl
+    LOGC(DDEV, ALERT) << "set RX: " << wFreq << "failed" << std::endl
                << "    baseband freq: " << result.baseband_freq << std::endl
                << "    DDC freq:      " << result.dxc_freq << std::endl
                << "    residual freq: " << result.residual_freq;
@@ -656,15 +656,15 @@ RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
 			       const std::vector<std::string>& rx_paths)
 {
 	if (tx_sps != rx_sps) {
-		LOG(ERROR) << "USRP1 requires tx_sps == rx_sps";
+		LOGC(DDEV, ERROR) << "USRP1 requires tx_sps == rx_sps";
 		return NULL;
 	}
 	if (chans != 1) {
-		LOG(ERROR) << "USRP1 supports only 1 channel";
+		LOGC(DDEV, ERROR) << "USRP1 supports only 1 channel";
 		return NULL;
 	}
 	if (lo_offset != 0.0) {
-		LOG(ERROR) << "USRP1 doesn't support lo_offset";
+		LOGC(DDEV, ERROR) << "USRP1 doesn't support lo_offset";
 		return NULL;
 	}
 	return new USRPDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);

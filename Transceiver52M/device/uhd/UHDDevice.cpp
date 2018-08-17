@@ -340,13 +340,13 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 {
 	switch (type) {
 	case uhd::msg::status:
-		LOG(INFO) << msg;
+		LOGC(DDEV, INFO) << msg;
 		break;
 	case uhd::msg::warning:
-		LOG(WARNING) << msg;
+		LOGC(DDEV, WARNING) << msg;
 		break;
 	case uhd::msg::error:
-		LOG(ERR) << msg;
+		LOGC(DDEV, ERR) << msg;
 		break;
 	case uhd::msg::fastpath:
 		break;
@@ -388,7 +388,7 @@ void uhd_device::init_gains()
 	if (dev_type == UMTRX) {
 		std::vector<std::string> gain_stages = usrp_dev->get_tx_gain_names(0);
 		if (gain_stages[0] == "VGA") {
-			LOG(WARNING) << "Update your UHD version for a proper Tx gain support";
+			LOGC(DDEV, WARNING) << "Update your UHD version for a proper Tx gain support";
 		}
 		if (gain_stages[0] == "VGA" || gain_stages[0] == "PA") {
 			range = usrp_dev->get_tx_gain_range();
@@ -404,23 +404,23 @@ void uhd_device::init_gains()
 		tx_gain_min = range.start();
 		tx_gain_max = range.stop();
 	}
-	LOG(INFO) << "Supported Tx gain range [" << tx_gain_min << "; " << tx_gain_max << "]";
+	LOGC(DDEV, INFO) << "Supported Tx gain range [" << tx_gain_min << "; " << tx_gain_max << "]";
 
 	range = usrp_dev->get_rx_gain_range();
 	rx_gain_min = range.start();
 	rx_gain_max = range.stop();
-	LOG(INFO) << "Supported Rx gain range [" << rx_gain_min << "; " << rx_gain_max << "]";
+	LOGC(DDEV, INFO) << "Supported Rx gain range [" << rx_gain_min << "; " << rx_gain_max << "]";
 
 	for (size_t i = 0; i < tx_gains.size(); i++) {
 		double gain = (tx_gain_min + tx_gain_max) / 2;
-		LOG(INFO) << "Default setting Tx gain for channel " << i << " to " << gain;
+		LOGC(DDEV, INFO) << "Default setting Tx gain for channel " << i << " to " << gain;
 		usrp_dev->set_tx_gain(gain, i);
 		tx_gains[i] = usrp_dev->get_tx_gain(i);
 	}
 
 	for (size_t i = 0; i < rx_gains.size(); i++) {
 		double gain = (rx_gain_min + rx_gain_max) / 2;
-		LOG(INFO) << "Default setting Rx gain for channel " << i << " to " << gain;
+		LOGC(DDEV, INFO) << "Default setting Rx gain for channel " << i << " to " << gain;
 		usrp_dev->set_rx_gain(gain, i);
 		rx_gains[i] = usrp_dev->get_rx_gain(i);
 	}
@@ -444,7 +444,7 @@ void uhd_device::set_rates()
 	rx_rate = usrp_dev->get_rx_rate();
 
 	ts_offset = static_cast<TIMESTAMP>(desc.offset * rx_rate);
-	LOG(INFO) << "Rates configured for " << desc.str;
+	LOGC(DDEV, INFO) << "Rates configured for " << desc.str;
 }
 
 double uhd_device::setTxGain(double db, size_t chan)
@@ -453,7 +453,7 @@ double uhd_device::setTxGain(double db, size_t chan)
 		chan = 0;
 
 	if (chan >= tx_gains.size()) {
-		LOG(ALERT) << "Requested non-existent channel" << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel" << chan;
 		return 0.0f;
 	}
 
@@ -476,7 +476,7 @@ double uhd_device::setTxGain(double db, size_t chan)
 
 	tx_gains[chan] = usrp_dev->get_tx_gain(chan);
 
-	LOG(INFO) << "Set TX gain to " << tx_gains[chan] << "dB (asked for " << db << "dB)";
+	LOGC(DDEV, INFO) << "Set TX gain to " << tx_gains[chan] << "dB (asked for " << db << "dB)";
 
 	return tx_gains[chan];
 }
@@ -484,14 +484,14 @@ double uhd_device::setTxGain(double db, size_t chan)
 double uhd_device::setRxGain(double db, size_t chan)
 {
 	if (chan >= rx_gains.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return 0.0f;
 	}
 
 	usrp_dev->set_rx_gain(db, chan);
 	rx_gains[chan] = usrp_dev->get_rx_gain(chan);
 
-	LOG(INFO) << "Set RX gain to " << rx_gains[chan] << "dB (asked for " << db << "dB)";
+	LOGC(DDEV, INFO) << "Set RX gain to " << rx_gains[chan] << "dB (asked for " << db << "dB)";
 
 	return rx_gains[chan];
 }
@@ -502,7 +502,7 @@ double uhd_device::getRxGain(size_t chan)
 		chan = 0;
 
 	if (chan >= rx_gains.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return 0.0f;
 	}
 
@@ -550,7 +550,7 @@ bool uhd_device::parse_dev_type()
 		mapIter++;
 	}
 
-	LOG(ALERT) << "Unsupported device " << devString;
+	LOGC(DDEV, ALERT) << "Unsupported device " << devString;
 	return false;
 }
 
@@ -621,16 +621,16 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	uhd::device_addr_t addr(args);
 	uhd::device_addrs_t dev_addrs = uhd::device::find(addr);
 	if (dev_addrs.size() == 0) {
-		LOG(ALERT) << "No UHD devices found with address '" << args << "'";
+		LOGC(DDEV, ALERT) << "No UHD devices found with address '" << args << "'";
 		return -1;
 	}
 
 	// Use the first found device
-	LOG(INFO) << "Using discovered UHD device " << dev_addrs[0].to_string();
+	LOGC(DDEV, INFO) << "Using discovered UHD device " << dev_addrs[0].to_string();
 	try {
 		usrp_dev = uhd::usrp::multi_usrp::make(addr);
 	} catch(...) {
-		LOG(ALERT) << "UHD make failed, device " << args;
+		LOGC(DDEV, ALERT) << "UHD make failed, device " << args;
 		return -1;
 	}
 
@@ -639,19 +639,19 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 		return -1;
 
 	if ((dev_type == E3XX) && !uhd_e3xx_version_chk()) {
-		LOG(ALERT) << "E3XX requires UHD 003.009.000 or greater";
+		LOGC(DDEV, ALERT) << "E3XX requires UHD 003.009.000 or greater";
 		return -1;
 	}
 
 	try {
 		set_channels(swap_channels);
         } catch (const std::exception &e) {
-		LOG(ALERT) << "Channel setting failed - " << e.what();
+		LOGC(DDEV, ALERT) << "Channel setting failed - " << e.what();
 		return -1;
 	}
 
 	if (!set_antennas()) {
-		LOG(ALERT) << "UHD antenna setting failed";
+		LOGC(DDEV, ALERT) << "UHD antenna setting failed";
 		return -1;
 	}
 
@@ -672,7 +672,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 		refstr = "gpsdo";
 		break;
 	default:
-		LOG(ALERT) << "Invalid reference type";
+		LOGC(DDEV, ALERT) << "Invalid reference type";
 		return -1;
 	}
 
@@ -681,7 +681,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	try {
 		set_rates();
         } catch (const std::exception &e) {
-		LOG(ALERT) << "UHD rate setting failed - " << e.what();
+		LOGC(DDEV, ALERT) << "UHD rate setting failed - " << e.what();
 		return -1;
 	}
 
@@ -720,7 +720,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	init_gains();
 
 	// Print configuration
-	LOG(INFO) << "\n" << usrp_dev->get_pp_string();
+	LOGC(DDEV, INFO) << "\n" << usrp_dev->get_pp_string();
 
 	if (iface == MULTI_ARFCN)
 		return MULTI_ARFCN;
@@ -763,7 +763,7 @@ bool uhd_device::flush_recv(size_t num_pkts)
 		if (!num_smpls) {
 			switch (md.error_code) {
 			case uhd::rx_metadata_t::ERROR_CODE_TIMEOUT:
-				LOG(ALERT) << "Device timed out";
+				LOGC(DDEV, ALERT) << "Device timed out";
 				return false;
 			default:
 				continue;
@@ -773,7 +773,7 @@ bool uhd_device::flush_recv(size_t num_pkts)
 		ts_initial = md.time_spec.to_ticks(rx_rate);
 	}
 
-	LOG(INFO) << "Initial timestamp " << ts_initial << std::endl;
+	LOGC(DDEV, INFO) << "Initial timestamp " << ts_initial << std::endl;
 
 	return true;
 }
@@ -798,10 +798,10 @@ bool uhd_device::restart()
 
 bool uhd_device::start()
 {
-	LOG(INFO) << "Starting USRP...";
+	LOGC(DDEV, INFO) << "Starting USRP...";
 
 	if (started) {
-		LOG(ERR) << "Device already started";
+		LOGC(DDEV, ERR) << "Device already started";
 		return false;
 	}
 
@@ -819,7 +819,7 @@ bool uhd_device::start()
 
 	// Display usrp time
 	double time_now = usrp_dev->get_time_now().get_real_secs();
-	LOG(INFO) << "The current time is " << time_now << " seconds";
+	LOGC(DDEV, INFO) << "The current time is " << time_now << " seconds";
 
 	started = true;
 	return true;
@@ -852,11 +852,11 @@ void uhd_device::setPriority(float prio)
 int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 {
 	if (!num_smpls) {
-		LOG(ERR) << str_code(md);
+		LOGC(DDEV, ERR) << str_code(md);
 
 		switch (md.error_code) {
 		case uhd::rx_metadata_t::ERROR_CODE_TIMEOUT:
-			LOG(ALERT) << "UHD: Receive timed out";
+			LOGC(DDEV, ALERT) << "UHD: Receive timed out";
 			return ERROR_TIMEOUT;
 		case uhd::rx_metadata_t::ERROR_CODE_OVERFLOW:
 		case uhd::rx_metadata_t::ERROR_CODE_LATE_COMMAND:
@@ -869,14 +869,14 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 
 	// Missing timestamp
 	if (!md.has_time_spec) {
-		LOG(ALERT) << "UHD: Received packet missing timestamp";
+		LOGC(DDEV, ALERT) << "UHD: Received packet missing timestamp";
 		return ERROR_UNRECOVERABLE;
 	}
 
 	// Monotonicity check
 	if (md.time_spec < prev_ts) {
-		LOG(ALERT) << "UHD: Loss of monotonic time";
-		LOG(ALERT) << "Current time: " << md.time_spec.get_real_secs() << ", "
+		LOGC(DDEV, ALERT) << "UHD: Loss of monotonic time";
+		LOGC(DDEV, ALERT) << "Current time: " << md.time_spec.get_real_secs() << ", "
 			   << "Previous time: " << prev_ts.get_real_secs();
 		return ERROR_TIMING;
 	}
@@ -899,7 +899,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	uhd::rx_metadata_t metadata;
 
 	if (bufs.size() != chans) {
-		LOG(ALERT) << "Invalid channel combination " << bufs.size();
+		LOGC(DDEV, ALERT) << "Invalid channel combination " << bufs.size();
 		return -1;
 	}
 
@@ -910,13 +910,13 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	timestamp += ts_offset;
 
 	ts = uhd::time_spec_t::from_ticks(timestamp, rx_rate);
-	LOG(DEBUG) << "Requested timestamp = " << ts.get_real_secs();
+	LOGC(DDEV, DEBUG) << "Requested timestamp = " << ts.get_real_secs();
 
 	// Check that timestamp is valid
 	rc = rx_buffers[0]->avail_smpls(timestamp);
 	if (rc < 0) {
-		LOG(ERR) << rx_buffers[0]->str_code(rc);
-		LOG(ERR) << rx_buffers[0]->str_status(timestamp);
+		LOGC(DDEV, ERR) << rx_buffers[0]->str_code(rc);
+		LOGC(DDEV, ERR) << rx_buffers[0]->str_status(timestamp);
 		return 0;
 	}
 
@@ -941,8 +941,8 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 		rc = check_rx_md_err(metadata, num_smpls);
 		switch (rc) {
 		case ERROR_UNRECOVERABLE:
-			LOG(ALERT) << "UHD: Version " << uhd::get_version_string();
-			LOG(ALERT) << "UHD: Unrecoverable error, exiting...";
+			LOGC(DDEV, ALERT) << "UHD: Version " << uhd::get_version_string();
+			LOGC(DDEV, ALERT) << "UHD: Unrecoverable error, exiting...";
 			exit(-1);
 		case ERROR_TIMEOUT:
 			// Assume stopping condition
@@ -954,7 +954,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 		}
 
 		ts = metadata.time_spec;
-		LOG(DEBUG) << "Received timestamp = " << ts.get_real_secs();
+		LOGC(DDEV, DEBUG) << "Received timestamp = " << ts.get_real_secs();
 
 		for (size_t i = 0; i < rx_buffers.size(); i++) {
 			rc = rx_buffers[i]->write((short *) &pkt_bufs[i].front(),
@@ -963,8 +963,8 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 
 			// Continue on local overrun, exit on other errors
 			if ((rc < 0)) {
-				LOG(ERR) << rx_buffers[i]->str_code(rc);
-				LOG(ERR) << rx_buffers[i]->str_status(timestamp);
+				LOGC(DDEV, ERR) << rx_buffers[i]->str_code(rc);
+				LOGC(DDEV, ERR) << rx_buffers[i]->str_status(timestamp);
 				if (rc != smpl_buf::ERROR_OVERFLOW)
 					return 0;
 			}
@@ -975,8 +975,8 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	for (size_t i = 0; i < rx_buffers.size(); i++) {
 		rc = rx_buffers[i]->read(bufs[i], len, timestamp);
 		if ((rc < 0) || (rc != len)) {
-			LOG(ERR) << rx_buffers[i]->str_code(rc);
-			LOG(ERR) << rx_buffers[i]->str_status(timestamp);
+			LOGC(DDEV, ERR) << rx_buffers[i]->str_code(rc);
+			LOGC(DDEV, ERR) << rx_buffers[i]->str_status(timestamp);
 			return 0;
 		}
 	}
@@ -997,12 +997,12 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 
 	// No control packets
 	if (isControl) {
-		LOG(ERR) << "Control packets not supported";
+		LOGC(DDEV, ERR) << "Control packets not supported";
 		return 0;
 	}
 
 	if (bufs.size() != chans) {
-		LOG(ALERT) << "Invalid channel combination " << bufs.size();
+		LOGC(DDEV, ALERT) << "Invalid channel combination " << bufs.size();
 		return -1;
 	}
 
@@ -1011,14 +1011,14 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 		drop_cnt++;
 
 		if (drop_cnt == 1) {
-			LOG(DEBUG) << "Aligning transmitter: stop burst";
+			LOGC(DDEV, DEBUG) << "Aligning transmitter: stop burst";
 			*underrun = true;
 			metadata.end_of_burst = true;
 		} else if (drop_cnt < 30) {
-			LOG(DEBUG) << "Aligning transmitter: packet advance";
+			LOGC(DDEV, DEBUG) << "Aligning transmitter: packet advance";
 			return len;
 		} else {
-			LOG(DEBUG) << "Aligning transmitter: start burst";
+			LOGC(DDEV, DEBUG) << "Aligning transmitter: start burst";
 			metadata.start_of_burst = true;
 			aligned = true;
 			drop_cnt = 0;
@@ -1030,7 +1030,7 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 	thread_enable_cancel(true);
 
 	if (num_smpls != (unsigned) len) {
-		LOG(ALERT) << "UHD: Device send timed out";
+		LOGC(DDEV, ALERT) << "UHD: Device send timed out";
 	}
 
 	return num_smpls;
@@ -1066,7 +1066,7 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 
 		return uhd::tune_request_t(freq, lo_offset);
 	} else if ((dev_type != B210) || (chans > 2) || (chan > 1)) {
-		LOG(ALERT) << chans << " channels unsupported";
+		LOGC(DDEV, ALERT) << chans << " channels unsupported";
 		return treq;
 	}
 
@@ -1082,7 +1082,7 @@ uhd::tune_request_t uhd_device::select_freq(double freq, size_t chan, bool tx)
 	/* Find center frequency between channels */
 	rf_spread = fabs(freqs[!chan] - freq);
 	if (rf_spread > dev_param_map.at(dev_key(B210, tx_sps, rx_sps)).mcr) {
-		LOG(ALERT) << rf_spread << "Hz tuning spread not supported\n";
+		LOGC(DDEV, ALERT) << rf_spread << "Hz tuning spread not supported\n";
 		return treq;
 	}
 
@@ -1108,7 +1108,7 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 		tres = usrp_dev->set_rx_freq(treq, chan);
 		rx_freqs[chan] = usrp_dev->get_rx_freq(chan);
 	}
-	LOG(INFO) << "\n" << tres.to_pp_string() << std::endl;
+	LOGC(DDEV, INFO) << "\n" << tres.to_pp_string() << std::endl;
 
 	if ((chans == 1) || ((chans == 2) && dev_type == UMTRX))
 		return true;
@@ -1128,7 +1128,7 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 			rx_freqs[!chan] = usrp_dev->get_rx_freq(!chan);
 
 		}
-		LOG(INFO) << "\n" << tres.to_pp_string() << std::endl;
+		LOGC(DDEV, INFO) << "\n" << tres.to_pp_string() << std::endl;
 	}
 
 	return true;
@@ -1137,7 +1137,7 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 bool uhd_device::setTxFreq(double wFreq, size_t chan)
 {
 	if (chan >= tx_freqs.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 	ScopedLock lock(tune_lock);
@@ -1148,7 +1148,7 @@ bool uhd_device::setTxFreq(double wFreq, size_t chan)
 bool uhd_device::setRxFreq(double wFreq, size_t chan)
 {
 	if (chan >= rx_freqs.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 	ScopedLock lock(tune_lock);
@@ -1159,7 +1159,7 @@ bool uhd_device::setRxFreq(double wFreq, size_t chan)
 double uhd_device::getTxFreq(size_t chan)
 {
 	if (chan >= tx_freqs.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return 0.0;
 	}
 
@@ -1169,7 +1169,7 @@ double uhd_device::getTxFreq(size_t chan)
 double uhd_device::getRxFreq(size_t chan)
 {
 	if (chan >= rx_freqs.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return 0.0;
 	}
 
@@ -1180,23 +1180,23 @@ bool uhd_device::setRxAntenna(const std::string &ant, size_t chan)
 {
 	std::vector<std::string> avail;
 	if (chan >= rx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 
 	avail = usrp_dev->get_rx_antennas(chan);
 	if (std::find(avail.begin(), avail.end(), ant) == avail.end()) {
-		LOG(ALERT) << "Requested non-existent Rx antenna " << ant << " on channel " << chan;
-		LOG(INFO) << "Available Rx antennas: ";
+		LOGC(DDEV, ALERT) << "Requested non-existent Rx antenna " << ant << " on channel " << chan;
+		LOGC(DDEV, INFO) << "Available Rx antennas: ";
 		for (std::vector<std::string>::const_iterator i = avail.begin(); i != avail.end(); ++i)
-			LOG(INFO) << "- '" << *i << "'";
+			LOGC(DDEV, INFO) << "- '" << *i << "'";
 		return false;
 	}
 	usrp_dev->set_rx_antenna(ant, chan);
 	rx_paths[chan] = usrp_dev->get_rx_antenna(chan);
 
 	if (ant != rx_paths[chan]) {
-		LOG(ALERT) << "Failed setting antenna " << ant << " on channel " << chan << ", got instead " << rx_paths[chan];
+		LOGC(DDEV, ALERT) << "Failed setting antenna " << ant << " on channel " << chan << ", got instead " << rx_paths[chan];
 		return false;
 	}
 
@@ -1206,7 +1206,7 @@ bool uhd_device::setRxAntenna(const std::string &ant, size_t chan)
 std::string uhd_device::getRxAntenna(size_t chan)
 {
 	if (chan >= rx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return "";
 	}
 	return usrp_dev->get_rx_antenna(chan);
@@ -1216,23 +1216,23 @@ bool uhd_device::setTxAntenna(const std::string &ant, size_t chan)
 {
 	std::vector<std::string> avail;
 	if (chan >= tx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 
 	avail = usrp_dev->get_tx_antennas(chan);
 	if (std::find(avail.begin(), avail.end(), ant) == avail.end()) {
-		LOG(ALERT) << "Requested non-existent Tx antenna " << ant << " on channel " << chan;
-		LOG(INFO) << "Available Tx antennas: ";
+		LOGC(DDEV, ALERT) << "Requested non-existent Tx antenna " << ant << " on channel " << chan;
+		LOGC(DDEV, INFO) << "Available Tx antennas: ";
 		for (std::vector<std::string>::const_iterator i = avail.begin(); i != avail.end(); ++i)
-			LOG(INFO) << "- '" << *i << "'";
+			LOGC(DDEV, INFO) << "- '" << *i << "'";
 		return false;
 	}
 	usrp_dev->set_tx_antenna(ant, chan);
 	tx_paths[chan] = usrp_dev->get_tx_antenna(chan);
 
 	if (ant != tx_paths[chan]) {
-		LOG(ALERT) << "Failed setting antenna " << ant << " on channel " << chan << ", got instead " << tx_paths[chan];
+		LOGC(DDEV, ALERT) << "Failed setting antenna " << ant << " on channel " << chan << ", got instead " << tx_paths[chan];
 		return false;
 	}
 
@@ -1242,7 +1242,7 @@ bool uhd_device::setTxAntenna(const std::string &ant, size_t chan)
 std::string uhd_device::getTxAntenna(size_t chan)
 {
 	if (chan >= tx_paths.size()) {
-		LOG(ALERT) << "Requested non-existent channel " << chan;
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return "";
 	}
 	return usrp_dev->get_tx_antenna(chan);
@@ -1310,7 +1310,7 @@ bool uhd_device::recv_async_msg()
 
 		if ((md.event_code != uhd::async_metadata_t::EVENT_CODE_UNDERFLOW) &&
 		    (md.event_code != uhd::async_metadata_t::EVENT_CODE_TIME_ERROR)) {
-			LOG(ERR) << str_code(md);
+			LOGC(DDEV, ERR) << str_code(md);
 		}
 	}
 
@@ -1470,15 +1470,15 @@ ssize_t smpl_buf::write(void *buf, size_t len, TIMESTAMP timestamp)
 		return ERROR_TIMESTAMP;
 
 	if (timestamp < time_end) {
-		LOG(ERR) << "Overwriting old buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
+		LOGC(DDEV, ERR) << "Overwriting old buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
 		uhd::time_spec_t ts = uhd::time_spec_t::from_ticks(timestamp, clk_rt);
-		LOG(DEBUG) << "Requested timestamp = " << timestamp << " (real_sec=" << std::fixed << ts.get_real_secs() << " = " << ts.to_ticks(clk_rt) << ") rate=" << clk_rt;
+		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp << " (real_sec=" << std::fixed << ts.get_real_secs() << " = " << ts.to_ticks(clk_rt) << ") rate=" << clk_rt;
 		// Do not return error here, because it's a rounding error and is not fatal
 	}
 	if (timestamp > time_end && time_end != 0) {
-		LOG(ERR) << "Skipping buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
+		LOGC(DDEV, ERR) << "Skipping buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
 		uhd::time_spec_t ts = uhd::time_spec_t::from_ticks(timestamp, clk_rt);
-		LOG(DEBUG) << "Requested timestamp = " << timestamp << " (real_sec=" << std::fixed << ts.get_real_secs() << " = " << ts.to_ticks(clk_rt) << ") rate=" << clk_rt;
+		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp << " (real_sec=" << std::fixed << ts.get_real_secs() << " = " << ts.to_ticks(clk_rt) << ") rate=" << clk_rt;
 		// Do not return error here, because it's a rounding error and is not fatal
 	}
 
