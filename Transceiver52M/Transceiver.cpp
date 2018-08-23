@@ -954,7 +954,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     // tune receiver
     int freqKhz;
     sscanf(params, "%d", &freqKhz);
-    mRxFreq = freqKhz * 1e3;
+    mRxFreq = (freqKhz + cfg->freq_offset_khz) * 1e3;
     if (!mRadioInterface->tuneRx(mRxFreq, chan)) {
        LOGCHAN(chan, DTRXCTRL, FATAL) << "RX failed to tune";
        sprintf(response,"RSP RXTUNE 1 %d",freqKhz);
@@ -965,7 +965,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     // tune txmtr
     int freqKhz;
     sscanf(params, "%d", &freqKhz);
-    mTxFreq = freqKhz * 1e3;
+    mTxFreq = (freqKhz + cfg->freq_offset_khz) * 1e3;
     if (!mRadioInterface->tuneTx(mTxFreq, chan)) {
        LOGCHAN(chan, DTRXCTRL, FATAL) << "TX failed to tune";
        sprintf(response,"RSP TXTUNE 1 %d",freqKhz);

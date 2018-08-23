@@ -244,6 +244,19 @@ DEFUN(cfg_offset, cfg_offset_cmd,
 	return CMD_SUCCESS;
 }
 
+DEFUN_ATTR(cfg_freq_offset, cfg_freq_offset_cmd,
+	   "freq-offset FLOAT",
+	   "Apply an artificial offset to Rx/Tx carrier frequency\n"
+	   "Frequency offset in kHz (e.g. -145300)\n",
+	   CMD_ATTR_HIDDEN)
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.freq_offset_khz = atof(argv[0]);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_rssi_offset, cfg_rssi_offset_cmd,
 	"rssi-offset FLOAT [relative]",
 	"Set the RSSI to dBm offset in dB (default=0)\n"
@@ -593,6 +606,8 @@ static int config_write_trx(struct vty *vty)
 	vty_out(vty, " multi-arfcn %s%s", trx->cfg.multi_arfcn ? "enable" : "disable", VTY_NEWLINE);
 	if (trx->cfg.offset != 0)
 		vty_out(vty, " offset %f%s", trx->cfg.offset, VTY_NEWLINE);
+	if (trx->cfg.freq_offset_khz != 0)
+		vty_out(vty, " freq-offset %f%s", trx->cfg.freq_offset_khz, VTY_NEWLINE);
 	if (!(trx->cfg.rssi_offset == 0 && !trx->cfg.force_rssi_offset))
 		vty_out(vty, " rssi-offset %f%s%s", trx->cfg.rssi_offset,
 			trx->cfg.force_rssi_offset ? " relative": "", VTY_NEWLINE);
@@ -758,6 +773,7 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_clock_ref_cmd);
 	install_element(TRX_NODE, &cfg_multi_arfcn_cmd);
 	install_element(TRX_NODE, &cfg_offset_cmd);
+	install_element(TRX_NODE, &cfg_freq_offset_cmd);
 	install_element(TRX_NODE, &cfg_rssi_offset_cmd);
 	install_element(TRX_NODE, &cfg_swap_channels_cmd);
 	install_element(TRX_NODE, &cfg_egprs_cmd);

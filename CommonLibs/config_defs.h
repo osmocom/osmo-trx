@@ -46,6 +46,7 @@ struct trx_cfg {
 	enum FillerType filler;
 	bool multi_arfcn;
 	double offset;
+	double freq_offset_khz;
 	double rssi_offset;
 	bool force_rssi_offset; /* Force value set in VTY? */
 	bool swap_channels;

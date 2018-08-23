@@ -542,7 +542,9 @@ static void print_config(struct trx_ctx *trx)
 	ost << "   Filler Burst TSC........ " << trx->cfg.rtsc << std::endl;
 	ost << "   Filler Burst RACH Delay. " << trx->cfg.rach_delay << std::endl;
 	ost << "   Multi-Carrier........... " << trx->cfg.multi_arfcn << std::endl;
-	ost << "   Tuning offset........... " << trx->cfg.offset << std::endl;
+	ost << "   LO freq. offset......... " << trx->cfg.offset << std::endl;
+	if (trx->cfg.freq_offset_khz != 0)
+		ost << "   Tune freq. offset....... " << trx->cfg.freq_offset_khz << std::endl;
 	ost << "   RSSI to dBm offset...... " << trx->cfg.rssi_offset << (trx->cfg.force_rssi_offset ? "" : " (relative)") << std::endl;
 	ost << "   Swap channels........... " << trx->cfg.swap_channels << std::endl;
 	ost << "   Tx Antennas.............";
