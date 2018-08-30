@@ -230,6 +230,7 @@ int RadioInterfaceMulti::pullBuffer()
 	bool local_underrun;
 	size_t num;
 	float *buf;
+	unsigned int i;
 
 	if (recvBuffer[0]->getFreeSegments() <= 0)
 		return -1;
@@ -273,10 +274,22 @@ int RadioInterfaceMulti::pullBuffer()
 		buf = channelizer->outputBuffer(pchan);
 		size_t cLen = channelizer->outputLen();
 		size_t hLen = dnsampler->len();
-		size_t hSize = 2 * hLen * sizeof(float);
 
-		memcpy(&buf[2 * -hLen], history[lchan]->begin(), hSize);
-		memcpy(history[lchan]->begin(), &buf[2 * (cLen - hLen)], hSize);
+		float *fdst = &buf[2 * -hLen];
+		complex *src = history[lchan]->begin();
+		for (i = 0; i < hLen; i++) {
+			fdst[0] = src->real();
+			fdst[1] = src->imag();
+			src++;
+			fdst += 2;
+		}
+		complex *dst = history[lchan]->begin();
+		float *fsrc = &buf[2 * (cLen - hLen)];
+		for (i = 0; i < hLen; i++) {
+			*dst = complex(fdst[0], fdst[1]);
+			fsrc += 2;
+			dst++;
+		}
 
 		float *wr_segment = recvBuffer[lchan]->getWriteSegment();
 
