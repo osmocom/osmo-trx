@@ -79,7 +79,7 @@ set -x
 
 cd "$base"
 autoreconf --install --force
-./configure --enable-sanitize --enable-werror --with-uhd --with-usrp1 $INSTR
+./configure --enable-sanitize --enable-werror --with-uhd --with-usrp1 --with-lms $INSTR
 $MAKE $PARALLEL_MAKE
 $MAKE check \
   || cat-testlogs.sh
