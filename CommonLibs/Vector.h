@@ -282,7 +282,7 @@ template <class T> class Vector {
 	T* end() { return mEnd; }
 	bool isOwner() { return !!mData; }	// Do we own any memory ourselves?
 	//@}
-	
+
 
 };
 

@@ -1102,17 +1102,17 @@ static complex interpolatePoint(const signalVector &inSig, float ix)
   if (start < 0) start = 0;
   int end = (int) (floor(ix) + 11);
   if ((unsigned) end > inSig.size()-1) end = inSig.size()-1;
-  
+
   complex pVal = 0.0;
   if (!inSig.isReal()) {
-    for (int i = start; i < end; i++) 
+    for (int i = start; i < end; i++)
       pVal += inSig[i] * sinc(M_PI_F*(i-ix));
   }
   else {
-    for (int i = start; i < end; i++) 
+    for (int i = start; i < end; i++)
       pVal += inSig[i].real() * sinc(M_PI_F*(i-ix));
   }
-   
+
   return pVal;
 }
 
@@ -1157,12 +1157,12 @@ static complex peakDetect(const signalVector &rxBurst,
   // to save computation, we'll use early-late balancing
   float earlyIndex = maxIndex-1;
   float lateIndex = maxIndex+1;
-  
+
   float incr = 0.5;
   while (incr > 1.0/1024.0) {
     complex earlyP = interpolatePoint(rxBurst,earlyIndex);
     complex lateP =  interpolatePoint(rxBurst,lateIndex);
-    if (earlyP < lateP) 
+    if (earlyP < lateP)
       earlyIndex += incr;
     else if (earlyP > lateP)
       earlyIndex -= incr;
@@ -1250,7 +1250,7 @@ static bool generateMidamble(int sps, int tsc)
 
   // NOTE: Because ideal TSC 16-bit midamble is 66 symbols into burst,
   //       the ideal TSC has an + 180 degree phase shift,
-  //       due to the pi/2 frequency shift, that 
+  //       due to the pi/2 frequency shift, that
   //       needs to be accounted for.
   //       26-midamble is 61 symbols into burst, has +90 degree phase shift.
   scaleVector(*midMidamble, complex(-1.0, 0.0));
@@ -1589,7 +1589,7 @@ static int detectGeneralBurst(const signalVector &rxBurst,
 }
 
 
-/* 
+/*
  * RACH burst detection
  *
  * Correlation window parameters:
@@ -1614,7 +1614,7 @@ static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
   return rc;
 }
 
-/* 
+/*
  * Normal burst detection
  *
  * Correlation window parameters:
