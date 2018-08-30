@@ -204,10 +204,15 @@ template <class T> class Vector {
 	*/
 	void copyToSegment(Vector<T>& other, size_t start, size_t span) const
 	{
-		T* base = other.mStart + start;
-		assert(base+span<=other.mEnd);
+		unsigned int i;
+		T* dst = other.mStart + start;
+		T* src = mStart;
+		assert(dst+span<=other.mEnd);
 		assert(mStart+span<=mEnd);
-		memcpy(base,mStart,span*sizeof(T));
+		for (i = 0; i < span; i++, src++, dst++)
+			*dst = *src;
+		/*TODO if not non-trivially copyable type class, optimize:
+		memcpy(dst,mStart,span*sizeof(T)); */
 	}
 
 	/** Copy all of this Vector to a segment of another Vector. */

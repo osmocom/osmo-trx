@@ -41,7 +41,14 @@ signalVector::signalVector(const signalVector &vector,
 void signalVector::operator=(const signalVector& vector)
 {
 	resize(vector.size() + vector.getStart());
-	memcpy(mData, vector.mData, bytes());
+
+	unsigned int i;
+	complex *dst = mData;
+	complex *src = vector.mData;
+	for (i = 0; i < size(); i++, src++, dst++)
+		*dst = *src;
+	/* TODO: optimize for non non-trivially copyable types: */
+	/*memcpy(mData, vector.mData, bytes()); */
 	mStart = mData + vector.getStart();
 }
 
@@ -58,8 +65,13 @@ size_t signalVector::getStart() const
 size_t signalVector::updateHistory()
 {
 	size_t num = getStart();
-
-	memmove(mData, mStart + this->size() - num, num * sizeof(complex));
+	unsigned int i;
+	complex *dst = mData;
+	complex *src = mStart + this->size() - num;
+	for (i = 0; i < num; i++, src++, dst++)
+		*dst = *src;
+	/* TODO: optimize for non non-trivially copyable types: */
+	/*memmove(mData, mStart + this->size() - num, num * sizeof(complex)); */
 
 	return num;
 }
