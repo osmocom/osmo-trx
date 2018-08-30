@@ -28,7 +28,6 @@
 #include <uhd/version.hpp>
 #include <uhd/property_tree.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
-#include <uhd/utils/thread_priority.hpp>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -36,6 +35,9 @@
 
 #ifndef USE_UHD_3_11
 #include <uhd/utils/msg.hpp>
+#include <uhd/utils/thread_priority.hpp>
+#else
+#include <uhd/utils/thread.hpp>
 #endif
 
 #define USRP_TX_AMPL     0.3
