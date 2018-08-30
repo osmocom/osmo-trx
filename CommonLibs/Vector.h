@@ -107,7 +107,7 @@ template <class T> class Vector {
 	void clone(const Vector<T>& other)
 	{
 		resize(other.size());
-		memcpy(mData,other.mStart,other.bytes());
+		other.copyTo(*this);
 	}
 
 

@@ -1262,8 +1262,7 @@ static bool generateMidamble(int sps, int tsc)
   data = (complex *) convolve_h_alloc(midMidamble->size());
   _midMidamble = new signalVector(data, 0, midMidamble->size());
   _midMidamble->setAligned(true);
-  memcpy(_midMidamble->begin(), midMidamble->begin(),
-	 midMidamble->size() * sizeof(complex));
+  midMidamble->copyTo(*_midMidamble);
 
   autocorr = convolve(midamble, _midMidamble, NULL, NO_DELAY);
   if (!autocorr) {
@@ -1319,8 +1318,7 @@ static CorrelationSequence *generateEdgeMidamble(int tsc)
   data = (complex *) convolve_h_alloc(midamble->size());
   _midamble = new signalVector(data, 0, midamble->size());
   _midamble->setAligned(true);
-  memcpy(_midamble->begin(), midamble->begin(),
-	 midamble->size() * sizeof(complex));
+  midamble->copyTo(*_midamble);
 
   /* Channel gain is an empirically measured value */
   seq = new CorrelationSequence;
@@ -1360,7 +1358,7 @@ static bool generateRACHSequence(int sps)
   data = (complex *) convolve_h_alloc(seq1->size());
   _seq1 = new signalVector(data, 0, seq1->size());
   _seq1->setAligned(true);
-  memcpy(_seq1->begin(), seq1->begin(), seq1->size() * sizeof(complex));
+  seq1->copyTo(*_seq1);
 
   autocorr = convolve(seq0, _seq1, autocorr, NO_DELAY);
   if (!autocorr) {
@@ -1457,7 +1455,7 @@ static signalVector *downsampleBurst(const signalVector &burst)
 {
   signalVector in(DOWNSAMPLE_IN_LEN, dnsampler->len());
   signalVector *out = new signalVector(DOWNSAMPLE_OUT_LEN);
-  memcpy(in.begin(), burst.begin(), DOWNSAMPLE_IN_LEN * 2 * sizeof(float));
+  burst.copyToSegment(in, 0, DOWNSAMPLE_IN_LEN);
 
   if (dnsampler->rotate((float *) in.begin(), DOWNSAMPLE_IN_LEN,
                         (float *) out->begin(), DOWNSAMPLE_OUT_LEN) < 0) {
