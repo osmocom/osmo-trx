@@ -511,11 +511,13 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 	for (i = 0; i<chans; i++) {
 		thread_enable_cancel(false);
 		rc = LMS_RecvStream(&m_lms_stream_rx[i], bufs[i], len, &rx_metadata, 100);
+		if (rc != len) {
+			LOGC(DDEV, ALERT) << "LMS: Device receive timed out (" << rc << " vs exp " << len << ").";
+			thread_enable_cancel(true);
+			return -1;
+		}
 		if (timestamp != (TIMESTAMP)rx_metadata.timestamp)
 			LOGC(DDEV, ALERT) << "chan "<< i << " recv buffer of len " << rc << " expect " << std::hex << timestamp << " got " << std::hex << (TIMESTAMP)rx_metadata.timestamp << " (" << std::hex << rx_metadata.timestamp <<") diff=" << rx_metadata.timestamp - timestamp;
-		if (rc != len) {
-			LOGC(DDEV, ALERT) << "LMS: Device receive timed out";
-		}
 
 		if (LMS_GetStreamStatus(&m_lms_stream_rx[i], &status) == 0) {
 			if (status.underrun > m_last_rx_underruns[i])
