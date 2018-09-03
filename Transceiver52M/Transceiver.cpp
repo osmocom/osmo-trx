@@ -27,6 +27,10 @@
 #include "Transceiver.h"
 #include <Logger.h>
 
+extern "C" {
+#include "osmo_signal.h"
+}
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -115,7 +119,7 @@ Transceiver::Transceiver(int wBasePort,
   : mBasePort(wBasePort), mLocalAddr(TRXAddress), mRemoteAddr(GSMcoreAddress),
     mClockSocket(TRXAddress, wBasePort, GSMcoreAddress, wBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
-    rssiOffset(wRssiOffset),
+    rssiOffset(wRssiOffset), sig_cbfn(NULL),
     mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false), mForceClockInterface(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
     mWriteBurstToDiskMask(0)
@@ -217,6 +221,17 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay, bool
   }
 
   return true;
+}
+
+void Transceiver::setSignalHandler(osmo_signal_cbfn cbfn)
+{
+  if (this->sig_cbfn)
+    osmo_signal_unregister_handler(SS_TRANSC, this->sig_cbfn, NULL);
+
+  if (cbfn) {
+    this->sig_cbfn = cbfn;
+    osmo_signal_register_handler(SS_TRANSC, this->sig_cbfn, NULL);
+  }
 }
 
 /*
@@ -885,8 +900,12 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
 
 void Transceiver::driveReceiveRadio()
 {
-  if (!mRadioInterface->driveReceiveRadio()) {
+  int rc = mRadioInterface->driveReceiveRadio();
+  if (rc == 0) {
     usleep(100000);
+  } else if (rc < 0) {
+    LOG(FATAL) << "radio Interface receive failed, requesting stop.";
+    osmo_signal_dispatch(SS_TRANSC, S_TRANSC_STOP_REQUIRED, this);
   } else if (mForceClockInterface || mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0)) {
     mForceClockInterface = false;
     writeClockInterface();

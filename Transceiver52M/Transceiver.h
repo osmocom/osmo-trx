@@ -31,6 +31,7 @@
 #include <sys/socket.h>
 
 extern "C" {
+#include <osmocom/core/signal.h>
 #include "config_defs.h"
 }
 
@@ -128,6 +129,8 @@ public:
   /** accessor for number of channels */
   size_t numChans() const { return mChans; };
 
+  void setSignalHandler(osmo_signal_cbfn cbfn);
+
   /** Codes for channel combinations */
   typedef enum {
     FILL,               ///< Channel is transmitted, but unused
@@ -176,6 +179,8 @@ private:
   double rxFullScale;                     ///< full scale output to radio
 
   double rssiOffset;                      ///< RSSI to dBm conversion offset
+
+  osmo_signal_cbfn *sig_cbfn;              ///< Registered Signal Handler to announce events.
 
   /** modulate and add a burst to the transmit queue */
   void addRadioVector(size_t chan, BitVector &bits,

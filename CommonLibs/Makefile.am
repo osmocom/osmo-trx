@@ -49,4 +49,5 @@ noinst_HEADERS = \
 	Logger.h \
 	trx_vty.h \
 	debug.h \
+	osmo_signal.h \
 	config_defs.h

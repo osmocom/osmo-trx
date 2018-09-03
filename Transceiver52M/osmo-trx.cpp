@@ -55,6 +55,7 @@ extern "C" {
 #include "convert.h"
 #include "trx_vty.h"
 #include "debug.h"
+#include "osmo_signal.h"
 }
 
 #define DEFAULT_CONFIG_FILE	"osmo-trx.cfg"
@@ -112,6 +113,20 @@ RadioInterface *makeRadioInterface(struct trx_ctx *trx,
 	return radio;
 }
 
+/* Callback function to be called every time we receive a signal from TRANSC */
+static int transc_sig_cb(unsigned int subsys, unsigned int signal,
+		     void *handler_data, void *signal_data)
+{
+	switch (signal) {
+	case S_TRANSC_STOP_REQUIRED:
+		gshutdown = true;
+                break;
+	default:
+                break;
+	}
+	return 0;
+}
+
 /* Create transceiver core
  *     The multi-threaded modem core operates at multiples of the GSM rate of
  *     270.8333 ksps and consists of GSM specific modulation, demodulation,
@@ -131,6 +146,8 @@ int makeTransceiver(struct trx_ctx *trx, RadioInterface *radio)
 		LOG(ALERT) << "Failed to initialize transceiver";
 		return -1;
 	}
+
+        transceiver->setSignalHandler(transc_sig_cb);
 
 	for (size_t i = 0; i < trx->cfg.num_chans; i++) {
 		fifo = radio->receiveFIFO(i);
