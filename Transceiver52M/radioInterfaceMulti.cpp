@@ -1,7 +1,7 @@
 /*
  * Multi-carrier radio interface
  *
- * Copyright (C) 2016 Ettus Research LLC 
+ * Copyright (C) 2016 Ettus Research LLC
  *
  * Author: Tom Tsou <tom.tsou@ettus.com>
  *

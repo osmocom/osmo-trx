@@ -239,7 +239,7 @@ bool RadioInterface::driveReceiveRadio()
   else
     burstSize = symbolsPerSlot + (tN % 4 == 0);
 
-  /* 
+  /*
    * Pre-allocate head room for the largest correlation size
    * so we can later avoid a re-allocation and copy
    * */

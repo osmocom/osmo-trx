@@ -14,7 +14,7 @@
 
 
 
-#include "sigProcLib.h"  
+#include "sigProcLib.h"
 #include "GSMCommon.h"
 #include "LinkedLists.h"
 #include "radioDevice.h"
@@ -130,7 +130,7 @@ public:
   /** set thread priority on current thread */
   void setPriority(float prio = 0.5) { mRadio->setPriority(prio); }
 
-  /** get transport window type of attached device */ 
+  /** get transport window type of attached device */
   enum RadioDevice::TxWindowType getWindowType() { return mRadio->getWindowType(); }
 
   /** Minimum latency that the device can achieve */
