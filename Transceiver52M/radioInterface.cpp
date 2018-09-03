@@ -304,7 +304,8 @@ double RadioInterface::getRxGain(size_t chan)
 int RadioInterface::pullBuffer()
 {
   bool local_underrun;
-  size_t numRecv, segmentLen = recvBuffer[0]->getSegmentLen();
+  int numRecv;
+  size_t segmentLen = recvBuffer[0]->getSegmentLen();
 
   if (recvBuffer[0]->getFreeSegments() <= 0)
     return -1;
@@ -316,7 +317,7 @@ int RadioInterface::pullBuffer()
                                 readTimestamp,
                                 &local_underrun);
 
-  if (numRecv != segmentLen) {
+  if ((size_t) numRecv != segmentLen) {
           LOG(ALERT) << "Receive error " << numRecv;
           return -1;
   }
