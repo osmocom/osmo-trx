@@ -49,6 +49,7 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PATH_PROG([RM_PROG], [rm])
+AC_LANG([C++])
 
 dnl check for pkg-config (explained in detail in libosmocore/configure.ac)
 AC_PATH_PROG(PKG_CONFIG_INSTALLED, pkg-config, no)
