@@ -218,14 +218,15 @@ void RadioInterface::driveTransmitRadio(std::vector<signalVector *> &bursts,
   while (pushBuffer());
 }
 
-bool RadioInterface::driveReceiveRadio()
+int RadioInterface::driveReceiveRadio()
 {
   radioVector *burst = NULL;
 
   if (!mOn)
-    return false;
+    return 0;
 
-  pullBuffer();
+  if (pullBuffer() < 0)
+    return  -1;
 
   GSM::Time rcvClock = mClock.get();
   rcvClock.decTN(receiveOffset);
@@ -270,7 +271,7 @@ bool RadioInterface::driveReceiveRadio()
       burstSize = (symbolsPerSlot + (tN % 4 == 0)) * mSPSRx;
   }
 
-  return true;
+  return 1;
 }
 
 bool RadioInterface::isUnderrun()
@@ -300,13 +301,13 @@ double RadioInterface::getRxGain(size_t chan)
 }
 
 /* Receive a timestamped chunk from the device */
-void RadioInterface::pullBuffer()
+int RadioInterface::pullBuffer()
 {
   bool local_underrun;
   size_t numRecv, segmentLen = recvBuffer[0]->getSegmentLen();
 
   if (recvBuffer[0]->getFreeSegments() <= 0)
-    return;
+    return -1;
 
   /* Outer buffer access size is fixed */
   numRecv = mRadio->readSamples(convertRecvBuffer,
@@ -317,7 +318,7 @@ void RadioInterface::pullBuffer()
 
   if (numRecv != segmentLen) {
           LOG(ALERT) << "Receive error " << numRecv;
-          return;
+          return -1;
   }
 
   for (size_t i = 0; i < mChans; i++) {
@@ -328,6 +329,7 @@ void RadioInterface::pullBuffer()
 
   underrun |= local_underrun;
   readTimestamp += numRecv;
+  return 0;
 }
 
 /* Send timestamped chunk to the device with arbitrary size */

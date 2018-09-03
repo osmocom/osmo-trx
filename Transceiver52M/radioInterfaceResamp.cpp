@@ -160,13 +160,13 @@ bool RadioInterfaceResamp::init(int type)
 }
 
 /* Receive a timestamped chunk from the device */
-void RadioInterfaceResamp::pullBuffer()
+int RadioInterfaceResamp::pullBuffer()
 {
 	bool local_underrun;
 	int rc, num_recv;
 
 	if (recvBuffer[0]->getFreeSegments() <= 0)
-		return;
+		return -1;
 
 	/* Outer buffer access size is fixed */
 	num_recv = mRadio->readSamples(convertRecvBuffer,
@@ -176,7 +176,7 @@ void RadioInterfaceResamp::pullBuffer()
 				       &local_underrun);
 	if (num_recv != (int) resamp_outchunk) {
 		LOG(ALERT) << "Receive error " << num_recv;
-		return;
+		return -1;
 	}
 
 	convert_short_float((float *) outerRecvBuffer->begin(),
@@ -196,6 +196,7 @@ void RadioInterfaceResamp::pullBuffer()
 
 	/* Set history for the next chunk */
 	outerRecvBuffer->updateHistory();
+	return 0;
 }
 
 /* Send a timestamped chunk to the device */

@@ -225,14 +225,14 @@ bool RadioInterfaceMulti::init(int type)
 }
 
 /* Receive a timestamped chunk from the device */
-void RadioInterfaceMulti::pullBuffer()
+int RadioInterfaceMulti::pullBuffer()
 {
 	bool local_underrun;
 	size_t num;
 	float *buf;
 
 	if (recvBuffer[0]->getFreeSegments() <= 0)
-		return;
+		return -1;
 
 	/* Outer buffer access size is fixed */
 	num = mRadio->readSamples(convertRecvBuffer,
@@ -242,7 +242,7 @@ void RadioInterfaceMulti::pullBuffer()
 				  &local_underrun);
 	if (num != channelizer->inputLen()) {
 		LOG(ALERT) << "Receive error " << num << ", " << channelizer->inputLen();
-		return;
+		return -1;
 	}
 
 	convert_short_float((float *) outerRecvBuffer->begin(),
@@ -288,6 +288,7 @@ void RadioInterfaceMulti::pullBuffer()
 			LOG(ALERT) << "Sample rate upsampling error";
 		}
 	}
+	return 0;
 }
 
 /* Send a timestamped chunk to the device */

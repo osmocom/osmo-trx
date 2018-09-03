@@ -71,7 +71,7 @@ private:
   virtual bool pushBuffer(void);
 
   /** pull GSM bursts from the receive buffer */
-  virtual void pullBuffer(void);
+  virtual int pullBuffer(void);
 
 public:
 
@@ -116,8 +116,8 @@ public:
   void driveTransmitRadio(std::vector<signalVector *> &bursts,
                           std::vector<bool> &zeros);
 
-  /** drive reception of GSM bursts */
-  bool driveReceiveRadio();
+  /** drive reception of GSM bursts. -1: Error. 0: Radio off. 1: Received something. */
+  int driveReceiveRadio();
 
   int setPowerAttenuation(int atten, size_t chan = 0);
 
@@ -149,7 +149,7 @@ private:
   signalVector *outerRecvBuffer;
 
   bool pushBuffer();
-  void pullBuffer();
+  int pullBuffer();
 
 public:
   RadioInterfaceResamp(RadioDevice* wRadio, size_t tx_sps, size_t rx_sps);
@@ -162,7 +162,7 @@ public:
 class RadioInterfaceMulti : public RadioInterface {
 private:
   bool pushBuffer();
-  void pullBuffer();
+  int pullBuffer();
 
   signalVector *outerSendBuffer;
   signalVector *outerRecvBuffer;
