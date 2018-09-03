@@ -44,6 +44,8 @@ std::ostream& operator<<(std::ostream& os, std::ostringstream& ss)
 
 Log::~Log()
 {
+	int old_state;
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old_state);
 	int mlen = mStream.str().size();
 	int neednl = (mlen==0 || mStream.str()[mlen-1] != '\n');
 	const char *fmt = neednl ? "%s\n" : "%s";
@@ -51,6 +53,7 @@ Log::~Log()
 	// The COUT() macro prevents messages from stomping each other but adds uninteresting thread numbers,
 	// so just use std::cout.
 	LOGPSRC(mCategory, mPriority, filename, line, fmt, mStream.str().c_str());
+	pthread_setcancelstate(old_state, NULL);
 }
 
 ostringstream& Log::get()
