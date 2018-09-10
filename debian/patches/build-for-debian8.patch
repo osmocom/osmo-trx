@@ -50,8 +50,8 @@ Index: osmo-trx/debian/rules
  	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
  
  override_dh_auto_configure:
--	dh_auto_configure -- --with-uhd --with-usrp1 --with-lms
-+	dh_auto_configure -- --with-uhd --with-usrp1
+-	dh_auto_configure -- --with-uhd --with-usrp1 --with-lms --with-systemdsystemunitdir=/lib/systemd/system
++	dh_auto_configure -- --with-uhd --with-usrp1 --with-systemdsystemunitdir=/lib/systemd/system
  
  override_dh_strip:
  	dh_strip --dbg-package=osmo-trx-dbg

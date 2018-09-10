@@ -1,2 +1,3 @@
+lib/systemd/system/osmo-trx-lms.service
 /usr/bin/osmo-trx-lms
 /usr/share/doc/osmo-trx/examples/osmo-trx-lms/osmo-trx-limesdr.cfg /usr/share/doc/osmo-trx/examples/osmo-trx-lms/
