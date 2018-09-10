@@ -398,7 +398,7 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 
     // read USRP packets, parse and save A/D data as needed
     readLen = m_uRx->read((void *)readBuf,readLen,overrun);
-    for(int pktNum = 0; pktNum < (readLen/512); pktNum++) {
+    for (int pktNum = 0; pktNum < (readLen/512); pktNum++) {
       // tmpBuf points to start of a USB packet
       uint32_t* tmpBuf = (uint32_t *) (readBuf+pktNum*512/4);
       TIMESTAMP pktTimestamp = usrp_to_host_u32(tmpBuf[1]);

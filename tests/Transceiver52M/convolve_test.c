@@ -18,7 +18,7 @@ float *y;
 void gen_floats(float *vect, int len)
 {
 	int i;
-	for(i=0;i<len;i++) {
+	for (i = 0; i < len; i++) {
 		vect[i] = (float)rand()/(float)(RAND_MAX);
 	}
 }
@@ -45,7 +45,7 @@ static void dump_floats(float *vect, int len, char *name)
 	int i;
 
 	printf("float %s[] = {", name);
-	for(i=0;i<len;i++) {
+	for(i = 0; i < len; i++) {
 
 		printf("%f",vect[i]);
 
