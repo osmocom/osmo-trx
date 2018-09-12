@@ -1,3 +1,4 @@
+etc/osmocom/osmo-trx-uhd.cfg
 lib/systemd/system/osmo-trx-uhd.service
 /usr/bin/osmo-trx-uhd
 /usr/share/doc/osmo-trx/examples/osmo-trx-uhd/osmo-trx-usrp_b200.cfg /usr/share/doc/osmo-trx/examples/osmo-trx-uhd/
