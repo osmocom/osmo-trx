@@ -23,3 +23,68 @@ OsmoTRX is built with UHD backend, an _osmo-trx-uhd_ binary is generated; when
 OsmoTRX is built with LimeSuite backend, an _osmo-trx-lms_ binary is generated.
 Build of different backend can be enabled and disabled by means of configure
 flags, which can be found in each subsection relative to each backend below.
+
+[[dev_ettus_usrp1]]
+=== Ettus USRP1
+
+The binary _osmo-trx-usrp1_ is used to drive this device, see <<backend_usrp1>>.
+
+[[dev_ettus_b200]]
+=== Ettus B200
+
+The binary _osmo-trx-uhd_ is used to drive this device, see <<backend_uhd>>.
+
+Comes only with 1 RF channel. It can still be used in a multi-TRX setup by using
+the <<multiarfcn_mode>> feature. By using this feature, one can drive up to 3
+TRX (with the restrictions explained there).
+
+[[dev_ettus_b200]]
+=== Ettus B210
+
+The binary _osmo-trx-uhd_ is used to drive this device, see <<backend_uhd>>.
+
+Comes with 2 RF channels, which can be used to set up a multi-TRX BTS. However,
+due to a shared local oscillator for both RF channels, ARFCN separation can be
+up about 25 MHz.
+
+This device also supports the <<multiarfcn_mode>> feature. By using this
+feature, one can drive up to 3 TRX (with the restrictions explained there).
+Please note  that the above configurations cannot be combined, which means
+maximum number of TRX one can achieve is 2 by using separate physical RF
+channels, or 3 by using multi-ARFCN method. You cannot support, for example, 6
+ARFCN operation on B210 using 3 TRX on side A and another 3 TRX on side B.
+
+[[dev_limesdr_usb]]
+=== LimeSDR-USB
+
+The binary _osmo-trx-lms_ is used to drive this device, see <<backend_lms>>.
+
+This device comes with 2 RF channels, so it should theoretically be possible to
+run a multi-TRX setup with it, but there are yet no records that this kind of
+setup was tested with this device.
+
+This device has 3 different Rx paths with different antenna connectors in the
+PCB, each with a different frequency and bandwidth range. One should make sure
+the physical antenna is connected to the correct connector matching the Rx path
+you want to use. If one wants to be able to use the device in both 900 and 1800
+MHz GSM bands and easily switch between them, then Rx Path `LNAW` should be used
+,since it is the only one covering both bands, and the antenna physically plugged
+accordingly. Following example shows how to then configure _osmo-trx-lms_ to use
+that Rx path to read samples.
+
+.Example: Configure osmo-trx-lms to use LNAW as Rx path and BAND1 as Tx Path
+----
+trx
+ ...
+ chan 0
+  tx-path BAND1
+  rx-path LNAW
+----
+
+[[dev_limesdr_mini]]
+=== LimeSDR-mini
+
+The binary _osmo-trx-lms_ is used to drive this device, see <<backend_lms>>.
+
+As a smaller brother of the [[dev_limesdr_usb]], this device comes only with 1
+RF channel. As a result, it can only hold 1 TRX as of today.
