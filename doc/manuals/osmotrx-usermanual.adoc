@@ -25,6 +25,8 @@ include::chapters/configuration.adoc[]
 
 include::chapters/trx-architectures.adoc[]
 
+include::chapters/trx-devices.adoc[]
+
 include::chapters/trx-backends.adoc[]
 
 include::../common/chapters/trx_if.adoc[]
