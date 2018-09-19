@@ -34,3 +34,52 @@ trx
 <7> Configure the first channel. As no other channels are specified, `osmo-trx` assumes it is using only one channel.
 <8> Configure the device to use `BAND1` Tx antenna path from all the available ones (device specific).
 <9> Configure the device to use `LNAW` Rx antenna path from all the available ones (device specific).
+
+[[multiarfcn_mode]]
+=== Multi-ARFCN mode
+
+The Multi-ARFCN feature allows to have a multi-carrier approach multiplexed on a
+single physical RF channel, which can introduce several benefits, such as lower
+cost and higher capacity support.
+
+Multi-ARFCN support is available since osmo-trx release `0.2.0`, and it was
+added specifically in commit `76764278169d252980853251daeb9f1ba0c246e1`.
+
+This feature is useful for instance if you want to run more than 1 TRX with an
+Ettus B200 device, or 3 TRX with an Ettus B210 device, since they support only 1
+and 2 physical RF channels respectively. No device from other providers or even
+other devices than B200 and B210 from Ettus are known to support this feature.
+
+With multi-ARFCN enabled, ARFCN spacing is fixed at 800 kHz or 4 GSM channels.
+So if TRX-0 is set to ARFCN 51, TRX-1 _must_ be set to 55, and so on. Up to
+three ARFCN's is supported for multi-TRX.
+
+From BTS and BSC point of view, supporting multiple TRX through multi-ARFCN
+feature in OsmoTRX doesn't make any difference from a regular multi-TRX setup,
+leaving apart of course the mentioned ARFCN limitations explained above and as a
+consequence physical installation and operational differences.
+
+.Example: osmo-bts-trx.cfg using 2 TRX against an osmo-trx driven device
+----
+phy 0
+ osmotrx ip local 127.0.0.1
+ osmotrx ip remote 127.0.0.1
+ instance 0
+ instance 1
+bts 0
+ ...
+ band GSM-1800
+ trx 0
+  phy 0 instance 0
+ trx 1
+  phy 0 instance 1
+----
+
+.Example: osmo-trx.cfg using Multi-ARFCN mode to run 2 TRX
+----
+trx
+ ...
+ multi-arfcn enable
+ chan 0
+ chan 1
+----
