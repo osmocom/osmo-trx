@@ -1,0 +1,141 @@
+[[code_architecture]]
+== Code Architecture
+
+[[fig-code-architecture-general]]
+.General overview of main OsmoTRX components
+[graphviz]
+----
+digraph hierarchy {
+node[shape=record,style=filled,fillcolor=gray95]
+edge[dir=back, arrowtail=empty]
+
+2[label = "{Transceiver|+ constructor()\l+ destructor()\l+ init()\l+ numChans()\l+ receiveFIFO()\l+ setSignalHandler()}"]
+3[label = "{RadioInterface|...}"]
+4[label = "{RadioInterfaceResamp|...}"]
+5[label = "{RadioInterfaceMulti|...}"]
+6[label = "{RadioDevice|...}"]
+7[label = "{UHDDevice|...}"]
+8[label = "{LMSDevice|...}"]
+9[label = "{USRPDevice|...}"]
+
+2->3[arrowtail=odiamond]
+3->4[constraint=false]
+3->5[constraint=false]
+3->6[arrowtail=odiamond]
+6->7
+6->8
+6->9
+}
+----
+
+[[fig-code-architecture-threads]]
+.Example of thread architecture with OsmoTRX configured to use 2 logical RF channels (Trx=Transceiver, RI=RadioIface)
+[graphviz]
+----
+digraph hierarchy {
+node[shape=record,style=filled,fillcolor=gray95]
+
+trans [label="Transceiver"];
+radioiface [label="RadioInterface"];
+radiodev [label="RadioDevice"];
+
+trans:nw->trans:ne [label="Trx.ControlServiceLoop_0"];
+trans:nw->trans:ne [label="Trx.ControlServiceLoop_1"];
+trans:w->radioiface:w [label="Trx.TxPriorityQueueServiceLoop_0"];
+trans:w->radioiface:w [label="Trx.TxPriorityQueueServiceLoop_1"];
+radioiface:e->trans:e [label="Trx.RxServiceLoop_0"];
+radioiface:e->trans:e [label="Trx.RxServiceLoop_1"];
+radioiface->radiodev[label="RI.AlignRadioServiceLoop"];
+radioiface:sw->radiodev:nw [label="Trx.TxLowerLoop"];
+radiodev:ne->radioiface:se [label="Trx.RxLowerLoop"];
+}
+----
+
+[[code_component_transceiver]]
+=== Transceiver
+
+The Transceiver is the main component managing the other components running in
+the OsmoTRX process. There's a unique instance per process.
+
+This class is quite complex from code point of view, as it starts lots of
+different threads and hence the interaction with this class from the outside is
+quite limited. Only interaction possible is to:
+
+* `Transceiver()`: Create an instance through its constructor, at this time most
+  configuration is handed to it.
+* `init()`: Start running all the threads.
+* `receiveFIFO()`: Attach a `radioInterface` channel FIFO in order to use it.
+* `setSignalHandler()`: Used to set up a callback to receive certain events
+  asynchronously from the Transceiver. No assumptions can be made about from
+  which thread is the callback being called, which means multi-thread locking
+  precautions may be required in certain cases, similar to usual signal handler
+  processing. One important event received through this path is for instance
+  when the Transceiver detected a fatal error which requires it to stop. Since
+  it cannot stop itself (see destructor below), stopping procedure must be
+  delegated to the user who created the instance.
+* `~Transceiver()`: The destructor, which stops all running threads created at
+  `init()` time. Destroying the object is the only way to stop the `Transceiver`
+  completely, and must be called from a thread not managed by the
+  `Transceiver`, otherwise it will deadlock. Usually it is stopped from the main
+  thread, the one that called the constructor during startup.
+
+During `init()` time, `Transceiver` will create a noticeable amount of threads,
+which may vary depending on the amount of RF channels requested.
+
+Static amount of Threads (1 per `Transceiver` instance):
+
+* `RxLowerLoop`: This thread is responsible for reading bursts from the
+  `RadioInterface`, storing them into its FIFO and sending Clock Indications
+  (<<trx_if_clock_ind>>) to _osmo-bts_trx_.
+* `TxLowerLoop`: Manages pushing bursts from buffers in the FIFO into the
+  `RadioInterface` at expected correct time based on the Transceiver clock.
+
+Dynamic amount of Threads (1 per RF logical channel on the `Transceiver` instance):
+
+* `ControlServiceLoop`: Handles commands from the Per-ARFCN Control Interface
+  socket (<<trx_if_control>>). Each thread is responsible for managing one
+  socket related to one ARFCN or which is the same, to one RF logical channel.
+  These are the only threads expected to use the private `start()` and `stop()`
+  methods of the `Transceiver()` class, since those methods don't stop any of
+  the `ControlServiceLoop` threads as they must keep running to handle new
+  commands (for instance, to re-start processing samples with the _POWERON_
+  command).
+* `RxServiceLoop`: Each thread of this type pulls bursts from the
+  `RadioInterface` FIFO for one specific logical RF channel and handles it
+  according to the slot and burst correlation type, finally sending proper data
+  over the TRX Manager UDP socket (<<trx_if>>).
+* `TxPriorityQueueServiceLoop`: Blocks reading from one ARFCN specific TRX
+  Manager UDP socket (<<trx_if>>), and fills the `RadioInterface` with it
+  setting clock related information.
+
+[[code_component_radioiface]]
+=== RadioInterface
+
+The `RadioInterface` sits between the `Transceiver` and the `RadioDevice`,  and
+provides extra features to the pipe like channelizers, resamplers, Tx/Rx
+synchronization on some devices, etc.
+
+If the `RadioDevice` it drives requires it (only _USRP1_ so far), the
+`RadioIntercace` will start and manage a thread internally called
+`AlignRadioServiceLoop` which will align current RX and TX timestamps.
+
+Different features are offered through different `RadioInterface` subclasses
+which are selected based on configuration and device detected at runtime. Using
+these features may impact on the amount of CPU required to run the entire pipe.
+
+==== RadioInterfaceResamp
+
+This subclass of `RadioInterface` is automatically selected when some known
+specific UHD are to be used, since they require resampling to work properly.
+Some of this devices are for instance Ettus B100, USRP2 and X3XX models.
+
+==== RadioInterfaceMulti
+
+This subclass of `RadioInterface` is used when <<multiarfcn_mode>> is requested.
+
+[[code_component_radiodev]]
+=== RadioDevice
+
+The `RadioDevice` class is responsible for driving the actual Hardware device.
+It is actually only an interface, and it is implemented in each backend which in
+turn becomes a specific OsmoTRX binary, see <<trx_backends>>.
