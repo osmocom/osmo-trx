@@ -322,6 +322,7 @@ private:
 
 void *async_event_loop(uhd_device *dev)
 {
+	set_selfthread_name("UHDAsyncEvent");
 	dev->setPriority(0.43);
 
 	while (1) {

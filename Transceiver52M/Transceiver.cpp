@@ -1044,10 +1044,14 @@ void Transceiver::writeClockInterface()
 
 void *RxUpperLoopAdapter(TransceiverChannel *chan)
 {
+  char thread_name[16];
   Transceiver *trx = chan->trx;
   size_t num = chan->num;
 
   delete chan;
+
+  snprintf(thread_name, 16, "RxUpper%zu", num);
+  set_selfthread_name(thread_name);
 
   trx->setPriority(0.42);
 
@@ -1060,6 +1064,8 @@ void *RxUpperLoopAdapter(TransceiverChannel *chan)
 
 void *RxLowerLoopAdapter(Transceiver *transceiver)
 {
+  set_selfthread_name("RxLower");
+
   transceiver->setPriority(0.45);
 
   while (1) {
@@ -1071,6 +1077,8 @@ void *RxLowerLoopAdapter(Transceiver *transceiver)
 
 void *TxLowerLoopAdapter(Transceiver *transceiver)
 {
+  set_selfthread_name("TxLower");
+
   transceiver->setPriority(0.44);
 
   while (1) {
@@ -1082,10 +1090,14 @@ void *TxLowerLoopAdapter(Transceiver *transceiver)
 
 void *ControlServiceLoopAdapter(TransceiverChannel *chan)
 {
+  char thread_name[16];
   Transceiver *trx = chan->trx;
   size_t num = chan->num;
 
   delete chan;
+
+  snprintf(thread_name, 16, "CtrlService%zu", num);
+  set_selfthread_name(thread_name);
 
   while (1) {
     trx->driveControl(num);
@@ -1096,10 +1108,14 @@ void *ControlServiceLoopAdapter(TransceiverChannel *chan)
 
 void *TxUpperLoopAdapter(TransceiverChannel *chan)
 {
+  char thread_name[16];
   Transceiver *trx = chan->trx;
   size_t num = chan->num;
 
   delete chan;
+
+  snprintf(thread_name, 16, "TxUpper%zu", num);
+  set_selfthread_name(thread_name);
 
   trx->setPriority(0.40);
 

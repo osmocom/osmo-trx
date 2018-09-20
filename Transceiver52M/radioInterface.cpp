@@ -148,6 +148,7 @@ bool RadioInterface::tuneRx(double freq, size_t chan)
 /** synchronization thread loop */
 void *AlignRadioServiceLoopAdapter(RadioInterface *radioInterface)
 {
+  set_selfthread_name("AlignRadio");
   while (1) {
     sleep(60);
     radioInterface->alignRadio();

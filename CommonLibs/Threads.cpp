@@ -24,11 +24,17 @@
 */
 
 
-
-
+#include <string.h>
+#include <sys/types.h>
 
 #include "Threads.h"
 #include "Timeval.h"
+#include "Logger.h"
+
+#ifndef gettid
+#include <sys/syscall.h>
+#define gettid() syscall(SYS_gettid)
+#endif
 
 
 using namespace std;
@@ -102,6 +108,19 @@ void Signal::wait(Mutex& wMutex, unsigned timeout) const
 	pthread_cond_timedwait(&mSignal,&wMutex.mMutex,&waitTime);
 }
 
+void set_selfthread_name(const char *name)
+{
+	pthread_t selfid = pthread_self();
+	pid_t tid = gettid();
+	if (pthread_setname_np(selfid, name) == 0) {
+		LOG(INFO) << "Thread "<< selfid << " (task " << tid << ") set name: " << name;
+	} else {
+		char buf[256];
+		int err = errno;
+		char* err_str = strerror_r(err, buf, sizeof(buf));
+		LOG(NOTICE) << "Thread "<< selfid << " (task " << tid << ") set name \"" << name << "\" failed: (" << err << ") " << err_str;
+	}
+}
 
 void Thread::start(void *(*task)(void*), void *arg)
 {

@@ -141,6 +141,8 @@ class Signal {
 #define START_THREAD(thread,function,argument) \
 	thread.start((void *(*)(void*))function, (void*)argument);
 
+void set_selfthread_name(const char *name);
+
 /** A C++ wrapper for pthread threads.  */
 class Thread {
 
