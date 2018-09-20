@@ -1,5 +1,8 @@
+[[trx_backends]]
+== OsmoTRX backend support
+
 [[backend_uhd]]
-== `osmo-trx-uhd` for UHD based Transceivers
+=== `osmo-trx-uhd` for UHD based Transceivers
 
 This OsmoTRX model uses _libuhd_ (UHD, USRP Hardware Driver) to drive the
 device, that is configuring it and reading/writing samples from/to it.
@@ -17,7 +20,7 @@ Related code can be found in the _Transceiver52M/device/uhd/_ directory in
 _osmo-trx.git_.
 
 [[backend_lms]]
-== `osmo-trx-lms` for LimeSuite based Transceivers
+=== `osmo-trx-lms` for LimeSuite based Transceivers
 
 This OsmoTRX model uses LimeSuite API and library to drive the device, that is
 configuring it and reading/writing samples from/to it.
@@ -30,7 +33,7 @@ Related code can be found in the _Transceiver52M/device/lms/_ directory in
 _osmo-trx.git_.
 
 [[backend_usrp1]]
-== `osmo-trx-usrp1` for libusrp based Transceivers
+=== `osmo-trx-usrp1` for libusrp based Transceivers
 
 This OsmoTRX model uses the legacy libusrp driver provided in GNU Radio 3.4.2.
 
