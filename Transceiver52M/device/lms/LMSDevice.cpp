@@ -543,7 +543,7 @@ int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
 			    bool * underrun, unsigned long long timestamp,
 			    bool isControl)
 {
-	int rc;
+	int rc = 0;
 	unsigned int i;
 	lms_stream_status_t status;
 	lms_stream_meta_t tx_metadata = {};
