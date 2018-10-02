@@ -1001,7 +1001,8 @@ void Transceiver::driveTxFIFO()
           // only update latency at the defined frame interval
           if (radioClock->get() > mLatencyUpdateTime + GSM::Time(USB_LATENCY_INTRVL)) {
             mTransmitLatency = mTransmitLatency + GSM::Time(1,0);
-            LOG(INFO) << "new latency: " << mTransmitLatency;
+            LOG(INFO) << "new latency: " << mTransmitLatency << " (underrun "
+                      << radioClock->get() << " vs " << mLatencyUpdateTime + GSM::Time(USB_LATENCY_INTRVL) << ")";
             mLatencyUpdateTime = radioClock->get();
           }
         }
