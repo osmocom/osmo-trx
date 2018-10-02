@@ -36,6 +36,7 @@ libcommon_la_SOURCES = \
 	Logger.cpp \
 	trx_vty.c \
 	debug.c
+libcommon_la_LIBADD = $(LIBOSMOCORE_LIBS) $(LIBOSMOCTRL_LIBS) $(LIBOSMOVTY_LIBS)
 
 noinst_HEADERS = \
 	BitVector.h \
