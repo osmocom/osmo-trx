@@ -52,7 +52,9 @@ extern const BitVector gEdgeTrainingSequence[];
 extern const BitVector gDummyBurst;
 
 /** Random access burst synch. sequence */
-extern const BitVector gRACHSynchSequence;
+extern const BitVector gRACHSynchSequenceTS0;
+extern const BitVector gRACHSynchSequenceTS1;
+extern const BitVector gRACHSynchSequenceTS2;
 /** Random access burst synch. sequence, GSM 05.02 5.2.7 */
 extern const BitVector gRACHBurst;
 

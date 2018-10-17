@@ -132,7 +132,7 @@ struct PulseSequence {
 
 static CorrelationSequence *gMidambles[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 static CorrelationSequence *gEdgeMidambles[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
-static CorrelationSequence *gRACHSequence = NULL;
+static CorrelationSequence *gRACHSequences[] = {NULL,NULL,NULL};
 static PulseSequence *GSMPulse1 = NULL;
 static PulseSequence *GSMPulse4 = NULL;
 
@@ -150,11 +150,15 @@ void sigProcLibDestroy()
     delayFilters[i] = NULL;
   }
 
+  for (int i = 0; i < 3; i++) {
+    delete gRACHSequences[i];
+    gRACHSequences[i] = NULL;
+  }
+
   delete GMSKRotation1;
   delete GMSKReverseRotation1;
   delete GMSKRotation4;
   delete GMSKReverseRotation4;
-  delete gRACHSequence;
   delete GSMPulse1;
   delete GSMPulse4;
   delete dnsampler;
@@ -163,7 +167,6 @@ void sigProcLibDestroy()
   GMSKRotation4 = NULL;
   GMSKReverseRotation4 = NULL;
   GMSKReverseRotation1 = NULL;
-  gRACHSequence = NULL;
   GSMPulse1 = NULL;
   GSMPulse4 = NULL;
 }
@@ -1332,7 +1335,7 @@ static CorrelationSequence *generateEdgeMidamble(int tsc)
   return seq;
 }
 
-static bool generateRACHSequence(int sps)
+static bool generateRACHSequence(CorrelationSequence **seq, const BitVector &bv, int sps)
 {
   bool status = true;
   float toa;
@@ -1340,13 +1343,14 @@ static bool generateRACHSequence(int sps)
   signalVector *autocorr = NULL;
   signalVector *seq0 = NULL, *seq1 = NULL, *_seq1 = NULL;
 
-  delete gRACHSequence;
+  if (*seq != NULL)
+    delete *seq;
 
-  seq0 = modulateBurst(gRACHSynchSequence, 0, sps, false);
+  seq0 = modulateBurst(bv, 0, sps, false);
   if (!seq0)
     return false;
 
-  seq1 = modulateBurst(gRACHSynchSequence.segment(0, 40), 0, sps, true);
+  seq1 = modulateBurst(bv.segment(0, 40), 0, sps, true);
   if (!seq1) {
     status = false;
     goto release;
@@ -1366,19 +1370,19 @@ static bool generateRACHSequence(int sps)
     goto release;
   }
 
-  gRACHSequence = new CorrelationSequence;
-  gRACHSequence->sequence = _seq1;
-  gRACHSequence->buffer = data;
-  gRACHSequence->gain = peakDetect(*autocorr, &toa, NULL);
+  *seq = new CorrelationSequence;
+  (*seq)->sequence = _seq1;
+  (*seq)->buffer = data;
+  (*seq)->gain = peakDetect(*autocorr, &toa, NULL);
 
   /* For 1 sps only
    *     (Half of correlation length - 1) + midpoint of pulse shaping filer
    *     20.5 = (40 / 2 - 1) + 1.5
    */
   if (sps == 1)
-    gRACHSequence->toa = toa - 20.5;
+    (*seq)->toa = toa - 20.5;
   else
-    gRACHSequence->toa = 0.0;
+    (*seq)->toa = 0.0;
 
 release:
   delete autocorr;
@@ -1388,7 +1392,7 @@ release:
   if (!status) {
     delete _seq1;
     free(data);
-    gRACHSequence = NULL;
+    *seq = NULL;
   }
 
   return status;
@@ -1606,7 +1610,7 @@ static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
   target = 8 + 40;
   head = 8;
   tail = 8 + max_toa;
-  sync = gRACHSequence;
+  sync = gRACHSequences[0];
 
   rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
                           target, head, tail, sync);
@@ -1858,7 +1862,10 @@ bool sigProcLibSetup()
   GSMPulse1 = generateGSMPulse(1);
   GSMPulse4 = generateGSMPulse(4);
 
-  generateRACHSequence(1);
+  generateRACHSequence(&gRACHSequences[0], gRACHSynchSequenceTS0, 1);
+  generateRACHSequence(&gRACHSequences[1], gRACHSynchSequenceTS1, 1);
+  generateRACHSequence(&gRACHSequences[2], gRACHSynchSequenceTS2, 1);
+
   for (int tsc = 0; tsc < 8; tsc++) {
     generateMidamble(1, tsc);
     gEdgeMidambles[tsc] = generateEdgeMidamble(tsc);

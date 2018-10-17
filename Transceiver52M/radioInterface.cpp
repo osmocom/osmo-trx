@@ -245,7 +245,7 @@ int RadioInterface::driveReceiveRadio()
    * Pre-allocate head room for the largest correlation size
    * so we can later avoid a re-allocation and copy
    * */
-  size_t head = GSM::gRACHSynchSequence.size();
+  size_t head = GSM::gRACHSynchSequenceTS0.size();
 
   /*
    * Form receive bursts and pass up to transceiver. Use repeating
