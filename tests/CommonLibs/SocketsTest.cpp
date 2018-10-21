@@ -47,9 +47,10 @@ void *testReaderIP(void *param)
 	readSocket->nonblocking();
 	int rc = 0;
 	while (rc<gNumToSend) {
-		char buf[MAX_UDP_LENGTH] = { 0 };
+		char buf[MAX_UDP_LENGTH+1] = { 0 };
 		int count = readSocket->read(buf, MAX_UDP_LENGTH);
 		if (count>0) {
+			buf[count] = 0;
 			CERR("read: " << buf);
 			rc++;
 		} else {
