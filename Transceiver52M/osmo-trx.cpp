@@ -376,7 +376,7 @@ int trx_validate_config(struct trx_ctx *trx)
 
 	/* Force 4 SPS for EDGE or multi-ARFCN configurations */
 	if ((trx->cfg.egprs || trx->cfg.multi_arfcn) &&
-	    (trx->cfg.tx_sps!=4 || trx->cfg.tx_sps!=4)) {
+	    (trx->cfg.tx_sps!=4 || trx->cfg.rx_sps!=4)) {
 		LOG(ERROR) << "EDGE and Multi-Carrier options require 4 tx and rx sps. Check you config.";
 		return -1;
 	}
