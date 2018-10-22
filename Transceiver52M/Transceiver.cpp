@@ -159,7 +159,8 @@ Transceiver::~Transceiver()
  * are still expected to report clock indications through control channel
  * activity.
  */
-bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay, bool edge)
+bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
+                       bool edge, bool ext_rach)
 {
   int d_srcport, d_dstport, c_srcport, c_dstport;
 
@@ -173,6 +174,7 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay, bool
     return false;
   }
 
+  mExtRACH = ext_rach;
   mEdge = edge;
 
   mDataSockets.resize(mChans);
@@ -497,16 +499,16 @@ CorrType Transceiver::expectedCorrType(GSM::Time currTime,
     break;
   case IV:
   case VI:
-    return RACH;
+    return mExtRACH ? EXT_RACH : RACH;
     break;
   case V: {
     int mod51 = burstFN % 51;
     if ((mod51 <= 36) && (mod51 >= 14))
-      return RACH;
+      return mExtRACH ? EXT_RACH : RACH;
     else if ((mod51 == 4) || (mod51 == 5))
-      return RACH;
+      return mExtRACH ? EXT_RACH : RACH;
     else if ((mod51 == 45) || (mod51 == 46))
-      return RACH;
+      return mExtRACH ? EXT_RACH : RACH;
     else if (mHandover[burstTN][sdcch4_subslot[burstFN % 102]])
       return RACH;
     else
@@ -524,7 +526,7 @@ CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   case XIII: {
     int mod52 = burstFN % 52;
     if ((mod52 == 12) || (mod52 == 38))
-      return RACH;
+      return mExtRACH ? EXT_RACH : RACH;
     else if ((mod52 == 25) || (mod52 == 51))
       return IDLE;
     else
@@ -635,9 +637,11 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
     noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
   }
 
+  unsigned max_toa = (type == RACH || type == EXT_RACH) ?
+                      mMaxExpectedDelayAB : mMaxExpectedDelayNB;
+
   /* Detect normal or RACH bursts */
-  rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, amp, toa,
-                      (type==RACH)?mMaxExpectedDelayAB:mMaxExpectedDelayNB);
+  rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, amp, toa, max_toa);
 
   if (rc > 0) {
     type = (CorrType) rc;

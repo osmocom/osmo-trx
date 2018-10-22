@@ -114,7 +114,8 @@ public:
   ~Transceiver();
 
   /** Start the control loop */
-  bool init(FillerType filler, size_t rtsc, unsigned rach_delay, bool edge);
+  bool init(FillerType filler, size_t rtsc, unsigned rach_delay,
+            bool edge, bool ext_rach);
 
   /** attach the radioInterface receive FIFO */
   bool receiveFIFO(VectorFIFO *wFIFO, size_t chan)
@@ -210,6 +211,7 @@ private:
   int mSPSRx;                          ///< number of samples per Rx symbol
   size_t mChans;
 
+  bool mExtRACH;
   bool mEdge;
   bool mOn;	                           ///< flag to indicate that transceiver is powered on
   bool mForceClockInterface;           ///< flag to indicate whether IND CLOCK shall be sent unconditionally after transceiver is started

@@ -144,7 +144,7 @@ int makeTransceiver(struct trx_ctx *trx, RadioInterface *radio)
 			      trx->cfg.rx_sps, trx->cfg.num_chans, GSM::Time(3,0),
 			      radio, trx->cfg.rssi_offset);
 	if (!transceiver->init(trx->cfg.filler, trx->cfg.rtsc,
-		       trx->cfg.rach_delay, trx->cfg.egprs)) {
+		       trx->cfg.rach_delay, trx->cfg.egprs, trx->cfg.ext_rach)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
 		return -1;
 	}
@@ -408,6 +408,7 @@ static void print_config(struct trx_ctx *trx)
 	ost << "   Tx Samples-per-Symbol... " << trx->cfg.tx_sps << std::endl;
 	ost << "   Rx Samples-per-Symbol... " << trx->cfg.rx_sps << std::endl;
 	ost << "   EDGE support............ " << trx->cfg.egprs << std::endl;
+	ost << "   Extended RACH support... " << trx->cfg.ext_rach << std::endl;
 	ost << "   Reference............... " << trx->cfg.clock_ref << std::endl;
 	ost << "   C0 Filler Table......... " << trx->cfg.filler << std::endl;
 	ost << "   Multi-Carrier........... " << trx->cfg.multi_arfcn << std::endl;

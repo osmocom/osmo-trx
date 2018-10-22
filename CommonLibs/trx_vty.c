@@ -304,6 +304,21 @@ DEFUN(cfg_egprs, cfg_egprs_cmd,
 	return CMD_SUCCESS;
 }
 
+DEFUN(cfg_ext_rach, cfg_ext_rach_cmd,
+	"ext-rach (disable|enable)",
+	"Enable extended (11-bit) RACH (default=disable)\n")
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	if (strcmp("disable", argv[0]) == 0)
+		trx->cfg.ext_rach = false;
+
+	if (strcmp("enable", argv[0]) == 0)
+		trx->cfg.ext_rach = true;
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_rt_prio, cfg_rt_prio_cmd,
 	"rt-prio <1-32>",
 	"Set the SCHED_RR real-time priority\n"
@@ -417,6 +432,7 @@ static int config_write_trx(struct vty *vty)
 		vty_out(vty, " rssi-offset %f%s", trx->cfg.rssi_offset, VTY_NEWLINE);
 	vty_out(vty, " swap-channels %s%s", trx->cfg.swap_channels ? "enable" : "disable", VTY_NEWLINE);
 	vty_out(vty, " egprs %s%s", trx->cfg.egprs ? "enable" : "disable", VTY_NEWLINE);
+	vty_out(vty, " ext-rach %s%s", trx->cfg.ext_rach ? "enable" : "disable", VTY_NEWLINE);
 	if (trx->cfg.sched_rr != 0)
 		vty_out(vty, " rt-prio %u%s", trx->cfg.sched_rr, VTY_NEWLINE);
 
@@ -454,6 +470,7 @@ static void trx_dump_vty(struct vty *vty, struct trx_ctx *trx)
 	vty_out(vty, " RSSI to dBm offset: %f%s", trx->cfg.rssi_offset, VTY_NEWLINE);
 	vty_out(vty, " Swap channels: %s%s", trx->cfg.swap_channels ? "Enabled" : "Disabled", VTY_NEWLINE);
 	vty_out(vty, " EDGE support: %s%s", trx->cfg.egprs ? "Enabled" : "Disabled", VTY_NEWLINE);
+	vty_out(vty, " Extended RACH support: %s%s", trx->cfg.ext_rach ? "Enabled" : "Disabled", VTY_NEWLINE);
 	vty_out(vty, " Real Time Priority: %u (%s)%s", trx->cfg.sched_rr,
 		trx->cfg.sched_rr ? "Enabled" : "Disabled", VTY_NEWLINE);
 	vty_out(vty, " Channels: %u%s", trx->cfg.num_chans, VTY_NEWLINE);
@@ -564,6 +581,7 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_rssi_offset_cmd);
 	install_element(TRX_NODE, &cfg_swap_channels_cmd);
 	install_element(TRX_NODE, &cfg_egprs_cmd);
+	install_element(TRX_NODE, &cfg_ext_rach_cmd);
 	install_element(TRX_NODE, &cfg_rt_prio_cmd);
 	install_element(TRX_NODE, &cfg_filler_cmd);
 

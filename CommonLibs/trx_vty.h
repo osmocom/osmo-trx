@@ -57,6 +57,7 @@ struct trx_ctx {
 		double offset;
 		double rssi_offset;
 		bool swap_channels;
+		bool ext_rach;
 		bool egprs;
 		unsigned int sched_rr;
 		unsigned int num_chans;
