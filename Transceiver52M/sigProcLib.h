@@ -29,6 +29,7 @@
 enum CorrType{
   OFF,         ///< timeslot is off
   TSC,         ///< timeslot should contain a normal burst
+  EXT_RACH,    ///< timeslot should contain an extended access burst
   RACH,        ///< timeslot should contain an access burst
   EDGE,        ///< timeslot should contain an EDGE burst
   IDLE         ///< timeslot is an idle (or dummy) burst

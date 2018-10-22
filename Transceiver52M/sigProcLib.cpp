@@ -1602,18 +1602,22 @@ static int detectGeneralBurst(const signalVector &rxBurst,
  *   tail: Search 8 symbols + maximum expected delay
  */
 static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
-                           complex &amplitude, float &toa, unsigned max_toa)
+                           complex &amplitude, float &toa, unsigned max_toa, bool ext)
 {
   int rc, target, head, tail;
-  CorrelationSequence *sync;
+  int i, num_seq;
 
   target = 8 + 40;
   head = 8;
   tail = 8 + max_toa;
-  sync = gRACHSequences[0];
+  num_seq = ext ? 3 : 1;
 
-  rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
-                          target, head, tail, sync);
+  for (i = 0; i < num_seq; i++) {
+    rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
+                            target, head, tail, gRACHSequences[i]);
+    if (rc > 0)
+      break;
+  }
 
   return rc;
 }
@@ -1682,9 +1686,10 @@ int detectAnyBurst(const signalVector &burst, unsigned tsc, float threshold,
     rc = analyzeTrafficBurst(burst, tsc, threshold, sps,
                              amp, toa, max_toa);
     break;
+  case EXT_RACH:
   case RACH:
     rc = detectRACHBurst(burst, threshold, sps, amp, toa,
-                         max_toa);
+                         max_toa, type == EXT_RACH);
     break;
   default:
     LOG(ERR) << "Invalid correlation type";
