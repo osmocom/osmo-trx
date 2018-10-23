@@ -91,6 +91,25 @@ Description: SDR transceiver that implements Layer 1 of a GSM BTS (LimeSuite)
  between different telecommunication associations for developing new
  generations of mobile phone networks. (post-2G/GSM)
 
+Package: osmo-trx-xtrx
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: SDR transceiver that implements Layer 1 of a GSM BTS (XTRX)
+ OsmoTRX is a software-defined radio transceiver that implements the Layer 1
+ physical layer of a BTS comprising the following 3GPP specifications:
+ .
+ TS 05.01 "Physical layer on the radio path"
+ TS 05.02 "Multiplexing and Multiple Access on the Radio Path"
+ TS 05.04 "Modulation"
+ TS 05.10 "Radio subsystem synchronization"
+ .
+ In this context, BTS is "Base transceiver station". It's the stations that
+ connect mobile phones to the mobile network.
+ .
+ 3GPP is the "3rd Generation Partnership Project" which is the collaboration
+ between different telecommunication associations for developing new
+ generations of mobile phone networks. (post-2G/GSM)
+
 Package: osmo-trx-doc
 Architecture: all
 Section: doc

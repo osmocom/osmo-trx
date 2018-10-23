@@ -1,0 +1,11 @@
+[Unit]
+Description=Osmocom SDR BTS L1 Transceiver (XTRX backend)
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/osmo-trx-xtrx -C /etc/osmocom/osmo-trx-xtrx.cfg
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

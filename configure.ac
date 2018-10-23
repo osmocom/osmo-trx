@@ -125,6 +125,11 @@ AC_ARG_WITH(lms, [
         [enable LimeSuite based transceiver])
 ])
 
+AC_ARG_WITH(xtrx, [
+    AS_HELP_STRING([--with-xtrx],
+        [enable XTRX based transceiver])
+])
+
 AC_ARG_WITH(singledb, [
     AS_HELP_STRING([--with-singledb],
         [enable single daughterboard use on USRP1])
@@ -162,6 +167,10 @@ AS_IF([test "x$with_usrp1" = "xyes"], [
 
 AS_IF([test "x$with_lms" = "xyes"], [
     PKG_CHECK_MODULES(LMS, LimeSuite)
+])
+
+AS_IF([test "x$with_xtrx" = "xyes"], [
+    PKG_CHECK_MODULES(XTRX, libxtrx)
 ])
 
 AS_IF([test "x$with_uhd" != "xno"],[
@@ -226,6 +235,7 @@ AS_IF([test "x$osmo_cv_cc_has___sync_fetch_and_and" = "xyes" && test "x$osmo_cv_
 AM_CONDITIONAL(DEVICE_UHD, [test "x$with_uhd" != "xno"])
 AM_CONDITIONAL(DEVICE_USRP1, [test "x$with_usrp1" = "xyes"])
 AM_CONDITIONAL(DEVICE_LMS, [test "x$with_lms" = "xyes"])
+AM_CONDITIONAL(DEVICE_XTRX, [test "x$with_xtrx" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
 
@@ -310,6 +320,7 @@ AC_CONFIG_FILES([\
     Transceiver52M/device/uhd/Makefile \
     Transceiver52M/device/usrp1/Makefile \
     Transceiver52M/device/lms/Makefile \
+    Transceiver52M/device/xtrx/Makefile \
     tests/Makefile \
     tests/CommonLibs/Makefile \
     tests/Transceiver52M/Makefile \
