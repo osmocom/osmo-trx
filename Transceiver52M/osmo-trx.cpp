@@ -27,6 +27,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <sched.h>
 #include <vector>
 #include <string>
@@ -211,9 +212,9 @@ static std::vector<std::string> comma_delimited_to_vector(char* opt)
 static void print_help()
 {
 	fprintf(stdout, "Options:\n"
-		"  -h    This text\n"
-		"  -C    Filename The config file to use\n"
-		"  -V    Print the version of OsmoTRX\n"
+		"  -h, --help      This text\n"
+		"  -C, --config    Filename The config file to use\n"
+		"  -V, --version   Print the version of OsmoTRX\n"
 		);
 }
 
@@ -230,8 +231,15 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 	unsigned int i;
 	std::vector<std::string> rx_paths, tx_paths;
 	bool rx_paths_set = false, tx_paths_set = false;
+	static struct option long_options[] = {
+		{"help", 0, 0, 'h'},
+		{"config", 1, 0, 'C'},
+		{"version", 0, 0, 'V'},
+		{NULL, 0, 0, 0}
+	};
 
-	while ((option = getopt(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:V")) != -1) {
+	while ((option = getopt_long(argc, argv, "ha:l:i:j:p:c:dmxgfo:s:b:r:A:R:Set:y:z:C:V", long_options,
+		NULL)) != -1) {
 		switch (option) {
 		case 'h':
 			print_help();
