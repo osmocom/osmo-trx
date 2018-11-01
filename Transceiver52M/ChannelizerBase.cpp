@@ -239,7 +239,7 @@ ChannelizerBase::~ChannelizerBase()
 
 	for (size_t i = 0; i < m; i++) {
 		free(subFilters[i]);
-		delete hist[i];
+		delete[] hist[i];
 	}
 
 	fft_free(fftInput);
