@@ -62,10 +62,10 @@ static void lms_log_callback(int lvl, const char *msg)
 	/* map lime specific log levels */
 	static const int lvl_map[5] = {
 		[0] = LOGL_FATAL,
-		[1] = LOGL_ERROR,
-		[2] = LOGL_NOTICE,
-		[3] = LOGL_INFO,
-		[4] = LOGL_DEBUG,
+		[LMS_LOG_ERROR] = LOGL_ERROR,
+		[LMS_LOG_WARNING] = LOGL_NOTICE,
+		[LMS_LOG_INFO] = LOGL_INFO,
+		[LMS_LOG_DEBUG] = LOGL_DEBUG,
 	};
 	/* protect against future higher log level values (lower importance) */
 	if ((unsigned int) lvl >= ARRAY_SIZE(lvl_map))
