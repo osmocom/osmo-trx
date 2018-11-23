@@ -71,7 +71,7 @@ static void lms_log_callback(int lvl, const char *msg)
 	if ((unsigned int) lvl >= ARRAY_SIZE(lvl_map))
 		lvl = ARRAY_SIZE(lvl_map)-1;
 
-	LOGLV(DLMS, lvl) << msg;
+	LOGLV(DLMS, lvl_map[lvl]) << msg;
 }
 
 static void thread_enable_cancel(bool cancel)
