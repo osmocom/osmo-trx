@@ -28,7 +28,14 @@
 #include <iostream>
 #include <lime/LimeSuite.h>
 
-#define LIMESDR_TX_AMPL  0.3
+/* Definition of LIMESDR_TX_AMPL limits maximum amplitude of I and Q
+ * channels separately. Hence LIMESDR_TX_AMPL value must be 1/sqrt(2) =
+ * 0.7071.... to get an amplitude of 1 of the complex signal:
+ * 	A^2 = I^2 + Q^2
+ * 	A^2 = (1/sqrt(2))^2 + (1/sqrt(2))^2
+ * 	A^2 = 1/2 + 1/2
+ * 	A^2 = 1 */
+#define LIMESDR_TX_AMPL  0.707
 
 /** A class to handle a LimeSuite supported device */
 class LMSDevice:public RadioDevice {
