@@ -223,7 +223,7 @@ bool LMSDevice::start()
 
 		// Set gains to midpoint
 		setTxGain((minTxGain() + maxTxGain()) / 2, i);
-		setRxGain(34.0, i);
+		setRxGain((minRxGain() + maxRxGain()) / 2, i);
 
 		m_lms_stream_rx[i] = {};
 		m_lms_stream_rx[i].isTx = false;
