@@ -1,0 +1,46 @@
+[[trx_backends]]
+== OsmoTRX backend support
+
+[[backend_uhd]]
+=== `osmo-trx-uhd` for UHD based Transceivers
+
+This OsmoTRX model uses _libuhd_ (UHD, USRP Hardware Driver) to drive the
+device, that is configuring it and reading/writing samples from/to it.
+
+So far, this backend has been mostly used to drive devices such as the Ettus
+B200 family and Fairwaves UmTRX family, and used to be the default backend used
+for legacy @osmo-trx@ binary when per-backend binaries didn't exist yet.
+
+Any device providing generic support for UHD should theoretically be able to be
+run through this backend without much effort, but pracitcal experience showed
+that some devices don't play well with it, such as the LimeSDR family of
+devices, which showed far better results when using its native interface.
+
+Related code can be found in the _Transceiver52M/device/uhd/_ directory in
+_osmo-trx.git_.
+
+[[backend_lms]]
+=== `osmo-trx-lms` for LimeSuite based Transceivers
+
+This OsmoTRX model uses LimeSuite API and library to drive the device, that is
+configuring it and reading/writing samples from/to it.
+
+This backend was developed in order to be used together with LimeSDR-USB and
+LimeSDR-mini devices, due to to the poor results obtained with the UHD backend,
+and to simplify the stack.
+
+Related code can be found in the _Transceiver52M/device/lms/_ directory in
+_osmo-trx.git_.
+
+[[backend_usrp1]]
+=== `osmo-trx-usrp1` for libusrp based Transceivers
+
+This OsmoTRX model uses the legacy libusrp driver provided in GNU Radio 3.4.2.
+
+As this code was dropped from GNU Radio at some point and was found very
+difficult to build, some work was done to create a standalone libusrp which can
+be nowadays found as a separate git repository together with other osmocom git
+repositories, in https://git.osmocom.org/libusrp/
+
+Related code can be found in the _Transceiver52M/device/usrp1/_ directory in
+_osmo-trx.git_.

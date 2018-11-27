@@ -1,0 +1,19 @@
+== Running OsmoTRX
+
+The OsmoTRX executable (`osmo-trx`) offers the following command-line
+options:
+
+
+=== SYNOPSIS
+
+*osmo-trx* [-h] [-C 'CONFIGFILE']
+
+
+=== OPTIONS
+
+*-h*::
+	Print a short help message about the supported options
+*-C 'CONFIGFILE'*::
+	Specify the file and path name of the configuration file to be
+	used. If none is specified, use `osmo_trx.cfg` in the current
+	working directory.
