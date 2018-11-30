@@ -1,4 +1,12 @@
 #!/bin/sh
+# jenkins build helper script for osmo-trx.  This is how we build on jenkins.osmocom.org
+#
+# environment variables:
+# * INSTR: configure the CPU instruction set ("--with-sse", "--with-neon" or "--with-neon-vfpv4")
+# * WITH_MANUALS: build manual PDFs if set to "1"
+# * PUBLISH: upload manuals after building if set to "1" (ignored without WITH_MANUALS = "1")
+# * INSIDE_CHROOT: (used internally) set to "1" when the script runs with QEMU in an ARM chroot
+#
 set -ex
 
 substr() { [ -z "${2##*$1*}" ]; }
@@ -68,6 +76,14 @@ osmo-build-dep.sh libusrp
 
 export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="$inst/lib"
+export PATH="$inst/bin:$PATH"
+
+# Additional configure options and depends
+CONFIG=""
+if [ "$WITH_MANUALS" = "1" ]; then
+	osmo-build-dep.sh osmo-gsm-manuals
+	CONFIG="--enable-manuals"
+fi
 
 set +x
 echo
@@ -79,9 +95,13 @@ set -x
 
 cd "$base"
 autoreconf --install --force
-./configure --enable-sanitize --enable-werror --with-uhd --with-usrp1 --with-lms $INSTR
+./configure --enable-sanitize --enable-werror --with-uhd --with-usrp1 --with-lms $INSTR $CONFIG
 $MAKE $PARALLEL_MAKE
 $MAKE check \
   || cat-testlogs.sh
+
+if [ "$WITH_MANUALS" = "1" ] && [ "$PUBLISH" = "1" ]; then
+	make -C "$base/doc/manuals" publish
+fi
 
 osmo-clean-workspace.sh
