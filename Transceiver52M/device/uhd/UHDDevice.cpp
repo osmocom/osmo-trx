@@ -635,8 +635,8 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	LOGC(DDEV, INFO) << "Using discovered UHD device " << dev_addrs[0].to_string();
 	try {
 		usrp_dev = uhd::usrp::multi_usrp::make(addr);
-	} catch(...) {
-		LOGC(DDEV, ALERT) << "UHD make failed, device " << args;
+	} catch(uhd::key_error::exception &e) {
+		LOGC(DDEV, ALERT) << "UHD make failed, device " << args << ", exception:\n" << e.what();
 		return -1;
 	}
 
