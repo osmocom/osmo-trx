@@ -29,6 +29,25 @@
 #include "LinkedLists.h"
 
 
+PointerFIFO::~PointerFIFO()
+{
+	ListNode *node, *next;
+
+	node = mHead;
+	while (node != NULL) {
+		next = node->next();
+		delete node;
+		node = next;
+	}
+
+	node = mFreeList;
+	while (node != NULL) {
+		next = node->next();
+		delete node;
+		node = next;
+	}
+}
+
 void PointerFIFO::push_front(void* val)	// by pat
 {
 	// Pat added this routine for completeness, but never used or tested.

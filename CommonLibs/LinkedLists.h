@@ -70,6 +70,7 @@ class PointerFIFO {
 		:mHead(NULL),mTail(NULL),mFreeList(NULL),
 		mSize(0)
 	{}
+	~PointerFIFO();
 
 	unsigned size() const { return mSize; }
 	unsigned totalSize() const { return 0; }	// Not used in this version.
