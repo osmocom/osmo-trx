@@ -84,14 +84,13 @@ static Resampler *dnsampler = NULL;
  * perform 16-byte memory alignment required by many SSE instructions.
  */
 struct CorrelationSequence {
-  CorrelationSequence() : sequence(NULL), buffer(NULL)
+  CorrelationSequence() : sequence(NULL)
   {
   }
 
   ~CorrelationSequence()
   {
     delete sequence;
-    free(buffer);
   }
 
   signalVector *sequence;
@@ -106,8 +105,7 @@ struct CorrelationSequence {
  * for SSE instructions.
  */
 struct PulseSequence {
-  PulseSequence() : c0(NULL), c1(NULL), c0_inv(NULL), empty(NULL),
-		    c0_buffer(NULL), c1_buffer(NULL), c0_inv_buffer(NULL)
+  PulseSequence() : c0(NULL), c1(NULL), c0_inv(NULL), empty(NULL)
   {
   }
 
@@ -117,17 +115,12 @@ struct PulseSequence {
     delete c1;
     delete c0_inv;
     delete empty;
-    free(c0_buffer);
-    free(c1_buffer);
   }
 
   signalVector *c0;
   signalVector *c1;
   signalVector *c0_inv;
   signalVector *empty;
-  void *c0_buffer;
-  void *c1_buffer;
-  void *c0_inv_buffer;
 };
 
 static CorrelationSequence *gMidambles[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
@@ -340,7 +333,7 @@ static signalVector *convolve(const signalVector *x, const signalVector *h,
   if (y && (len > y->size()))
     return NULL;
   if (!y) {
-    y = new signalVector(len);
+    y = new signalVector(len, convolve_h_alloc, free);
     alloc = true;
   }
 
@@ -403,8 +396,7 @@ static bool generateInvertC0Pulse(PulseSequence *pulse)
   if (!pulse)
     return false;
 
-  pulse->c0_inv_buffer = convolve_h_alloc(5);
-  pulse->c0_inv = new signalVector((complex *) pulse->c0_inv_buffer, 0, 5);
+  pulse->c0_inv = new signalVector((complex *) convolve_h_alloc(5), 0, 5, convolve_h_alloc, free);
   pulse->c0_inv->isReal(true);
   pulse->c0_inv->setAligned(false);
 
@@ -433,9 +425,7 @@ static bool generateC1Pulse(int sps, PulseSequence *pulse)
     return false;
   }
 
-  pulse->c1_buffer = convolve_h_alloc(len);
-  pulse->c1 = new signalVector((complex *)
-                                  pulse->c1_buffer, 0, len);
+  pulse->c1 = new signalVector((complex *) convolve_h_alloc(len), 0, len, convolve_h_alloc, free);
   pulse->c1->isReal(true);
 
   /* Enable alignment for SSE usage */
@@ -489,8 +479,7 @@ static PulseSequence *generateGSMPulse(int sps)
     len = 4;
   }
 
-  pulse->c0_buffer = convolve_h_alloc(len);
-  pulse->c0 = new signalVector((complex *) pulse->c0_buffer, 0, len);
+  pulse->c0 = new signalVector((complex *) convolve_h_alloc(len), 0, len, convolve_h_alloc, free);
   pulse->c0->isReal(true);
 
   /* Enable alingnment for SSE usage */
@@ -1019,7 +1008,7 @@ static void generateDelayFilters()
 
   for (int i = 0; i < DELAYFILTS; i++) {
     data = (complex *) convolve_h_alloc(h_len);
-    h = new signalVector(data, 0, h_len);
+    h = new signalVector(data, 0, h_len, convolve_h_alloc, free);
     h->setAligned(true);
     h->isReal(true);
 
@@ -1263,7 +1252,7 @@ static bool generateMidamble(int sps, int tsc)
 
   /* For SSE alignment, reallocate the midamble sequence on 16-byte boundary */
   data = (complex *) convolve_h_alloc(midMidamble->size());
-  _midMidamble = new signalVector(data, 0, midMidamble->size());
+  _midMidamble = new signalVector(data, 0, midMidamble->size(), convolve_h_alloc, free);
   _midMidamble->setAligned(true);
   midMidamble->copyTo(*_midMidamble);
 
@@ -1274,7 +1263,6 @@ static bool generateMidamble(int sps, int tsc)
   }
 
   gMidambles[tsc] = new CorrelationSequence;
-  gMidambles[tsc]->buffer = data;
   gMidambles[tsc]->sequence = _midMidamble;
   gMidambles[tsc]->gain = peakDetect(*autocorr, &toa, NULL);
 
@@ -1319,13 +1307,12 @@ static CorrelationSequence *generateEdgeMidamble(int tsc)
   conjugateVector(*midamble);
 
   data = (complex *) convolve_h_alloc(midamble->size());
-  _midamble = new signalVector(data, 0, midamble->size());
+  _midamble = new signalVector(data, 0, midamble->size(), convolve_h_alloc, free);
   _midamble->setAligned(true);
   midamble->copyTo(*_midamble);
 
   /* Channel gain is an empirically measured value */
   seq = new CorrelationSequence;
-  seq->buffer = data;
   seq->sequence = _midamble;
   seq->gain = Complex<float>(-19.6432, 19.5006) / 1.18;
   seq->toa = 0;
@@ -1360,7 +1347,7 @@ static bool generateRACHSequence(CorrelationSequence **seq, const BitVector &bv,
 
   /* For SSE alignment, reallocate the midamble sequence on 16-byte boundary */
   data = (complex *) convolve_h_alloc(seq1->size());
-  _seq1 = new signalVector(data, 0, seq1->size());
+  _seq1 = new signalVector(data, 0, seq1->size(), convolve_h_alloc, free);
   _seq1->setAligned(true);
   seq1->copyTo(*_seq1);
 
@@ -1372,7 +1359,6 @@ static bool generateRACHSequence(CorrelationSequence **seq, const BitVector &bv,
 
   *seq = new CorrelationSequence;
   (*seq)->sequence = _seq1;
-  (*seq)->buffer = data;
   (*seq)->gain = peakDetect(*autocorr, &toa, NULL);
 
   /* For 1 sps only

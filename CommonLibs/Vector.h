@@ -32,11 +32,14 @@
 #include <string.h>
 #include <iostream>
 #include <assert.h>
+#include <stdlib.h>
+
 // We cant use Logger.h in this file...
 extern int gVectorDebug;
 #define BVDEBUG(msg) if (gVectorDebug) {std::cout << msg;}
 
-
+typedef void (*vector_free_func)(void* wData);
+typedef void *(*vector_alloc_func)(size_t newSize);
 
 /**
 	A simplified Vector template with aliases.
@@ -60,6 +63,8 @@ template <class T> class Vector {
 	T* mData;		///< allocated data block, if any
 	T* mStart;		///< start of useful data
 	T* mEnd;		///< end of useful data + 1
+	vector_alloc_func mAllocFunc; ///< function used to alloc new mData during resize.
+	vector_free_func mFreeFunc; ///< function used to free mData.
 
 	public:
 
@@ -85,9 +90,19 @@ template <class T> class Vector {
 	/** Change the size of the Vector, discarding content. */
 	void resize(size_t newSize)
 	{
-		if (mData!=NULL) delete[] mData;
+		if (mData!=NULL) {
+			if (mFreeFunc)
+				mFreeFunc(mData);
+			else
+				delete[] mData;
+		}
 		if (newSize==0) mData=NULL;
-		else mData = new T[newSize];
+		else {
+			if (mAllocFunc)
+				mData = (T*) mAllocFunc(newSize);
+			else
+				mData = new T[newSize];
+		}
 		mStart = mData;
 		mEnd = mStart + newSize;
 	}
@@ -116,29 +131,31 @@ template <class T> class Vector {
 	//@{
 
 	/** Build an empty Vector of a given size. */
-	Vector(size_t wSize=0):mData(NULL) { resize(wSize); }
+	Vector(size_t wSize=0, vector_alloc_func wAllocFunc=NULL, vector_free_func wFreeFunc=NULL)
+		:mData(NULL), mAllocFunc(wAllocFunc), mFreeFunc(wFreeFunc)
+	{ resize(wSize); }
 
 	/** Build a Vector by moving another. */
 	Vector(Vector<T>&& other)
-		:mData(other.mData),mStart(other.mStart),mEnd(other.mEnd)
+		:mData(other.mData),mStart(other.mStart),mEnd(other.mEnd), mAllocFunc(other.mAllocFunc),  mFreeFunc(other.mFreeFunc)
 	{ other.mData=NULL; }
 
 	/** Build a Vector by copying another. */
-	Vector(const Vector<T>& other):mData(NULL) { clone(other); }
+	Vector(const Vector<T>& other):mData(NULL), mAllocFunc(other.mAllocFunc), mFreeFunc(other.mFreeFunc) { clone(other); }
 
 	/** Build a Vector with explicit values. */
-	Vector(T* wData, T* wStart, T* wEnd)
-		:mData(wData),mStart(wStart),mEnd(wEnd)
+	Vector(T* wData, T* wStart, T* wEnd, vector_alloc_func wAllocFunc=NULL, vector_free_func wFreeFunc=NULL)
+		:mData(wData),mStart(wStart),mEnd(wEnd), mAllocFunc(wAllocFunc), mFreeFunc(wFreeFunc)
 	{ }
 
 	/** Build a vector from an existing block, NOT to be deleted upon destruction. */
-	Vector(T* wStart, size_t span)
-		:mData(NULL),mStart(wStart),mEnd(wStart+span)
+	Vector(T* wStart, size_t span, vector_alloc_func wAllocFunc=NULL, vector_free_func wFreeFunc=NULL)
+		:mData(NULL),mStart(wStart),mEnd(wStart+span),mAllocFunc(wAllocFunc), mFreeFunc(wFreeFunc)
 	{ }
 
 	/** Build a Vector by concatenation. */
-	Vector(const Vector<T>& other1, const Vector<T>& other2)
-		:mData(NULL)
+	Vector(const Vector<T>& other1, const Vector<T>& other2, vector_alloc_func wAllocFunc=NULL, vector_free_func wFreeFunc=NULL)
+		:mData(NULL), mAllocFunc(wAllocFunc), mFreeFunc(wFreeFunc)
 	{
 		resize(other1.size()+other2.size());
 		memcpy(mStart, other1.mStart, other1.bytes());
@@ -162,6 +179,8 @@ template <class T> class Vector {
 		mData=other.mData;
 		mStart=other.mStart;
 		mEnd=other.mEnd;
+		mAllocFunc=other.mAllocFunc;
+		mFreeFunc=other.mFreeFunc;
 		other.mData=NULL;
 	}
 

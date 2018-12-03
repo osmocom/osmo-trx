@@ -1,7 +1,7 @@
 #ifndef _CONVOLVE_H_
 #define _CONVOLVE_H_
 
-void *convolve_h_alloc(int num);
+void *convolve_h_alloc(size_t num);
 
 int convolve_real(const float *x, int x_len,
 		  const float *h, int h_len,

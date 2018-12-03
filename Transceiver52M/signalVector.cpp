@@ -1,20 +1,20 @@
 #include "signalVector.h"
 
-signalVector::signalVector(size_t size)
-	: Vector<complex>(size),
+signalVector::signalVector(size_t size, vector_alloc_func wAllocFunc, vector_free_func wFreeFunc)
+	: Vector<complex>(size, wAllocFunc, wFreeFunc),
 	  real(false), aligned(false), symmetry(NONE)
 {
 }
 
-signalVector::signalVector(size_t size, size_t start)
-	: Vector<complex>(size + start),
+signalVector::signalVector(size_t size, size_t start, vector_alloc_func wAllocFunc, vector_free_func wFreeFunc)
+	: Vector<complex>(size + start, wAllocFunc, wFreeFunc),
 	  real(false), aligned(false), symmetry(NONE)
 {
 	mStart = mData + start;
 }
 
-signalVector::signalVector(complex *data, size_t start, size_t span)
-	: Vector<complex>(NULL, data + start, data + start + span),
+signalVector::signalVector(complex *data, size_t start, size_t span, vector_alloc_func wAllocFunc, vector_free_func wFreeFunc)
+	: Vector<complex>(data, data + start, data + start + span, wAllocFunc, wFreeFunc),
 	  real(false), aligned(false), symmetry(NONE)
 {
 }

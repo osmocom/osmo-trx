@@ -13,13 +13,13 @@ enum Symmetry {
 class signalVector: public Vector<complex> {
 public:
 	/** Default constructor */
-	signalVector(size_t size = 0);
+	signalVector(size_t size = 0, vector_alloc_func wAllocFunc = NULL, vector_free_func wFreeFunc = NULL);
 
 	/** Construct with head room */
-	signalVector(size_t size, size_t start);
+	signalVector(size_t size, size_t start, vector_alloc_func wAllocFunc = NULL, vector_free_func wFreeFunc = NULL);
 
 	/** Construct from existing buffer data (buffer not managed) */
-	signalVector(complex *data, size_t start, size_t span);
+	signalVector(complex *data, size_t start, size_t span, vector_alloc_func wAllocFunc = NULL, vector_free_func wFreeFunc = NULL);
 
 	/** Construct by from existing vector */
 	signalVector(const signalVector &vector);
