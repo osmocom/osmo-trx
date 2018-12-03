@@ -57,6 +57,15 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 	m_last_tx_overruns.resize(chans, 0);
 }
 
+LMSDevice::~LMSDevice()
+{
+	LOGC(DDEV, INFO) << "Closing LMS device";
+	if (m_lms_dev) {
+		LMS_Close(m_lms_dev);
+		m_lms_dev = NULL;
+	}
+}
+
 static void lms_log_callback(int lvl, const char *msg)
 {
 	/* map lime specific log levels */
@@ -204,6 +213,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 out_close:
 	LOGC(DDEV, ALERT) << "Error in LMS open, closing: " << LMS_GetLastErrorMessage();
 	LMS_Close(m_lms_dev);
+	m_lms_dev = NULL;
 	return -1;
 }
 

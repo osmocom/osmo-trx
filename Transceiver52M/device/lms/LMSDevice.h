@@ -74,6 +74,7 @@ public:
 	LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chans, double lo_offset,
 		  const std::vector<std::string>& tx_paths,
 		  const std::vector<std::string>& rx_paths);
+	~LMSDevice();
 
 	/** Instantiate the LMS */
 	int open(const std::string &args, int ref, bool swap_channels);
