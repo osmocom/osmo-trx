@@ -155,6 +155,8 @@ AS_IF([test "x$with_neon_vfpv4" = "xyes"], [
 ])
 
 AS_IF([test "x$with_usrp1" = "xyes"], [
+    AC_CHECK_HEADER([boost/config.hpp],[],
+        [AC_MSG_ERROR([boost/config.hpp not found, install e.g. libboost-dev])])
     PKG_CHECK_MODULES(USRP, usrp >= 3.3)
 ])
 
@@ -233,9 +235,6 @@ AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
 
 PKG_CHECK_MODULES(LIBUSB, libusb-1.0)
 PKG_CHECK_MODULES(FFTWF, fftw3f)
-
-AC_CHECK_HEADER([boost/config.hpp],[],
-    [AC_MSG_ERROR([boost/config.hpp not found, install e.g. libboost-dev])])
 
 # Generate manuals
 AC_ARG_ENABLE(manuals,
