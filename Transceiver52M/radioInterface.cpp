@@ -75,6 +75,14 @@ bool RadioInterface::init(int type)
 
 void RadioInterface::close()
 {
+  for (std::vector<RadioBuffer*>::iterator it = sendBuffer.begin(); it != sendBuffer.end(); ++it)
+          delete *it;
+  for (std::vector<RadioBuffer*>::iterator it = recvBuffer.begin(); it != recvBuffer.end(); ++it)
+          delete *it;
+  for (std::vector<short*>::iterator it = convertSendBuffer.begin(); it != convertSendBuffer.end(); ++it)
+          delete[] *it;
+  for (std::vector<short*>::iterator it = convertRecvBuffer.begin(); it != convertRecvBuffer.end(); ++it)
+          delete[] *it;
   sendBuffer.resize(0);
   recvBuffer.resize(0);
   convertSendBuffer.resize(0);
