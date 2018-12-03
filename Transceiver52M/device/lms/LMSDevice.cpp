@@ -277,7 +277,11 @@ bool LMSDevice::stop()
 	for (i=0; i<chans; i++) {
 		LMS_StopStream(&m_lms_stream_tx[i]);
 		LMS_StopStream(&m_lms_stream_rx[i]);
+	}
 
+	for (i=0; i<chans; i++) {
+		LMS_DestroyStream(m_lms_dev, &m_lms_stream_tx[i]);
+		LMS_DestroyStream(m_lms_dev, &m_lms_stream_rx[i]);
 		LMS_EnableChannel(m_lms_dev, LMS_CH_RX, i, false);
 		LMS_EnableChannel(m_lms_dev, LMS_CH_TX, i, false);
 	}
