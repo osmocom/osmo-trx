@@ -213,6 +213,11 @@ bool LMSDevice::start()
 
 	unsigned int i;
 
+	if (started) {
+		LOGC(DDEV, ERR) << "Device already started";
+		return false;
+	}
+
 	/* configure the channels/streams */
 	for (i=0; i<chans; i++) {
 		if (LMS_EnableChannel(m_lms_dev, LMS_CH_RX, i, true) < 0)
@@ -277,6 +282,7 @@ bool LMSDevice::stop()
 		LMS_EnableChannel(m_lms_dev, LMS_CH_TX, i, false);
 	}
 
+	started = false;
 	return true;
 }
 
