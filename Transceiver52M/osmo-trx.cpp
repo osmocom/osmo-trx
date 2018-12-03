@@ -398,7 +398,7 @@ static int set_sched_rr(unsigned int prio)
 	int rc;
 	memset(&param, 0, sizeof(param));
 	param.sched_priority = prio;
-	printf("Setting SCHED_RR priority(%d)\n", param.sched_priority);
+	LOG(INFO) << "Setting SCHED_RR priority " << param.sched_priority;
 	rc = sched_setscheduler(getpid(), SCHED_RR, &param);
 	if (rc != 0) {
 		LOG(ERROR) << "Config: Setting SCHED_RR failed";
@@ -441,12 +441,12 @@ static void print_config(struct trx_ctx *trx)
 	}
 	ost << std::endl;
 
-	std::cout << ost << std::endl;
+	LOG(INFO) << ost << std::endl;
 }
 
 static void trx_stop()
 {
-	std::cout << "Shutting down transceiver..." << std::endl;
+	LOG(NOTICE) << "Shutting down transceiver..." << std::endl;
 
 	delete transceiver;
 	delete radio;
@@ -489,7 +489,7 @@ static int trx_start(struct trx_ctx *trx)
 		goto shutdown;
 
 	chans = transceiver->numChans();
-	std::cout << "-- Transceiver active with "
+	LOG(NOTICE) << "-- Transceiver active with "
 		  << chans << " channel(s)" << std::endl;
 
 	return 0;
@@ -564,7 +564,7 @@ int main(int argc, char *argv[])
 
 	g_ctrlh = ctrl_interface_setup(NULL, OSMO_CTRL_PORT_TRX, NULL);
 	if (!g_ctrlh) {
-		fprintf(stderr, "Failed to create CTRL interface.\n");
+		LOG(ERROR) << "Failed to create CTRL interface.\n";
 		exit(1);
 	}
 
