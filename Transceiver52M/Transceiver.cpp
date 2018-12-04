@@ -715,13 +715,13 @@ void Transceiver::driveControl(size_t chan)
 
   /* Verify a command signature */
   if (strncmp(buffer, "CMD ", 4)) {
-    LOG(WARNING) << "bogus message on control interface";
+    LOGC(DTRXCTRL, WARNING) << "bogus message on control interface";
     return;
   }
 
   /* Set command pointer */
   command = buffer + 4;
-  LOG(INFO) << "chan " << chan << ": command is " << command;
+  LOGC(DTRXCTRL, INFO) << "chan " << chan << ": command is " << command;
 
   if (match_cmd(command, "POWEROFF", NULL)) {
     stop();
@@ -800,7 +800,7 @@ void Transceiver::driveControl(size_t chan)
     sscanf(params, "%d", &freqKhz);
     mRxFreq = freqKhz * 1e3;
     if (!mRadioInterface->tuneRx(mRxFreq, chan)) {
-       LOG(ALERT) << "RX failed to tune";
+       LOGC(DTRXCTRL, ALERT) << "RX failed to tune";
        sprintf(response,"RSP RXTUNE 1 %d",freqKhz);
     }
     else
@@ -811,7 +811,7 @@ void Transceiver::driveControl(size_t chan)
     sscanf(params, "%d", &freqKhz);
     mTxFreq = freqKhz * 1e3;
     if (!mRadioInterface->tuneTx(mTxFreq, chan)) {
-       LOG(ALERT) << "TX failed to tune";
+       LOGC(DTRXCTRL, ALERT) << "TX failed to tune";
        sprintf(response,"RSP TXTUNE 1 %d",freqKhz);
     }
     else
@@ -823,7 +823,7 @@ void Transceiver::driveControl(size_t chan)
     if (TSC > 7) {
       sprintf(response, "RSP SETTSC 1 %d", TSC);
     } else {
-      LOG(NOTICE) << "Changing TSC from " << mTSC << " to " << TSC;
+      LOGC(DTRXCTRL, NOTICE) << "Changing TSC from " << mTSC << " to " << TSC;
       mTSC = TSC;
       sprintf(response,"RSP SETTSC 0 %d", TSC);
     }
@@ -833,7 +833,7 @@ void Transceiver::driveControl(size_t chan)
     int  timeslot;
     sscanf(params, "%d %d", &timeslot, &corrCode);
     if ((timeslot < 0) || (timeslot > 7)) {
-      LOG(WARNING) << "bogus message on control interface";
+      LOGC(DTRXCTRL, WARNING) << "bogus message on control interface";
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
       return;
     }
@@ -848,7 +848,7 @@ void Transceiver::driveControl(size_t chan)
     mWriteBurstToDiskMask = mask;
     sprintf(response,"RSP _SETBURSTTODISKMASK 0 %d",mask);
   } else {
-    LOG(WARNING) << "bogus command " << command << " on control interface.";
+    LOGC(DTRXCTRL, WARNING) << "bogus command " << command << " on control interface.";
     sprintf(response,"RSP ERR 1");
   }
 
