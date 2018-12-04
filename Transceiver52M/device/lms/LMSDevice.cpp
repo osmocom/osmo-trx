@@ -322,11 +322,6 @@ double LMSDevice::minRxGain()
 
 double LMSDevice::setTxGain(double dB, size_t chan)
 {
-	if (chan) {
-		LOGC(DDEV, ALERT) << "Invalid channel " << chan;
-		return 0.0;
-	}
-
 	if (dB > maxTxGain())
 		dB = maxTxGain();
 	if (dB < minTxGain())
@@ -342,11 +337,6 @@ double LMSDevice::setTxGain(double dB, size_t chan)
 
 double LMSDevice::setRxGain(double dB, size_t chan)
 {
-	if (chan) {
-		LOGC(DDEV, ALERT) << "Invalid channel " << chan;
-		return 0.0;
-	}
-
 	if (dB > maxRxGain())
 		dB = maxRxGain();
 	if (dB < minRxGain())
