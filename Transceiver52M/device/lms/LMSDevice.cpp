@@ -327,10 +327,10 @@ double LMSDevice::setTxGain(double dB, size_t chan)
 	if (dB < minTxGain())
 		dB = minTxGain();
 
-	LOGC(DDEV, NOTICE) << "Setting TX gain to " << dB << " dB.";
+	LOGC(DDEV, NOTICE) << "chan " << chan <<": Setting TX gain to " << dB << " dB";
 
 	if (LMS_SetGaindB(m_lms_dev, LMS_CH_TX, chan, dB) < 0)
-		LOGC(DDEV, ERR) << "Error setting TX gain";
+		LOGC(DDEV, ERR) << "chan " << chan <<": Error setting TX gain to " << dB << " dB";
 
 	return dB;
 }
@@ -342,10 +342,10 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 	if (dB < minRxGain())
 		dB = minRxGain();
 
-	LOGC(DDEV, NOTICE) << "Setting RX gain to " << dB << " dB.";
+	LOGC(DDEV, NOTICE) << "chan "<< chan << ": Setting RX gain to " << dB << " dB";
 
 	if (LMS_SetGaindB(m_lms_dev, LMS_CH_RX, chan, dB) < 0)
-		LOGC(DDEV, ERR) << "Error setting RX gain";
+		LOGC(DDEV, ERR) << "chan "<< chan << ": Error setting RX gain to " << dB << " dB";
 
 	return dB;
 }
@@ -601,8 +601,10 @@ bool LMSDevice::updateAlignment(TIMESTAMP timestamp)
 
 bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 {
+	LOGC(DDEV, NOTICE) << "chan "<< chan << ": Setting Tx Freq to " << wFreq << " Hz";
+
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_TX, chan, wFreq) < 0) {
-		LOGC(DDEV, ALERT) << "set Tx: " << wFreq << " failed!";
+		LOGC(DDEV, ERROR) << "chan "<< chan << ": Error setting Tx Freq to " << wFreq << " Hz";
 		return false;
 	}
 
@@ -611,8 +613,10 @@ bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 
 bool LMSDevice::setRxFreq(double wFreq, size_t chan)
 {
+	LOGC(DDEV, NOTICE) << "chan "<< chan << ": Setting Rx Freq to " << wFreq << " Hz";
+
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_RX, chan, wFreq) < 0) {
-		LOGC(DDEV, ALERT) << "set Rx: " << wFreq << " failed!";
+		LOGC(DDEV, ERROR) << "chan "<< chan << ": Error setting Rx Freq to " << wFreq << " Hz";
 		return false;
 	}
 
