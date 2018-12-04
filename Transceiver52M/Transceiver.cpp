@@ -721,7 +721,7 @@ void Transceiver::driveControl(size_t chan)
 
   /* Set command pointer */
   command = buffer + 4;
-  LOGC(DTRXCTRL, INFO) << "chan " << chan << ": command is " << command;
+  LOGC(DTRXCTRL, INFO) << "chan " << chan << ": command is '" << command << "'";
 
   if (match_cmd(command, "POWEROFF", NULL)) {
     stop();
@@ -852,6 +852,7 @@ void Transceiver::driveControl(size_t chan)
     sprintf(response,"RSP ERR 1");
   }
 
+  LOGC(DTRXCTRL, INFO) << "chan " << chan << ": response is '" << response << "'";
   mCtrlSockets[chan]->write(response, strlen(response) + 1);
 }
 
