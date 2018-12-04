@@ -42,7 +42,7 @@ EXTRA_DIST = \
 	COPYING \
 	README
 
-DISTCHECK_CONFIGURE_FLAGS = \
+AM_DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
 
 .PHONY: release
