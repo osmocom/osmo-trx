@@ -601,12 +601,6 @@ bool LMSDevice::updateAlignment(TIMESTAMP timestamp)
 
 bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 {
-
-	if (chan) {
-		LOGC(DDEV, ALERT) << "Invalid channel " << chan;
-		return false;
-	}
-
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_TX, chan, wFreq) < 0) {
 		LOGC(DDEV, ALERT) << "set Tx: " << wFreq << " failed!";
 		return false;
@@ -617,11 +611,6 @@ bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 
 bool LMSDevice::setRxFreq(double wFreq, size_t chan)
 {
-	if (chan) {
-		LOGC(DDEV, ALERT) << "Invalid channel " << chan;
-		return false;
-	}
-
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_RX, chan, wFreq) < 0) {
 		LOGC(DDEV, ALERT) << "set Rx: " << wFreq << " failed!";
 		return false;
