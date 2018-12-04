@@ -721,7 +721,7 @@ void Transceiver::driveControl(size_t chan)
 
   /* Set command pointer */
   command = buffer + 4;
-  LOG(INFO) << "command is " << command;
+  LOG(INFO) << "chan " << chan << ": command is " << command;
 
   if (match_cmd(command, "POWEROFF", NULL)) {
     stop();
