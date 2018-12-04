@@ -135,7 +135,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	LOGC(DDEV, INFO) << "Init LMS device";
 	if (LMS_Init(m_lms_dev) != 0) {
 		LOGC(DDEV, ERROR) << "LMS_Init() failed";
-		return -1;
+		goto out_close;
 	}
 
 	if (LMS_GetSampleRateRange(m_lms_dev, LMS_CH_RX, &range_sr))
