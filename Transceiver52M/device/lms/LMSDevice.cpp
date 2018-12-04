@@ -499,13 +499,26 @@ GSM::Time LMSDevice::minLatency() {
 	return GSM::Time(6,7);
 }
 
+void LMSDevice::update_stream_stats(size_t chan, bool * underrun, bool * overrun)
+{
+	lms_stream_status_t status;
+	if (LMS_GetStreamStatus(&m_lms_stream_rx[chan], &status) == 0) {
+		if (status.underrun > m_last_rx_underruns[chan])
+			*underrun = true;
+		m_last_rx_underruns[chan] = status.underrun;
+
+		if (status.overrun > m_last_rx_overruns[chan])
+			*overrun = true;
+		m_last_rx_overruns[chan] = status.overrun;
+	}
+}
+
 // NOTE: Assumes sequential reads
 int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 			   TIMESTAMP timestamp, bool * underrun, unsigned *RSSI)
 {
 	int rc = 0;
 	unsigned int i;
-	lms_stream_status_t status;
 	lms_stream_meta_t rx_metadata = {};
 	rx_metadata.flushPartialPacket = false;
 	rx_metadata.waitForTimestamp = false;
@@ -528,16 +541,7 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 		}
 		if (timestamp != (TIMESTAMP)rx_metadata.timestamp)
 			LOGC(DDEV, ALERT) << "chan "<< i << " recv buffer of len " << rc << " expect " << std::hex << timestamp << " got " << std::hex << (TIMESTAMP)rx_metadata.timestamp << " (" << std::hex << rx_metadata.timestamp <<") diff=" << rx_metadata.timestamp - timestamp;
-
-		if (LMS_GetStreamStatus(&m_lms_stream_rx[i], &status) == 0) {
-			if (status.underrun > m_last_rx_underruns[i])
-				*underrun = true;
-			m_last_rx_underruns[i] = status.underrun;
-
-			if (status.overrun > m_last_rx_overruns[i])
-				*overrun = true;
-			m_last_rx_overruns[i] = status.overrun;
-		}
+		update_stream_stats(i, underrun, overrun);
 		thread_enable_cancel(true);
 	}
 

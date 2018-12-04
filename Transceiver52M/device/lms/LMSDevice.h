@@ -67,6 +67,7 @@ private:
 
 	int get_ant_idx(const std::string & name, bool dir_tx, size_t chan);
 	bool flush_recv(size_t num_pkts);
+	void update_stream_stats(size_t chan, bool * underrun, bool * overrun);
 
 public:
 
