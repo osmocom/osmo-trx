@@ -78,11 +78,12 @@ export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="$inst/lib"
 export PATH="$inst/bin:$PATH"
 
+CONFIG="--enable-sanitize --enable-werror --with-uhd --with-usrp1 --with-lms $INSTR"
+
 # Additional configure options and depends
-CONFIG=""
 if [ "$WITH_MANUALS" = "1" ]; then
 	osmo-build-dep.sh osmo-gsm-manuals
-	CONFIG="--enable-manuals"
+	CONFIG="$CONFIG --enable-manuals"
 fi
 
 set +x
@@ -95,9 +96,11 @@ set -x
 
 cd "$base"
 autoreconf --install --force
-./configure --enable-sanitize --enable-werror --with-uhd --with-usrp1 --with-lms $INSTR $CONFIG
+./configure $CONFIG
 $MAKE $PARALLEL_MAKE
 $MAKE check \
+  || cat-testlogs.sh
+DISTCHECK_CONFIGURE_FLAGS="$CONFIG" $MAKE distcheck \
   || cat-testlogs.sh
 
 if [ "$WITH_MANUALS" = "1" ] && [ "$PUBLISH" = "1" ]; then
