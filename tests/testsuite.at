@@ -1,6 +1,12 @@
 AT_INIT
 AT_BANNER([Regression tests.])
 
+AT_SETUP([LMSDeviceTest])
+AT_KEYWORDS([LMSDeviceTest])
+AT_SKIP_IF([! test -e $abs_top_builddir/tests/Transceiver52M/LMSDeviceTest])
+AT_CHECK([$abs_top_builddir/tests/Transceiver52M/LMSDeviceTest], [], [], [])
+AT_CLEANUP
+
 AT_SETUP([BitVectorTest])
 AT_KEYWORDS([BitVectorTest])
 cat $abs_srcdir/CommonLibs/BitVectorTest.ok > expout

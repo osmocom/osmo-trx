@@ -18,6 +18,7 @@ tests/CommonLibs/URLEncodeTest
 tests/CommonLibs/VectorTest
 tests/CommonLibs/PRBSTest
 tests/Transceiver52M/convolve_test
+tests/Transceiver52M/LMSDeviceTest
 
 # automake/autoconf
 *.in

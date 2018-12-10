@@ -16,3 +16,13 @@ endif
 if HAVE_SSE4_1
 convolve_test_CFLAGS += $(SIMD_FLAGS)
 endif
+
+if DEVICE_LMS
+noinst_PROGRAMS += LMSDeviceTest
+LMSDeviceTest_SOURCES = LMSDeviceTest.cpp
+LMSDeviceTest_LDFLAGS = $(LIBOSMOCORE_LIBS) $(LMS_LIBS)
+LMSDeviceTest_LDADD = \
+	$(top_builddir)/Transceiver52M/device/lms/libdevice.la \
+	$(COMMON_LA)
+LMSDeviceTest_CPPFLAGS = $(AM_CPPFLAGS) $(LMS_CFLAGS)
+endif

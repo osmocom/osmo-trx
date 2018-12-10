@@ -21,6 +21,7 @@
 #include "Logger.h"
 #include "Threads.h"
 #include "LMSDevice.h"
+#include "Utils.h"
 
 #include <lime/LimeSuite.h>
 
@@ -95,6 +96,35 @@ static void print_range(const char* name, lms_range_t *range)
 		   << " Step=" << range->step;
 }
 
+/*! Find the device string that matches all filters from \a args.
+ *  \param[in] info_list device addresses found by LMS_GetDeviceList()
+ *  \param[in] count length of info_list
+ *  \param[in] args dev-args value from osmo-trx.cfg, containing comma separated key=value pairs
+ *  \return index of first matching device or -1 (no match) */
+int info_list_find(lms_info_str_t* info_list, unsigned int count, const std::string &args)
+{
+	unsigned int i, j;
+	vector<string> filters;
+
+	filters = comma_delimited_to_vector(args.c_str());
+
+	/* iterate over device addresses */
+	for (i=0; i < count; i++) {
+		/* check if all filters match */
+		bool match = true;
+		for (j=0; j < filters.size(); j++) {
+			if (!strstr(info_list[i], filters[j].c_str())) {
+				match = false;
+				break;
+			}
+		}
+
+		if (match)
+			return i;
+	}
+	return -1;
+}
+
 int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 {
 	//lms_info_str_t dev_str;
@@ -103,7 +133,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	float_type sr_host, sr_rf, lpfbw_rx, lpfbw_tx;
 	uint16_t dac_val;
 	unsigned int i, n;
-	int rc;
+	int rc, dev_id;
 
 	LOGC(DDEV, INFO) << "Opening LMS device..";
 
@@ -123,7 +153,15 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	for (i = 0; i < n; i++)
 		LOGC(DDEV, INFO) << "Device [" << i << "]: " << info_list[i];
 
-	rc = LMS_Open(&m_lms_dev, info_list[0], NULL);
+	dev_id = info_list_find(info_list, n, args);
+	if (dev_id == -1) {
+		LOGC(DDEV, ERROR) << "No LMS device found with address '" << args << "'";
+		delete[] info_list;
+		return -1;
+	}
+
+	LOGC(DDEV, INFO) << "Using device[" << dev_id << "]";
+	rc = LMS_Open(&m_lms_dev, info_list[dev_id], NULL);
 	if (rc != 0) {
 		LOGC(DDEV, ERROR) << "LMS_GetDeviceList() failed)";
 		delete [] info_list;
