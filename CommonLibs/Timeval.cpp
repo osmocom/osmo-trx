@@ -57,7 +57,7 @@ bool Timeval::passed() const
 	Timeval nowTime;
 	if (nowTime.mTimeval.tv_sec < mTimeval.tv_sec) return false;
 	if (nowTime.mTimeval.tv_sec > mTimeval.tv_sec) return true;
-	if (nowTime.mTimeval.tv_usec > mTimeval.tv_usec) return true;
+	if (nowTime.mTimeval.tv_usec >= mTimeval.tv_usec) return true;
 	return false;
 }
 
