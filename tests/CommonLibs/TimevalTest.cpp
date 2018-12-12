@@ -31,34 +31,45 @@
 #include <assert.h>
 #include <sys/time.h>
 
+extern "C" {
+#include <osmocom/core/timer.h>
+}
+
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-	long last_remaining = 10000;
+
+	osmo_clock_override_enable(CLOCK_REALTIME, true);
+
+	struct timespec *clk = osmo_clock_override_gettimespec(CLOCK_REALTIME);
+	clk->tv_sec = 0;
+	clk->tv_nsec = 1000;
+
+	long last_remaining = 10000; /*10 sec */
 	Timeval then(last_remaining);
 	assert(then.elapsed() == -last_remaining);
 	cerr << then << " elapsed: " << then.elapsed() << endl;
 
 	/* Check that last_remaining parameter affects setting time in the future */
-	usleep(10000);
+	osmo_clock_override_add(CLOCK_REALTIME, 0, 10*1000*1000);
 	double increased_time_secs = Timeval().seconds();
-	assert(increased_time_secs <= then.seconds());
+	assert(increased_time_secs < then.seconds());
 
 	struct timespec invariant_time  = then.timespec();
 	int loops = 0;
 
 	while (!then.passed()) {
 		struct timespec tspecnow = then.timespec();
-		cerr << "now: " << Timeval().seconds() << " then: " << then << " remaining: " << then.remaining() << endl;
+		cerr << "["<< loops << "] now: " << Timeval().seconds() << " then: " << then << " remaining: " << then.remaining() << endl;
 		assert(last_remaining >= then.remaining());
 		assert(tspecnow.tv_sec == invariant_time.tv_sec && tspecnow.tv_nsec == invariant_time.tv_nsec);
-		usleep(500000);
+		osmo_clock_override_add(CLOCK_REALTIME, 0, 500000*1000);
 		loops++;
 	}
 	cerr << "now: " << Timeval() << " then: " << then << " remaining: " << then.remaining() << endl;
-	assert(then.remaining() <= 0);
-	assert(loops >= 18);
+	assert(then.remaining() == -10);
+	assert(loops == 20);
 
 	printf("Done\n");
 }
