@@ -34,6 +34,7 @@ libcommon_la_SOURCES = \
 	Threads.cpp \
 	Timeval.cpp \
 	Logger.cpp \
+	Utils.cpp \
 	trx_vty.c \
 	debug.c
 libcommon_la_LIBADD = $(LIBOSMOCORE_LIBS) $(LIBOSMOCTRL_LIBS) $(LIBOSMOVTY_LIBS)
@@ -48,6 +49,7 @@ noinst_HEADERS = \
 	Timeval.h \
 	Vector.h \
 	Logger.h \
+	Utils.h \
 	trx_vty.h \
 	debug.h \
 	osmo_signal.h \

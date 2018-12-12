@@ -22,6 +22,7 @@
 
 #include "Transceiver.h"
 #include "radioDevice.h"
+#include "Utils.h"
 
 #include <time.h>
 #include <signal.h>
@@ -192,21 +193,6 @@ static void setup_signal_handlers()
 	signal(SIGUSR1, &sig_handler);
 	signal(SIGUSR2, &sig_handler);
 	osmo_init_ignore_signals();
-}
-
-static std::vector<std::string> comma_delimited_to_vector(char* opt)
-{
-	std::string str = std::string(opt);
-	std::vector<std::string> result;
-	std::stringstream ss(str);
-
-	while( ss.good() )
-	{
-	    std::string substr;
-	    getline(ss, substr, ',');
-	    result.push_back(substr);
-	}
-	return result;
 }
 
 static void print_help()
