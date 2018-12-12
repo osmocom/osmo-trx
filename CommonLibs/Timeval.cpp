@@ -34,36 +34,33 @@ void Timeval::future(unsigned offset)
 	now();
 	unsigned sec = offset/1000;
 	unsigned msec = offset%1000;
-	mTimeval.tv_usec += msec*1000;
-	mTimeval.tv_sec += sec;
-	if (mTimeval.tv_usec>1000000) {
-		mTimeval.tv_usec -= 1000000;
-		mTimeval.tv_sec += 1;
+	mTimespec.tv_nsec += msec*1000*1000;
+	mTimespec.tv_sec += sec;
+	if (mTimespec.tv_nsec > 1000*1000*1000) {
+		mTimespec.tv_nsec -= 1000*1000*1000;
+		mTimespec.tv_sec += 1;
 	}
 }
 
 
 struct timespec Timeval::timespec() const
 {
-	struct timespec retVal;
-	retVal.tv_sec = mTimeval.tv_sec;
-	retVal.tv_nsec = 1000 * (long)mTimeval.tv_usec;
-	return retVal;
+	return mTimespec;
 }
 
 
 bool Timeval::passed() const
 {
 	Timeval nowTime;
-	if (nowTime.mTimeval.tv_sec < mTimeval.tv_sec) return false;
-	if (nowTime.mTimeval.tv_sec > mTimeval.tv_sec) return true;
-	if (nowTime.mTimeval.tv_usec >= mTimeval.tv_usec) return true;
+	if (nowTime.mTimespec.tv_sec < mTimespec.tv_sec) return false;
+	if (nowTime.mTimespec.tv_sec > mTimespec.tv_sec) return true;
+	if (nowTime.mTimespec.tv_nsec >= mTimespec.tv_nsec) return true;
 	return false;
 }
 
 double Timeval::seconds() const
 {
-	return ((double)mTimeval.tv_sec) + 1e-6*((double)mTimeval.tv_usec);
+	return ((double)mTimespec.tv_sec) + 1e-9*((double)mTimespec.tv_nsec);
 }
 
 
@@ -72,8 +69,8 @@ long Timeval::delta(const Timeval& other) const
 {
 	// 2^31 milliseconds is just over 4 years.
 	int32_t deltaS = other.sec() - sec();
-	int32_t deltaUs = other.usec() - usec();
-	return 1000*deltaS + deltaUs/1000;
+	int32_t deltaNs = other.nsec() - nsec();
+	return 1000*deltaS + deltaNs/1000000;
 }
 	
 
@@ -89,7 +86,7 @@ ostream& operator<<(ostream& os, const Timeval& tv)
 
 ostream& operator<<(ostream& os, const struct timespec& ts)
 {
-	os << ts.tv_sec << "," << ts.tv_nsec;
+	os << ts.tv_sec << "," << ts.tv_nsec/1000;
 	return os;
 }
 

@@ -42,12 +42,12 @@ class Timeval {
 
 	private:
 
-	struct timeval mTimeval;
+	struct timespec mTimespec;
 
 	public:
 
-	/** Set the value to gettimeofday. */
-	void now() { gettimeofday(&mTimeval,NULL); }
+	/** Set the value to current time. */
+	void now() { clock_gettime(CLOCK_REALTIME, &mTimespec); }
 
 	/** Set the value to gettimeofday plus an offset. */
 	void future(unsigned ms);
@@ -55,16 +55,18 @@ class Timeval {
 	//@{
 	Timeval(unsigned sec, unsigned usec)
 	{
-		mTimeval.tv_sec = sec;
-		mTimeval.tv_usec = usec;
+		mTimespec.tv_sec = sec;
+		mTimespec.tv_nsec = usec*1000;
 	}
 
 	Timeval(const struct timeval& wTimeval)
-		:mTimeval(wTimeval)
-	{}
+	{
+		mTimespec.tv_sec = wTimeval.tv_sec;
+		mTimespec.tv_nsec = wTimeval.tv_sec*1000;
+	}
 
 	/**
-		Create a Timeval offset into the future.
+		Create a Timespec offset into the future.
 		@param offset milliseconds
 	*/
 	Timeval(unsigned offset=0) { future(offset); }
@@ -76,8 +78,9 @@ class Timeval {
 	/** Return total seconds. */
 	double seconds() const;
 
-	uint32_t sec() const { return mTimeval.tv_sec; }
-	uint32_t usec() const { return mTimeval.tv_usec; }
+	uint32_t sec() const { return mTimespec.tv_sec; }
+	uint32_t usec() const { return mTimespec.tv_nsec / 1000; }
+	uint32_t nsec() const { return mTimespec.tv_nsec; }
 
 	/** Return differnce from other (other-self), in ms. */
 	long delta(const Timeval& other) const;
@@ -88,11 +91,11 @@ class Timeval {
 	/** Remaining time in ms. */
 	long remaining() const { return -elapsed(); }
 
-	/** Return true if the time has passed, as per gettimeofday. */
+	/** Return true if the time has passed, as per clock_gettime(CLOCK_REALTIME). */
 	bool passed() const;
 
 	/** Add a given number of minutes to the time. */
-	void addMinutes(unsigned minutes) { mTimeval.tv_sec += minutes*60; }
+	void addMinutes(unsigned minutes) { mTimespec.tv_sec += minutes*60; }
 
 };
 
