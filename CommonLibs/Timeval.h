@@ -47,7 +47,7 @@ class Timeval {
 	public:
 
 	/** Set the value to current time. */
-	void now() { clock_gettime(CLOCK_REALTIME, &mTimespec); }
+	void now();
 
 	/** Set the value to gettimeofday plus an offset. */
 	void future(unsigned ms);

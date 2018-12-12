@@ -27,7 +27,16 @@
 
 #include "Timeval.h"
 
+extern "C" {
+#include <osmocom/core/timer.h>
+}
+
 using namespace std;
+
+void Timeval::now()
+{
+	osmo_clock_gettime(CLOCK_REALTIME, &mTimespec);
+}
 
 void Timeval::future(unsigned offset)
 {
