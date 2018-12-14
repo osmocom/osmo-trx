@@ -41,6 +41,24 @@ constexpr double LMSDevice::masterClockRate;
 #define LMS_MIN_BW_SUPPORTED 2.5e6 /* 2.5mHz, minimum supported by LMS */
 #define LMS_CALIBRATE_BW_HZ OSMO_MAX(GSM_CARRIER_BW, LMS_MIN_BW_SUPPORTED)
 
+static int compat_LMS_VCTCXORead(lms_device_t *dev, uint16_t *val, bool memory)
+{
+#if HAVE_LMS_VCTCXO_EEPROM_SAVING
+	return LMS_VCTCXORead(dev, val, memory);
+#else
+	return LMS_VCTCXORead(dev, val);
+#endif
+}
+
+static int compat_LMS_VCTCXOWrite(lms_device_t *dev, uint16_t val, bool memory)
+{
+#if HAVE_LMS_VCTCXO_EEPROM_SAVING
+	return LMS_VCTCXOWrite(dev, val, memory);
+#else
+	return LMS_VCTCXOWrite(dev, val);
+#endif
+}
+
 LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chans, double lo_offset,
 		     const std::vector<std::string>& tx_paths,
 		     const std::vector<std::string>& rx_paths):
@@ -195,10 +213,10 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	case REF_INTERNAL:
 		LOGC(DDEV, INFO) << "Setting Internal clock reference";
 		/* Ugly API: Selecting clock source implicit by writing to VCTCXO DAC ?!? */
-		if (LMS_VCTCXORead(m_lms_dev, &dac_val) < 0)
+		if (compat_LMS_VCTCXORead(m_lms_dev, &dac_val, false) < 0)
 			goto out_close;
 		LOGC(DDEV, INFO) << "Setting VCTCXO to " << dac_val;
-		if (LMS_VCTCXOWrite(m_lms_dev, dac_val) < 0)
+		if (compat_LMS_VCTCXOWrite(m_lms_dev, dac_val, false) < 0)
 			goto out_close;
 		break;
 	case REF_EXTERNAL:
