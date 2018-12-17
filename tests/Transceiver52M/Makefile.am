@@ -23,6 +23,7 @@ LMSDeviceTest_SOURCES = LMSDeviceTest.cpp
 LMSDeviceTest_LDFLAGS = $(LIBOSMOCORE_LIBS) $(LMS_LIBS)
 LMSDeviceTest_LDADD = \
 	$(top_builddir)/Transceiver52M/device/lms/libdevice.la \
-	$(COMMON_LA)
+	$(COMMON_LA) \
+	$(LMS_LIBS)
 LMSDeviceTest_CPPFLAGS = $(AM_CPPFLAGS) $(LMS_CFLAGS)
 endif
