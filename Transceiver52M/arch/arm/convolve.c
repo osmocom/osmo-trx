@@ -29,17 +29,15 @@
 int _base_convolve_real(float *x, int x_len,
 			float *h, int h_len,
 			float *y, int y_len,
-			int start, int len,
-			int step, int offset);
+			int start, int len);
 
 int _base_convolve_complex(float *x, int x_len,
 			   float *h, int h_len,
 			   float *y, int y_len,
-			   int start, int len,
-			   int step, int offset);
+			   int start, int len);
 
 int bounds_check(int x_len, int h_len, int y_len,
-		 int start, int len, int step);
+		 int start, int len);
 
 #ifdef HAVE_NEON
 /* Calls into NEON assembler */
@@ -69,35 +67,32 @@ void convolve_init(void)
 int convolve_real(float *x, int x_len,
 		  float *h, int h_len,
 		  float *y, int y_len,
-		  int start, int len,
-		  int step, int offset)
+		  int start, int len)
 {
 	void (*conv_func)(float *, float *, float *, int) = NULL;
 
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (bounds_check(x_len, h_len, y_len, start, len) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));
 
 #ifdef HAVE_NEON
-	if (step <= 4) {
-		switch (h_len) {
-		case 4:
-			conv_func = neon_conv_real4;
-			break;
-		case 8:
-			conv_func = neon_conv_real8;
-			break;
-		case 12:
-			conv_func = neon_conv_real12;
-			break;
-		case 16:
-			conv_func = neon_conv_real16;
-			break;
-		case 20:
-			conv_func = neon_conv_real20;
-			break;
-		}
+	switch (h_len) {
+	case 4:
+		conv_func = neon_conv_real4;
+		break;
+	case 8:
+		conv_func = neon_conv_real8;
+		break;
+	case 12:
+		conv_func = neon_conv_real12;
+		break;
+	case 16:
+		conv_func = neon_conv_real16;
+		break;
+	case 20:
+		conv_func = neon_conv_real20;
+		break;
 	}
 #endif
 	if (conv_func) {
@@ -107,7 +102,7 @@ int convolve_real(float *x, int x_len,
 		_base_convolve_real(x, x_len,
 				    h, h_len,
 				    y, y_len,
-				    start, len, step, offset);
+				    start, len);
 	}
 
 	return len;
@@ -118,18 +113,17 @@ int convolve_real(float *x, int x_len,
 int convolve_complex(float *x, int x_len,
 		     float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len,
-		     int step, int offset)
+		     int start, int len)
 {
 	void (*conv_func)(float *, float *, float *, int, int) = NULL;
 
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (bounds_check(x_len, h_len, y_len, start, len) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));
 
 #ifdef HAVE_NEON
-	if (step <= 4 && !(h_len % 4))
+	if (!(h_len % 4))
 		conv_func = neon_conv_cmplx_4n;
 #endif
 	if (conv_func) {
@@ -139,7 +133,7 @@ int convolve_complex(float *x, int x_len,
 		_base_convolve_complex(x, x_len,
 				       h, h_len,
 				       y, y_len,
-				       start, len, step, offset);
+				       start, len);
 	}
 
 	return len;

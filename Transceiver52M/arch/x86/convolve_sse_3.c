@@ -34,12 +34,12 @@
 void sse_conv_real4(const float *x, int x_len,
 		    const float *h, int h_len,
 		    float *y, int y_len,
-		    int start, int len, int step, int offset)
+		    int start, int len)
 {
 	/* NOTE: The parameter list of this function has to match the parameter
 	 * list of _base_convolve_real() in convolve_base.c. This specific
 	 * implementation, ignores some of the parameters of
-	 * _base_convolve_complex(), which are: x_len, y_len, offset, step */
+	 * _base_convolve_complex(), which are: x_len, y_len. */
 
 	__m128 m0, m1, m2, m3, m4, m5, m6, m7;
 
@@ -75,7 +75,7 @@ void sse_conv_real4(const float *x, int x_len,
 void sse_conv_real8(const float *x, int x_len,
 		    const float *h, int h_len,
 		    float *y, int y_len,
-		    int start, int len, int step, int offset)
+		    int start, int len)
 {
 	/* See NOTE in sse_conv_real4() */
 
@@ -126,7 +126,7 @@ void sse_conv_real8(const float *x, int x_len,
 void sse_conv_real12(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len, int step, int offset)
+		     int start, int len)
 {
 	/* See NOTE in sse_conv_real4() */
 
@@ -192,7 +192,7 @@ void sse_conv_real12(const float *x, int x_len,
 void sse_conv_real16(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len, int step, int offset)
+		     int start, int len)
 {
 	/* See NOTE in sse_conv_real4() */
 
@@ -271,7 +271,7 @@ void sse_conv_real16(const float *x, int x_len,
 void sse_conv_real20(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len, int step, int offset)
+		     int start, int len)
 {
 	/* See NOTE in sse_conv_real4() */
 
@@ -361,7 +361,7 @@ void sse_conv_real20(const float *x, int x_len,
 void sse_conv_real4n(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len, int step, int offset)
+		     int start, int len)
 {
 	/* See NOTE in sse_conv_real4() */
 
@@ -408,12 +408,12 @@ void sse_conv_real4n(const float *x, int x_len,
 void sse_conv_cmplx_4n(const float *x, int x_len,
 		       const float *h, int h_len,
 		       float *y, int y_len,
-		       int start, int len, int step, int offset)
+		       int start, int len)
 {
 	/* NOTE: The parameter list of this function has to match the parameter
 	 * list of _base_convolve_complex() in convolve_base.c. This specific
 	 * implementation, ignores some of the parameters of
-	 * _base_convolve_complex(), which are: x_len, y_len, offset, step. */
+	 * _base_convolve_complex(), which are: x_len, y_len. */
 
 	__m128 m0, m1, m2, m3, m4, m5, m6, m7;
 
@@ -466,7 +466,7 @@ void sse_conv_cmplx_4n(const float *x, int x_len,
 void sse_conv_cmplx_8n(const float *x, int x_len,
 		       const float *h, int h_len,
 		       float *y, int y_len,
-		       int start, int len, int step, int offset)
+		       int start, int len)
 {
 	/* See NOTE in sse_conv_cmplx_4n() */
 

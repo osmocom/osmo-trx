@@ -143,7 +143,7 @@ int Resampler::rotate(const float *in, size_t in_len, float *out, size_t out_len
 		convolve_real(in, in_len,
 			      reinterpret_cast<float *>(partitions[path]),
 			      filt_len, &out[2 * i], out_len - i,
-			      n, 1, 1, 0);
+			      n, 1);
 	}
 
 	return out_len;

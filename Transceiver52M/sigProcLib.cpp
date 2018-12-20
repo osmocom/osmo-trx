@@ -285,8 +285,7 @@ enum ConvType {
 
 static signalVector *convolve(const signalVector *x, const signalVector *h,
                               signalVector *y, ConvType spanType,
-                              size_t start = 0, size_t len = 0,
-                              size_t step = 1, int offset = 0)
+                              size_t start = 0, size_t len = 0)
 {
   int rc;
   size_t head = 0, tail = 0;
@@ -354,22 +353,22 @@ static signalVector *convolve(const signalVector *x, const signalVector *h,
     rc = convolve_real((float *) _x->begin(), _x->size(),
                        (float *) h->begin(), h->size(),
                        (float *) y->begin(), y->size(),
-                       start, len, step, offset);
+                       start, len);
   } else if (!h->isReal() && h->isAligned()) {
     rc = convolve_complex((float *) _x->begin(), _x->size(),
                           (float *) h->begin(), h->size(),
                           (float *) y->begin(), y->size(),
-                          start, len, step, offset);
+                          start, len);
   } else if (h->isReal() && !h->isAligned()) {
     rc = base_convolve_real((float *) _x->begin(), _x->size(),
                             (float *) h->begin(), h->size(),
                             (float *) y->begin(), y->size(),
-                            start, len, step, offset);
+                            start, len);
   } else if (!h->isReal() && !h->isAligned()) {
     rc = base_convolve_complex((float *) _x->begin(), _x->size(),
                                (float *) h->begin(), h->size(),
                                (float *) y->begin(), y->size(),
-                               start, len, step, offset);
+                               start, len);
   } else {
     rc = -1;
   }
@@ -1482,7 +1481,7 @@ static int detectBurst(const signalVector &burst,
 
   /* Correlate */
   if (!convolve(corr_in, sync->sequence, &corr,
-                CUSTOM, start, len, 1, 0)) {
+                CUSTOM, start, len)) {
     delete dec;
     return -1;
   }
