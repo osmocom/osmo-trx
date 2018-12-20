@@ -62,21 +62,17 @@ static void test_convolve_complex(int h_len)
 	int y_len;
 	int start;
 	int len;
-	int step;
-	int offset;
 
 	x_len=34;
 	y_len=26;
 	start=8;
 	len=26;
-	step=1;
-	offset=1;
 	reset_testvec(0);
 	dump_floats(x,x_len,"x");
 	printf("\n");
 	dump_floats(h,h_len,"h");
 	printf("\n");
-	convolve_complex(x, x_len, h, h_len, y, y_len, start, len, step, offset);
+	convolve_complex(x, x_len, h, h_len, y, y_len, start, len);
 	dump_floats(y,y_len,"y");
 	printf("\n");
 }
@@ -88,21 +84,17 @@ static void test_convolve_real(int h_len)
 	int y_len;
 	int start;
 	int len;
-	int step;
-	int offset;
 
 	x_len=34;
 	y_len=26;
 	start=8;
 	len=26;
-	step=1;
-	offset=1;
 	reset_testvec(0);
-	dump_floats(x,x_len,"x");
+	dump_floats(x-30,2*x_len+30,"x");
 	printf("\n");
-	dump_floats(h,h_len,"h");
+	dump_floats(h,2*h_len,"h");
 	printf("\n");
-	convolve_real(x, x_len, h, h_len, y, y_len, start, len, step, offset);
+	convolve_real(x, x_len, h, h_len, y, y_len, start, len);
 	dump_floats(y,y_len,"y");
 	printf("\n");
 }

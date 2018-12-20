@@ -88,7 +88,7 @@ bool Channelizer::rotate(const float *in, size_t len)
 		convolve_real(hInputs[i], blockLen,
 			      subFilters[i], hLen,
 			      hOutputs[i], blockLen,
-			      0, blockLen, 1, 0);
+			      0, blockLen);
 	}
 
 	cxvec_fft(fftHandle);

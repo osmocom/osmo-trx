@@ -41,17 +41,17 @@ static void mac_cmplx(const float *x, const float *h, float *y)
 
 /* Base vector complex-complex multiply and accumulate */
 static void mac_real_vec_n(const float *x, const float *h, float *y,
-			   int len, int step, int offset)
+			   int len)
 {
-	for (int i = offset; i < len; i += step)
+	for (int i=0; i<len; i++)
 		mac_real(&x[2 * i], &h[2 * i], y);
 }
 
 /* Base vector complex-complex multiply and accumulate */
 static void mac_cmplx_vec_n(const float *x, const float *h, float *y,
-			    int len, int step, int offset)
+			    int len)
 {
-	for (int i = offset; i < len; i += step)
+	for (int i=0; i<len; i++)
 		mac_cmplx(&x[2 * i], &h[2 * i], y);
 }
 
@@ -59,14 +59,12 @@ static void mac_cmplx_vec_n(const float *x, const float *h, float *y,
 int _base_convolve_real(const float *x, int x_len,
 			const float *h, int h_len,
 			float *y, int y_len,
-			int start, int len,
-			int step, int offset)
+			int start, int len)
 {
 	for (int i = 0; i < len; i++) {
 		mac_real_vec_n(&x[2 * (i - (h_len - 1) + start)],
 			       h,
-			       &y[2 * i], h_len,
-			       step, offset);
+			       &y[2 * i], h_len);
 	}
 
 	return len;
@@ -76,14 +74,13 @@ int _base_convolve_real(const float *x, int x_len,
 int _base_convolve_complex(const float *x, int x_len,
 			   const float *h, int h_len,
 			   float *y, int y_len,
-			   int start, int len,
-			   int step, int offset)
+			   int start, int len)
 {
 	for (int i = 0; i < len; i++) {
 		mac_cmplx_vec_n(&x[2 * (i - (h_len - 1) + start)],
 				h,
 				&y[2 * i],
-				h_len, step, offset);
+				h_len);
 	}
 
 	return len;
@@ -91,10 +88,10 @@ int _base_convolve_complex(const float *x, int x_len,
 
 /* Buffer validity checks */
 int bounds_check(int x_len, int h_len, int y_len,
-		 int start, int len, int step)
+		 int start, int len)
 {
 	if ((x_len < 1) || (h_len < 1) ||
-	    (y_len < 1) || (len < 1) || (step < 1)) {
+	    (y_len < 1) || (len < 1)) {
 		fprintf(stderr, "Convolve: Invalid input\n");
 		return -1;
 	}
@@ -113,10 +110,9 @@ int bounds_check(int x_len, int h_len, int y_len,
 int base_convolve_real(const float *x, int x_len,
 		       const float *h, int h_len,
 		       float *y, int y_len,
-		       int start, int len,
-		       int step, int offset)
+		       int start, int len)
 {
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (bounds_check(x_len, h_len, y_len, start, len) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));
@@ -124,17 +120,16 @@ int base_convolve_real(const float *x, int x_len,
 	return _base_convolve_real(x, x_len,
 				   h, h_len,
 				   y, y_len,
-				   start, len, step, offset);
+				   start, len);
 }
 
 /* API: Non-aligned (no SSE) complex-complex */
 int base_convolve_complex(const float *x, int x_len,
 			  const float *h, int h_len,
 			  float *y, int y_len,
-			  int start, int len,
-			  int step, int offset)
+			  int start, int len)
 {
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (bounds_check(x_len, h_len, y_len, start, len) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));
@@ -142,7 +137,7 @@ int base_convolve_complex(const float *x, int x_len,
 	return _base_convolve_complex(x, x_len,
 				      h, h_len,
 				      y, y_len,
-				      start, len, step, offset);
+				      start, len);
 }
 
 /* Aligned filter tap allocation */

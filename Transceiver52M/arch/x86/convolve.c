@@ -30,25 +30,25 @@
 /* Architecture dependant function pointers */
 struct convolve_cpu_context {
 	void (*conv_cmplx_4n) (const float *, int, const float *, int, float *,
-			       int, int, int, int, int);
+			       int, int, int);
 	void (*conv_cmplx_8n) (const float *, int, const float *, int, float *,
-			       int, int, int, int, int);
+			       int, int, int);
 	void (*conv_cmplx) (const float *, int, const float *, int, float *,
-			    int, int, int, int, int);
+			    int, int, int);
 	void (*conv_real4) (const float *, int, const float *, int, float *,
-			    int, int, int, int, int);
+			    int, int, int);
 	void (*conv_real8) (const float *, int, const float *, int, float *,
-			    int, int, int, int, int);
+			    int, int, int);
 	void (*conv_real12) (const float *, int, const float *, int, float *,
-			     int, int, int, int, int);
+			     int, int, int);
 	void (*conv_real16) (const float *, int, const float *, int, float *,
-			     int, int, int, int, int);
+			     int, int, int);
 	void (*conv_real20) (const float *, int, const float *, int, float *,
-			     int, int, int, int, int);
+			     int, int, int);
 	void (*conv_real4n) (const float *, int, const float *, int, float *,
-			     int, int, int, int, int);
+			     int, int, int);
 	void (*conv_real) (const float *, int, const float *, int, float *, int,
-			   int, int, int, int);
+			   int, int);
 };
 static struct convolve_cpu_context c;
 
@@ -56,17 +56,15 @@ static struct convolve_cpu_context c;
 int _base_convolve_real(const float *x, int x_len,
 			const float *h, int h_len,
 			float *y, int y_len,
-			int start, int len,
-			int step, int offset);
+			int start, int len);
 
 int _base_convolve_complex(const float *x, int x_len,
 			   const float *h, int h_len,
 			   float *y, int y_len,
-			   int start, int len,
-			   int step, int offset);
+			   int start, int len);
 
 int bounds_check(int x_len, int h_len, int y_len,
-		 int start, int len, int step);
+		 int start, int len);
 
 /* API: Initalize convolve module */
 void convolve_init(void)
@@ -99,46 +97,37 @@ void convolve_init(void)
 /* API: Aligned complex-real */
 int convolve_real(const float *x, int x_len,
 		  const float *h, int h_len,
-		  float *y, int y_len, int start, int len, int step, int offset)
+		  float *y, int y_len, int start, int len)
 {
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (bounds_check(x_len, h_len, y_len, start, len) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));
 
-	if (step <= 4) {
-		switch (h_len) {
-		case 4:
-			c.conv_real4(x, x_len, h, h_len, y, y_len, start, len,
-				     step, offset);
-			break;
-		case 8:
-			c.conv_real8(x, x_len, h, h_len, y, y_len, start, len,
-				     step, offset);
-			break;
-		case 12:
-			c.conv_real12(x, x_len, h, h_len, y, y_len, start, len,
-				      step, offset);
-			break;
-		case 16:
-			c.conv_real16(x, x_len, h, h_len, y, y_len, start, len,
-				      step, offset);
-			break;
-		case 20:
-			c.conv_real20(x, x_len, h, h_len, y, y_len, start, len,
-				      step, offset);
-			break;
-		default:
-			if (!(h_len % 4))
-				c.conv_real4n(x, x_len, h, h_len, y, y_len,
-					      start, len, step, offset);
-			else
-				c.conv_real(x, x_len, h, h_len, y, y_len, start,
-					    len, step, offset);
-		}
-	} else
-		c.conv_real(x, x_len, h, h_len, y, y_len, start, len, step,
-			    offset);
+	switch (h_len) {
+	case 4:
+		c.conv_real4(x, x_len, h, h_len, y, y_len, start, len);
+		break;
+	case 8:
+		c.conv_real8(x, x_len, h, h_len, y, y_len, start, len);
+		break;
+	case 12:
+		c.conv_real12(x, x_len, h, h_len, y, y_len, start, len);
+		break;
+	case 16:
+		c.conv_real16(x, x_len, h, h_len, y, y_len, start, len);
+		break;
+	case 20:
+		c.conv_real20(x, x_len, h, h_len, y, y_len, start, len);
+		break;
+	default:
+		if (!(h_len % 4))
+			c.conv_real4n(x, x_len, h, h_len, y, y_len,
+				      start, len);
+		else
+			c.conv_real(x, x_len, h, h_len, y, y_len, start,
+				    len);
+	}
 
 	return len;
 }
@@ -147,26 +136,19 @@ int convolve_real(const float *x, int x_len,
 int convolve_complex(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len, int step, int offset)
+		     int start, int len)
 {
-	if (bounds_check(x_len, h_len, y_len, start, len, step) < 0)
+	if (bounds_check(x_len, h_len, y_len, start, len) < 0)
 		return -1;
 
 	memset(y, 0, len * 2 * sizeof(float));
 
-	if (step <= 4) {
-		if (!(h_len % 8))
-			c.conv_cmplx_8n(x, x_len, h, h_len, y, y_len, start,
-					len, step, offset);
-		else if (!(h_len % 4))
-			c.conv_cmplx_4n(x, x_len, h, h_len, y, y_len, start,
-					len, step, offset);
-		else
-			c.conv_cmplx(x, x_len, h, h_len, y, y_len, start, len,
-				     step, offset);
-	} else
-		c.conv_cmplx(x, x_len, h, h_len, y, y_len, start, len, step,
-			     offset);
+	if (!(h_len % 8))
+		c.conv_cmplx_8n(x, x_len, h, h_len, y, y_len, start, len);
+	else if (!(h_len % 4))
+		c.conv_cmplx_4n(x, x_len, h, h_len, y, y_len, start, len);
+	else
+		c.conv_cmplx(x, x_len, h, h_len, y, y_len, start, len);
 
 	return len;
 }

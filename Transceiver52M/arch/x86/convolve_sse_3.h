@@ -23,46 +23,46 @@
 void sse_conv_real4(const float *x, int x_len,
 		    const float *h, int h_len,
 		    float *y, int y_len,
-		    int start, int len, int step, int offset);
+		    int start, int len);
 
 /* 8-tap SSE complex-real convolution */
 void sse_conv_real8(const float *x, int x_len,
 		    const float *h, int h_len,
 		    float *y, int y_len,
-		    int start, int len, int step, int offset);
+		    int start, int len);
 
 /* 12-tap SSE complex-real convolution */
 void sse_conv_real12(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len, int step, int offset);
+		     int start, int len);
 
 /* 16-tap SSE complex-real convolution */
 void sse_conv_real16(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len, int step, int offset);
+		     int start, int len);
 
 /* 20-tap SSE complex-real convolution */
 void sse_conv_real20(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len, int step, int offset);
+		     int start, int len);
 
 /* 4*N-tap SSE complex-real convolution */
 void sse_conv_real4n(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
-		     int start, int len, int step, int offset);
+		     int start, int len);
 
 /* 4*N-tap SSE complex-complex convolution */
 void sse_conv_cmplx_4n(const float *x, int x_len,
 		       const float *h, int h_len,
 		       float *y, int y_len,
-		       int start, int len, int step, int offset);
+		       int start, int len);
 
 /* 8*N-tap SSE complex-complex convolution */
 void sse_conv_cmplx_8n(const float *x, int x_len,
 		       const float *h, int h_len,
 		       float *y, int y_len,
-		       int start, int len, int step, int offset);
+		       int start, int len);
