@@ -92,8 +92,8 @@ neon_conv_real12:
 	vld2.32     {q8-q9}, [r4], r6
 	vld2.32   {q10-q11}, [r5], r6
 #ifdef HAVE_NEON_FMA
-	vfma.f32         q1,   q6, q0
-	vfma.f32         q3,   q7, q0
+	vmul.f32         q1,   q6, q0
+	vmul.f32         q3,   q7, q0
 	vfma.f32         q1,   q8, q2
 	vfma.f32         q3,   q9, q2
 	vfma.f32         q1,  q10, q4
