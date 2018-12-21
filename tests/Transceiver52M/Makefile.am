@@ -2,7 +2,7 @@ include $(top_srcdir)/Makefile.common
 
 AM_CFLAGS = -Wall -I$(top_srcdir)/Transceiver52M -I$(top_srcdir)/Transceiver52M/arch/common $(STD_DEFINES_AND_INCLUDES) -g
 
-EXTRA_DIST = convolve_test.ok
+EXTRA_DIST = convolve_test.ok convolve_test_golden.h
 
 noinst_PROGRAMS = \
 	convolve_test
