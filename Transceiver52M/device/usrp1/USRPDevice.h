@@ -55,7 +55,6 @@ private:
   unsigned long long samplesWritten;	///< number of samples sent to USRP
 
   bool started;			///< flag indicates USRP has started
-  bool skipRx;			///< set if USRP is transmit-only.
 
   static const unsigned int currDataSize_log2 = 21;
   static const unsigned long currDataSize = (1 << currDataSize_log2);

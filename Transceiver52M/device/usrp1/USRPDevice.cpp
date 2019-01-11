@@ -100,7 +100,6 @@ int USRPDevice::open(const std::string &, int, bool)
   string rbf = "std_inband.rbf";
   //string rbf = "inband_1rxhb_1tx.rbf";
   m_uRx.reset();
-  if (!skipRx) {
   try {
     m_uRx = usrp_standard_rx_sptr(usrp_standard_rx::make(
                                         0, decimRate * tx_sps, 1, -1,
@@ -121,7 +120,6 @@ int USRPDevice::open(const std::string &, int, bool)
                << ", desired clock freq = " << masterClockRate;
     m_uRx.reset();
     return -1;
-  }
   }
 
   try {
@@ -145,7 +143,7 @@ int USRPDevice::open(const std::string &, int, bool)
     return -1;
   }
 
-  if (!skipRx) m_uRx->stop();
+  m_uRx->stop();
   m_uTx->stop();
 
 #endif
@@ -188,10 +186,10 @@ bool USRPDevice::start()
 {
   LOGC(DDEV, INFO) << "starting USRP...";
 #ifndef SWLOOPBACK
-  if (!m_uRx && !skipRx) return false;
+  if (!m_uRx) return false;
   if (!m_uTx) return false;
 
-  if (!skipRx) m_uRx->stop();
+  m_uRx->stop();
   m_uTx->stop();
 
   writeLock.lock();
@@ -221,10 +219,7 @@ bool USRPDevice::start()
   isAligned = false;
 
 
-  if (!skipRx)
   started = (m_uRx->start() && m_uTx->start());
-  else
-  started = m_uTx->start();
   return started;
 #else
   gettimeofday(&lastReadTime,NULL);
