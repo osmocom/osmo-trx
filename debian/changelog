@@ -1,3 +1,149 @@
+osmo-trx (1.0.0) unstable; urgency=medium
+
+  [ Pau Espin Pedrol ]
+  * doc: examples: Add umtrx sample config
+  * UHDDevice: Fix setup failure with LimeSuite > 18.04.1
+  * examples: Set rt-prio 18 and print file basename
+  * lms: Several improvements and compilation/runtime fixes
+  * build: Add support for LimeSuite device backend
+  * LMSDevice: Set correct values for Max{Tx,Rx}Gain
+  * LMSDevice: Fix setup failure with LimeSuite > 18.04.1
+  * lms: Makefile.am: Reorder params to fix link issue
+  * lms: Check LPBFW to set is within supported range
+  * debian: Add package osmo-trx-lms
+  * contrib: Add systemd services for all backends
+  * debian: Add cfg file examples for osmo-trx-{lms,uhd}
+  * Add -V param to print version
+  * lms: Allow values diff than 34dB to be set by setRxGain()
+  * Use correct paths when installing example files
+  * debian: Enable build of osmo-trx-lms
+  * debian: Explicitly enable osmo-trx-uhd build
+  * configure.ac: Fix typo in with-lms help string
+  * vty: Fix typo in gpsdo clock reference type
+  * configure.ac: Add --enable-werror option
+  * Logger: Disable pthread cancel point inside Logger destructor
+  * cosmetic: Fix trailing whitespace
+  * radioInterface: forward errors from RadioDevice to Transceiver in recv path
+  * lms: Return error on device read timeout
+  * osmo-trx: Add osmo_signal to stop whole transceiver chain correctly on error
+  * radioInterface: Fix variable storing integer return value
+  * configure.ac: Specify default language as C++
+  * UHHDDevice: Replace deprecated header uhd/utils/thread_priority.hpp
+  * SigProcLib: Use available copyTo Vector API instead of memcopy
+  * cosmetic: Fix trailing whitespace in several files
+  * radioInterfaceMulti:pullBuffer: Sanely convert float array to complex array
+  * Vector: Copy arrays in a sane way for non-trivially copyable types
+  * jenkins.sh: Add --enable-werror flag to osmo-trx configure step
+  * Install systemd services with autotools
+  * Install sample cfg file to /etc/osmocom
+  * cosmetic: Use proper whitespace in several for loops
+  * Use pthread_setname_np to name threads
+  * CommonLibs/Makefile.am: Specify libcommon_la_LIBADD
+  * Transciever: Log values causing Tx underrun
+  * examples: Use logging level 'set-all' instead of 'all'
+  * jenkins.sh: Enable build of osmo-trx-lms
+  * ChannelizerBase: Fix ASan alloc-dealloc-mismatch
+  * UHDDevice: setRxGain on chan 0 when using multi-arfcn
+  * lms: Use LimeSuite.h log level defines instead of hardcoded values
+  * lms: Apply LMS->OSMO log level conversion
+  * Introduce OsmoTRX manual
+  * Introduce chapter trx_if.adoc and add it to OsmoTRX and OsmoBTS
+  * trx: Add reference to project wiki page in overfiew section
+  * trx: Add Hardware architecture support section
+  * trx: Add Hardware device support section
+  * osmotrx: Split Device specific section from backend one
+  * osmotrx: Write initial documentation for several supported devices
+  * osmotrx: configuration: Add section to document multi-arfcn feature
+  * osmotrx: Create a common chapter for section documenting backends
+  * osmotrx: Introduce code architecture chapter
+  * lms: Fix start after stop of device
+  * lms: Destroy streams on device stop
+  * radioInterface: Fix memleak during close()
+  * PointerFIFO: Fix memleak of ListNode
+  * lms: Make sure LMS_Close is called when Device is torn down
+  * osmo-trx: Change some lines to use libosmocore logging instead of cout
+  * lms: Close device on LMS_Init failure
+  * SigProcLib: Improve Vector buffer allocation mess
+  * lms: Allow setting Tx/RxGain for chan!=0
+  * lms: Allow setting Tx/RxFreq for lchan!=0
+  * lms: Improve Set{Rx,Tx}{Gain,Freq} logging
+  * transceiver: log chan on CTRL command received
+  * Add TRXCTRL log category
+  * transceiver: Log TRXCTRL iface responses towards osmo-bts-trx
+  * lms: Move {under,over}run checks into separate method
+  * lms: Do {under,over}run checks even if LMS_RecvStream fails
+  * Timeval: passed() returns true if time is equal
+  * Timeval: Move implementation to use clock_gettime and timespec
+  * Timeval: Move to osmo_clock_gettime
+  * TimevalTest: Make test deterministic with fake time
+  * lms: Fix build against LimeSuite > 18.10
+  * configure.ac: check boost only if USRP1 support is enabled
+
+  [ Vadim Yanitskiy ]
+  * trx_vty.c: fix: use CONFIG_NODE as parent by default
+  * device/lms/LMSDevice.cpp: fix compilation warning
+  * sigProcLib: introduce both TS1 and TS2 RACH synch. sequences
+  * sigProcLib: add a CorrType for extended (11-bit) RACH
+
+  [ Harald Welte ]
+  * Initial work towards direct LimeSuite support in OsmoTRX
+  * update .gitignore to include osmo-trx-lms
+  * LMSDevice: Call LMS_Init() before setting sample rate
+  * LMSDevice: Print sample rate range + actual sample rate after setting it
+  * LMSDevice: Typo fix: s/Internal/External
+  * LMSDevice: Set low-pass filters to smallest possible option
+  * LMSDevice: Fix initial timestamp offset of 2500
+  * LMS_Device: Set ts_offset to 0.
+  * LMSDevice: Reduce Rx logging verbosity: Only log unexpected timestamps
+  * move set_antennas() from UHD to generic radioDevice base class
+  * lms: Fix support for rx_paths / tx_paths
+  * lms: Call set_antennas() during open() method
+  * radioDevice: Move tx_sps from derived into base class
+  * radioDevice: better encapsulation in base class
+  * lms: Fix coding style
+  * lms: Fail in case of unsupported configuration
+  * usrp1: Fail in case of unsupported configuration
+  * Fix config file saving of {tx,rx}-path VTY config strings
+  * logging: Introduce new "DDEV" category for device-specific code
+  * update git-version-gen to generate proper version numbers
+  * ensure well-formed example config files
+  * SocketsTest.testReaderIP(): Zero terminate received buffer
+  * trx_validate_config(): Fix validation of rx_sps
+  * vty-ref: Update URI of docbook 5.0 schema
+  * lms: User correct scale factor for transmit samples
+  * lms: Set Rx gain to midpoint, as comment suggests.
+  * usrp1: Remove uninitialized skipRx logic
+  * usrp1: Fix formatting of log message (missing space)
+  * cosmetic: Don't call the SDR "USRP" in error message
+
+  [ Zydrunas Tamosevicius ]
+  * lms: Use same timestamp offset like when using LimeSDR via UHD
+  * lms: Reduce log level of "send buffer of len ..."
+  * lms: fix LMS_StartStream() handling for multiple channels
+  * lms: Reduce Rx gain from 47 to 34 dB
+
+  [ Alexander Couzens ]
+  * debian: add patches for debian8
+
+  [ Oliver Smith ]
+  * Add long parameters (--help, --version, ...)
+  * build manuals moved here from osmo-gsm-manuals.git
+  * Fix DISTCHECK_CONFIGURE_FLAGS override
+  * contrib/jenkins.sh: build and publish manuals
+  * jenkins.sh: run "make distcheck"
+  * contrib: fix makedistcheck with disabled systemd
+  * osmo-trx.cpp: move comma_delimited_to_vector() to Utils.cpp
+  * LMSDevice: make use of dev-args in osmo-trx.cfg
+  * LMSDeviceTest: fix link errors on OBS
+
+  [ Neels Hofmeyr ]
+  * Importing history from osmo-gsm-manuals.git
+
+  [ d0gtail ]
+  * UHDDevice: log exception information on device open failure
+
+ -- Harald Welte <laforge@gnumonks.org>  Sun, 20 Jan 2019 19:35:04 +0100
+
 osmo-trx (0.4.0) unstable; urgency=medium
 
   [ Neels Hofmeyr ]
