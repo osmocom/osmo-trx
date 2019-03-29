@@ -164,6 +164,12 @@ int makeTransceiver(struct trx_ctx *trx, RadioInterface *radio)
 
 static void sig_handler(int signo)
 {
+
+	if (gshutdown)
+		/* We are in the middle of shutdown process, avoid any kind of extra
+		   action like printing */
+		return;
+
 	fprintf(stdout, "signal %d received\n", signo);
 	switch (signo) {
 	case SIGINT:
