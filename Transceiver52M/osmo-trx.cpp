@@ -34,6 +34,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <sys/signalfd.h>
 
 #include <GSMCommon.h>
 #include <Logger.h>
@@ -66,6 +67,7 @@ extern "C" {
 
 static char* config_file = (char*)DEFAULT_CONFIG_FILE;
 
+struct osmo_fd signal_ofd;
 volatile bool gshutdown = false;
 
 static void *tall_trx_ctx;
@@ -185,20 +187,57 @@ static void sig_handler(int signo)
 	case SIGUSR2:
 		talloc_report_full(tall_trx_ctx, stderr);
 		break;
+	case SIGHUP:
+		log_targets_reopen();
 	default:
 		break;
 	}
+
+}
+
+static int signalfd_callback(struct osmo_fd *ofd, unsigned int what)
+{
+	struct signalfd_siginfo fdsi;
+	ssize_t s;
+
+	s = read(ofd->fd, &fdsi, sizeof(struct signalfd_siginfo));
+	if (s < 0) {
+		LOG(FATAL) << "Failed to read from signalfd ("<< ofd->fd << "): " << errno;
+		gshutdown = true;
+		return 0;
+	}
+	sig_handler(fdsi.ssi_signo);
+	return 0;
 }
 
 static void setup_signal_handlers()
 {
-	/* Handle keyboard interrupt SIGINT */
-	signal(SIGINT, &sig_handler);
-	signal(SIGTERM, &sig_handler);
+	sigset_t set;
+	int sfd;
+
 	signal(SIGABRT, &sig_handler);
-	signal(SIGUSR1, &sig_handler);
-	signal(SIGUSR2, &sig_handler);
 	osmo_init_ignore_signals();
+
+	/* Other threads created by this thread (main) will inherit a copy of the
+	signal mask. */
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGTERM);
+	sigaddset(&set, SIGUSR1);
+	sigaddset(&set, SIGUSR2);
+	sigaddset(&set, SIGHUP);
+	if (pthread_sigmask(SIG_BLOCK, &set, NULL)) {
+		fprintf(stderr, "pthread_sigmask() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if ((sfd = signalfd(-1, &set, 0)) == -1) {
+		fprintf(stderr, "signalfd() failed (%d).\n", errno);
+		exit(EXIT_FAILURE);
+	}
+
+	osmo_fd_setup(&signal_ofd, sfd, OSMO_FD_READ, signalfd_callback, NULL, 0);
+	osmo_fd_register(&signal_ofd);
 }
 
 static void print_help()
@@ -594,5 +633,7 @@ int main(int argc, char *argv[])
 
 	trx_stop();
 
+	osmo_fd_unregister(&signal_ofd);
+	osmo_fd_close(&signal_ofd);
 	return 0;
 }
