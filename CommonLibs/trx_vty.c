@@ -236,12 +236,16 @@ DEFUN(cfg_multi_arfcn, cfg_multi_arfcn_cmd,
 
 	if (strcmp("disable", argv[0]) == 0) {
 		trx->cfg.multi_arfcn = false;
-	} else if (strcmp("enable", argv[0]) == 0) {
-		trx->cfg.multi_arfcn = true;
-	} else {
+		return CMD_SUCCESS;
+	}
+
+	if (trx->cfg.num_chans > TRX_MCHAN_MAX) {
+		vty_out(vty, "Up to %i channels are supported for multi-TRX mode%s",
+			TRX_MCHAN_MAX, VTY_NEWLINE);
 		return CMD_WARNING;
 	}
 
+	trx->cfg.multi_arfcn = true;
 	return CMD_SUCCESS;
 }
 
@@ -354,7 +358,12 @@ DEFUN(cfg_chan, cfg_chan_cmd,
 	if (idx >= TRX_CHAN_MAX) {
 		vty_out(vty, "Chan list full.%s", VTY_NEWLINE);
 		return CMD_WARNING;
+	} else if (trx->cfg.multi_arfcn && trx->cfg.num_chans >= TRX_MCHAN_MAX) {
+		vty_out(vty, "Up to %i channels are supported for multi-TRX mode%s",
+			TRX_MCHAN_MAX, VTY_NEWLINE);
+		return CMD_WARNING;
 	}
+
 	if (trx->cfg.num_chans < idx) { /* Unexisting or creating non-consecutive */
 		vty_out(vty, "Non-existent or non-consecutive chan %d.%s",
 				idx, VTY_NEWLINE);

@@ -6,7 +6,10 @@
 
 extern struct vty_app_info g_vty_info;
 
+/* Maximum number of physical RF channels */
 #define TRX_CHAN_MAX 8
+/* Maximum number of carriers in multi-ARFCN mode */
+#define TRX_MCHAN_MAX 3
 
 /* Samples-per-symbol for downlink path
  *     4 - Uses precision modulator (more computation, less distortion)

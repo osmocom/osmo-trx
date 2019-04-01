@@ -411,7 +411,7 @@ bad_config:
 
 int trx_validate_config(struct trx_ctx *trx)
 {
-	if (trx->cfg.multi_arfcn && trx->cfg.num_chans > 5) {
+	if (trx->cfg.multi_arfcn && trx->cfg.num_chans > TRX_MCHAN_MAX) {
 		LOG(ERROR) << "Unsupported number of channels";
 		return -1;
 	}
