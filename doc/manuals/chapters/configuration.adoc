@@ -46,7 +46,7 @@ Multi-ARFCN support is available since osmo-trx release `0.2.0`, and it was
 added specifically in commit `76764278169d252980853251daeb9f1ba0c246e1`.
 
 This feature is useful for instance if you want to run more than 1 TRX with an
-Ettus B200 device, or 3 TRX with an Ettus B210 device, since they support only 1
+Ettus B200 device, or 2 TRX with an Ettus B210 device, since they support only 1
 and 2 physical RF channels respectively. No device from other providers or even
 other devices than B200 and B210 from Ettus are known to support this feature.
 
