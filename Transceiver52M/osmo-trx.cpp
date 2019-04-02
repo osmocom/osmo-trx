@@ -237,7 +237,10 @@ static void setup_signal_handlers()
 	}
 
 	osmo_fd_setup(&signal_ofd, sfd, OSMO_FD_READ, signalfd_callback, NULL, 0);
-	osmo_fd_register(&signal_ofd);
+	if (osmo_fd_register(&signal_ofd) < 0) {
+		fprintf(stderr, "osmo_fd_register() failed.\n");
+		exit(EXIT_FAILURE);
+	}
 }
 
 static void print_help()
