@@ -153,8 +153,8 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 {
 	//lms_info_str_t dev_str;
 	lms_info_str_t* info_list;
-	lms_range_t range_lpfbw_rx, range_lpfbw_tx, range_sr;
-	float_type sr_host, sr_rf, lpfbw_rx, lpfbw_tx;
+	lms_range_t range_sr;
+	float_type sr_host, sr_rf;
 	uint16_t dac_val;
 	unsigned int i, n;
 	int rc, dev_id;
@@ -244,34 +244,9 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	}
 
-	if (LMS_GetLPFBWRange(m_lms_dev, LMS_CH_RX, &range_lpfbw_rx))
-		goto out_close;
-	print_range("LPFBWRange Rx", &range_lpfbw_rx);
-	if (LMS_GetLPFBWRange(m_lms_dev, LMS_CH_RX, &range_lpfbw_tx))
-		goto out_close;
-	print_range("LPFBWRange Tx", &range_lpfbw_tx);
-	lpfbw_rx = OSMO_MIN(OSMO_MAX(1.4001e6, range_lpfbw_rx.min), range_lpfbw_rx.max);
-	lpfbw_tx = OSMO_MIN(OSMO_MAX(5.2e6, range_lpfbw_tx.min), range_lpfbw_tx.max);
-
-	LOGC(DDEV, INFO) << "LPFBW: Rx=" << lpfbw_rx << " Tx=" << lpfbw_tx;
-
 	if (!set_antennas()) {
 		LOGC(DDEV, ALERT) << "LMS antenna setting failed";
 		return -1;
-	}
-
-	/* Perform Rx and Tx calibration */
-	for (i=0; i<chans; i++) {
-		LOGC(DDEV, INFO) << "Setting LPFBW chan " << i;
-		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_RX, i, lpfbw_rx) < 0)
-			goto out_close;
-		if (LMS_SetLPFBW(m_lms_dev, LMS_CH_TX, i, lpfbw_tx) < 0)
-			goto out_close;
-		LOGC(DDEV, INFO) << "Calibrating chan " << i;
-		if (LMS_Calibrate(m_lms_dev, LMS_CH_RX, i, LMS_CALIBRATE_BW_HZ, 0) < 0)
-			goto out_close;
-		if (LMS_Calibrate(m_lms_dev, LMS_CH_TX, i, LMS_CALIBRATE_BW_HZ, 0) < 0)
-			goto out_close;
 	}
 
 	samplesRead = 0;
@@ -303,6 +278,13 @@ bool LMSDevice::start()
 		// Set gains to midpoint
 		setTxGain((minTxGain() + maxTxGain()) / 2, i);
 		setRxGain((minRxGain() + maxRxGain()) / 2, i);
+
+		/* set up Rx and Tx filters */
+		if (!do_filters(i))
+			return false;
+		/* Perform Rx and Tx calibration */
+		if (!do_calib(i))
+			return false;
 
 		m_lms_stream_rx[i] = {};
 		m_lms_stream_rx[i].isTx = false;
@@ -361,6 +343,45 @@ bool LMSDevice::stop()
 	started = false;
 	return true;
 }
+
+/* do rx/tx calibration - depends on gain, freq and bw */
+bool LMSDevice::do_calib(size_t chan)
+{
+	LOGC(DDEV, INFO) << "Calibrating chan " << chan;
+	if (LMS_Calibrate(m_lms_dev, LMS_CH_RX, chan, LMS_CALIBRATE_BW_HZ, 0) < 0)
+		return false;
+	if (LMS_Calibrate(m_lms_dev, LMS_CH_TX, chan, LMS_CALIBRATE_BW_HZ, 0) < 0)
+		return false;
+	return true;
+}
+
+/* do rx/tx filter config - depends on bw only? */
+bool LMSDevice::do_filters(size_t chan)
+{
+	lms_range_t range_lpfbw_rx, range_lpfbw_tx;
+	float_type lpfbw_rx, lpfbw_tx;
+
+	LOGC(DDEV, INFO) << "Setting filters on chan " << chan;
+	if (LMS_GetLPFBWRange(m_lms_dev, LMS_CH_RX, &range_lpfbw_rx))
+		return false;
+	print_range("LPFBWRange Rx", &range_lpfbw_rx);
+	if (LMS_GetLPFBWRange(m_lms_dev, LMS_CH_RX, &range_lpfbw_tx))
+		return false;
+	print_range("LPFBWRange Tx", &range_lpfbw_tx);
+
+	lpfbw_rx = OSMO_MIN(OSMO_MAX(1.4001e6, range_lpfbw_rx.min), range_lpfbw_rx.max);
+	lpfbw_tx = OSMO_MIN(OSMO_MAX(5.2e6, range_lpfbw_tx.min), range_lpfbw_tx.max);
+
+	LOGC(DDEV, INFO) << "LPFBW: Rx=" << lpfbw_rx << " Tx=" << lpfbw_tx;
+
+	LOGC(DDEV, INFO) << "Setting LPFBW chan " << chan;
+	if (LMS_SetLPFBW(m_lms_dev, LMS_CH_RX, chan, lpfbw_rx) < 0)
+		return false;
+	if (LMS_SetLPFBW(m_lms_dev, LMS_CH_TX, chan, lpfbw_tx) < 0)
+		return false;
+	return true;
+}
+
 
 double LMSDevice::maxTxGain()
 {
