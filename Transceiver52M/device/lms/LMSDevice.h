@@ -64,6 +64,7 @@ private:
 	TIMESTAMP ts_initial, ts_offset;
 
 	double rxGain;
+	double maxTxGainClamp;
 
 	bool do_calib(size_t chan);
 	bool do_filters(size_t chan);

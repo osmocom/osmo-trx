@@ -41,24 +41,6 @@ constexpr double LMSDevice::masterClockRate;
 #define LMS_MIN_BW_SUPPORTED 2.5e6 /* 2.5mHz, minimum supported by LMS */
 #define LMS_CALIBRATE_BW_HZ OSMO_MAX(GSM_CARRIER_BW, LMS_MIN_BW_SUPPORTED)
 
-static int compat_LMS_VCTCXORead(lms_device_t *dev, uint16_t *val, bool memory)
-{
-#if HAVE_LMS_VCTCXO_EEPROM_SAVING
-	return LMS_VCTCXORead(dev, val, memory);
-#else
-	return LMS_VCTCXORead(dev, val);
-#endif
-}
-
-static int compat_LMS_VCTCXOWrite(lms_device_t *dev, uint16_t val, bool memory)
-{
-#if HAVE_LMS_VCTCXO_EEPROM_SAVING
-	return LMS_VCTCXOWrite(dev, val, memory);
-#else
-	return LMS_VCTCXOWrite(dev, val);
-#endif
-}
-
 LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chans, double lo_offset,
 		     const std::vector<std::string>& tx_paths,
 		     const std::vector<std::string>& rx_paths):
@@ -151,11 +133,10 @@ int info_list_find(lms_info_str_t* info_list, unsigned int count, const std::str
 
 int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 {
-	//lms_info_str_t dev_str;
 	lms_info_str_t* info_list;
+	const lms_dev_info_t* device_info;
 	lms_range_t range_sr;
 	float_type sr_host, sr_rf;
-	uint16_t dac_val;
 	unsigned int i, n;
 	int rc, dev_id;
 
@@ -194,11 +175,44 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 
 	delete [] info_list;
 
+	device_info = LMS_GetDeviceInfo(m_lms_dev);
+
+	if ((ref != REF_EXTERNAL) && (ref != REF_INTERNAL)){
+		LOGC(DDEV, ERROR) << "Invalid reference type";
+		goto out_close;
+	}
+
+	/* if reference clock is external setup must happen _before_ calling LMS_Init */
+	/* FIXME make external reference frequency configurable */
+	if (ref == REF_EXTERNAL) {
+		LOGC(DDEV, INFO) << "Setting External clock reference to 10MHz";
+		/* Assume an external 10 MHz reference clock */
+		if (LMS_SetClockFreq(m_lms_dev, LMS_CLOCK_EXTREF, 10000000.0) < 0)
+			goto out_close;
+	}
+
 	LOGC(DDEV, INFO) << "Init LMS device";
 	if (LMS_Init(m_lms_dev) != 0) {
 		LOGC(DDEV, ERROR) << "LMS_Init() failed";
 		goto out_close;
 	}
+
+	/* LimeSDR-Mini does not have switches but needs soldering to select external/internal clock */
+	/* LimeNET-Micro also does not like selecting internal clock*/
+	/* also set device specific maximum tx levels selected by phasenoise measurements*/
+	if (strncmp(device_info->deviceName,"LimeSDR-USB",11) == 0){
+		/* if reference clock is internal setup must happen _after_ calling LMS_Init */
+		/* according to lms using LMS_CLOCK_EXTREF with a frequency <= 0 is the correct way to set clock to internal reference*/
+		if (ref == REF_INTERNAL) {
+			LOGC(DDEV, INFO) << "Setting Internal clock reference";
+			if (LMS_SetClockFreq(m_lms_dev, LMS_CLOCK_EXTREF, -1) < 0)
+				goto out_close;
+		}
+		maxTxGainClamp = 73.0;
+	} else if (strncmp(device_info->deviceName,"LimeSDR-Mini",12) == 0)
+		maxTxGainClamp = 66.0;
+	else
+		maxTxGainClamp = 71.0; /* "LimeNET-Micro", etc FIXME pciE based LMS boards?*/
 
 	/* enable all used channels */
 	for (i=0; i<chans; i++) {
@@ -222,27 +236,6 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 
 	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
 	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE * tx_sps); /* time * sample_rate */
-
-	switch (ref) {
-	case REF_INTERNAL:
-		LOGC(DDEV, INFO) << "Setting Internal clock reference";
-		/* Ugly API: Selecting clock source implicit by writing to VCTCXO DAC ?!? */
-		if (compat_LMS_VCTCXORead(m_lms_dev, &dac_val, false) < 0)
-			goto out_close;
-		LOGC(DDEV, INFO) << "Setting VCTCXO to " << dac_val;
-		if (compat_LMS_VCTCXOWrite(m_lms_dev, dac_val, false) < 0)
-			goto out_close;
-		break;
-	case REF_EXTERNAL:
-		LOGC(DDEV, INFO) << "Setting External clock reference to " << 10000000.0;
-		/* Assume an external 10 MHz reference clock */
-		if (LMS_SetClockFreq(m_lms_dev, LMS_CLOCK_EXTREF, 10000000.0) < 0)
-			goto out_close;
-		break;
-	default:
-		LOGC(DDEV, ALERT) << "Invalid reference type";
-		goto out_close;
-	}
 
 	if (!set_antennas()) {
 		LOGC(DDEV, ALERT) << "LMS antenna setting failed";
@@ -275,8 +268,10 @@ bool LMSDevice::start()
 
 	/* configure the channels/streams */
 	for (i=0; i<chans; i++) {
-		// Set gains to midpoint
-		setTxGain((minTxGain() + maxTxGain()) / 2, i);
+		/* Set gains for calibration/filter setup */
+		/* TX gain to maximum */
+		setTxGain(maxTxGain(), i);
+		/* RX gain to midpoint */
 		setRxGain((minRxGain() + maxRxGain()) / 2, i);
 
 		/* set up Rx and Tx filters */
@@ -385,7 +380,7 @@ bool LMSDevice::do_filters(size_t chan)
 
 double LMSDevice::maxTxGain()
 {
-	return 73.0;
+	return maxTxGainClamp;
 }
 
 double LMSDevice::minTxGain()

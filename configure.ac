@@ -162,20 +162,6 @@ AS_IF([test "x$with_usrp1" = "xyes"], [
 
 AS_IF([test "x$with_lms" = "xyes"], [
     PKG_CHECK_MODULES(LMS, LimeSuite)
-
-    # LimeSuite dc124e4e2ed9b549b142410af172f0592f9f0c23 > 18.10 broke API compatibility:
-    _cflags_save=$CFLAGS
-    CFLAGS="$CFLAGS $LMS_CFLAGS"
-    AC_COMPILE_IFELSE(
-        [AC_LANG_PROGRAM(
-            [[#include <lime/LimeSuite.h>]],
-            [[LMS_VCTCXOWrite(NULL, 0, false); LMS_VCTCXORead(NULL, 0, false);]]
-        )],
-        [AC_DEFINE([HAVE_LMS_VCTCXO_EEPROM_SAVING], [1],
-            [LMS_VCTCXO* requires memory parameter])],
-        [AC_DEFINE([HAVE_LMS_VCTCXO_EEPROM_SAVING], [0],
-            [LMS_VCTCXO* has no memory parameter])])
-    CFLAGS=$_cflags_save
 ])
 
 AS_IF([test "x$with_uhd" != "xno"],[
