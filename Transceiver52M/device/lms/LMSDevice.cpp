@@ -78,8 +78,14 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 
 LMSDevice::~LMSDevice()
 {
+	unsigned int i;
 	LOGC(DDEV, INFO) << "Closing LMS device";
 	if (m_lms_dev) {
+		/* disable all channels */
+		for (i=0; i<chans; i++) {
+			LMS_EnableChannel(m_lms_dev, LMS_CH_RX, i, false);
+			LMS_EnableChannel(m_lms_dev, LMS_CH_TX, i, false);
+		}
 		LMS_Close(m_lms_dev);
 		m_lms_dev = NULL;
 	}
@@ -194,6 +200,14 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	}
 
+	/* enable all used channels */
+	for (i=0; i<chans; i++) {
+		if (LMS_EnableChannel(m_lms_dev, LMS_CH_RX, i, true) < 0)
+			goto out_close;
+		if (LMS_EnableChannel(m_lms_dev, LMS_CH_TX, i, true) < 0)
+			goto out_close;
+	}
+
 	if (LMS_GetSampleRateRange(m_lms_dev, LMS_CH_RX, &range_sr))
 		goto out_close;
 	print_range("Sample Rate", &range_sr);
@@ -286,12 +300,6 @@ bool LMSDevice::start()
 
 	/* configure the channels/streams */
 	for (i=0; i<chans; i++) {
-		if (LMS_EnableChannel(m_lms_dev, LMS_CH_RX, i, true) < 0)
-			return false;
-
-		if (LMS_EnableChannel(m_lms_dev, LMS_CH_TX, i, true) < 0)
-			return false;
-
 		// Set gains to midpoint
 		setTxGain((minTxGain() + maxTxGain()) / 2, i);
 		setRxGain((minRxGain() + maxRxGain()) / 2, i);
@@ -348,8 +356,6 @@ bool LMSDevice::stop()
 	for (i=0; i<chans; i++) {
 		LMS_DestroyStream(m_lms_dev, &m_lms_stream_tx[i]);
 		LMS_DestroyStream(m_lms_dev, &m_lms_stream_rx[i]);
-		LMS_EnableChannel(m_lms_dev, LMS_CH_RX, i, false);
-		LMS_EnableChannel(m_lms_dev, LMS_CH_TX, i, false);
 	}
 
 	started = false;
