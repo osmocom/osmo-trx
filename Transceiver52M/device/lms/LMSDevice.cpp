@@ -222,6 +222,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 			goto out_close;
 	}
 
+	/* set samplerate */
 	if (LMS_GetSampleRateRange(m_lms_dev, LMS_CH_RX, &range_sr))
 		goto out_close;
 	print_range("Sample Rate", &range_sr);
@@ -237,9 +238,10 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
 	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE * tx_sps); /* time * sample_rate */
 
+	/* configure antennas */
 	if (!set_antennas()) {
 		LOGC(DDEV, ALERT) << "LMS antenna setting failed";
-		return -1;
+		goto out_close;
 	}
 
 	samplesRead = 0;
@@ -281,6 +283,7 @@ bool LMSDevice::start()
 		if (!do_calib(i))
 			return false;
 
+		/* configure Streams */
 		m_lms_stream_rx[i] = {};
 		m_lms_stream_rx[i].isTx = false;
 		m_lms_stream_rx[i].channel = i;
