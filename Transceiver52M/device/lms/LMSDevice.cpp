@@ -548,11 +548,8 @@ bool LMSDevice::requiresRadioAlign()
 }
 
 GSM::Time LMSDevice::minLatency() {
-	/* Empirical data from a handful of
-	relatively recent machines shows that the B100 will underrun when
-	the transmit threshold is reduced to a time of 6 and a half frames,
-	so we set a minimum 7 frame threshold. */
-	return GSM::Time(6,7);
+	/* UNUSED on limesdr (only used on usrp1/2) */
+	return GSM::Time(0,0);
 }
 
 void LMSDevice::update_stream_stats(size_t chan, bool * underrun, bool * overrun)
