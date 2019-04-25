@@ -462,7 +462,7 @@ bool LMSDevice::flush_recv(size_t num_pkts)
 		rc = LMS_RecvStream(&m_lms_stream_rx[0], &buffer[0], len, &rx_metadata, 100);
 		LOGC(DDEV, DEBUG) << "Flush: Recv buffer of len " << rc << " at " << std::hex << rx_metadata.timestamp;
 		if (rc != len) {
-			LOGC(DDEV, ALERT) << "LMS: Device receive timed out";
+			LOGC(DDEV, ALERT) << "Flush: Device receive timed out";
 			return false;
 		}
 
