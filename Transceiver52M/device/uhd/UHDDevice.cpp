@@ -357,12 +357,6 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 }
 #endif
 
-static void thread_enable_cancel(bool cancel)
-{
-	cancel ? pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL) :
-		 pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-}
-
 uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
 		       InterfaceType iface, size_t chans, double lo_offset,
 		       const std::vector<std::string>& tx_paths,

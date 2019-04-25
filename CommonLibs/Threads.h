@@ -142,6 +142,7 @@ class Signal {
 	thread.start((void *(*)(void*))function, (void*)argument);
 
 void set_selfthread_name(const char *name);
+void thread_enable_cancel(bool cancel);
 
 /** A C++ wrapper for pthread threads.  */
 class Thread {

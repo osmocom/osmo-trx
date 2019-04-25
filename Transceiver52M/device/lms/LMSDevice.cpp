@@ -90,12 +90,6 @@ static void lms_log_callback(int lvl, const char *msg)
 	LOGLV(DLMS, lvl_map[lvl]) << msg;
 }
 
-static void thread_enable_cancel(bool cancel)
-{
-	cancel ? pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL) :
-		 pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
-}
-
 static void print_range(const char* name, lms_range_t *range)
 {
 	LOGC(DDEV, INFO) << name << ": Min=" << range->min << " Max=" << range->max

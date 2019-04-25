@@ -122,6 +122,12 @@ void set_selfthread_name(const char *name)
 	}
 }
 
+void thread_enable_cancel(bool cancel)
+{
+	cancel ? pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL) :
+		 pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
+}
+
 void Thread::start(void *(*task)(void*), void *arg)
 {
 	assert(mThread==((pthread_t)0));
