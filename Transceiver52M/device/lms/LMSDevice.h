@@ -50,6 +50,7 @@ private:
 
 	std::vector<uint32_t> m_last_rx_underruns;
 	std::vector<uint32_t> m_last_rx_overruns;
+	std::vector<uint32_t> m_last_rx_dropped;
 	std::vector<uint32_t> m_last_tx_underruns;
 
 	double actualSampleRate;	///< the actual USRP sampling rate
