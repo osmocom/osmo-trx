@@ -55,7 +55,6 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 	m_last_rx_underruns.resize(chans, 0);
 	m_last_rx_overruns.resize(chans, 0);
 	m_last_tx_underruns.resize(chans, 0);
-	m_last_tx_overruns.resize(chans, 0);
 }
 
 LMSDevice::~LMSDevice()
