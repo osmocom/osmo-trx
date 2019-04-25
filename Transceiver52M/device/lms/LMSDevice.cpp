@@ -573,12 +573,20 @@ void LMSDevice::update_stream_stats(size_t chan, bool * underrun, bool * overrun
 {
 	lms_stream_status_t status;
 	if (LMS_GetStreamStatus(&m_lms_stream_rx[chan], &status) == 0) {
-		if (status.underrun > m_last_rx_underruns[chan])
+		if (status.underrun > m_last_rx_underruns[chan]) {
 			*underrun = true;
+			LOGC(DDEV, ERROR) << "chan " << chan << ": recv Underrun! ("
+					  << m_last_rx_underruns[chan] << " -> "
+					  << status.underrun << ")";
+		}
 		m_last_rx_underruns[chan] = status.underrun;
 
-		if (status.overrun > m_last_rx_overruns[chan])
+		if (status.overrun > m_last_rx_overruns[chan]) {
 			*overrun = true;
+			LOGC(DDEV, ERROR) << "chan " << chan << ": recv Overrun! ("
+					  << m_last_rx_overruns[chan] << " -> "
+					  << status.overrun << ")";
+		}
 		m_last_rx_overruns[chan] = status.overrun;
 	}
 }
