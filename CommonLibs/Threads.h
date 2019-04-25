@@ -55,7 +55,7 @@ void unlockCout();		///< call after writing cout
 #define OBJDCOUT(text) {}
 #else
 #define DCOUT(text) { COUT(__FILE__ << ":" << __LINE__ << " " << text); }
-#define OBJDCOUT(text) { DCOUT(this << " " << text); } 
+#define OBJDCOUT(text) { DCOUT(this << " " << text); }
 #endif
 //@}
 //@}
@@ -152,7 +152,7 @@ class Thread {
 	pthread_attr_t mAttrib;
 	// FIXME -- Can this be reduced now?
 	size_t mStackSize;
-	
+
 
 	public:
 
