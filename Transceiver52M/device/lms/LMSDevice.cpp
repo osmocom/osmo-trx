@@ -450,7 +450,7 @@ bool LMSDevice::flush_recv(size_t num_pkts)
 {
 	#define CHUNK 625
 	int len = CHUNK * tx_sps;
-	short *buffer = new short[len * 2];
+	short *buffer = (short*) alloca(sizeof(short) * len * 2);
 	int rc;
 	lms_stream_meta_t rx_metadata = {};
 	rx_metadata.flushPartialPacket = false;
@@ -463,7 +463,6 @@ bool LMSDevice::flush_recv(size_t num_pkts)
 		LOGC(DDEV, DEBUG) << "Flush: Recv buffer of len " << rc << " at " << std::hex << rx_metadata.timestamp;
 		if (rc != len) {
 			LOGC(DDEV, ALERT) << "LMS: Device receive timed out";
-			delete[] buffer;
 			return false;
 		}
 
@@ -471,7 +470,6 @@ bool LMSDevice::flush_recv(size_t num_pkts)
 	}
 
 	LOGC(DDEV, INFO) << "Initial timestamp " << ts_initial << std::endl;
-	delete[] buffer;
 	return true;
 }
 
