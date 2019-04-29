@@ -25,13 +25,12 @@
 #pragma once
 
 #include <unistd.h>
-#include <uhd/types/time_spec.hpp>
 
 #include "radioDevice.h"
 
 /*
     Sample Buffer - Allows reading and writing of timed samples using osmo-trx
-                    or UHD style timestamps. Time conversions are handled
+                    timestamps. Time conversions are handled
                     internally or accessable through the static convert calls.
 */
 class smpl_buf {
@@ -49,7 +48,6 @@ public:
 	    @return number of available samples or error
 	*/
 	ssize_t avail_smpls(TIMESTAMP timestamp) const;
-	ssize_t avail_smpls(uhd::time_spec_t timestamp) const;
 
 	/** Read and write
 	    @param buf pointer to buffer
@@ -58,9 +56,7 @@ public:
 	    @return number of actual samples read or written or error
 	*/
 	ssize_t read(void *buf, size_t len, TIMESTAMP timestamp);
-	ssize_t read(void *buf, size_t len, uhd::time_spec_t timestamp);
 	ssize_t write(void *buf, size_t len, TIMESTAMP timestamp);
-	ssize_t write(void *buf, size_t len, uhd::time_spec_t timestamp);
 
 	/** Buffer status string
 	    @return a formatted string describing internal buffer state

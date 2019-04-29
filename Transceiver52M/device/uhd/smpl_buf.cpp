@@ -47,11 +47,6 @@ ssize_t smpl_buf::avail_smpls(TIMESTAMP timestamp) const
 		return time_end - timestamp;
 }
 
-ssize_t smpl_buf::avail_smpls(uhd::time_spec_t timespec) const
-{
-	return avail_smpls(timespec.to_ticks(clk_rt));
-}
-
 ssize_t smpl_buf::read(void *buf, size_t len, TIMESTAMP timestamp)
 {
 	int type_sz = 2 * sizeof(short);
@@ -93,11 +88,6 @@ ssize_t smpl_buf::read(void *buf, size_t len, TIMESTAMP timestamp)
 		return num_smpls;
 }
 
-ssize_t smpl_buf::read(void *buf, size_t len, uhd::time_spec_t ts)
-{
-	return read(buf, len, ts.to_ticks(clk_rt));
-}
-
 ssize_t smpl_buf::write(void *buf, size_t len, TIMESTAMP timestamp)
 {
 	int type_sz = 2 * sizeof(short);
@@ -110,14 +100,12 @@ ssize_t smpl_buf::write(void *buf, size_t len, TIMESTAMP timestamp)
 
 	if (timestamp < time_end) {
 		LOGC(DDEV, ERR) << "Overwriting old buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
-		uhd::time_spec_t ts = uhd::time_spec_t::from_ticks(timestamp, clk_rt);
-		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp << " (real_sec=" << std::fixed << ts.get_real_secs() << " = " << ts.to_ticks(clk_rt) << ") rate=" << clk_rt;
+		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp << " rate=" << clk_rt;
 		// Do not return error here, because it's a rounding error and is not fatal
 	}
 	if (timestamp > time_end && time_end != 0) {
 		LOGC(DDEV, ERR) << "Skipping buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
-		uhd::time_spec_t ts = uhd::time_spec_t::from_ticks(timestamp, clk_rt);
-		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp << " (real_sec=" << std::fixed << ts.get_real_secs() << " = " << ts.to_ticks(clk_rt) << ") rate=" << clk_rt;
+		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp << " rate=" << clk_rt;
 		// Do not return error here, because it's a rounding error and is not fatal
 	}
 
@@ -148,11 +136,6 @@ ssize_t smpl_buf::write(void *buf, size_t len, TIMESTAMP timestamp)
 		return ERROR_WRITE;
 	else
 		return len;
-}
-
-ssize_t smpl_buf::write(void *buf, size_t len, uhd::time_spec_t ts)
-{
-	return write(buf, len, ts.to_ticks(clk_rt));
 }
 
 std::string smpl_buf::str_status(size_t ts) const
