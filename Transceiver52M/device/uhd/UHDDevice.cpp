@@ -149,7 +149,7 @@ void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 		LOGC(DDEV, WARNING) << msg;
 		break;
 	case uhd::msg::error:
-		LOGC(DDEV, ERR) << msg;
+		LOGC(DDEV, ERROR) << msg;
 		break;
 	case uhd::msg::fastpath:
 		break;
@@ -601,7 +601,7 @@ bool uhd_device::start()
 	LOGC(DDEV, INFO) << "Starting USRP...";
 
 	if (started) {
-		LOGC(DDEV, ERR) << "Device already started";
+		LOGC(DDEV, ERROR) << "Device already started";
 		return false;
 	}
 
@@ -652,7 +652,7 @@ void uhd_device::setPriority(float prio)
 int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 {
 	if (!num_smpls) {
-		LOGC(DDEV, ERR) << str_code(md);
+		LOGC(DDEV, ERROR) << str_code(md);
 
 		switch (md.error_code) {
 		case uhd::rx_metadata_t::ERROR_CODE_TIMEOUT:
@@ -715,8 +715,8 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	// Check that timestamp is valid
 	rc = rx_buffers[0]->avail_smpls(timestamp);
 	if (rc < 0) {
-		LOGC(DDEV, ERR) << rx_buffers[0]->str_code(rc);
-		LOGC(DDEV, ERR) << rx_buffers[0]->str_status(timestamp);
+		LOGC(DDEV, ERROR) << rx_buffers[0]->str_code(rc);
+		LOGC(DDEV, ERROR) << rx_buffers[0]->str_status(timestamp);
 		return 0;
 	}
 
@@ -763,8 +763,8 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 
 			// Continue on local overrun, exit on other errors
 			if ((rc < 0)) {
-				LOGC(DDEV, ERR) << rx_buffers[i]->str_code(rc);
-				LOGC(DDEV, ERR) << rx_buffers[i]->str_status(timestamp);
+				LOGC(DDEV, ERROR) << rx_buffers[i]->str_code(rc);
+				LOGC(DDEV, ERROR) << rx_buffers[i]->str_status(timestamp);
 				if (rc != smpl_buf::ERROR_OVERFLOW)
 					return 0;
 			}
@@ -775,8 +775,8 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	for (size_t i = 0; i < rx_buffers.size(); i++) {
 		rc = rx_buffers[i]->read(bufs[i], len, timestamp);
 		if ((rc < 0) || (rc != len)) {
-			LOGC(DDEV, ERR) << rx_buffers[i]->str_code(rc);
-			LOGC(DDEV, ERR) << rx_buffers[i]->str_status(timestamp);
+			LOGC(DDEV, ERROR) << rx_buffers[i]->str_code(rc);
+			LOGC(DDEV, ERROR) << rx_buffers[i]->str_status(timestamp);
 			return 0;
 		}
 	}
@@ -797,7 +797,7 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 
 	// No control packets
 	if (isControl) {
-		LOGC(DDEV, ERR) << "Control packets not supported";
+		LOGC(DDEV, ERROR) << "Control packets not supported";
 		return 0;
 	}
 
@@ -1110,7 +1110,7 @@ bool uhd_device::recv_async_msg()
 
 		if ((md.event_code != uhd::async_metadata_t::EVENT_CODE_UNDERFLOW) &&
 		    (md.event_code != uhd::async_metadata_t::EVENT_CODE_TIME_ERROR)) {
-			LOGC(DDEV, ERR) << str_code(md);
+			LOGC(DDEV, ERROR) << str_code(md);
 		}
 	}
 
