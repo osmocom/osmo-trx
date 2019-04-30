@@ -1,6 +1,6 @@
 include $(top_srcdir)/Makefile.common
 
-noinst_HEADERS = radioDevice.h
+noinst_HEADERS = radioDevice.h smpl_buf.h
 
 SUBDIRS =
 
