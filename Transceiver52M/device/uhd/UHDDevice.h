@@ -152,6 +152,11 @@ private:
 
 	TIMESTAMP ts_initial, ts_offset;
 	std::vector<smpl_buf *> rx_buffers;
+	/* Sample buffers used to receive samples from UHD: */
+	std::vector<std::vector<short> > pkt_bufs;
+	/* Used to call UHD API: Buffer pointer of each elem in pkt_ptrs will
+	   point to corresponding buffer of vector pkt_bufs. */
+	std::vector<short *> pkt_ptrs;
 
 	void init_gains();
 	void set_channels(bool swap);

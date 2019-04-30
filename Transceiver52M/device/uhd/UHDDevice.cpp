@@ -516,6 +516,11 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		rx_buffers[i] = new smpl_buf(buf_len, rx_rate);
 
+	// Create vector buffer
+	pkt_bufs = std::vector<std::vector<short> >(chans, std::vector<short>(2 * rx_spp));
+	for (size_t i = 0; i < pkt_bufs.size(); i++)
+		pkt_ptrs.push_back(&pkt_bufs[i].front());
+
 	// Initialize and shadow gain values
 	init_gains();
 
@@ -548,13 +553,6 @@ bool uhd_device::flush_recv(size_t num_pkts)
 	uhd::rx_metadata_t md;
 	size_t num_smpls;
 	float timeout = UHD_RESTART_TIMEOUT;
-
-	std::vector<std::vector<short> >
-		pkt_bufs(chans, std::vector<short>(2 * rx_spp));
-
-	std::vector<short *> pkt_ptrs;
-	for (size_t i = 0; i < pkt_bufs.size(); i++)
-		pkt_ptrs.push_back(&pkt_bufs[i].front());
 
 	ts_initial = 0;
 	while (!ts_initial || (num_pkts-- > 0)) {
@@ -719,14 +717,6 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 		LOGC(DDEV, ERROR) << rx_buffers[0]->str_status(timestamp);
 		return 0;
 	}
-
-	// Create vector buffer
-	std::vector<std::vector<short> >
-		pkt_bufs(chans, std::vector<short>(2 * rx_spp));
-
-	std::vector<short *> pkt_ptrs;
-	for (size_t i = 0; i < pkt_bufs.size(); i++)
-		pkt_ptrs.push_back(&pkt_bufs[i].front());
 
 	// Receive samples from the usrp until we have enough
 	while (rx_buffers[0]->avail_smpls(timestamp) < len) {
