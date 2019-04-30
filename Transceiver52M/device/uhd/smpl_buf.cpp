@@ -138,11 +138,11 @@ ssize_t smpl_buf::write(void *buf, size_t len, TIMESTAMP timestamp)
 		return len;
 }
 
-std::string smpl_buf::str_status(size_t ts) const
+std::string smpl_buf::str_status(TIMESTAMP timestamp) const
 {
 	std::ostringstream ost("Sample buffer: ");
 
-	ost << "timestamp = " << ts;
+	ost << "timestamp = " << timestamp;
 	ost << ", length = " << buf_len;
 	ost << ", time_start = " << time_start;
 	ost << ", time_end = " << time_end;

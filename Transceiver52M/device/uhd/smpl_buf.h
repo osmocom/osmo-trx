@@ -61,7 +61,7 @@ public:
 	/** Buffer status string
 	    @return a formatted string describing internal buffer state
 	*/
-	std::string str_status(size_t ts) const;
+	std::string str_status(TIMESTAMP timestamp) const;
 
 	/** Formatted error string
 	    @param code an error code
