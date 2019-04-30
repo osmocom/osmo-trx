@@ -51,9 +51,6 @@ private:
   double actualSampleRate;	///< the actual USRP sampling rate
   unsigned int decimRate;	///< the USRP decimation rate
 
-  unsigned long long samplesRead;	///< number of samples read from USRP
-  unsigned long long samplesWritten;	///< number of samples sent to USRP
-
   bool started;			///< flag indicates USRP has started
 
   static const unsigned int currDataSize_log2 = 21;
@@ -201,8 +198,6 @@ private:
   inline double getTxFreq(size_t chan = 0) { return 0; }
   inline double getRxFreq(size_t chan = 0) { return 0; }
   inline double getSampleRate() { return actualSampleRate; }
-  inline double numberRead() { return samplesRead; }
-  inline double numberWritten() { return samplesWritten; }
 };
 
 #endif // _USRP_DEVICE_H_

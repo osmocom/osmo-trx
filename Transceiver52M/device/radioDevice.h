@@ -161,8 +161,6 @@ class RadioDevice {
   virtual double getTxFreq(size_t chan = 0) = 0;
   virtual double getRxFreq(size_t chan = 0) = 0;
   virtual double getSampleRate()=0;
-  virtual double numberRead()=0;
-  virtual double numberWritten()=0;
 
   protected:
   size_t tx_sps, rx_sps;

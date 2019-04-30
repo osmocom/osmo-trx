@@ -55,9 +55,6 @@ private:
 
 	double actualSampleRate;	///< the actual USRP sampling rate
 
-	unsigned long long samplesRead;	///< number of samples read from LMS
-	unsigned long long samplesWritten;	///< number of samples sent to LMS
-
 	bool started;		///< flag indicates LMS has started
 	bool skipRx;		///< set if LMS is transmit-only.
 
@@ -202,12 +199,6 @@ public:
 	}
 	inline double getSampleRate() {
 		return actualSampleRate;
-	}
-	inline double numberRead() {
-		return samplesRead;
-	}
-	inline double numberWritten() {
-		return samplesWritten;
 	}
 };
 

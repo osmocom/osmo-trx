@@ -165,7 +165,7 @@ uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
 	  tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),
-	  started(false), aligned(false), rx_pkt_cnt(0), drop_cnt(0),
+	  started(false), aligned(false), drop_cnt(0),
 	  prev_ts(0,0), ts_initial(0), ts_offset(0), async_event_thrd(NULL)
 {
 }
@@ -724,8 +724,6 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 		size_t num_smpls = rx_stream->recv(pkt_ptrs, rx_spp,
 						   metadata, 0.1, true);
 		thread_enable_cancel(true);
-
-		rx_pkt_cnt++;
 
 		// Check for errors
 		rc = check_rx_md_err(metadata, num_smpls);

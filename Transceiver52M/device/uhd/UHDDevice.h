@@ -112,8 +112,6 @@ public:
 	GSM::Time minLatency();
 
 	inline double getSampleRate() { return tx_rate; }
-	inline double numberRead() { return rx_pkt_cnt; }
-	inline double numberWritten() { return 0; }
 
 	/** Receive and process asynchronous message
 	    @return true if message received or false on timeout or error
@@ -146,7 +144,6 @@ private:
 	bool started;
 	bool aligned;
 
-	size_t rx_pkt_cnt;
 	size_t drop_cnt;
 	uhd::time_spec_t prev_ts;
 

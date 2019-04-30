@@ -238,8 +238,6 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	}
 
-	samplesRead = 0;
-	samplesWritten = 0;
 	started = false;
 
 	return NORMAL;
@@ -630,8 +628,6 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 		thread_enable_cancel(true);
 	}
 
-	samplesRead += rc;
-
 	if (((TIMESTAMP) rx_metadata.timestamp) < timestamp)
 		rc = 0;
 
@@ -677,8 +673,6 @@ int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
 		}
 		thread_enable_cancel(true);
 	}
-
-	samplesWritten += rc;
 
 	return rc;
 }

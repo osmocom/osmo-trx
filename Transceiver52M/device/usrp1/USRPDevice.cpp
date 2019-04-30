@@ -173,8 +173,6 @@ int USRPDevice::open(const std::string &, int, bool)
   m_dbTx = m_uTx->selected_subdev(txSubdevSpec);
   m_dbRx = m_uRx->selected_subdev(rxSubdevSpec);
 
-  samplesRead = 0;
-  samplesWritten = 0;
   started = false;
 
   return NORMAL;
@@ -505,7 +503,6 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
     gettimeofday(&lastReadTime,NULL);
     firstRead = true;
   }
-  samplesRead += numSamples;
 
   return numSamples;
 #endif
@@ -555,14 +552,12 @@ int USRPDevice::writeSamples(std::vector<short *> &bufs, int len,
   }
   m_uTx->write((const void*) outPkt,sizeof(uint32_t)*128*numPkts,NULL);
 
-  samplesWritten += len/2/sizeof(short);
   writeLock.unlock();
 
   return len/2/sizeof(short);
 #else
   int retVal = len;
   memcpy(loopbackBuffer+loopbackBufferSize,buf,sizeof(short)*2*len);
-  samplesWritten += retVal;
   loopbackBufferSize += retVal*2;
 
   return retVal;
