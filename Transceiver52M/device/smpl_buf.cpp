@@ -99,13 +99,13 @@ ssize_t smpl_buf::write(void *buf, size_t len, TIMESTAMP timestamp)
 		return ERROR_TIMESTAMP;
 
 	if (timestamp < time_end) {
-		LOGC(DDEV, ERR) << "Overwriting old buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
-		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp;
+		LOGC(DDEV, ERR) << "Overwriting old buffer data: timestamp="
+				<< timestamp << " time_end=" << time_end;
 		// Do not return error here, because it's a rounding error and is not fatal
 	}
 	if (timestamp > time_end && time_end != 0) {
-		LOGC(DDEV, ERR) << "Skipping buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
-		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp;
+		LOGC(DDEV, ERR) << "Skipping buffer data: timestamp="
+				<< timestamp << " time_end=" << time_end;
 		// Do not return error here, because it's a rounding error and is not fatal
 	}
 
