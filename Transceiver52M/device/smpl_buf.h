@@ -37,10 +37,9 @@ class smpl_buf {
 public:
 	/** Sample buffer constructor
 	    @param len number of 32-bit samples the buffer should hold
-	    @param rate sample clockrate
 	    @param timestamp
 	*/
-	smpl_buf(size_t len, double rate);
+	smpl_buf(size_t len);
 	~smpl_buf();
 
 	/** Query number of samples available for reading

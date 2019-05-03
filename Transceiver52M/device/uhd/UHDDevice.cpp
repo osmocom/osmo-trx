@@ -514,7 +514,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	// Create receive buffer
 	size_t buf_len = SAMPLE_BUF_SZ / sizeof(uint32_t);
 	for (size_t i = 0; i < rx_buffers.size(); i++)
-		rx_buffers[i] = new smpl_buf(buf_len, rx_rate);
+		rx_buffers[i] = new smpl_buf(buf_len);
 
 	// Create vector buffer
 	pkt_bufs = std::vector<std::vector<short> >(chans, std::vector<short>(2 * rx_spp));

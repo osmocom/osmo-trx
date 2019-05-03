@@ -25,9 +25,9 @@
 #include "smpl_buf.h"
 #include <inttypes.h>
 
-smpl_buf::smpl_buf(size_t len, double rate)
-	: buf_len(len), clk_rt(rate),
-	  time_start(0), time_end(0), data_start(0), data_end(0)
+smpl_buf::smpl_buf(size_t len)
+	: buf_len(len), time_start(0), time_end(0),
+	  data_start(0), data_end(0)
 {
 	data = new uint32_t[len];
 }
@@ -100,12 +100,12 @@ ssize_t smpl_buf::write(void *buf, size_t len, TIMESTAMP timestamp)
 
 	if (timestamp < time_end) {
 		LOGC(DDEV, ERR) << "Overwriting old buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
-		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp << " rate=" << clk_rt;
+		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp;
 		// Do not return error here, because it's a rounding error and is not fatal
 	}
 	if (timestamp > time_end && time_end != 0) {
 		LOGC(DDEV, ERR) << "Skipping buffer data: timestamp="<<timestamp<<" time_end="<<time_end;
-		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp << " rate=" << clk_rt;
+		LOGC(DDEV, DEBUG) << "Requested timestamp = " << timestamp;
 		// Do not return error here, because it's a rounding error and is not fatal
 	}
 
