@@ -1,8 +1,6 @@
 include $(top_srcdir)/Makefile.common
 
-noinst_HEADERS = radioDevice.h smpl_buf.h
-
-SUBDIRS =
+SUBDIRS = common
 
 if DEVICE_USRP1
 SUBDIRS += usrp1

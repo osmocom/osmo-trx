@@ -1,6 +1,6 @@
 include $(top_srcdir)/Makefile.common
 
-AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/..
+AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/../common
 AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS) $(LMS_CFLAGS)
 
 noinst_HEADERS = LMSDevice.h

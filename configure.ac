@@ -296,6 +296,7 @@ AC_CONFIG_FILES([\
     Transceiver52M/arch/arm/Makefile \
     Transceiver52M/arch/x86/Makefile \
     Transceiver52M/device/Makefile \
+    Transceiver52M/device/common/Makefile \
     Transceiver52M/device/uhd/Makefile \
     Transceiver52M/device/usrp1/Makefile \
     Transceiver52M/device/lms/Makefile \
