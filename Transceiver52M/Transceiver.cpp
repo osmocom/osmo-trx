@@ -390,7 +390,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     state = &mStates[i];
 
     while ((burst = mTxPriorityQueues[i].getStaleBurst(nowTime))) {
-      LOG(NOTICE) << "chan " << i << " dumping STALE burst in TRX->SDR interface ("
+      LOGCHAN(i, DMAIN, NOTICE) << "dumping STALE burst in TRX->SDR interface ("
                   << burst->getTime() <<" vs " << nowTime << "), retrans=" << state->mRetrans;
       if (state->mRetrans)
         updateFillerTable(i, burst);
@@ -725,7 +725,7 @@ void Transceiver::driveControl(size_t chan)
 
   /* Set command pointer */
   command = buffer + 4;
-  LOGC(DTRXCTRL, INFO) << "chan " << chan << ": command is '" << command << "'";
+  LOGCHAN(chan, DTRXCTRL, INFO) << "command is '" << command << "'";
 
   if (match_cmd(command, "POWEROFF", NULL)) {
     stop();
@@ -856,7 +856,7 @@ void Transceiver::driveControl(size_t chan)
     sprintf(response,"RSP ERR 1");
   }
 
-  LOGC(DTRXCTRL, INFO) << "chan " << chan << ": response is '" << response << "'";
+  LOGCHAN(chan, DTRXCTRL, INFO) << "response is '" << response << "'";
   mCtrlSockets[chan]->write(response, strlen(response) + 1);
 }
 

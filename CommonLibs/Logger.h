@@ -56,6 +56,9 @@ extern "C" {
 #define LOGLV(category, level) \
 	Log(category, level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "] "
 
+#define LOGCHAN(chan, category, level) \
+	Log(category, LOGL_##level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "][chan=" << chan << "] "
+
 /**
 	A C++ stream-based thread-safe logger.
 	This object is NOT the global logger;
