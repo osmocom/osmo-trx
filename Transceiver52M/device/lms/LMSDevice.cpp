@@ -40,6 +40,7 @@ constexpr double LMSDevice::masterClockRate;
 #define GSM_CARRIER_BW 270000.0 /* 270kHz */
 #define LMS_MIN_BW_SUPPORTED 2.5e6 /* 2.5mHz, minimum supported by LMS */
 #define LMS_CALIBRATE_BW_HZ OSMO_MAX(GSM_CARRIER_BW, LMS_MIN_BW_SUPPORTED)
+#define SAMPLE_BUF_SZ    (1 << 20) /* Size of Rx timestamp based Ring buffer, in bytes */
 
 LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chans, double lo_offset,
 		     const std::vector<std::string>& tx_paths,
@@ -56,6 +57,8 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 	m_last_rx_overruns.resize(chans, 0);
 	m_last_rx_dropped.resize(chans, 0);
 	m_last_tx_underruns.resize(chans, 0);
+
+	rx_buffers.resize(chans);
 }
 
 LMSDevice::~LMSDevice()
@@ -71,6 +74,9 @@ LMSDevice::~LMSDevice()
 		LMS_Close(m_lms_dev);
 		m_lms_dev = NULL;
 	}
+
+	for (size_t i = 0; i < rx_buffers.size(); i++)
+		delete rx_buffers[i];
 }
 
 static void lms_log_callback(int lvl, const char *msg)
@@ -237,6 +243,10 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		LOGC(DDEV, FATAL) << "LMS antenna setting failed";
 		goto out_close;
 	}
+
+	/* Set up per-channel Rx timestamp based Ring buffers */
+	for (size_t i = 0; i < rx_buffers.size(); i++)
+		rx_buffers[i] = new smpl_buf(SAMPLE_BUF_SZ / sizeof(uint32_t));
 
 	started = false;
 
@@ -600,7 +610,9 @@ void LMSDevice::update_stream_stats(size_t chan, bool * underrun, bool * overrun
 int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 			   TIMESTAMP timestamp, bool * underrun, unsigned *RSSI)
 {
-	int rc = 0;
+	int rc, num_smpls, expect_smpls;
+	ssize_t avail_smpls;
+	TIMESTAMP expect_timestamp;
 	unsigned int i;
 	lms_stream_meta_t rx_metadata = {};
 	rx_metadata.flushPartialPacket = false;
@@ -614,24 +626,62 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 
 	*overrun = false;
 	*underrun = false;
-	for (i = 0; i<chans; i++) {
-		thread_enable_cancel(false);
-		rc = LMS_RecvStream(&m_lms_stream_rx[i], bufs[i], len, &rx_metadata, 100);
-		update_stream_stats(i, underrun, overrun);
-		if (rc != len) {
-			LOGCHAN(i, DDEV, ERROR) << "LMS: Device receive timed out (" << rc << " vs exp " << len << ").";
-			thread_enable_cancel(true);
-			return -1;
-		}
-		if (timestamp != (TIMESTAMP)rx_metadata.timestamp)
-			LOGCHAN(i, DDEV, ERROR) << "recv buffer of len " << rc << " expect " << std::hex << timestamp << " got " << std::hex << (TIMESTAMP)rx_metadata.timestamp << " (" << std::hex << rx_metadata.timestamp <<") diff=" << rx_metadata.timestamp - timestamp;
-		thread_enable_cancel(true);
+
+	/* Check that timestamp is valid */
+	rc = rx_buffers[0]->avail_smpls(timestamp);
+	if (rc < 0) {
+		LOGC(DDEV, ERROR) << rx_buffers[0]->str_code(rc);
+		LOGC(DDEV, ERROR) << rx_buffers[0]->str_status(timestamp);
+		return 0;
 	}
 
-	if (((TIMESTAMP) rx_metadata.timestamp) < timestamp)
-		rc = 0;
+	for (i = 0; i<chans; i++) {
+		/* Receive samples from HW until we have enough */
+		while ((avail_smpls = rx_buffers[i]->avail_smpls(timestamp)) < len) {
+			thread_enable_cancel(false);
+			num_smpls = LMS_RecvStream(&m_lms_stream_rx[i], bufs[i], len - avail_smpls, &rx_metadata, 100);
+			update_stream_stats(i, underrun, overrun);
+			thread_enable_cancel(true);
+			if (num_smpls <= 0) {
+				LOGCHAN(i, DDEV, ERROR) << "Device receive timed out (" << rc << " vs exp " << len << ").";
+				return -1;
+			}
 
-	return rc;
+			LOGCHAN(i, DDEV, DEBUG) "Received timestamp = " << (TIMESTAMP)rx_metadata.timestamp << " (" << num_smpls << ")";
+
+			expect_smpls = len - avail_smpls;
+			if (expect_smpls != num_smpls)
+				LOGCHAN(i, DDEV, NOTICE) << "Unexpected recv buffer len: expect "
+							 << expect_smpls << " got " << num_smpls
+							 << ", diff=" << expect_smpls - num_smpls;
+
+			expect_timestamp = timestamp + avail_smpls;
+			if (expect_timestamp != (TIMESTAMP)rx_metadata.timestamp)
+				LOGCHAN(i, DDEV, ERROR) << "Unexpected recv buffer timestamp: expect "
+							<< expect_timestamp << " got " << (TIMESTAMP)rx_metadata.timestamp
+							<< ", diff=" << rx_metadata.timestamp - expect_timestamp;
+
+			rc = rx_buffers[i]->write(bufs[i], num_smpls, (TIMESTAMP)rx_metadata.timestamp);
+			if (rc < 0) {
+				LOGCHAN(i, DDEV, ERROR) << rx_buffers[i]->str_code(rc);
+				LOGCHAN(i, DDEV, ERROR) << rx_buffers[i]->str_status(timestamp);
+				if (rc != smpl_buf::ERROR_OVERFLOW)
+					return 0;
+			}
+		}
+	}
+
+	/* We have enough samples */
+	for (size_t i = 0; i < rx_buffers.size(); i++) {
+		rc = rx_buffers[i]->read(bufs[i], len, timestamp);
+		if ((rc < 0) || (rc != len)) {
+			LOGC(DDEV, ERROR) << rx_buffers[i]->str_code(rc);
+			LOGC(DDEV, ERROR) << rx_buffers[i]->str_status(timestamp);
+			return 0;
+		}
+	}
+
+	return len;
 }
 
 int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,

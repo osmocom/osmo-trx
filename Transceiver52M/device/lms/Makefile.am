@@ -8,3 +8,4 @@ noinst_HEADERS = LMSDevice.h
 noinst_LTLIBRARIES = libdevice.la
 
 libdevice_la_SOURCES = LMSDevice.cpp
+libdevice_la_LIBADD = $(top_builddir)/Transceiver52M/device/common/libdevice_common.la

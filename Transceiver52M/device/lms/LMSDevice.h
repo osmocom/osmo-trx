@@ -20,6 +20,7 @@
 #endif
 
 #include "radioDevice.h"
+#include "smpl_buf.h"
 
 #include <sys/time.h>
 #include <math.h>
@@ -52,6 +53,8 @@ private:
 	std::vector<uint32_t> m_last_rx_overruns;
 	std::vector<uint32_t> m_last_rx_dropped;
 	std::vector<uint32_t> m_last_tx_underruns;
+
+	std::vector<smpl_buf *> rx_buffers;
 
 	double actualSampleRate;	///< the actual USRP sampling rate
 
