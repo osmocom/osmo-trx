@@ -79,8 +79,6 @@ private:
 	uint32_t *data;
 	size_t buf_len;
 
-	double clk_rt;
-
 	TIMESTAMP time_start;
 	TIMESTAMP time_end;
 
