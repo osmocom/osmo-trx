@@ -1455,6 +1455,28 @@ static signalVector *downsampleBurst(const signalVector &burst)
   return out;
 };
 
+static float computeCI(const signalVector *burst, CorrelationSequence *sync,
+                       float toa, int start, complex xcorr)
+{
+  float S, C;
+  int ps;
+
+  /* Integer position where the sequence starts */
+  ps = start + 1 - sync->sequence->size() + (int)roundf(toa);
+
+  /* Estimate Signal power */
+  S = 0.0f;
+  for (int i=0, j=ps; i<(int)sync->sequence->size(); i++,j++)
+    S += (*burst)[j].norm2();
+  S /= sync->sequence->size();
+
+  /* Esimate Carrier power */
+  C = xcorr.norm2() / ((sync->sequence->size() - 1) * sync->gain.abs());
+
+  /* Interference = Signal - Carrier, so C/I = C / (S - C) */
+  return 3.0103f * log2f(C / (S - C));
+}
+
 /*
  * Detect a burst based on correlation and peak-to-average ratio
  *
@@ -1470,6 +1492,7 @@ static int detectBurst(const signalVector &burst,
 {
   const signalVector *corr_in;
   signalVector *dec = NULL;
+  complex xcorr;
 
   if (sps == 4) {
     dec = downsampleBurst(burst);
@@ -1497,15 +1520,18 @@ static int detectBurst(const signalVector &burst,
   if ((*toa < 3 * sps) || (*toa > len - 3 * sps))
     return 0;
 
-  /* Peak -to-average ratio */
+  /* Peak-to-average ratio */
   if (computePeakRatio(&corr, sps, *toa, *amp) < thresh)
     return 0;
 
-  /* Compute peak-to-average ratio. Reject if we don't have enough values */
-  *amp = peakDetect(corr, toa, NULL);
+  /* Refine TOA and correlation value */
+  xcorr = peakDetect(corr, toa, NULL);
+
+  /* Compute C/I */
+  float CI = computeCI(corr_in, sync, *toa, start, xcorr);
 
   /* Normalize our channel gain */
-  *amp = *amp / sync->gain;
+  *amp = xcorr / sync->gain;
 
   /* Compensate for residuate time lag */
   *toa = *toa - sync->toa;
