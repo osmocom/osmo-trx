@@ -111,6 +111,7 @@ struct estim_burst_params {
         complex amp;
         float toa;
         uint8_t tsc;
+        float ci;
 };
 /**
         8-PSK/GMSK/RACH burst detector

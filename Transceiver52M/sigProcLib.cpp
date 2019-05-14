@@ -1454,6 +1454,33 @@ static signalVector *downsampleBurst(const signalVector &burst)
 };
 
 /*
+ * Computes C/I (Carrier-to-Interference ratio) in dB (deciBels).
+ * It is computed from the training sequence of each received burst,
+ * by comparing the "ideal" training sequence with the actual one.
+ */
+static float computeCI(const signalVector *burst, CorrelationSequence *sync,
+                       float toa, int start, complex xcorr)
+{
+  float S, C;
+  int ps;
+
+  /* Integer position where the sequence starts */
+  ps = start + 1 - sync->sequence->size() + (int)roundf(toa);
+
+  /* Estimate Signal power */
+  S = 0.0f;
+  for (int i=0, j=ps; i<(int)sync->sequence->size(); i++,j++)
+    S += (*burst)[j].norm2();
+  S /= sync->sequence->size();
+
+  /* Esimate Carrier power */
+  C = xcorr.norm2() / ((sync->sequence->size() - 1) * sync->gain.abs());
+
+  /* Interference = Signal - Carrier, so C/I = C / (S - C) */
+  return 3.0103f * log2f(C / (S - C));
+}
+
+/*
  * Detect a burst based on correlation and peak-to-average ratio
  *
  * For one sampler-per-symbol, perform fast peak detection (no interpolation)
@@ -1468,6 +1495,8 @@ static int detectBurst(const signalVector &burst,
 {
   const signalVector *corr_in;
   signalVector *dec = NULL;
+  complex xcorr;
+  int rc = 1;
 
   if (sps == 4) {
     dec = downsampleBurst(burst);
@@ -1480,11 +1509,9 @@ static int detectBurst(const signalVector &burst,
   /* Correlate */
   if (!convolve(corr_in, sync->sequence, &corr,
                 CUSTOM, start, len)) {
-    delete dec;
-    return -1;
+    rc = -1;
+    goto del_ret;
   }
-
-  delete dec;
 
   /* Running at the downsampled rate at this point */
   sps = 1;
@@ -1492,23 +1519,32 @@ static int detectBurst(const signalVector &burst,
   /* Peak detection - place restrictions at correlation edges */
   ebp->amp = fastPeakDetect(corr, &ebp->toa);
 
-  if ((ebp->toa < 3 * sps) || (ebp->toa > len - 3 * sps))
-    return 0;
+  if ((ebp->toa < 3 * sps) || (ebp->toa > len - 3 * sps)) {
+    rc = 0;
+    goto del_ret;
+  }
 
-  /* Peak -to-average ratio */
-  if (computePeakRatio(&corr, sps, ebp->toa, ebp->amp) < thresh)
-    return 0;
+  /* Peak-to-average ratio */
+  if (computePeakRatio(&corr, sps, ebp->toa, ebp->amp) < thresh) {
+    rc = 0;
+    goto del_ret;
+  }
 
-  /* Compute peak-to-average ratio. Reject if we don't have enough values */
-  ebp->amp = peakDetect(corr, &ebp->toa, NULL);
+  /* Refine TOA and correlation value */
+  xcorr = peakDetect(corr, &ebp->toa, NULL);
+
+  /* Compute C/I */
+  ebp->ci = computeCI(corr_in, sync, ebp->toa, start, xcorr);
 
   /* Normalize our channel gain */
-  ebp->amp = ebp->amp / sync->gain;
+  ebp->amp = xcorr / sync->gain;
 
   /* Compensate for residuate time lag */
   ebp->toa = ebp->toa - sync->toa;
 
-  return 1;
+del_ret:
+  delete dec;
+  return rc;
 }
 
 static float maxAmplitude(const signalVector &burst)
@@ -1563,6 +1599,7 @@ static int detectGeneralBurst(const signalVector &rxBurst, float thresh, int sps
   } else if (!rc) {
     ebp->amp = 0.0f;
     ebp->toa = 0.0f;
+    ebp->ci = 0.0f;
     return clipping?-SIGERR_CLIP:SIGERR_NONE;
   }
 
