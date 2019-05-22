@@ -1,16 +1,16 @@
-Index: osmo-trx/debian/control
-===================================================================
---- osmo-trx.orig/debian/control
-+++ osmo-trx/debian/control
+diff --git a/debian/control b/debian/control
+index 8ff59f0..126c16a 100644
+--- a/debian/control
++++ b/debian/control
 @@ -13,7 +13,6 @@ Build-Depends: debhelper (>= 9),
                 libfftw3-dev,
                 libtalloc-dev,
                 libusrp-dev,
 -               liblimesuite-dev,
-                libosmocore-dev (>= 0.10.0)
+                libosmocore-dev (>= 0.10.0),
+                osmo-gsm-manuals-dev
  Standards-Version: 3.9.6
- Vcs-Browser: http://cgit.osmocom.org/osmo-trx
-@@ -29,7 +28,7 @@ Package: osmo-trx-dbg
+@@ -30,7 +29,7 @@ Package: osmo-trx-dbg
  Architecture: any
  Section: debug
  Priority: extra
@@ -19,11 +19,10 @@ Index: osmo-trx/debian/control
  Description: Debug symbols for the osmo-trx-*
   Make debugging possible
  
-@@ -70,22 +70,3 @@ Description: SDR transceiver that implem
-  3GPP is the "3rd Generation Partnership Project" which is the collaboration
+@@ -72,25 +71,6 @@ Description: SDR transceiver that implements Layer 1 of a GSM BTS (USRP1)
   between different telecommunication associations for developing new
   generations of mobile phone networks. (post-2G/GSM)
--
+ 
 -Package: osmo-trx-lms
 -Architecture: any
 -Depends: ${shlibs:Depends}, ${misc:Depends}
@@ -42,16 +41,20 @@ Index: osmo-trx/debian/control
 - 3GPP is the "3rd Generation Partnership Project" which is the collaboration
 - between different telecommunication associations for developing new
 - generations of mobile phone networks. (post-2G/GSM)
-Index: osmo-trx/debian/rules
-===================================================================
---- osmo-trx.orig/debian/rules
-+++ osmo-trx/debian/rules
+-
+ Package: osmo-trx-doc
+ Architecture: all
+ Section: doc
+diff --git a/debian/rules b/debian/rules
+index 627c0c8..d9285e2 100755
+--- a/debian/rules
++++ b/debian/rules
 @@ -9,7 +9,7 @@ override_dh_shlibdeps:
  	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
  
  override_dh_auto_configure:
--	dh_auto_configure -- --with-uhd --with-usrp1 --with-lms --with-systemdsystemunitdir=/lib/systemd/system
-+	dh_auto_configure -- --with-uhd --with-usrp1 --with-systemdsystemunitdir=/lib/systemd/system
+-	dh_auto_configure -- --with-uhd --with-usrp1 --with-lms --with-systemdsystemunitdir=/lib/systemd/system --enable-manuals
++	dh_auto_configure -- --with-uhd --with-usrp1 --with-systemdsystemunitdir=/lib/systemd/system --enable-manuals
  
  override_dh_strip:
  	dh_strip --dbg-package=osmo-trx-dbg

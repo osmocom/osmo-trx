@@ -9,7 +9,11 @@ override_dh_shlibdeps:
 	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
 
 override_dh_auto_configure:
-	dh_auto_configure -- --with-uhd --with-usrp1 --with-lms --with-systemdsystemunitdir=/lib/systemd/system
+	dh_auto_configure -- --with-uhd --with-usrp1 --with-lms --with-systemdsystemunitdir=/lib/systemd/system --enable-manuals
 
 override_dh_strip:
 	dh_strip --dbg-package=osmo-trx-dbg
+
+# Don't create .pdf.gz files (barely saves space and they can't be opened directly by most pdf readers)
+override_dh_compress:
+	dh_compress -X.pdf
