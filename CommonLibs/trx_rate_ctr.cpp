@@ -56,6 +56,7 @@ extern "C" {
 #include <osmocom/core/rate_ctr.h>
 #include <osmocom/core/select.h>
 #include <osmocom/core/stats.h>
+#include <osmocom/core/timer.h>
 
 #include "osmo_signal.h"
 #include "trx_vty.h"
@@ -68,18 +69,34 @@ extern "C" {
    (non-pending) counter data */
 #define PENDING_CHAN_NONE SIZE_MAX
 
+static void *trx_rate_ctr_ctx;
+
 static struct rate_ctr_group** rate_ctrs;
 static struct device_counters* ctrs_pending;
 static size_t chan_len;
 static struct osmo_fd rate_ctr_timerfd;
 static Mutex rate_ctr_mutex;
 
-enum {
-	TRX_CTR_RX_UNDERRUNS,
-	TRX_CTR_RX_OVERRUNS,
-	TRX_CTR_TX_UNDERRUNS,
-	TRX_CTR_RX_DROP_EV,
-	TRX_CTR_RX_DROP_SMPL,
+struct osmo_timer_list threshold_timer;
+static LLIST_HEAD(threshold_list);
+static int threshold_timer_sched_secs;
+static bool threshold_initied;
+
+const struct value_string rate_ctr_intv[] = {
+	{ RATE_CTR_INTV_SEC,	"per-second" },
+	{ RATE_CTR_INTV_MIN,	"per-minute" },
+	{ RATE_CTR_INTV_HOUR,	"per-hour" },
+	{ RATE_CTR_INTV_DAY, 	"per-day" },
+	{ 0, NULL }
+};
+
+const struct value_string trx_chan_ctr_names[] = {
+	{ TRX_CTR_RX_UNDERRUNS,	"rx_underruns" },
+	{ TRX_CTR_RX_OVERRUNS,	"rx_overruns" },
+	{ TRX_CTR_TX_UNDERRUNS,	"tx_underruns" },
+	{ TRX_CTR_RX_DROP_EV,	"rx_drop_events" },
+	{ TRX_CTR_RX_DROP_SMPL,	"rx_drop_samples" },
+	{ 0, NULL }
 };
 
 static const struct rate_ctr_desc trx_chan_ctr_desc[] = {
@@ -155,10 +172,99 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 	return 0;
 }
 
-/* Init rate_ctr subsystem. Expected to be called during process start by main thread */
+/************************************
+ * ctr_threshold  APIs
+ ************************************/
+static const char* ctr_threshold_2_vty_str(struct ctr_threshold *ctr)
+{
+	static char buf[256];
+	int rc = 0;
+	rc += snprintf(buf, sizeof(buf), "ctr-error-threshold %s", get_value_string(trx_chan_ctr_names, ctr->ctr_id));
+	rc += snprintf(buf + rc, sizeof(buf) - rc, " %d %s", ctr->val, get_value_string(rate_ctr_intv, ctr->intv));
+	return buf;
+}
+
+static void threshold_timer_cb(void *data)
+{
+	struct ctr_threshold *ctr_thr;
+	struct rate_ctr *rate_ctr;
+	size_t chan;
+	LOGC(DMAIN, DEBUG) << "threshold_timer_cb fired!";
+
+	llist_for_each_entry(ctr_thr, &threshold_list, list) {
+		for (chan = 0; chan < chan_len; chan++) {
+			rate_ctr = &rate_ctrs[chan]->ctr[ctr_thr->ctr_id];
+			LOGCHAN(chan, DMAIN, INFO) << "checking threshold: " << ctr_threshold_2_vty_str(ctr_thr)
+						   << " ("<< rate_ctr->intv[ctr_thr->intv].rate << " vs " << ctr_thr->val << ")";
+			if (rate_ctr->intv[ctr_thr->intv].rate >= ctr_thr->val) {
+				LOGCHAN(chan, DMAIN, FATAL) << "threshold reached, stopping! " << ctr_threshold_2_vty_str(ctr_thr)
+							   << " ("<< rate_ctr->intv[ctr_thr->intv].rate << " vs " << ctr_thr->val << ")";
+				osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
+				return;
+			}
+		}
+	}
+	osmo_timer_schedule(&threshold_timer, threshold_timer_sched_secs, 0);
+}
+
+static size_t ctr_threshold_2_seconds(struct ctr_threshold *ctr)
+{
+	size_t mult = 0;
+	switch (ctr->intv) {
+	case RATE_CTR_INTV_SEC:
+		mult = 1;
+		break;
+	case RATE_CTR_INTV_MIN:
+		mult = 60;
+		break;
+	case RATE_CTR_INTV_HOUR:
+		mult = 60*60;
+		break;
+	case RATE_CTR_INTV_DAY:
+		mult = 60*60*24;
+		break;
+	default:
+		OSMO_ASSERT(false);
+	}
+	return mult;
+}
+
+static void threshold_timer_update_intv() {
+	struct ctr_threshold *ctr, *min_ctr;
+	size_t secs, min_secs;
+
+	/* Avoid scheduling timer until itself and other structures are prepared
+	   by trx_rate_ctr_init */
+	if (!threshold_initied)
+		return;
+
+	if (llist_empty(&threshold_list)) {
+		if (osmo_timer_pending(&threshold_timer))
+			osmo_timer_del(&threshold_timer);
+		return;
+	}
+
+	min_ctr = llist_first_entry(&threshold_list, struct ctr_threshold, list);
+	min_secs = ctr_threshold_2_seconds(min_ctr);
+
+	llist_for_each_entry(ctr, &threshold_list, list) {
+		secs = ctr_threshold_2_seconds(ctr);
+		if( min_secs > secs)
+			min_secs = secs;
+	}
+
+
+	threshold_timer_sched_secs = OSMO_MAX(min_secs / 2 - 1, 1);
+	LOGC(DMAIN, INFO) << "New ctr-error-threshold check interval: "
+			  << threshold_timer_sched_secs << " seconds";
+	osmo_timer_schedule(&threshold_timer, threshold_timer_sched_secs, 0);
+}
+
+/* Init rate_ctr subsystem. Expected to be called during process start by main thread before VTY is ready */
 void trx_rate_ctr_init(void *ctx, struct trx_ctx* trx_ctx)
 {
 	size_t  i;
+	trx_rate_ctr_ctx = ctx;
 	chan_len = trx_ctx->cfg.num_chans;
 	ctrs_pending = (struct device_counters*) talloc_zero_size(ctx, chan_len * sizeof(struct device_counters));
 	rate_ctrs = (struct rate_ctr_group**) talloc_zero_size(ctx, chan_len * sizeof(struct rate_ctr_group*));
@@ -177,4 +283,48 @@ void trx_rate_ctr_init(void *ctx, struct trx_ctx* trx_ctx)
 		exit(1);
 	}
 	osmo_signal_register_handler(SS_DEVICE, device_sig_cb, NULL);
+
+	/* Now set up threshold checks */
+	threshold_initied = true;
+	osmo_timer_setup(&threshold_timer, threshold_timer_cb, NULL);
+	threshold_timer_update_intv();
+}
+
+void trx_rate_ctr_threshold_add(struct ctr_threshold *ctr)
+{
+	struct ctr_threshold *new_ctr;
+
+	new_ctr = talloc_zero(trx_rate_ctr_ctx, struct ctr_threshold);
+	*new_ctr = *ctr;
+	LOGC(DMAIN, NOTICE) << "Adding new threshold check: " << ctr_threshold_2_vty_str(new_ctr);
+	llist_add(&new_ctr->list, &threshold_list);
+	threshold_timer_update_intv();
+}
+
+int trx_rate_ctr_threshold_del(struct ctr_threshold *del_ctr)
+{
+	struct ctr_threshold *ctr;
+
+	llist_for_each_entry(ctr, &threshold_list, list) {
+		if (ctr->intv != del_ctr->intv ||
+		    ctr->ctr_id != del_ctr->ctr_id ||
+		    ctr->val != del_ctr->val)
+			continue;
+
+		LOGC(DMAIN, NOTICE) << "Deleting threshold check: " << ctr_threshold_2_vty_str(del_ctr);
+		llist_del(&ctr->list);
+		talloc_free(ctr);
+		threshold_timer_update_intv();
+		return 0;
+	}
+	return -1;
+}
+
+void trx_rate_ctr_threshold_write_config(struct vty *vty, char *indent_prefix)
+{
+	struct ctr_threshold *ctr;
+
+	llist_for_each_entry(ctr, &threshold_list, list) {
+		vty_out(vty, "%s%s%s", indent_prefix, ctr_threshold_2_vty_str(ctr), VTY_NEWLINE);
+	}
 }

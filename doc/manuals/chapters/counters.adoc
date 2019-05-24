@@ -2,3 +2,62 @@
 == Counters
 
 include::./counters_generated.adoc[]
+
+=== Rate Counter Configurable Error Thresholds
+
+Some rate counters such as overruns, underruns and dropped packets indicate
+events that can really harm correct operation of the BTS served by OsmoTRX,
+specially if they happen frequently. OsmoTRX is in most cases (depending on
+maturity of device driver) prepared to dodge the temporary failure and keep
+running and providing service.
+
+Still, it is sometimes important for this kind of events to not go unnoticed by
+the operator, since they may indicate issues regarding the set up that may
+require operator intervention to fix it.
+
+For instance, frequent dropped packets could indicate SDR HW/FW/power errors, or
+a faulty connection against the host running OsmoTRX.
+
+They can also indicate issues on the host running OsmoTRX itself: For instance,
+OsmoTRX may not be running under a high enough priority (hence other processes
+eventually battling for resources with it), or that simply the HW running
+OsmoTRX is not powerful enough to accomplish all work in a timely fashion all
+the time.
+
+As a result, OsmoTRX can be configured to exit the process upon certain
+conditions being met, in order to let osmoBTS notice something is wrong and thus
+announcing issues through alarms to the network, where the operator can then
+investigate the issue by looking at OsmoTRX logs.
+
+These conditions are configured by means of introducing rate counter thresholds
+in the VTY. The OsmoTRX user can provide those threshold commands either in the
+VTY cfg file read by OsmoTRX process during startup, or by adding/removing them
+dynamically through the VTY interactive console.
+
+Each threshold cmd states an event (a rate counter type), a value and an time
+interval (a second, a minute, an hour or a day). A threshold will be reached
+(and OsmoTRX stopped) if its value grows bigger than the configured threshold
+value over the configured time interval. This is the syntax used to manage rate
+counter thresholds:
+
+`(no) ctr-error-threshold <EVENT> <VALUE> <INTERVAL>`
+
+If several rate counter thresholds are set, then all of them are checked over
+time and the first one reached will stop OsmoTRX.
+
+.Example: rate counter threshold configuration (VTY .cfg file)
+----
+trx
+ ctr-error-threshold rx_drop_events 2 per-minute <1>
+ ctr-error-threshold rx_drop_samples 800 per-second <2>
+----
+<1> Stop OsmoTRX if dropped event (any amount of samples) during Rx was detected 2 times or more during a minute.
+<2> Stop OsmoTRX if 800 or more samples were detected during Rx to be dropped by the HW during a second.
+
+.Example: rate counter threshold configuration (VTY interactive)
+----
+OsmoTRX(config-trx)# ctr-error-threshold tx_underruns 3 per-hour <1>
+OsmoTRX(config-trx)# no ctr-error-threshold tx_underruns 3 per-hour <2>
+----
+<1> Stop OsmoTRX if 3 or more underruns were detected during Tx over the last hour
+<2> Remove previously set rate counter threshold

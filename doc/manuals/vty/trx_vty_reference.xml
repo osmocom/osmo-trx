@@ -1253,6 +1253,37 @@
         <param name='dummy' doc='Dummy method' />
       </params>
     </command>
+    <command id='ctr-error-threshold (rx_underruns|rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples) &lt;0-65535&gt; (per-second|per-minute|per-hour|per-day)'>
+      <params>
+        <param name='ctr-error-threshold' doc='Threshold rate for error counter' />
+        <param name='rx_underruns' doc='Set threshold value for rate_ctr device:rx_underruns' />
+        <param name='rx_overruns' doc='Set threshold value for rate_ctr device:rx_overruns' />
+        <param name='tx_underruns' doc='Set threshold value for rate_ctr device:tx_underruns' />
+        <param name='rx_drop_events' doc='Set threshold value for rate_ctr device:rx_drop_events' />
+        <param name='rx_drop_samples' doc='Set threshold value for rate_ctr device:rx_drop_samples' />
+        <param name='&lt;0-65535&gt;' doc='Value to set for threshold' />
+        <param name='per-second' doc='Threshold value sampled per-second' />
+        <param name='per-minute' doc='Threshold value sampled per-minute' />
+        <param name='per-hour' doc='Threshold value sampled per-hour' />
+        <param name='per-day' doc='Threshold value sampled per-day' />
+      </params>
+    </command>
+    <command id='no ctr-error-threshold (rx_underruns|rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples) &lt;0-65535&gt; (per-second|per-minute|per-hour|per-day)'>
+      <params>
+        <param name='no' doc='Negate a command or set its defaults' />
+        <param name='ctr-error-threshold' doc='Threshold rate for error counter' />
+        <param name='rx_underruns' doc='Set threshold value for rate_ctr device:rx_underruns' />
+        <param name='rx_overruns' doc='Set threshold value for rate_ctr device:rx_overruns' />
+        <param name='tx_underruns' doc='Set threshold value for rate_ctr device:tx_underruns' />
+        <param name='rx_drop_events' doc='Set threshold value for rate_ctr device:rx_drop_events' />
+        <param name='rx_drop_samples' doc='Set threshold value for rate_ctr device:rx_drop_samples' />
+        <param name='&lt;0-65535&gt;' doc='Value to set for threshold' />
+        <param name='per-second' doc='Threshold value sampled per-second' />
+        <param name='per-minute' doc='Threshold value sampled per-minute' />
+        <param name='per-hour' doc='Threshold value sampled per-hour' />
+        <param name='per-day' doc='Threshold value sampled per-day' />
+      </params>
+    </command>
     <command id='chan &lt;0-100&gt;'>
       <params>
         <param name='chan' doc='Select a channel to configure' />

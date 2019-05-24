@@ -31,6 +31,7 @@
 #include <osmocom/vty/vty.h>
 #include <osmocom/vty/misc.h>
 
+#include "trx_rate_ctr.h"
 #include "trx_vty.h"
 #include "../config.h"
 
@@ -347,6 +348,107 @@ DEFUN(cfg_filler, cfg_filler_cmd,
 	return CMD_SUCCESS;
 }
 
+static int vty_ctr_name_2_id(const char* str) {
+	size_t i;
+	for (i = 0; trx_chan_ctr_names[i].str; i++) {
+		if (strstr(trx_chan_ctr_names[i].str, str)) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+static int vty_intv_name_2_id(const char* str) {
+	size_t i;
+	for (i = 0; rate_ctr_intv[i].str; i++) {
+		if (strcmp(rate_ctr_intv[i].str, str) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+#define THRESHOLD_ARGS "(rx_underruns|rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples)"
+#define THRESHOLD_STR_VAL(s) "Set threshold value for rate_ctr device:" OSMO_STRINGIFY_VAL(s) "\n"
+#define THRESHOLD_STRS \
+	THRESHOLD_STR_VAL(rx_underruns) \
+	THRESHOLD_STR_VAL(rx_overruns) \
+	THRESHOLD_STR_VAL(tx_underruns) \
+	THRESHOLD_STR_VAL(rx_drop_events) \
+	THRESHOLD_STR_VAL(rx_drop_samples)
+#define INTV_ARGS "(per-second|per-minute|per-hour|per-day)"
+#define INTV_STR_VAL(s) "Threshold value sampled " OSMO_STRINGIFY_VAL(s) "\n"
+#define INTV_STRS \
+	INTV_STR_VAL(per-second) \
+	INTV_STR_VAL(per-minute) \
+	INTV_STR_VAL(per-hour) \
+	INTV_STR_VAL(per-day)
+
+DEFUN(cfg_ctr_error_threshold, cfg_ctr_error_threshold_cmd,
+	"ctr-error-threshold " THRESHOLD_ARGS " <0-65535> " INTV_ARGS,
+	"Threshold rate for error counter\n"
+	THRESHOLD_STRS
+	"Value to set for threshold\n"
+	INTV_STRS)
+{
+	int rc;
+	struct ctr_threshold ctr;
+
+	struct trx_ctx *trx = trx_from_vty(vty);
+	rc = vty_ctr_name_2_id(argv[0]);
+	if (rc < 0) {
+		vty_out(vty, "No valid ctr_name found for ctr-error-threshold %s%s",
+			argv[0], VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+	ctr.ctr_id = (enum TrxCtr)rc;
+	ctr.val = atoi(argv[1]);
+	rc = vty_intv_name_2_id(argv[2]);
+	if (rc < 0) {
+		vty_out(vty, "No valid time frame found for ctr-error-threshold %s %d %s%s",
+			argv[0], ctr.val, argv[2], VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+	ctr.intv = (enum rate_ctr_intv) rc;
+	trx_rate_ctr_threshold_add(&ctr);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_no_ctr_error_threshold, cfg_no_ctr_error_threshold_cmd,
+	"no ctr-error-threshold " THRESHOLD_ARGS " <0-65535> " INTV_ARGS,
+	NO_STR "Threshold rate for error counter\n"
+	THRESHOLD_STRS
+	"Value to set for threshold\n"
+	INTV_STRS)
+{
+	int rc;
+	struct ctr_threshold ctr;
+
+	struct trx_ctx *trx = trx_from_vty(vty);
+	rc = vty_ctr_name_2_id(argv[0]);
+	if (rc < 0) {
+		vty_out(vty, "No valid ctr_name found for ctr-error-threshold %s%s",
+			argv[0], VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+	ctr.ctr_id = (enum TrxCtr)rc;
+	ctr.val = atoi(argv[1]);
+	rc = vty_intv_name_2_id(argv[2]);
+	if (rc < 0) {
+		vty_out(vty, "No valid time frame found for ctr-error-threshold %s %d %s%s",
+			argv[0], ctr.val, argv[2], VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+	ctr.intv = (enum rate_ctr_intv) rc;
+	if (trx_rate_ctr_threshold_del(&ctr) < 0) {
+		vty_out(vty, "no ctr-error-threshold: Entry to delete not found%s", VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_chan, cfg_chan_cmd,
 	"chan <0-100>",
 	"Select a channel to configure\n"
@@ -444,6 +546,7 @@ static int config_write_trx(struct vty *vty)
 	vty_out(vty, " ext-rach %s%s", trx->cfg.ext_rach ? "enable" : "disable", VTY_NEWLINE);
 	if (trx->cfg.sched_rr != 0)
 		vty_out(vty, " rt-prio %u%s", trx->cfg.sched_rr, VTY_NEWLINE);
+	trx_rate_ctr_threshold_write_config(vty, " ");
 
 	for (i = 0; i < trx->cfg.num_chans; i++) {
 		chan = &trx->cfg.chans[i];
@@ -593,6 +696,8 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_ext_rach_cmd);
 	install_element(TRX_NODE, &cfg_rt_prio_cmd);
 	install_element(TRX_NODE, &cfg_filler_cmd);
+	install_element(TRX_NODE, &cfg_ctr_error_threshold_cmd);
+	install_element(TRX_NODE, &cfg_no_ctr_error_threshold_cmd);
 
 	install_element(TRX_NODE, &cfg_chan_cmd);
 	install_node(&chan_node, dummy_config_write);
