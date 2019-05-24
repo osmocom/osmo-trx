@@ -23,6 +23,7 @@
 
 extern "C" {
 #include "config_defs.h"
+#include "osmo_signal.h"
 }
 
 #ifdef HAVE_CONFIG_H
@@ -168,13 +169,20 @@ class RadioDevice {
   size_t chans;
   double lo_offset;
   std::vector<std::string> tx_paths, rx_paths;
+  std::vector<struct device_counters> m_ctr;
 
   RadioDevice(size_t tx_sps, size_t rx_sps, InterfaceType type, size_t chans, double offset,
               const std::vector<std::string>& tx_paths,
               const std::vector<std::string>& rx_paths):
 		tx_sps(tx_sps), rx_sps(rx_sps), iface(type), chans(chans), lo_offset(offset),
 		tx_paths(tx_paths), rx_paths(rx_paths)
-	{ }
+	{
+		m_ctr.resize(chans);
+		for (size_t i = 0; i < chans; i++) {
+			memset(&m_ctr[i], 0, sizeof(m_ctr[i]));
+			m_ctr[i].chan = i;
+		}
+	}
 
   bool set_antennas() {
 	unsigned int i;

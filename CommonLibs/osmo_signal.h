@@ -27,9 +27,28 @@
 /* Signalling subsystems */
 enum signal_subsystems {
 	SS_TRANSC,
+	SS_DEVICE,
 };
 
 /* SS_TRANSC signals */
 enum SS_TRANSC {
 	S_TRANSC_STOP_REQUIRED, /* Transceiver fatal error, it should be stopped */
+};
+
+/* SS_DEVICE signals */
+enum SS_DEVICE {
+	/* Device internal counters changed. Counters are provided as cb data
+	   (struct device_counters). Must be sent with PTHREAD_CANCEL_DISABLE
+	   to avoid deadlocks in case osmo-trx process is asked to exit. */
+	S_DEVICE_COUNTER_CHANGE,
+};
+
+/* signal cb for signal <SS_DEVICE,S_DEVICE_COUNTER_CHANGE> */
+struct device_counters {
+	size_t chan;
+	unsigned int rx_underruns;
+	unsigned int rx_overruns;
+	unsigned int tx_underruns;
+	unsigned int rx_dropped_events;
+	unsigned int rx_dropped_samples;
 };

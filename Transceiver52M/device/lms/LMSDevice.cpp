@@ -25,7 +25,10 @@
 
 #include <lime/LimeSuite.h>
 
+extern "C" {
+#include "osmo_signal.h"
 #include <osmocom/core/utils.h>
+}
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -52,11 +55,6 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 
 	m_lms_stream_rx.resize(chans);
 	m_lms_stream_tx.resize(chans);
-
-	m_last_rx_underruns.resize(chans, 0);
-	m_last_rx_overruns.resize(chans, 0);
-	m_last_rx_dropped.resize(chans, 0);
-	m_last_tx_underruns.resize(chans, 0);
 
 	rx_buffers.resize(chans);
 }
@@ -580,32 +578,45 @@ GSM::Time LMSDevice::minLatency() {
 void LMSDevice::update_stream_stats(size_t chan, bool * underrun, bool * overrun)
 {
 	lms_stream_status_t status;
-	if (LMS_GetStreamStatus(&m_lms_stream_rx[chan], &status) == 0) {
-		if (status.underrun > m_last_rx_underruns[chan]) {
-			*underrun = true;
-			LOGCHAN(chan, DDEV, ERROR) << "recv Underrun! ("
-						   << m_last_rx_underruns[chan] << " -> "
-						   << status.underrun << ")";
-		}
-		m_last_rx_underruns[chan] = status.underrun;
+	bool changed = false;
 
-		if (status.overrun > m_last_rx_overruns[chan]) {
-			*overrun = true;
-			LOGCHAN(chan, DDEV, ERROR) << "recv Overrun! ("
-						   << m_last_rx_overruns[chan] << " -> "
-						   << status.overrun << ")";
-		}
-		m_last_rx_overruns[chan] = status.overrun;
-
-		if (status.droppedPackets) {
-			LOGCHAN(chan, DDEV, ERROR) << "recv Dropped packets by HW! ("
-						   << m_last_rx_dropped[chan] << " -> "
-						   << m_last_rx_dropped[chan] +
-						      status.droppedPackets
-						   << ")";
-		}
-		m_last_rx_dropped[chan] += status.droppedPackets;
+	if (LMS_GetStreamStatus(&m_lms_stream_rx[chan], &status) != 0) {
+		LOGCHAN(chan, DDEV, ERROR) << "LMS_GetStreamStatus failed";
+		return;
 	}
+
+	if (status.underrun > m_ctr[chan].rx_underruns) {
+		changed = true;
+		*underrun = true;
+		LOGCHAN(chan, DDEV, ERROR) << "recv Underrun! ("
+					   << m_ctr[chan].rx_underruns << " -> "
+					   << status.underrun << ")";
+	}
+	m_ctr[chan].rx_underruns = status.underrun;
+
+	if (status.overrun > m_ctr[chan].rx_overruns) {
+		changed = true;
+		*overrun = true;
+		LOGCHAN(chan, DDEV, ERROR) << "recv Overrun! ("
+					   << m_ctr[chan].rx_overruns << " -> "
+					   << status.overrun << ")";
+	}
+	m_ctr[chan].rx_overruns = status.overrun;
+
+	if (status.droppedPackets) {
+		changed = true;
+		LOGCHAN(chan, DDEV, ERROR) << "recv Dropped packets by HW! ("
+					   << m_ctr[chan].rx_dropped_samples << " -> "
+					   << m_ctr[chan].rx_dropped_samples +
+					      status.droppedPackets
+					   << ")";
+		m_ctr[chan].rx_dropped_events++;
+	}
+	m_ctr[chan].rx_dropped_samples += status.droppedPackets;
+
+	if (changed)
+		osmo_signal_dispatch(SS_DEVICE, S_DEVICE_COUNTER_CHANGE, &m_ctr[chan]);
+
 }
 
 // NOTE: Assumes sequential reads
@@ -719,9 +730,12 @@ int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
 		}
 
 		if (LMS_GetStreamStatus(&m_lms_stream_tx[i], &status) == 0) {
-			if (status.underrun > m_last_tx_underruns[i])
+			if (status.underrun > m_ctr[i].tx_underruns) {
 				*underrun = true;
-			m_last_tx_underruns[i] = status.underrun;
+				m_ctr[i].tx_underruns = status.underrun;
+				osmo_signal_dispatch(SS_DEVICE, S_DEVICE_COUNTER_CHANGE, &m_ctr[i]);
+			}
+
 		}
 		thread_enable_cancel(true);
 	}

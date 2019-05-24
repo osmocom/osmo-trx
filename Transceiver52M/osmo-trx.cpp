@@ -59,6 +59,7 @@ extern "C" {
 #include "trx_vty.h"
 #include "debug.h"
 #include "osmo_signal.h"
+#include "trx_rate_ctr.h"
 }
 
 #define DEFAULT_CONFIG_FILE	"osmo-trx.cfg"
@@ -625,6 +626,8 @@ int main(int argc, char *argv[])
 		if (set_sched_rr(g_trx_ctx->cfg.sched_rr) < 0)
 			return EXIT_FAILURE;
 	}
+
+	trx_rate_ctr_init(tall_trx_ctx, g_trx_ctx);
 
 	srandom(time(NULL));
 

@@ -49,11 +49,6 @@ private:
 	std::vector<lms_stream_t> m_lms_stream_rx;
 	std::vector<lms_stream_t> m_lms_stream_tx;
 
-	std::vector<uint32_t> m_last_rx_underruns;
-	std::vector<uint32_t> m_last_rx_overruns;
-	std::vector<uint32_t> m_last_rx_dropped;
-	std::vector<uint32_t> m_last_tx_underruns;
-
 	std::vector<smpl_buf *> rx_buffers;
 
 	double actualSampleRate;	///< the actual USRP sampling rate
