@@ -597,12 +597,14 @@ void LMSDevice::update_stream_stats(size_t chan, bool * underrun, bool * overrun
 		}
 		m_last_rx_overruns[chan] = status.overrun;
 
-		if (status.droppedPackets > m_last_rx_dropped[chan]) {
+		if (status.droppedPackets) {
 			LOGCHAN(chan, DDEV, ERROR) << "recv Dropped packets by HW! ("
 						   << m_last_rx_dropped[chan] << " -> "
-						   << status.droppedPackets << ")";
+						   << m_last_rx_dropped[chan] +
+						      status.droppedPackets
+						   << ")";
 		}
-		m_last_rx_dropped[chan] = m_last_rx_overruns[chan];
+		m_last_rx_dropped[chan] += status.droppedPackets;
 	}
 }
 
