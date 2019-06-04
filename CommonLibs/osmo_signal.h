@@ -26,13 +26,13 @@
 
 /* Signalling subsystems */
 enum signal_subsystems {
-	SS_TRANSC,
+	SS_MAIN,
 	SS_DEVICE,
 };
 
-/* SS_TRANSC signals */
-enum SS_TRANSC {
-	S_TRANSC_STOP_REQUIRED, /* Transceiver fatal error, it should be stopped */
+/* SS_MAIN signals */
+enum SS_MAIN {
+	S_MAIN_STOP_REQUIRED, /* TRX fatal error, it should be stopped */
 };
 
 /* SS_DEVICE signals */

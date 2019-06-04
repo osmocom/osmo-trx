@@ -123,7 +123,7 @@ static int transc_sig_cb(unsigned int subsys, unsigned int signal,
 		     void *handler_data, void *signal_data)
 {
 	switch (signal) {
-	case S_TRANSC_STOP_REQUIRED:
+	case S_MAIN_STOP_REQUIRED:
 		gshutdown = true;
                 break;
 	default:
@@ -151,8 +151,6 @@ int makeTransceiver(struct trx_ctx *trx, RadioInterface *radio)
 		LOG(ALERT) << "Failed to initialize transceiver";
 		return -1;
 	}
-
-        transceiver->setSignalHandler(transc_sig_cb);
 
 	for (size_t i = 0; i < trx->cfg.num_chans; i++) {
 		fifo = radio->receiveFIFO(i);
@@ -627,6 +625,7 @@ int main(int argc, char *argv[])
 			return EXIT_FAILURE;
 	}
 
+	osmo_signal_register_handler(SS_MAIN, transc_sig_cb, NULL);
 	trx_rate_ctr_init(tall_trx_ctx, g_trx_ctx);
 
 	srandom(time(NULL));
@@ -641,5 +640,6 @@ int main(int argc, char *argv[])
 
 	osmo_fd_unregister(&signal_ofd);
 	osmo_fd_close(&signal_ofd);
+	osmo_signal_unregister_handler(SS_MAIN, transc_sig_cb, NULL);
 	return 0;
 }

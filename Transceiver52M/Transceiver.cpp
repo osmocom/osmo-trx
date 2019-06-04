@@ -119,7 +119,7 @@ Transceiver::Transceiver(int wBasePort,
   : mBasePort(wBasePort), mLocalAddr(TRXAddress), mRemoteAddr(GSMcoreAddress),
     mClockSocket(TRXAddress, wBasePort, GSMcoreAddress, wBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
-    rssiOffset(wRssiOffset), sig_cbfn(NULL),
+    rssiOffset(wRssiOffset),
     mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false), mForceClockInterface(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
     mWriteBurstToDiskMask(0)
@@ -223,17 +223,6 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
   }
 
   return true;
-}
-
-void Transceiver::setSignalHandler(osmo_signal_cbfn cbfn)
-{
-  if (this->sig_cbfn)
-    osmo_signal_unregister_handler(SS_TRANSC, this->sig_cbfn, NULL);
-
-  if (cbfn) {
-    this->sig_cbfn = cbfn;
-    osmo_signal_register_handler(SS_TRANSC, this->sig_cbfn, NULL);
-  }
 }
 
 /*
@@ -910,7 +899,7 @@ void Transceiver::driveReceiveRadio()
     usleep(100000);
   } else if (rc < 0) {
     LOG(FATAL) << "radio Interface receive failed, requesting stop.";
-    osmo_signal_dispatch(SS_TRANSC, S_TRANSC_STOP_REQUIRED, this);
+    osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
   } else if (mForceClockInterface || mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0)) {
     mForceClockInterface = false;
     writeClockInterface();
