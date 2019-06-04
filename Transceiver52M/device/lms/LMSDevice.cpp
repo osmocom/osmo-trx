@@ -36,8 +36,6 @@ extern "C" {
 
 using namespace std;
 
-constexpr double LMSDevice::masterClockRate;
-
 #define MAX_ANTENNA_LIST_SIZE 10
 #define LMS_SAMPLE_RATE GSMRATE*32
 #define GSM_CARRIER_BW 270000.0 /* 270kHz */

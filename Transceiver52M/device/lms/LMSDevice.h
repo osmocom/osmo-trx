@@ -42,9 +42,6 @@
 class LMSDevice:public RadioDevice {
 
 private:
-
-	static constexpr double masterClockRate = 52.0e6;
-
 	lms_device_t *m_lms_dev;
 	std::vector<lms_stream_t> m_lms_stream_rx;
 	std::vector<lms_stream_t> m_lms_stream_tx;
