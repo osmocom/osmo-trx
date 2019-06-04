@@ -583,23 +583,23 @@ void LMSDevice::update_stream_stats(size_t chan, bool * underrun, bool * overrun
 		return;
 	}
 
-	if (status.underrun > m_ctr[chan].rx_underruns) {
+	if (status.underrun) {
 		changed = true;
 		*underrun = true;
 		LOGCHAN(chan, DDEV, ERROR) << "recv Underrun! ("
 					   << m_ctr[chan].rx_underruns << " -> "
 					   << status.underrun << ")";
 	}
-	m_ctr[chan].rx_underruns = status.underrun;
+	m_ctr[chan].rx_underruns += status.underrun;
 
-	if (status.overrun > m_ctr[chan].rx_overruns) {
+	if (status.overrun) {
 		changed = true;
 		*overrun = true;
 		LOGCHAN(chan, DDEV, ERROR) << "recv Overrun! ("
 					   << m_ctr[chan].rx_overruns << " -> "
 					   << status.overrun << ")";
 	}
-	m_ctr[chan].rx_overruns = status.overrun;
+	m_ctr[chan].rx_overruns += status.overrun;
 
 	if (status.droppedPackets) {
 		changed = true;
