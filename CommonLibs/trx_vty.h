@@ -63,6 +63,7 @@ struct trx_ctx {
 		bool ext_rach;
 		bool egprs;
 		unsigned int sched_rr;
+		unsigned int stack_size;
 		unsigned int num_chans;
 		struct trx_chan chans[TRX_CHAN_MAX];
 	} cfg;

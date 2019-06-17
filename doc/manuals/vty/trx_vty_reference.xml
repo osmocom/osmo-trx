@@ -1247,6 +1247,12 @@
         <param name='&lt;1-32&gt;' doc='Real time priority' />
       </params>
     </command>
+    <command id='stack-size &lt;0-2147483647&gt;'>
+      <params>
+        <param name='stack-size' doc='Set the stack size for the spawned threads' />
+        <param name='&lt;0-2147483647&gt;' doc='Stack size in BYTE' />
+      </params>
+    </command>
     <command id='filler dummy'>
       <params>
         <param name='filler' doc='Enable C0 filler table' />

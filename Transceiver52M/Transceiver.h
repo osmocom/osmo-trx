@@ -108,7 +108,7 @@ public:
               size_t tx_sps, size_t rx_sps, size_t chans,
               GSM::Time wTransmitLatency,
               RadioInterface *wRadioInterface,
-              double wRssiOffset);
+              double wRssiOffset, int stackSize);
 
   /** Destructor */
   ~Transceiver();
@@ -178,6 +178,7 @@ private:
   double rxFullScale;                     ///< full scale output to radio
 
   double rssiOffset;                      ///< RSSI to dBm conversion offset
+  int stackSize;                      ///< stack size for threads, 0 = OS default
 
   /** modulate and add a burst to the transmit queue */
   void addRadioVector(size_t chan, BitVector &bits,

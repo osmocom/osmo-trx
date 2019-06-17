@@ -115,11 +115,11 @@ Transceiver::Transceiver(int wBasePort,
                          size_t tx_sps, size_t rx_sps, size_t chans,
                          GSM::Time wTransmitLatency,
                          RadioInterface *wRadioInterface,
-                         double wRssiOffset)
+                         double wRssiOffset, int wStackSize)
   : mBasePort(wBasePort), mLocalAddr(TRXAddress), mRemoteAddr(GSMcoreAddress),
     mClockSocket(TRXAddress, wBasePort, GSMcoreAddress, wBasePort + 100),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
-    rssiOffset(wRssiOffset),
+    rssiOffset(wRssiOffset), stackSize(wStackSize),
     mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false), mForceClockInterface(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
     mWriteBurstToDiskMask(0)
@@ -212,7 +212,7 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
   /* Start control threads */
   for (size_t i = 0; i < mChans; i++) {
     TransceiverChannel *chan = new TransceiverChannel(this, i);
-    mControlServiceLoopThreads[i] = new Thread(32768);
+    mControlServiceLoopThreads[i] = new Thread(stackSize);
     mControlServiceLoopThreads[i]->start((void * (*)(void*))
                                  ControlServiceLoopAdapter, (void*) chan);
 
@@ -254,8 +254,8 @@ bool Transceiver::start()
   }
 
   /* Device is running - launch I/O threads */
-  mRxLowerLoopThread = new Thread(32768);
-  mTxLowerLoopThread = new Thread(32768);
+  mRxLowerLoopThread = new Thread(stackSize);
+  mTxLowerLoopThread = new Thread(stackSize);
   mTxLowerLoopThread->start((void * (*)(void*))
                             TxLowerLoopAdapter,(void*) this);
   mRxLowerLoopThread->start((void * (*)(void*))
@@ -264,12 +264,12 @@ bool Transceiver::start()
   /* Launch uplink and downlink burst processing threads */
   for (size_t i = 0; i < mChans; i++) {
     TransceiverChannel *chan = new TransceiverChannel(this, i);
-    mRxServiceLoopThreads[i] = new Thread(32768);
+    mRxServiceLoopThreads[i] = new Thread(stackSize);
     mRxServiceLoopThreads[i]->start((void * (*)(void*))
                             RxUpperLoopAdapter, (void*) chan);
 
     chan = new TransceiverChannel(this, i);
-    mTxPriorityQueueServiceLoopThreads[i] = new Thread(32768);
+    mTxPriorityQueueServiceLoopThreads[i] = new Thread(stackSize);
     mTxPriorityQueueServiceLoopThreads[i]->start((void * (*)(void*))
                             TxUpperLoopAdapter, (void*) chan);
   }

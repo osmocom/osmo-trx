@@ -158,7 +158,7 @@ class Thread {
 	public:
 
 	/** Create a thread in a non-running state. */
-	Thread(size_t wStackSize = (65536*4)):mThread((pthread_t)0) {
+	Thread(size_t wStackSize = 0):mThread((pthread_t)0) {
 		pthread_attr_init(&mAttrib);	// (pat) moved this here.
 		mStackSize=wStackSize;
 	}

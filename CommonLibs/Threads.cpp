@@ -135,8 +135,10 @@ void Thread::start(void *(*task)(void*), void *arg)
 	// (pat) Moved initialization to constructor to avoid crash in destructor.
 	//res = pthread_attr_init(&mAttrib);
 	//assert(!res);
-	res = pthread_attr_setstacksize(&mAttrib, mStackSize);
-	assert(!res);
+	if (mStackSize != 0) {
+		res = pthread_attr_setstacksize(&mAttrib, mStackSize);
+		assert(!res);
+	}
 	res = pthread_create(&mThread, &mAttrib, task, arg);
 	assert(!res);
 }

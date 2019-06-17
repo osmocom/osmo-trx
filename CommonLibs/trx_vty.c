@@ -336,6 +336,18 @@ DEFUN(cfg_rt_prio, cfg_rt_prio_cmd,
 	return CMD_SUCCESS;
 }
 
+DEFUN(cfg_stack_size, cfg_stack_size_cmd,
+	"stack-size <0-2147483647>",
+	"Set the stack size per thread in BYTE, 0 = OS default\n"
+	"Stack size per thread in BYTE\n")
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.stack_size = atoi(argv[0]);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_filler, cfg_filler_cmd,
 	"filler dummy",
 	"Enable C0 filler table\n"
@@ -546,6 +558,8 @@ static int config_write_trx(struct vty *vty)
 	vty_out(vty, " ext-rach %s%s", trx->cfg.ext_rach ? "enable" : "disable", VTY_NEWLINE);
 	if (trx->cfg.sched_rr != 0)
 		vty_out(vty, " rt-prio %u%s", trx->cfg.sched_rr, VTY_NEWLINE);
+	if (trx->cfg.stack_size != 0)
+		vty_out(vty, " stack-size %u%s", trx->cfg.stack_size, VTY_NEWLINE);
 	trx_rate_ctr_threshold_write_config(vty, " ");
 
 	for (i = 0; i < trx->cfg.num_chans; i++) {
@@ -585,6 +599,7 @@ static void trx_dump_vty(struct vty *vty, struct trx_ctx *trx)
 	vty_out(vty, " Extended RACH support: %s%s", trx->cfg.ext_rach ? "Enabled" : "Disabled", VTY_NEWLINE);
 	vty_out(vty, " Real Time Priority: %u (%s)%s", trx->cfg.sched_rr,
 		trx->cfg.sched_rr ? "Enabled" : "Disabled", VTY_NEWLINE);
+	vty_out(vty, " Stack size per Thread in BYTE (0 = OS default): %u%s", trx->cfg.stack_size, VTY_NEWLINE);
 	vty_out(vty, " Channels: %u%s", trx->cfg.num_chans, VTY_NEWLINE);
 	for (i = 0; i < trx->cfg.num_chans; i++) {
 		chan = &trx->cfg.chans[i];
@@ -698,6 +713,7 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_filler_cmd);
 	install_element(TRX_NODE, &cfg_ctr_error_threshold_cmd);
 	install_element(TRX_NODE, &cfg_no_ctr_error_threshold_cmd);
+	install_element(TRX_NODE, &cfg_stack_size_cmd);
 
 	install_element(TRX_NODE, &cfg_chan_cmd);
 	install_node(&chan_node, dummy_config_write);

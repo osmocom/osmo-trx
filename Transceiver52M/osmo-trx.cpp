@@ -145,7 +145,7 @@ int makeTransceiver(struct trx_ctx *trx, RadioInterface *radio)
 	transceiver = new Transceiver(trx->cfg.base_port, trx->cfg.bind_addr,
 			      trx->cfg.remote_addr, trx->cfg.tx_sps,
 			      trx->cfg.rx_sps, trx->cfg.num_chans, GSM::Time(3,0),
-			      radio, trx->cfg.rssi_offset);
+			      radio, trx->cfg.rssi_offset, trx->cfg.stack_size);
 	if (!transceiver->init(trx->cfg.filler, trx->cfg.rtsc,
 		       trx->cfg.rach_delay, trx->cfg.egprs, trx->cfg.ext_rach)) {
 		LOG(ALERT) << "Failed to initialize transceiver";
