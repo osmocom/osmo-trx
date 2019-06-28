@@ -29,6 +29,9 @@
 
 extern "C" {
 #include "osmo_signal.h"
+#include "proto_trxd.h"
+
+#include <osmocom/core/bits.h>
 }
 
 #ifdef HAVE_CONFIG_H
@@ -950,22 +953,24 @@ void Transceiver::driveReceiveFIFO(size_t chan)
 
   TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
 
-  char burstString[nbits + 10];
-  burstString[0] = burstTime.TN();
-  for (int i = 0; i < 4; i++)
-    burstString[1+i] = (burstTime.FN() >> ((3-i)*8)) & 0x0ff;
-  burstString[5] = (int)dBm;
-  burstString[6] = (TOAint >> 8) & 0x0ff;
-  burstString[7] = TOAint & 0x0ff;
+  char burstString[sizeof(struct trxd_hdr_v0) + nbits + 2];
+  struct trxd_hdr_v0* pkt = (struct trxd_hdr_v0*)burstString;
+  pkt->common.version = 0;
+  pkt->common.reserved = 0;
+  pkt->common.tn = burstTime.TN();
+  osmo_store32be(burstTime.FN(), &pkt->common.fn);
+  pkt->v0.rssi = dBm;
+  osmo_store16be(TOAint, &pkt->v0.toa);
   SoftVector::iterator burstItr = rxBurst->begin();
 
   for (unsigned i = 0; i < nbits; i++)
-    burstString[8 + i] = (char) round((*burstItr++) * 255.0);
+    pkt->soft_bits[i] = (char) round((*burstItr++) * 255.0);
 
-  burstString[nbits + 9] = '\0';
+  /* +1: Historical reason. There's an uninitizalied byte in there: pkt->soft_bits[bi.nbits] */
+  pkt->soft_bits[nbits + 1] = '\0';
   delete rxBurst;
 
-  mDataSockets[chan]->write(burstString, nbits + 10);
+  mDataSockets[chan]->write(burstString, sizeof(struct trxd_hdr_v0) + nbits + 2);
 }
 
 void Transceiver::driveTxFIFO()

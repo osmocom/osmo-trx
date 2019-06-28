@@ -25,6 +25,7 @@ SUBDIRS = arch device
 
 AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/arch/common -I${srcdir}/device/common
 AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
+AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
 
 rev2dir = $(datadir)/usrp/rev2
 rev4dir = $(datadir)/usrp/rev4
@@ -66,7 +67,8 @@ noinst_HEADERS = \
 	Resampler.h \
 	ChannelizerBase.h \
 	Channelizer.h \
-	Synthesis.h
+	Synthesis.h \
+	proto_trxd.h
 
 COMMON_LDADD = \
 	libtransceiver_common.la \
