@@ -35,6 +35,15 @@ extern "C" {
 #include "config_defs.h"
 }
 
+struct trx_ul_burst_ind {
+        SoftVector *rxBurst;
+        GSM::Time burstTime;
+        double rssi; // in dBFS
+        double toa;  // in symbols
+        double noise; // noise level in dBFS
+        bool rssi_valid; // are RSSI, noise and burstTime valid
+};
+
 class Transceiver;
 
 /** Channel descriptor for transceiver object and channel number pair */
@@ -191,9 +200,7 @@ private:
   void pushRadioVector(GSM::Time &nowTime);
 
   /** Pull and demodulate a burst from the receive FIFO */
-  SoftVector *pullRadioVector(GSM::Time &wTime, double &RSSI, bool &isRssiValid,
-                              double &timingOffset, double &noise,
-                              size_t chan = 0);
+  bool pullRadioVector(size_t chan, struct trx_ul_burst_ind *ind);
 
   /** Set modulus for specific timeslot */
   void setModulus(size_t timeslot, size_t chan);
@@ -264,8 +271,7 @@ protected:
   /** set priority on current thread */
   void setPriority(float prio = 0.5) { mRadioInterface->setPriority(prio); }
 
-  void logRxBurst(size_t chan, SoftVector *burst, GSM::Time time, double dbm,
-                  double rssi, double noise, double toa);
+  void logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi, double dbm);
 };
 
 void *RxUpperLoopAdapter(TransceiverChannel *);

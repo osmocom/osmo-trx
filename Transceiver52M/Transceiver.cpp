@@ -551,27 +551,24 @@ void writeToFile(radioVector *radio_burst, size_t chan)
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled.
  */
-SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &isRssiValid,
-                                         double &timingOffset, double &noise,
-                                         size_t chan)
+bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 {
   int rc;
   complex amp;
   float toa, max = -1.0, avg = 0.0;
   int max_i = -1;
   signalVector *burst;
-  SoftVector *bits = NULL;
   TransceiverState *state = &mStates[chan];
-  isRssiValid = false;
+  bi->rssi_valid = false;
 
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
   if (!radio_burst)
-    return NULL;
+    return false;
 
   /* Set time and determine correlation type */
-  GSM::Time time = radio_burst->getTime();
-  CorrType type = expectedCorrType(time, chan);
+  bi->burstTime = radio_burst->getTime();
+  CorrType type = expectedCorrType(bi->burstTime, chan);
 
   /* Enable 8-PSK burst detection if EDGE is enabled */
   if (mEdge && (type == TSC))
@@ -580,14 +577,14 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   /* Debug: dump bursts to disk */
   /* bits 0-7  - chan 0 timeslots
    * bits 8-15 - chan 1 timeslots */
-  if (mWriteBurstToDiskMask & ((1<<time.TN()) << (8*chan)))
+  if (mWriteBurstToDiskMask & ((1<<bi->burstTime.TN()) << (8*chan)))
     writeToFile(radio_burst, chan);
 
   /* No processing if the timeslot is off.
    * Not even power level or noise calculation. */
   if (type == OFF) {
     delete radio_burst;
-    return NULL;
+    return false;
   }
 
   /* Select the diversity channel with highest energy */
@@ -603,30 +600,29 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
   if (max_i < 0) {
     LOG(ALERT) << "Received empty burst";
     delete radio_burst;
-    return NULL;
+    return false;
   }
 
   /* Average noise on diversity paths and update global levels */
   burst = radio_burst->getVector(max_i);
   avg = sqrt(avg / radio_burst->chans());
 
-  wTime = time;
-  RSSI = 20.0 * log10(rxFullScale / avg);
+  bi->rssi = 20.0 * log10(rxFullScale / avg);
 
   /* RSSI estimation are valid */
-  isRssiValid = true;
+  bi->rssi_valid = true;
 
   if (type == IDLE) {
     /* Update noise levels */
     state->mNoises.insert(avg);
     state->mNoiseLev = state->mNoises.avg();
-    noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
+    bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
 
     delete radio_burst;
-    return NULL;
+    return false;
   } else {
     /* Do not update noise levels */
-    noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
+    bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
   }
 
   unsigned max_toa = (type == RACH || type == EXT_RACH) ?
@@ -645,15 +641,14 @@ SoftVector *Transceiver::pullRadioVector(GSM::Time &wTime, double &RSSI, bool &i
     }
 
     delete radio_burst;
-    return NULL;
+    return false;
   }
 
-  timingOffset = toa;
-
-  bits = demodAnyBurst(*burst, mSPSRx, amp, toa, type);
+  bi->toa = toa;
+  bi->rxBurst = demodAnyBurst(*burst, mSPSRx, amp, toa, type);
 
   delete radio_burst;
-  return bits;
+  return true;
 }
 
 void Transceiver::reset()
@@ -909,66 +904,60 @@ void Transceiver::driveReceiveRadio()
   }
 }
 
-void Transceiver::logRxBurst(size_t chan, SoftVector *burst, GSM::Time time, double dbm,
-                             double rssi, double noise, double toa)
+void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi, double dbm)
 {
   LOG(DEBUG) << std::fixed << std::right
     << " chan: "   << chan
-    << " time: "   << time
-    << " RSSI: "   << std::setw(5) << std::setprecision(1) << rssi
+    << " time: "   << bi->burstTime
+    << " RSSI: "   << std::setw(5) << std::setprecision(1) << bi->rssi
                    << "dBFS/" << std::setw(6) << -dbm << "dBm"
-    << " noise: "  << std::setw(5) << std::setprecision(1) << noise
-                   << "dBFS/" << std::setw(6) << -(noise + rssiOffset) << "dBm"
-    << " TOA: "    << std::setw(5) << std::setprecision(2) << toa
-    << " bits: "   << *burst;
+    << " noise: "  << std::setw(5) << std::setprecision(1) << bi->noise
+                   << "dBFS/" << std::setw(6) << -(bi->noise + rssiOffset) << "dBm"
+    << " TOA: "    << std::setw(5) << std::setprecision(2) << bi->toa
+    << " bits: "   << *(bi->rxBurst);
 }
 
 void Transceiver::driveReceiveFIFO(size_t chan)
 {
-  SoftVector *rxBurst = NULL;
-  double RSSI; // in dBFS
   double dBm;  // in dBm
-  double TOA;  // in symbols
   int TOAint;  // in 1/256 symbols
-  double noise; // noise level in dBFS
-  GSM::Time burstTime;
-  bool isRssiValid; // are RSSI, noise and burstTime valid
   unsigned nbits = gSlotLen;
 
-  rxBurst = pullRadioVector(burstTime, RSSI, isRssiValid, TOA, noise, chan);
-  if (!rxBurst)
-    return;
+  struct trx_ul_burst_ind bi;
+
+  if (!pullRadioVector(chan, &bi))
+        return;
 
   // Convert -1..+1 soft bits to 0..1 soft bits
-  vectorSlicer(rxBurst);
+  vectorSlicer(bi.rxBurst);
 
   /*
    * EDGE demodulator returns 444 (148 * 3) bits
    */
-  if (rxBurst->size() == gSlotLen * 3)
+  if (bi.rxBurst->size() == gSlotLen * 3)
     nbits = gSlotLen * 3;
 
-  dBm = RSSI + rssiOffset;
-  logRxBurst(chan, rxBurst, burstTime, dBm, RSSI, noise, TOA);
+  dBm = bi.rssi + rssiOffset;
+  logRxBurst(chan, &bi, dBm);
 
-  TOAint = (int) (TOA * 256.0 + 0.5); // round to closest integer
+  TOAint = (int) (bi.toa * 256.0 + 0.5); // round to closest integer
 
   char burstString[sizeof(struct trxd_hdr_v0) + nbits + 2];
   struct trxd_hdr_v0* pkt = (struct trxd_hdr_v0*)burstString;
   pkt->common.version = 0;
   pkt->common.reserved = 0;
-  pkt->common.tn = burstTime.TN();
-  osmo_store32be(burstTime.FN(), &pkt->common.fn);
+  pkt->common.tn = bi.burstTime.TN();
+  osmo_store32be(bi.burstTime.FN(), &pkt->common.fn);
   pkt->v0.rssi = dBm;
   osmo_store16be(TOAint, &pkt->v0.toa);
-  SoftVector::iterator burstItr = rxBurst->begin();
+  SoftVector::iterator burstItr = bi.rxBurst->begin();
 
   for (unsigned i = 0; i < nbits; i++)
     pkt->soft_bits[i] = (char) round((*burstItr++) * 255.0);
 
   /* +1: Historical reason. There's an uninitizalied byte in there: pkt->soft_bits[bi.nbits] */
   pkt->soft_bits[nbits + 1] = '\0';
-  delete rxBurst;
+  delete bi.rxBurst;
 
   mDataSockets[chan]->write(burstString, sizeof(struct trxd_hdr_v0) + nbits + 2);
 }
