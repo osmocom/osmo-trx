@@ -558,6 +558,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   float toa, max = -1.0, avg = 0.0;
   int max_i = -1;
   signalVector *burst;
+  GSM::Time burstTime;
   TransceiverState *state = &mStates[chan];
 
   /* Blocking FIFO read */
@@ -566,8 +567,10 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
     return false;
 
   /* Set time and determine correlation type */
-  bi->burstTime = radio_burst->getTime();
-  CorrType type = expectedCorrType(bi->burstTime, chan);
+  burstTime = radio_burst->getTime();
+  bi->fn = burstTime.FN();
+  bi->tn = burstTime.TN();
+  CorrType type = expectedCorrType(burstTime, chan);
 
   /* Enable 8-PSK burst detection if EDGE is enabled */
   if (mEdge && (type == TSC))
@@ -576,7 +579,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   /* Debug: dump bursts to disk */
   /* bits 0-7  - chan 0 timeslots
    * bits 8-15 - chan 1 timeslots */
-  if (mWriteBurstToDiskMask & ((1<<bi->burstTime.TN()) << (8*chan)))
+  if (mWriteBurstToDiskMask & ((1<<bi->tn) << (8*chan)))
     writeToFile(radio_burst, chan);
 
   /* No processing if the timeslot is off.
@@ -913,7 +916,7 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
 {
   LOG(DEBUG) << std::fixed << std::right
     << " chan: "   << chan
-    << " time: "   << bi->burstTime
+    << " time: "   << bi->tn << ":" << bi->fn
     << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - rssiOffset)
                    << "dBFS/" << std::setw(6) << -bi->rssi << "dBm"
     << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - rssiOffset)
@@ -939,8 +942,8 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   struct trxd_hdr_v0* pkt = (struct trxd_hdr_v0*)burstString;
   pkt->common.version = 0;
   pkt->common.reserved = 0;
-  pkt->common.tn = bi.burstTime.TN();
-  osmo_store32be(bi.burstTime.FN(), &pkt->common.fn);
+  pkt->common.tn = bi.tn;
+  osmo_store32be(bi.fn, &pkt->common.fn);
   pkt->v0.rssi = bi.rssi;
   osmo_store16be(TOAint, &pkt->v0.toa);
   SoftVector::iterator burstItr = bi.rxBurst->begin();

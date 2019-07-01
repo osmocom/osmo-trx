@@ -38,7 +38,8 @@ extern "C" {
 struct trx_ul_burst_ind {
         SoftVector *rxBurst;
         unsigned nbits; // number of symbols per slot in rxBurst, not counting guard periods
-        GSM::Time burstTime;
+        uint32_t fn; // TDMA frame number
+        uint8_t tn; // TDMA time-slot number
         double rssi; // in dBFS
         double toa;  // in symbols
         double noise; // noise level in dBFS
