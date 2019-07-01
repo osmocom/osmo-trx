@@ -32,12 +32,6 @@ cat $abs_srcdir/CommonLibs/PRBSTest.ok > expout
 AT_CHECK([$abs_top_builddir/tests/CommonLibs/PRBSTest], [], [expout], [])
 AT_CLEANUP
 
-AT_SETUP([SocketsTest])
-AT_KEYWORDS([SocketsTest])
-cat $abs_srcdir/CommonLibs/SocketsTest.ok > expout
-AT_CHECK([$abs_top_builddir/tests/CommonLibs/SocketsTest], [], [expout], [ignore])
-AT_CLEANUP
-
 AT_SETUP([TimevalTest])
 AT_KEYWORDS([TimevalTest])
 cat $abs_srcdir/CommonLibs/TimevalTest.ok > expout

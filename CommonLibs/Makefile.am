@@ -30,7 +30,6 @@ noinst_LTLIBRARIES = libcommon.la
 libcommon_la_SOURCES = \
 	BitVector.cpp \
 	LinkedLists.cpp \
-	Sockets.cpp \
 	Threads.cpp \
 	Timeval.cpp \
 	Logger.cpp \
@@ -45,7 +44,6 @@ noinst_HEADERS = \
 	PRBS.h \
 	Interthread.h \
 	LinkedLists.h \
-	Sockets.h \
 	Threads.h \
 	Timeval.h \
 	Vector.h \

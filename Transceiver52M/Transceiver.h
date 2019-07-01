@@ -25,7 +25,6 @@
 #include "radioInterface.h"
 #include "Interthread.h"
 #include "GSMCommon.h"
-#include "Sockets.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -167,9 +166,9 @@ private:
   std::string mLocalAddr;
   std::string mRemoteAddr;
 
-  std::vector<UDPSocket *> mDataSockets;  ///< socket for writing to/reading from GSM core
-  std::vector<UDPSocket *> mCtrlSockets;  ///< socket for writing/reading control commands from GSM core
-  UDPSocket mClockSocket;                 ///< socket for writing clock updates to GSM core
+  std::vector<int> mDataSockets;  ///< socket for writing to/reading from GSM core
+  std::vector<int> mCtrlSockets;  ///< socket for writing/reading control commands from GSM core
+  int mClockSocket;               ///< socket for writing clock updates to GSM core
 
   std::vector<VectorQueue> mTxPriorityQueues;   ///< priority queue of transmit bursts received from GSM core
   std::vector<VectorFIFO *>  mReceiveFIFO;      ///< radioInterface FIFO of receive bursts

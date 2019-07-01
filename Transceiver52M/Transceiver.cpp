@@ -32,6 +32,7 @@ extern "C" {
 #include "proto_trxd.h"
 
 #include <osmocom/core/bits.h>
+#include <osmocom/core/socket.h>
 }
 
 #ifdef HAVE_CONFIG_H
@@ -120,8 +121,7 @@ Transceiver::Transceiver(int wBasePort,
                          RadioInterface *wRadioInterface,
                          double wRssiOffset, int wStackSize)
   : mBasePort(wBasePort), mLocalAddr(TRXAddress), mRemoteAddr(GSMcoreAddress),
-    mClockSocket(TRXAddress, wBasePort, GSMcoreAddress, wBasePort + 100),
-    mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
+    mClockSocket(-1), mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset), stackSize(wStackSize),
     mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false), mForceClockInterface(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
@@ -142,14 +142,19 @@ Transceiver::~Transceiver()
 
   sigProcLibDestroy();
 
+  if (mClockSocket >= 0)
+    close(mClockSocket);
+
   for (size_t i = 0; i < mChans; i++) {
     mControlServiceLoopThreads[i]->cancel();
     mControlServiceLoopThreads[i]->join();
     delete mControlServiceLoopThreads[i];
 
     mTxPriorityQueues[i].clear();
-    delete mCtrlSockets[i];
-    delete mDataSockets[i];
+    if (mCtrlSockets[i] >= 0)
+      close(mCtrlSockets[i]);
+    if (mDataSockets[i] >= 0)
+      close(mDataSockets[i]);
   }
 }
 
@@ -180,8 +185,8 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
   mExtRACH = ext_rach;
   mEdge = edge;
 
-  mDataSockets.resize(mChans);
-  mCtrlSockets.resize(mChans);
+  mDataSockets.resize(mChans, -1);
+  mCtrlSockets.resize(mChans, -1);
   mControlServiceLoopThreads.resize(mChans);
   mTxPriorityQueueServiceLoopThreads.resize(mChans);
   mRxServiceLoopThreads.resize(mChans);
@@ -195,14 +200,30 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
     mStates[0].mRetrans = true;
 
   /* Setup sockets */
+  mClockSocket = osmo_sock_init2(AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP,
+				    mLocalAddr.c_str(), mBasePort,
+				    mRemoteAddr.c_str(), mBasePort + 100,
+				    OSMO_SOCK_F_BIND | OSMO_SOCK_F_CONNECT);
+
   for (size_t i = 0; i < mChans; i++) {
     c_srcport = mBasePort + 2 * i + 1;
     c_dstport = mBasePort + 2 * i + 101;
     d_srcport = mBasePort + 2 * i + 2;
     d_dstport = mBasePort + 2 * i + 102;
 
-    mCtrlSockets[i] = new UDPSocket(mLocalAddr.c_str(), c_srcport, mRemoteAddr.c_str(), c_dstport);
-    mDataSockets[i] = new UDPSocket(mLocalAddr.c_str(), d_srcport, mRemoteAddr.c_str(), d_dstport);
+    mCtrlSockets[i] = osmo_sock_init2(AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP,
+                                      mLocalAddr.c_str(), c_srcport,
+                                      mRemoteAddr.c_str(), c_dstport,
+				      OSMO_SOCK_F_BIND | OSMO_SOCK_F_CONNECT);
+    if (mCtrlSockets[i] < 0)
+      return false;
+
+    mDataSockets[i] = osmo_sock_init2(AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP,
+                                      mLocalAddr.c_str(), d_srcport,
+                                      mRemoteAddr.c_str(), d_dstport,
+				      OSMO_SOCK_F_BIND | OSMO_SOCK_F_CONNECT);
+    if (mCtrlSockets[i] < 0)
+      return false;
   }
 
   /* Randomize the central clock */
@@ -707,9 +728,11 @@ void Transceiver::driveControl(size_t chan)
   int msgLen;
 
   /* Attempt to read from control socket */
-  msgLen = mCtrlSockets[chan]->read(buffer, MAX_PACKET_LENGTH);
-  if (msgLen < 1)
+  msgLen = read(mCtrlSockets[chan], buffer, MAX_PACKET_LENGTH);
+  if (msgLen <= 0) {
+    LOGCHAN(chan, DTRXCTRL, WARNING) << "mCtrlSockets read(" << mCtrlSockets[chan] << ") failed: " << msgLen;
     return;
+  }
 
   /* Zero-terminate received string */
   buffer[msgLen] = '\0';
@@ -854,16 +877,23 @@ void Transceiver::driveControl(size_t chan)
   }
 
   LOGCHAN(chan, DTRXCTRL, INFO) << "response is '" << response << "'";
-  mCtrlSockets[chan]->write(response, strlen(response) + 1);
+  msgLen = write(mCtrlSockets[chan], response, strlen(response) + 1);
+  if (msgLen <= 0)
+    LOGCHAN(chan, DTRXCTRL, WARNING) << "mCtrlSockets write(" << mCtrlSockets[chan] << ") failed: " << msgLen;
 }
 
 bool Transceiver::driveTxPriorityQueue(size_t chan)
 {
+  int msgLen;
   int burstLen;
   char buffer[EDGE_BURST_NBITS + 50];
 
   // check data socket
-  size_t msgLen = mDataSockets[chan]->read(buffer, sizeof(buffer));
+  msgLen = read(mDataSockets[chan], buffer, sizeof(buffer));
+  if (msgLen <= 0) {
+    LOGCHAN(chan, DTRXCTRL, WARNING) << "mDataSockets read(" << mCtrlSockets[chan] << ") failed: " << msgLen;
+    return false;
+  }
 
   if (msgLen == gSlotLen + 1 + 4 + 1) {
     burstLen = gSlotLen;
@@ -937,6 +967,7 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
 
 void Transceiver::driveReceiveFIFO(size_t chan)
 {
+  int msgLen;
   int TOAint;  // in 1/256 symbols
 
   struct trx_ul_burst_ind bi;
@@ -963,7 +994,9 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   /* +1: Historical reason. There's an uninitizalied byte in there: pkt->soft_bits[bi.nbits] */
   pkt->soft_bits[bi.nbits + 1] = '\0';
 
-  mDataSockets[chan]->write(burstString, sizeof(struct trxd_hdr_v0) + bi.nbits + 2);
+  msgLen = write(mDataSockets[chan], burstString, sizeof(struct trxd_hdr_v0) + bi.nbits + 2);
+  if (msgLen <= 0)
+    LOGCHAN(chan, DTRXCTRL, WARNING) << "mDataSockets write(" << mCtrlSockets[chan] << ") failed: " << msgLen;
 }
 
 void Transceiver::driveTxFIFO()
@@ -1023,13 +1056,16 @@ void Transceiver::driveTxFIFO()
 
 void Transceiver::writeClockInterface()
 {
+  int msgLen;
   char command[50];
   // FIXME -- This should be adaptive.
   sprintf(command,"IND CLOCK %llu",(unsigned long long) (mTransmitDeadlineClock.FN()+2));
 
   LOG(INFO) << "ClockInterface: sending " << command;
 
-  mClockSocket.write(command, strlen(command) + 1);
+  msgLen = write(mClockSocket, command, strlen(command) + 1);
+  if (msgLen <= 0)
+    LOG(WARNING) << "mClockSocket write(" << mClockSocket << ") failed: " << msgLen;
 
   mLastClockUpdateTime = mTransmitDeadlineClock;
 
