@@ -47,7 +47,8 @@ COMMON_SOURCES = \
 	Transceiver.cpp \
 	ChannelizerBase.cpp \
 	Channelizer.cpp \
-	Synthesis.cpp
+	Synthesis.cpp \
+	proto_trxd.c
 
 libtransceiver_common_la_SOURCES = \
 	$(COMMON_SOURCES) \

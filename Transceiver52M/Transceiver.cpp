@@ -31,7 +31,7 @@ extern "C" {
 #include "osmo_signal.h"
 #include "proto_trxd.h"
 
-#include <osmocom/core/bits.h>
+#include <osmocom/core/utils.h>
 #include <osmocom/core/socket.h>
 }
 
@@ -125,7 +125,7 @@ Transceiver::Transceiver(int wBasePort,
     rssiOffset(wRssiOffset), stackSize(wStackSize),
     mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false), mForceClockInterface(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
-    mWriteBurstToDiskMask(0)
+    mWriteBurstToDiskMask(0), mVersionTRXD(0)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
@@ -971,36 +971,20 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
 
 void Transceiver::driveReceiveFIFO(size_t chan)
 {
-  int msgLen;
-  int TOAint;  // in 1/256 symbols
-
   struct trx_ul_burst_ind bi;
 
-  if (!pullRadioVector(chan, &bi) || bi.idle)
+  if (!pullRadioVector(chan, &bi))
         return;
+  if (!bi.idle)
+       logRxBurst(chan, &bi);
 
-  logRxBurst(chan, &bi);
-
-  TOAint = (int) (bi.toa * 256.0 + 0.5); // round to closest integer
-
-  char burstString[sizeof(struct trxd_hdr_v0) + bi.nbits + 2];
-  struct trxd_hdr_v0* pkt = (struct trxd_hdr_v0*)burstString;
-  pkt->common.version = 0;
-  pkt->common.reserved = 0;
-  pkt->common.tn = bi.tn;
-  osmo_store32be(bi.fn, &pkt->common.fn);
-  pkt->v0.rssi = bi.rssi;
-  osmo_store16be(TOAint, &pkt->v0.toa);
-
-  for (unsigned i = 0; i < bi.nbits; i++)
-    pkt->soft_bits[i] = (char) round(bi.rx_burst[i] * 255.0);
-
-  /* +1: Historical reason. There's an uninitizalied byte in there: pkt->soft_bits[bi.nbits] */
-  pkt->soft_bits[bi.nbits + 1] = '\0';
-
-  msgLen = write(mDataSockets[chan], burstString, sizeof(struct trxd_hdr_v0) + bi.nbits + 2);
-  if (msgLen <= 0)
-    LOGCHAN(chan, DTRXCTRL, WARNING) << "mDataSockets write(" << mCtrlSockets[chan] << ") failed: " << msgLen;
+  switch (mVersionTRXD) {
+    case 0:
+      trxd_send_burst_ind_v0(chan, mDataSockets[chan], &bi);
+      break;
+    default:
+      OSMO_ASSERT(false);
+  }
 }
 
 void Transceiver::driveTxFIFO()

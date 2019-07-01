@@ -34,19 +34,6 @@ extern "C" {
 #include "config_defs.h"
 }
 
-#define MAX_RX_BURST_BUF_SIZE EDGE_BURST_NBITS
-
-struct trx_ul_burst_ind {
-        float rx_burst[MAX_RX_BURST_BUF_SIZE]; /* soft bits normalized 0..1 */
-        unsigned nbits; // number of symbols per slot in rxBurst, not counting guard periods
-        uint32_t fn; // TDMA frame number
-        uint8_t tn; // TDMA time-slot number
-        double rssi; // in dBFS
-        double toa;  // in symbols
-        double noise; // noise level in dBFS
-        bool idle; // true if no valid burst is included
-};
-
 class Transceiver;
 
 /** Channel descriptor for transceiver object and channel number pair */
@@ -229,6 +216,7 @@ private:
   unsigned mMaxExpectedDelayAB;        ///< maximum expected time-of-arrival offset in GSM symbols for Access Bursts (RACH)
   unsigned mMaxExpectedDelayNB;        ///< maximum expected time-of-arrival offset in GSM symbols for Normal Bursts
   unsigned mWriteBurstToDiskMask;      ///< debug: bitmask to indicate which timeslots to dump to disk
+  unsigned mVersionTRXD;               ///< Format version to use for TRXD protocol communication
 
   std::vector<TransceiverState> mStates;
 
