@@ -618,6 +618,10 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   bi->toa = 0.0;
   bi->noise = 0.0;
   bi->idle = false;
+  bi->modulation = MODULATION_GMSK;
+  bi->tss = 0; /* TODO: we only support tss 0 right now */
+  bi->tsc = 0;
+  bi->ci = 0.0;
 
   /* Select the diversity channel with highest energy */
   for (size_t i = 0; i < radio_burst->chans(); i++) {
@@ -665,13 +669,18 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 
   type = (CorrType) rc;
   bi->toa = ebp.toa;
+  bi->tsc = ebp.tsc;
+  bi->ci = ebp.ci;
   rxBurst = demodAnyBurst(*burst, mSPSRx, ebp.amp, ebp.toa, type);
 
   /* EDGE demodulator returns 444 (gSlotLen * 3) bits */
-  if (rxBurst->size() == EDGE_BURST_NBITS)
+  if (rxBurst->size() == EDGE_BURST_NBITS) {
+    bi->modulation = MODULATION_8PSK;
     bi->nbits = EDGE_BURST_NBITS;
-  else /* size() here is actually gSlotLen + 8, due to guard periods */
+  } else { /* size() here is actually gSlotLen + 8, due to guard periods */
+    bi->modulation = MODULATION_GMSK;
     bi->nbits = gSlotLen;
+  }
 
   // Convert -1..+1 soft bits to 0..1 soft bits
   vectorSlicer(bi->rx_burst, rxBurst->begin(), bi->nbits);
@@ -980,6 +989,7 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
     << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - rssiOffset)
                    << "dBFS/" << std::setw(6) << -bi->noise << "dBm"
     << " TOA: "    << std::setw(5) << std::setprecision(2) << bi->toa
+    << " C/I: "    << std::setw(5) << std::setprecision(2) << bi->ci << "dB"
     << " bits: "   << os;
 }
 
@@ -995,6 +1005,9 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   switch (mVersionTRXD) {
     case 0:
       trxd_send_burst_ind_v0(chan, mDataSockets[chan], &bi);
+      break;
+    case 1:
+      trxd_send_burst_ind_v1(chan, mDataSockets[chan], &bi);
       break;
     default:
       OSMO_ASSERT(false);

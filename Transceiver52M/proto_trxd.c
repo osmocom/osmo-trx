@@ -43,6 +43,21 @@ static void trxd_fill_v0_specific(struct trxd_hdr_v0_specific *v0, const struct 
 	osmo_store16be(toa_int, &v0->toa);
 }
 
+static void trxd_fill_v1_specific(struct trxd_hdr_v1_specific *v1, const struct trx_ul_burst_ind *bi)
+{
+	int16_t ci_int_cB;
+
+	/* deciBels->centiBels, round to closest integer */
+	ci_int_cB = (int16_t)((bi->ci * 10) + 0.5);
+
+	v1->idle = !!bi->idle;
+	v1->modulation = (bi->modulation == MODULATION_GMSK) ?
+					TRXD_MODULATION_GMSK(bi->tss) :
+					TRXD_MODULATION_8PSK(bi->tss);
+	v1->tsc = bi->tsc;
+	osmo_store16be(ci_int_cB, &v1->ci);
+}
+
 static void trxd_fill_burst_normalized255(uint8_t* soft_bits, const struct trx_ul_burst_ind *bi)
 {
 	unsigned i;
@@ -69,6 +84,31 @@ bool trxd_send_burst_ind_v0(size_t chan, int fd, const struct trx_ul_burst_ind *
 	pkt->soft_bits[bi->nbits + 1] = '\0';
 
 	rc = write(fd, buf, sizeof(struct trxd_hdr_v0) + bi->nbits + 2);
+	if (rc <= 0) {
+		CLOGCHAN(chan, DMAIN, LOGL_NOTICE, "mDataSockets write(%d) failed: %d\n", fd, rc);
+		return false;
+	}
+	return true;
+}
+
+bool trxd_send_burst_ind_v1(size_t chan, int fd, const struct trx_ul_burst_ind *bi) {
+	int rc;
+	size_t buf_len;
+
+	buf_len = sizeof(struct trxd_hdr_v1);
+	if (!bi->idle)
+		buf_len += bi->nbits;
+	char buf[buf_len];
+
+	struct trxd_hdr_v1* pkt = (struct trxd_hdr_v1*)buf;
+	trxd_fill_common(&pkt->common, bi, 1);
+	trxd_fill_v0_specific(&pkt->v0, bi);
+	trxd_fill_v1_specific(&pkt->v1, bi);
+
+	if (!bi->idle)
+		trxd_fill_burst_normalized255(&pkt->soft_bits[0], bi);
+
+	rc = write(fd, buf, buf_len);
 	if (rc <= 0) {
 		CLOGCHAN(chan, DMAIN, LOGL_NOTICE, "mDataSockets write(%d) failed: %d\n", fd, rc);
 		return false;
