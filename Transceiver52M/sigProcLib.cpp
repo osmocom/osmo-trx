@@ -530,19 +530,17 @@ static PulseSequence *generateGSMPulse(int sps)
   return pulse;
 }
 
-bool vectorSlicer(SoftVector *x)
+/* Convert -1..+1 soft bits to 0..1 soft bits */
+void vectorSlicer(float *dest, const float *src, size_t len)
 {
-  SoftVector::iterator xP = x->begin();
-  SoftVector::iterator xPEnd = x->end();
-  while (xP < xPEnd) {
-    *xP = 0.5 * (*xP + 1.0f);
-    if (*xP > 1.0)
-      *xP = 1.0;
-    if (*xP < 0.0)
-      *xP = 0.0;
-    xP++;
-  }
-  return true;
+	size_t i;
+	for (i = 0; i < len; i++) {
+		dest[i] = 0.5 * (src[i] + 1.0f);
+		if (dest[i] > 1.0)
+			dest[i] = 1.0;
+		else if (dest[i] < 0.0)
+			dest[i] = 0.0;
+	}
 }
 
 static signalVector *rotateBurst(const BitVector &wBurst,

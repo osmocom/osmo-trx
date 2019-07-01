@@ -35,8 +35,10 @@ extern "C" {
 #include "config_defs.h"
 }
 
+#define MAX_RX_BURST_BUF_SIZE EDGE_BURST_NBITS
+
 struct trx_ul_burst_ind {
-        SoftVector *rxBurst;
+        float rx_burst[MAX_RX_BURST_BUF_SIZE]; /* soft bits normalized 0..1 */
         unsigned nbits; // number of symbols per slot in rxBurst, not counting guard periods
         uint32_t fn; // TDMA frame number
         uint8_t tn; // TDMA time-slot number

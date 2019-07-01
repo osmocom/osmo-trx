@@ -559,6 +559,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   int max_i = -1;
   signalVector *burst;
   GSM::Time burstTime;
+  SoftVector *rxBurst;
   TransceiverState *state = &mStates[chan];
 
   /* Blocking FIFO read */
@@ -644,17 +645,18 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   }
 
   bi->toa = toa;
-  bi->rxBurst = demodAnyBurst(*burst, mSPSRx, amp, toa, type);
+  rxBurst = demodAnyBurst(*burst, mSPSRx, amp, toa, type);
 
   /* EDGE demodulator returns 444 (gSlotLen * 3) bits */
-  if (bi->rxBurst->size() == EDGE_BURST_NBITS)
+  if (rxBurst->size() == EDGE_BURST_NBITS)
     bi->nbits = EDGE_BURST_NBITS;
   else /* size() here is actually gSlotLen + 8, due to guard periods */
     bi->nbits = gSlotLen;
 
   // Convert -1..+1 soft bits to 0..1 soft bits
-  vectorSlicer(bi->rxBurst);
+  vectorSlicer(bi->rx_burst, rxBurst->begin(), bi->nbits);
 
+  delete rxBurst;
   delete radio_burst;
   return true;
 }
@@ -914,6 +916,14 @@ void Transceiver::driveReceiveRadio()
 
 void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
 {
+  std::ostringstream os;
+  for (size_t i=0; i < bi->nbits; i++) {
+    if (bi->rx_burst[i] > 0.5) os << "1";
+    else if (bi->rx_burst[i] > 0.25) os << "|";
+    else if (bi->rx_burst[i] > 0.0) os << "'";
+    else os << "-";
+  }
+
   LOG(DEBUG) << std::fixed << std::right
     << " chan: "   << chan
     << " time: "   << bi->tn << ":" << bi->fn
@@ -922,7 +932,7 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
     << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - rssiOffset)
                    << "dBFS/" << std::setw(6) << -bi->noise << "dBm"
     << " TOA: "    << std::setw(5) << std::setprecision(2) << bi->toa
-    << " bits: "   << *(bi->rxBurst);
+    << " bits: "   << os;
 }
 
 void Transceiver::driveReceiveFIFO(size_t chan)
@@ -946,14 +956,12 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   osmo_store32be(bi.fn, &pkt->common.fn);
   pkt->v0.rssi = bi.rssi;
   osmo_store16be(TOAint, &pkt->v0.toa);
-  SoftVector::iterator burstItr = bi.rxBurst->begin();
 
   for (unsigned i = 0; i < bi.nbits; i++)
-    pkt->soft_bits[i] = (char) round((*burstItr++) * 255.0);
+    pkt->soft_bits[i] = (char) round(bi.rx_burst[i] * 255.0);
 
   /* +1: Historical reason. There's an uninitizalied byte in there: pkt->soft_bits[bi.nbits] */
   pkt->soft_bits[bi.nbits + 1] = '\0';
-  delete bi.rxBurst;
 
   mDataSockets[chan]->write(burstString, sizeof(struct trxd_hdr_v0) + bi.nbits + 2);
 }
