@@ -569,6 +569,10 @@ int main(int argc, char *argv[])
 #endif
 #endif
 
+	if (!log_mutex_init()) {
+		fprintf(stderr, "Failed to initialize log mutex!\n");
+		exit(2);
+	}
 	convolve_init();
 	convert_init();
 

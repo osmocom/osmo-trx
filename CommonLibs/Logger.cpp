@@ -35,8 +35,6 @@
 
 using namespace std;
 
-Mutex gLogToLock;
-
 std::ostream& operator<<(std::ostream& os, std::ostringstream& ss)
 {
 	return os << ss.str();
@@ -45,15 +43,13 @@ std::ostream& operator<<(std::ostream& os, std::ostringstream& ss)
 Log::~Log()
 {
 	int old_state;
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old_state);
 	int mlen = mStream.str().size();
 	int neednl = (mlen==0 || mStream.str()[mlen-1] != '\n');
 	const char *fmt = neednl ? "%s\n" : "%s";
-	ScopedLock lock(gLogToLock);
-	// The COUT() macro prevents messages from stomping each other but adds uninteresting thread numbers,
-	// so just use std::cout.
+
+	log_mutex_lock_canceldisable(&old_state);
 	LOGPSRC(mCategory, mPriority, filename, line, fmt, mStream.str().c_str());
-	pthread_setcancelstate(old_state, NULL);
+	log_mutex_unlock_canceldisable(old_state);
 }
 
 ostringstream& Log::get()
