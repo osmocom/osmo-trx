@@ -41,7 +41,6 @@ struct trx_ul_burst_ind {
         double rssi; // in dBFS
         double toa;  // in symbols
         double noise; // noise level in dBFS
-        bool rssi_valid; // are RSSI, noise and burstTime valid
 };
 
 class Transceiver;

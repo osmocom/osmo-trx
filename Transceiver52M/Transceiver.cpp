@@ -559,7 +559,6 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   int max_i = -1;
   signalVector *burst;
   TransceiverState *state = &mStates[chan];
-  bi->rssi_valid = false;
 
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
@@ -608,9 +607,6 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   avg = sqrt(avg / radio_burst->chans());
 
   bi->rssi = 20.0 * log10(rxFullScale / avg);
-
-  /* RSSI estimation are valid */
-  bi->rssi_valid = true;
 
   if (type == IDLE) {
     /* Update noise levels */
