@@ -649,6 +649,9 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   else /* size() here is actually gSlotLen + 8, due to guard periods */
     bi->nbits = gSlotLen;
 
+  // Convert -1..+1 soft bits to 0..1 soft bits
+  vectorSlicer(bi->rxBurst);
+
   delete radio_burst;
   return true;
 }
@@ -927,9 +930,6 @@ void Transceiver::driveReceiveFIFO(size_t chan)
 
   if (!pullRadioVector(chan, &bi))
         return;
-
-  // Convert -1..+1 soft bits to 0..1 soft bits
-  vectorSlicer(bi.rxBurst);
 
   logRxBurst(chan, &bi);
 
