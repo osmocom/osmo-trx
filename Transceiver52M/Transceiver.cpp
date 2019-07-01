@@ -606,19 +606,19 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   burst = radio_burst->getVector(max_i);
   avg = sqrt(avg / radio_burst->chans());
 
-  bi->rssi = 20.0 * log10(rxFullScale / avg);
+  bi->rssi = 20.0 * log10(rxFullScale / avg) + rssiOffset;
 
   if (type == IDLE) {
     /* Update noise levels */
     state->mNoises.insert(avg);
     state->mNoiseLev = state->mNoises.avg();
-    bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
+    bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + rssiOffset;
 
     delete radio_burst;
     return false;
   } else {
     /* Do not update noise levels */
-    bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev);
+    bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + rssiOffset;
   }
 
   unsigned max_toa = (type == RACH || type == EXT_RACH) ?
@@ -906,22 +906,21 @@ void Transceiver::driveReceiveRadio()
   }
 }
 
-void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi, double dbm)
+void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
 {
   LOG(DEBUG) << std::fixed << std::right
     << " chan: "   << chan
     << " time: "   << bi->burstTime
-    << " RSSI: "   << std::setw(5) << std::setprecision(1) << bi->rssi
-                   << "dBFS/" << std::setw(6) << -dbm << "dBm"
-    << " noise: "  << std::setw(5) << std::setprecision(1) << bi->noise
-                   << "dBFS/" << std::setw(6) << -(bi->noise + rssiOffset) << "dBm"
+    << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - rssiOffset)
+                   << "dBFS/" << std::setw(6) << -bi->rssi << "dBm"
+    << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - rssiOffset)
+                   << "dBFS/" << std::setw(6) << -bi->noise << "dBm"
     << " TOA: "    << std::setw(5) << std::setprecision(2) << bi->toa
     << " bits: "   << *(bi->rxBurst);
 }
 
 void Transceiver::driveReceiveFIFO(size_t chan)
 {
-  double dBm;  // in dBm
   int TOAint;  // in 1/256 symbols
 
   struct trx_ul_burst_ind bi;
@@ -932,8 +931,7 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   // Convert -1..+1 soft bits to 0..1 soft bits
   vectorSlicer(bi.rxBurst);
 
-  dBm = bi.rssi + rssiOffset;
-  logRxBurst(chan, &bi, dBm);
+  logRxBurst(chan, &bi);
 
   TOAint = (int) (bi.toa * 256.0 + 0.5); // round to closest integer
 
@@ -943,7 +941,7 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   pkt->common.reserved = 0;
   pkt->common.tn = bi.burstTime.TN();
   osmo_store32be(bi.burstTime.FN(), &pkt->common.fn);
-  pkt->v0.rssi = dBm;
+  pkt->v0.rssi = bi.rssi;
   osmo_store16be(TOAint, &pkt->v0.toa);
   SoftVector::iterator burstItr = bi.rxBurst->begin();
 
