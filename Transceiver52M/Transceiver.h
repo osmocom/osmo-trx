@@ -37,6 +37,7 @@ extern "C" {
 
 struct trx_ul_burst_ind {
         SoftVector *rxBurst;
+        unsigned nbits; // number of symbols per slot in rxBurst, not counting guard periods
         GSM::Time burstTime;
         double rssi; // in dBFS
         double toa;  // in symbols

@@ -643,6 +643,12 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   bi->toa = toa;
   bi->rxBurst = demodAnyBurst(*burst, mSPSRx, amp, toa, type);
 
+  /* EDGE demodulator returns 444 (gSlotLen * 3) bits */
+  if (bi->rxBurst->size() == EDGE_BURST_NBITS)
+    bi->nbits = EDGE_BURST_NBITS;
+  else /* size() here is actually gSlotLen + 8, due to guard periods */
+    bi->nbits = gSlotLen;
+
   delete radio_burst;
   return true;
 }
@@ -917,7 +923,6 @@ void Transceiver::driveReceiveFIFO(size_t chan)
 {
   double dBm;  // in dBm
   int TOAint;  // in 1/256 symbols
-  unsigned nbits = gSlotLen;
 
   struct trx_ul_burst_ind bi;
 
@@ -927,18 +932,12 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   // Convert -1..+1 soft bits to 0..1 soft bits
   vectorSlicer(bi.rxBurst);
 
-  /*
-   * EDGE demodulator returns 444 (148 * 3) bits
-   */
-  if (bi.rxBurst->size() == gSlotLen * 3)
-    nbits = gSlotLen * 3;
-
   dBm = bi.rssi + rssiOffset;
   logRxBurst(chan, &bi, dBm);
 
   TOAint = (int) (bi.toa * 256.0 + 0.5); // round to closest integer
 
-  char burstString[sizeof(struct trxd_hdr_v0) + nbits + 2];
+  char burstString[sizeof(struct trxd_hdr_v0) + bi.nbits + 2];
   struct trxd_hdr_v0* pkt = (struct trxd_hdr_v0*)burstString;
   pkt->common.version = 0;
   pkt->common.reserved = 0;
@@ -948,14 +947,14 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   osmo_store16be(TOAint, &pkt->v0.toa);
   SoftVector::iterator burstItr = bi.rxBurst->begin();
 
-  for (unsigned i = 0; i < nbits; i++)
+  for (unsigned i = 0; i < bi.nbits; i++)
     pkt->soft_bits[i] = (char) round((*burstItr++) * 255.0);
 
   /* +1: Historical reason. There's an uninitizalied byte in there: pkt->soft_bits[bi.nbits] */
-  pkt->soft_bits[nbits + 1] = '\0';
+  pkt->soft_bits[bi.nbits + 1] = '\0';
   delete bi.rxBurst;
 
-  mDataSockets[chan]->write(burstString, sizeof(struct trxd_hdr_v0) + nbits + 2);
+  mDataSockets[chan]->write(burstString, sizeof(struct trxd_hdr_v0) + bi.nbits + 2);
 }
 
 void Transceiver::driveTxFIFO()
