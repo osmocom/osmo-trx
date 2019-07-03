@@ -591,8 +591,6 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 
   /* Set time and determine correlation type */
   burstTime = radio_burst->getTime();
-  bi->fn = burstTime.FN();
-  bi->tn = burstTime.TN();
   CorrType type = expectedCorrType(burstTime, chan);
 
   /* Enable 8-PSK burst detection if EDGE is enabled */
@@ -612,6 +610,15 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
     return false;
   }
 
+  /* Initialize struct bi */
+  bi->nbits = 0;
+  bi->fn = burstTime.FN();
+  bi->tn = burstTime.TN();
+  bi->rssi = 0.0;
+  bi->toa = 0.0;
+  bi->noise = 0.0;
+  bi->idle = false;
+
   /* Select the diversity channel with highest energy */
   for (size_t i = 0; i < radio_burst->chans(); i++) {
     float pow = energyDetect(*radio_burst->getVector(i), 20 * mSPSRx);
@@ -624,8 +631,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 
   if (max_i < 0) {
     LOG(ALERT) << "Received empty burst";
-    delete radio_burst;
-    return false;
+    goto ret_idle;
   }
 
   /* Average noise on diversity paths and update global levels */
@@ -641,10 +647,8 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   bi->rssi = 20.0 * log10(rxFullScale / avg) + rssiOffset;
   bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + rssiOffset;
 
-  if (type == IDLE) {
-    delete radio_burst;
-    return false;
-  }
+  if (type == IDLE)
+    goto ret_idle;
 
   max_toa = (type == RACH || type == EXT_RACH) ?
             mMaxExpectedDelayAB : mMaxExpectedDelayNB;
@@ -656,8 +660,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
       LOG(WARNING) << "Clipping detected on received RACH or Normal Burst";
     else if (rc != SIGERR_NONE)
       LOG(WARNING) << "Unhandled RACH or Normal Burst detection error";
-    delete radio_burst;
-    return false;
+    goto ret_idle;
   }
 
   type = (CorrType) rc;
@@ -676,6 +679,11 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   delete rxBurst;
   delete radio_burst;
   return true;
+
+ret_idle:
+  bi->idle = true;
+  delete radio_burst;
+  return false;
 }
 
 void Transceiver::reset()
@@ -968,7 +976,7 @@ void Transceiver::driveReceiveFIFO(size_t chan)
 
   struct trx_ul_burst_ind bi;
 
-  if (!pullRadioVector(chan, &bi))
+  if (!pullRadioVector(chan, &bi) || bi.idle)
         return;
 
   logRxBurst(chan, &bi);
