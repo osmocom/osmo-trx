@@ -868,6 +868,20 @@ void Transceiver::driveControl(size_t chan)
     mStates[chan].chanType[timeslot] = (ChannelCombination) corrCode;
     setModulus(timeslot, chan);
     sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
+  } else if (match_cmd(command, "SETFORMAT", &params)) {
+    // set TRXD protocol version
+    unsigned version_recv;
+    sscanf(params, "%u", &version_recv);
+    LOGC(DTRXCTRL, INFO) << "BTS requests TRXD version switch: " << version_recv;
+    if (version_recv > TRX_DATA_FORMAT_VER) {
+      LOGC(DTRXCTRL, INFO) << "rejecting TRXD version " << version_recv
+                           << "in favor of " <<  TRX_DATA_FORMAT_VER;
+      sprintf(response, "RSP SETFORMAT %u %u", TRX_DATA_FORMAT_VER, version_recv);
+    } else {
+      LOGC(DTRXCTRL, NOTICE) << "switching to TRXD version " << version_recv;
+      mVersionTRXD = version_recv;
+      sprintf(response, "RSP SETFORMAT %u %u", version_recv, version_recv);
+    }
   } else if (match_cmd(command, "_SETBURSTTODISKMASK", &params)) {
     // debug command! may change or disapear without notice
     // set a mask which bursts to dump to disk
