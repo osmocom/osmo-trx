@@ -577,6 +577,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   int rc;
   complex amp;
   float toa, max = -1.0, avg = 0.0;
+  unsigned max_toa;
   int max_i = -1;
   signalVector *burst;
   GSM::Time burstTime;
@@ -645,8 +646,8 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
     return false;
   }
 
-  unsigned max_toa = (type == RACH || type == EXT_RACH) ?
-                      mMaxExpectedDelayAB : mMaxExpectedDelayNB;
+  max_toa = (type == RACH || type == EXT_RACH) ?
+            mMaxExpectedDelayAB : mMaxExpectedDelayNB;
 
   /* Detect normal or RACH bursts */
   rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, amp, toa, max_toa);
