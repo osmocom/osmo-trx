@@ -650,20 +650,16 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 
   /* Detect normal or RACH bursts */
   rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, amp, toa, max_toa);
-
-  if (rc > 0) {
-    type = (CorrType) rc;
-  } else if (rc <= 0) {
-    if (rc == -SIGERR_CLIP) {
+  if (rc <= 0) {
+    if (rc == -SIGERR_CLIP)
       LOG(WARNING) << "Clipping detected on received RACH or Normal Burst";
-    } else if (rc != SIGERR_NONE) {
+    else if (rc != SIGERR_NONE)
       LOG(WARNING) << "Unhandled RACH or Normal Burst detection error";
-    }
-
     delete radio_burst;
     return false;
   }
 
+  type = (CorrType) rc;
   bi->toa = toa;
   rxBurst = demodAnyBurst(*burst, mSPSRx, amp, toa, type);
 
