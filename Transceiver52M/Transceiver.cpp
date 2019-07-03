@@ -631,19 +631,18 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   burst = radio_burst->getVector(max_i);
   avg = sqrt(avg / radio_burst->chans());
 
-  bi->rssi = 20.0 * log10(rxFullScale / avg) + rssiOffset;
-
   if (type == IDLE) {
     /* Update noise levels */
     state->mNoises.insert(avg);
     state->mNoiseLev = state->mNoises.avg();
-    bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + rssiOffset;
+  }
 
+  bi->rssi = 20.0 * log10(rxFullScale / avg) + rssiOffset;
+  bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + rssiOffset;
+
+  if (type == IDLE) {
     delete radio_burst;
     return false;
-  } else {
-    /* Do not update noise levels */
-    bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + rssiOffset;
   }
 
   unsigned max_toa = (type == RACH || type == EXT_RACH) ?
