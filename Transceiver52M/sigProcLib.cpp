@@ -1463,8 +1463,8 @@ static signalVector *downsampleBurst(const signalVector &burst)
  */
 static int detectBurst(const signalVector &burst,
                        signalVector &corr, CorrelationSequence *sync,
-                       float thresh, int sps, complex *amp, float *toa,
-                       int start, int len)
+                       float thresh, int sps, int start, int len,
+                       struct estim_burst_params *ebp)
 {
   const signalVector *corr_in;
   signalVector *dec = NULL;
@@ -1490,23 +1490,23 @@ static int detectBurst(const signalVector &burst,
   sps = 1;
 
   /* Peak detection - place restrictions at correlation edges */
-  *amp = fastPeakDetect(corr, toa);
+  ebp->amp = fastPeakDetect(corr, &ebp->toa);
 
-  if ((*toa < 3 * sps) || (*toa > len - 3 * sps))
+  if ((ebp->toa < 3 * sps) || (ebp->toa > len - 3 * sps))
     return 0;
 
   /* Peak -to-average ratio */
-  if (computePeakRatio(&corr, sps, *toa, *amp) < thresh)
+  if (computePeakRatio(&corr, sps, ebp->toa, ebp->amp) < thresh)
     return 0;
 
   /* Compute peak-to-average ratio. Reject if we don't have enough values */
-  *amp = peakDetect(corr, toa, NULL);
+  ebp->amp = peakDetect(corr, &ebp->toa, NULL);
 
   /* Normalize our channel gain */
-  *amp = *amp / sync->gain;
+  ebp->amp = ebp->amp / sync->gain;
 
   /* Compensate for residuate time lag */
-  *toa = *toa - sync->toa;
+  ebp->toa = ebp->toa - sync->toa;
 
   return 1;
 }
@@ -1532,13 +1532,10 @@ static float maxAmplitude(const signalVector &burst)
  *   head: Search symbols before target
  *   tail: Search symbols after target
  */
-static int detectGeneralBurst(const signalVector &rxBurst,
-                              float thresh,
-                              int sps,
-                              complex &amp,
-                              float &toa,
+static int detectGeneralBurst(const signalVector &rxBurst, float thresh, int sps,
                               int target, int head, int tail,
-                              CorrelationSequence *sync)
+                              CorrelationSequence *sync,
+                              struct estim_burst_params *ebp)
 {
   int rc, start, len;
   bool clipping = false;
@@ -1560,17 +1557,17 @@ static int detectGeneralBurst(const signalVector &rxBurst,
   signalVector corr(len);
 
   rc = detectBurst(rxBurst, corr, sync,
-                   thresh, sps, &amp, &toa, start, len);
+                   thresh, sps, start, len, ebp);
   if (rc < 0) {
     return -SIGERR_INTERNAL;
   } else if (!rc) {
-    amp = 0.0f;
-    toa = 0.0f;
+    ebp->amp = 0.0f;
+    ebp->toa = 0.0f;
     return clipping?-SIGERR_CLIP:SIGERR_NONE;
   }
 
   /* Subtract forward search bits from delay */
-  toa -= head;
+  ebp->toa -= head;
 
   return 1;
 }
@@ -1585,7 +1582,7 @@ static int detectGeneralBurst(const signalVector &rxBurst,
  *   tail: Search 8 symbols + maximum expected delay
  */
 static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
-                           complex &amplitude, float &toa, unsigned max_toa, bool ext)
+                           unsigned max_toa, bool ext, struct estim_burst_params *ebp)
 {
   int rc, target, head, tail;
   int i, num_seq;
@@ -1596,8 +1593,8 @@ static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
   num_seq = ext ? 3 : 1;
 
   for (i = 0; i < num_seq; i++) {
-    rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
-                            target, head, tail, gRACHSequences[i]);
+    rc = detectGeneralBurst(burst, threshold, sps, target, head, tail,
+                            gRACHSequences[i], ebp);
     if (rc > 0)
       break;
   }
@@ -1614,7 +1611,7 @@ static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
  *   tail: Search 6 symbols + maximum expected delay
  */
 static int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float threshold,
-                               int sps, complex &amplitude, float &toa, unsigned max_toa)
+                               int sps, unsigned max_toa, struct estim_burst_params *ebp)
 {
   int rc, target, head, tail;
   CorrelationSequence *sync;
@@ -1627,13 +1624,12 @@ static int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float th
   tail = 6 + max_toa;
   sync = gMidambles[tsc];
 
-  rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
-                          target, head, tail, sync);
+  rc = detectGeneralBurst(burst, threshold, sps, target, head, tail, sync, ebp);
   return rc;
 }
 
 static int detectEdgeBurst(const signalVector &burst, unsigned tsc, float threshold,
-                           int sps, complex &amplitude, float &toa, unsigned max_toa)
+                           int sps, unsigned max_toa, struct estim_burst_params *ebp)
 {
   int rc, target, head, tail;
   CorrelationSequence *sync;
@@ -1646,33 +1642,30 @@ static int detectEdgeBurst(const signalVector &burst, unsigned tsc, float thresh
   tail = 6 + max_toa;
   sync = gEdgeMidambles[tsc];
 
-  rc = detectGeneralBurst(burst, threshold, sps, amplitude, toa,
-                          target, head, tail, sync);
+  rc = detectGeneralBurst(burst, threshold, sps,
+                          target, head, tail, sync, ebp);
   return rc;
 }
 
 int detectAnyBurst(const signalVector &burst, unsigned tsc, float threshold,
-                   int sps, CorrType type, complex &amp, float &toa,
-                   unsigned max_toa)
+                   int sps, CorrType type, unsigned max_toa,
+                   struct estim_burst_params *ebp)
 {
   int rc = 0;
 
   switch (type) {
   case EDGE:
-    rc = detectEdgeBurst(burst, tsc, threshold, sps,
-                         amp, toa, max_toa);
+    rc = detectEdgeBurst(burst, tsc, threshold, sps, max_toa, ebp);
     if (rc > 0)
       break;
     else
       type = TSC;
   case TSC:
-    rc = analyzeTrafficBurst(burst, tsc, threshold, sps,
-                             amp, toa, max_toa);
+    rc = analyzeTrafficBurst(burst, tsc, threshold, sps, max_toa, ebp);
     break;
   case EXT_RACH:
   case RACH:
-    rc = detectRACHBurst(burst, threshold, sps, amp, toa,
-                         max_toa, type == EXT_RACH);
+    rc = detectRACHBurst(burst, threshold, sps, max_toa, type == EXT_RACH, ebp);
     break;
   default:
     LOG(ERR) << "Invalid correlation type";

@@ -575,8 +575,8 @@ void writeToFile(radioVector *radio_burst, size_t chan)
 bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 {
   int rc;
-  complex amp;
-  float toa, max = -1.0, avg = 0.0;
+  struct estim_burst_params ebp;
+  float max = -1.0, avg = 0.0;
   unsigned max_toa;
   int max_i = -1;
   signalVector *burst;
@@ -654,7 +654,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
             mMaxExpectedDelayAB : mMaxExpectedDelayNB;
 
   /* Detect normal or RACH bursts */
-  rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, amp, toa, max_toa);
+  rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, max_toa, &ebp);
   if (rc <= 0) {
     if (rc == -SIGERR_CLIP)
       LOG(WARNING) << "Clipping detected on received RACH or Normal Burst";
@@ -664,8 +664,8 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   }
 
   type = (CorrType) rc;
-  bi->toa = toa;
-  rxBurst = demodAnyBurst(*burst, mSPSRx, amp, toa, type);
+  bi->toa = ebp.toa;
+  rxBurst = demodAnyBurst(*burst, mSPSRx, ebp.amp, ebp.toa, type);
 
   /* EDGE demodulator returns 444 (gSlotLen * 3) bits */
   if (rxBurst->size() == EDGE_BURST_NBITS)

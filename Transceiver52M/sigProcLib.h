@@ -101,15 +101,23 @@ void scaleVector(signalVector &x,
 */
 float energyDetect(const signalVector &rxBurst,
                    unsigned windowLength);
+
+/** Struct used to fill out parameters in detectAnyBurst(): estimated burst parameters
+@param amplitude The estimated amplitude of received TSC burst.
+@param toa The estimated time-of-arrival of received TSC burst (in symbols).
+*/
+struct estim_burst_params {
+        complex amp;
+        float toa;
+};
 /**
         8-PSK/GMSK/RACH burst detector
         @param burst The received GSM burst of interest
         @param tsc Midamble type (0..7) also known as TSC
         @param threshold The threshold that the received burst's post-correlator SNR is compared against to determine validity.
         @param sps The number of samples per GSM symbol.
-        @param amplitude The estimated amplitude of received TSC burst.
-        @param toa The estimate time-of-arrival of received TSC burst (in symbols).
         @param max_toa The maximum expected time-of-arrival (in symbols).
+        @param ebp The estimated parameters of the detected burst.
         @return positive value (CorrType) if threshold value is reached,
                 negative value (-SignalError) on error,
                 zero (SIGERR_NONE) if no burst is detected
@@ -119,9 +127,8 @@ int detectAnyBurst(const signalVector &burst,
                    float threshold,
                    int sps,
                    CorrType type,
-                   complex &amp,
-                   float &toa,
-                   unsigned max_toa);
+                   unsigned max_toa,
+                   struct estim_burst_params *ebp);
 
 /** Demodulate burst basde on type and output soft bits */
 SoftVector *demodAnyBurst(const signalVector &burst, int sps,
