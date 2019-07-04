@@ -1595,8 +1595,10 @@ static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
   for (i = 0; i < num_seq; i++) {
     rc = detectGeneralBurst(burst, threshold, sps, target, head, tail,
                             gRACHSequences[i], ebp);
-    if (rc > 0)
+    if (rc > 0) {
+      ebp->tsc = i;
       break;
+    }
   }
 
   return rc;
@@ -1624,6 +1626,7 @@ static int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float th
   tail = 6 + max_toa;
   sync = gMidambles[tsc];
 
+  ebp->tsc = tsc;
   rc = detectGeneralBurst(burst, threshold, sps, target, head, tail, sync, ebp);
   return rc;
 }
@@ -1642,6 +1645,7 @@ static int detectEdgeBurst(const signalVector &burst, unsigned tsc, float thresh
   tail = 6 + max_toa;
   sync = gEdgeMidambles[tsc];
 
+  ebp->tsc = tsc;
   rc = detectGeneralBurst(burst, threshold, sps,
                           target, head, tail, sync, ebp);
   return rc;

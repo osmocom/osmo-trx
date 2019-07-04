@@ -105,10 +105,12 @@ float energyDetect(const signalVector &rxBurst,
 /** Struct used to fill out parameters in detectAnyBurst(): estimated burst parameters
 @param amplitude The estimated amplitude of received TSC burst.
 @param toa The estimated time-of-arrival of received TSC burst (in symbols).
+@param tsc The TSC used to detect the burst.
 */
 struct estim_burst_params {
         complex amp;
         float toa;
+        uint8_t tsc;
 };
 /**
         8-PSK/GMSK/RACH burst detector
