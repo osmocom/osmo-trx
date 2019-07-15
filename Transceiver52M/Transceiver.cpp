@@ -943,6 +943,18 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   /* Convert TDMA FN to the host endianness */
   fn = osmo_load32be(&chdr->fn);
 
+  /* Make sure we support the received header format */
+  switch (chdr->version) {
+  case 0:
+  /* Version 1 has the same format */
+  case 1:
+    break;
+
+  default:
+    LOG(ERR) << "Rx TRXD message with unknown header version " << chdr->version;
+    return false;
+  }
+
   LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(fn, chdr->tn);
 
   int RSSI = (int) buffer[5];
