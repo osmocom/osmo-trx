@@ -33,6 +33,7 @@ extern "C" {
 
 #include <osmocom/core/utils.h>
 #include <osmocom/core/socket.h>
+#include <osmocom/core/bits.h>
 }
 
 #ifdef HAVE_CONFIG_H
@@ -914,6 +915,8 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   int msgLen;
   int burstLen;
   char buffer[EDGE_BURST_NBITS + 50];
+  struct trxd_hdr_common *chdr;
+  uint32_t fn;
 
   // check data socket
   msgLen = read(mDataSockets[chan], buffer, sizeof(buffer));
@@ -934,12 +937,13 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
     return false;
   }
 
-  int timeSlot = (int) buffer[0];
-  uint32_t frameNum = 0;
-  for (int i = 0; i < 4; i++)
-    frameNum = (frameNum << 8) | (0x0ff & buffer[i+1]);
+  /* Common header part: HDR version, TDMA TN & FN */
+  chdr = (struct trxd_hdr_common *) buffer;
 
-  LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(frameNum,timeSlot);
+  /* Convert TDMA FN to the host endianness */
+  fn = osmo_load32be(&chdr->fn);
+
+  LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(fn, chdr->tn);
 
   int RSSI = (int) buffer[5];
   BitVector newBurst(burstLen);
@@ -948,7 +952,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   while (itr < newBurst.end())
     *itr++ = *bufferItr++;
 
-  GSM::Time currTime = GSM::Time(frameNum,timeSlot);
+  GSM::Time currTime = GSM::Time(fn, chdr->tn);
 
   addRadioVector(chan, newBurst, RSSI, currTime);
 
