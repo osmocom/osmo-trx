@@ -935,7 +935,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   }
 
   int timeSlot = (int) buffer[0];
-  uint64_t frameNum = 0;
+  uint32_t frameNum = 0;
   for (int i = 0; i < 4; i++)
     frameNum = (frameNum << 8) | (0x0ff & buffer[i+1]);
 
