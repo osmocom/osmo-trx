@@ -955,7 +955,9 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
     return false;
   }
 
-  LOG(DEBUG) << "rcvd. burst at: " << GSM::Time(fn, chdr->tn);
+  LOG(DEBUG) << "Rx TRXD message (hdr_ver=" << chdr->version << "): "
+             << "fn=" << fn << ", tn=" << chdr->tn << ", "
+             << "burst_len=" << burstLen;
 
   int RSSI = (int) buffer[5];
   BitVector newBurst(burstLen);
