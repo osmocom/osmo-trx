@@ -124,7 +124,8 @@ Transceiver::Transceiver(int wBasePort,
   : mBasePort(wBasePort), mLocalAddr(TRXAddress), mRemoteAddr(GSMcoreAddress),
     mClockSocket(-1), mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     rssiOffset(wRssiOffset), stackSize(wStackSize),
-    mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mEdge(false), mOn(false), mForceClockInterface(false),
+    mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mExtRACH(false), mEdge(false),
+    mOn(false), mForceClockInterface(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
     mWriteBurstToDiskMask(0), mVersionTRXD(0)
 {
