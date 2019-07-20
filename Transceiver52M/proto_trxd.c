@@ -27,7 +27,7 @@
 
 static void trxd_fill_common(struct trxd_hdr_common *common, const struct trx_ul_burst_ind *bi, uint8_t version)
 {
-	common->version = version & 0x07;
+	common->version = version & 0b1111;
 	common->reserved = 0;
 	common->tn = bi->tn;
 	osmo_store32be(bi->fn, &common->fn);
