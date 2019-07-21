@@ -34,7 +34,8 @@ RadioInterface::RadioInterface(RadioDevice *wRadio, size_t tx_sps,
                                size_t rx_sps, size_t chans,
                                int wReceiveOffset, GSM::Time wStartTime)
   : mRadio(wRadio), mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans),
-    underrun(false), overrun(false), receiveOffset(wReceiveOffset), mOn(false)
+    underrun(false), overrun(false), writeTimestamp(0), readTimestamp(0),
+    receiveOffset(wReceiveOffset), mOn(false)
 {
   mClock.set(wStartTime);
 }
