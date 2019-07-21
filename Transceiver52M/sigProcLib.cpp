@@ -84,7 +84,7 @@ static Resampler *dnsampler = NULL;
  * perform 16-byte memory alignment required by many SSE instructions.
  */
 struct CorrelationSequence {
-  CorrelationSequence() : sequence(NULL)
+  CorrelationSequence() : sequence(NULL), buffer(NULL), toa(0.0)
   {
   }
 
