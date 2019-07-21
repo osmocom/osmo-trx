@@ -87,8 +87,9 @@ long Timeval::delta(const Timeval& other) const
 
 ostream& operator<<(ostream& os, const Timeval& tv)
 {
-	os.setf( ios::fixed, ios::floatfield );
+	ios_base::fmtflags flags_backup = os.setf( ios::fixed, ios::floatfield );
 	os << tv.seconds();
+	os.flags( flags_backup );
 	return os;
 }
 
