@@ -226,7 +226,8 @@ bool ChannelizerBase::checkLen(size_t innerLen, size_t outerLen)
  * Setup channelizer paramaters
  */
 ChannelizerBase::ChannelizerBase(size_t m, size_t blockLen, size_t hLen)
-	: fftInput(NULL), fftOutput(NULL), fftHandle(NULL)
+	: subFilters(NULL), hInputs(NULL), hOutputs(NULL), hist(NULL),
+	  fftInput(NULL), fftOutput(NULL), fftHandle(NULL)
 {
 	this->m = m;
 	this->hLen = hLen;
