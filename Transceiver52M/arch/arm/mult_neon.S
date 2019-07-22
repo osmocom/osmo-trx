@@ -1,5 +1,5 @@
 /*
- * NEON complex multiplication 
+ * NEON complex multiplication
  * Copyright (C) 2012,2013 Thomas Tsou <tom@tsou.cc>
  *
  * This library is free software; you can redistribute it and/or

@@ -81,7 +81,7 @@ long Timeval::delta(const Timeval& other) const
 	int32_t deltaNs = other.nsec() - nsec();
 	return 1000*deltaS + deltaNs/1000000;
 }
-	
+
 
 
 

@@ -1,8 +1,8 @@
 /*
  * Polyphase channelizer
- * 
+ *
  * Copyright (C) 2012-2014 Tom Tsou <tom@tsou.cc>
- * Copyright (C) 2015 Ettus Research LLC 
+ * Copyright (C) 2015 Ettus Research LLC
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -55,10 +55,10 @@ static void reverse(float *buf, size_t len)
 	}
 }
 
-/* 
+/*
  * Create polyphase filterbank
  *
- * Implementation based material found in, 
+ * Implementation based material found in,
  *
  * "harris, fred, Multirate Signal Processing, Upper Saddle River, NJ,
  *     Prentice Hall, 2006."
@@ -70,7 +70,7 @@ bool ChannelizerBase::initFilters()
 	float sum = 0.0f, scale = 0.0f;
 	float midpt = (float) (protoLen - 1.0) / 2.0;
 
-	/* 
+	/*
 	 * Allocate 'M' partition filters and the temporary prototype
 	 * filter. Coefficients are real only and must be 16-byte memory
 	 * aligned for SSE usage.
@@ -90,7 +90,7 @@ bool ChannelizerBase::initFilters()
 				memalign(16, hLen * 2 * sizeof(float));
 	}
 
-	/* 
+	/*
 	 * Generate the prototype filter with a Blackman-harris window.
 	 * Scale coefficients with DC filter gain set to unity divided
 	 * by the number of channels.
@@ -110,7 +110,7 @@ bool ChannelizerBase::initFilters()
 	}
 	scale = (float) m / sum;
 
-	/* 
+	/*
 	 * Populate partition filters and reverse the coefficients per
 	 * convolution requirements.
 	 */
@@ -174,7 +174,7 @@ bool ChannelizerBase::mapBuffers()
 	return true;
 }
 
-/* 
+/*
  * Setup filterbank internals
  */
 bool ChannelizerBase::init()
@@ -222,7 +222,7 @@ bool ChannelizerBase::checkLen(size_t innerLen, size_t outerLen)
 	return true;
 }
 
-/* 
+/*
  * Setup channelizer paramaters
  */
 ChannelizerBase::ChannelizerBase(size_t m, size_t blockLen, size_t hLen)

@@ -166,7 +166,7 @@ class Time {
         unsigned newTN = (mTN + other.mTN) % 8;
 		uint64_t newFN = (mFN+other.mFN + (mTN + other.mTN)/8) % gHyperframe;
         return Time(newFN,newTN);
-    } 
+    }
 
 	int operator-(const Time& other) const
 	{

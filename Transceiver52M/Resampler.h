@@ -28,7 +28,7 @@ public:
 	/* Constructor for rational sample rate conversion
 	 *   @param p numerator of resampling ratio
 	 *   @param q denominator of resampling ratio
-	 *   @param filt_len length of each polyphase subfilter 
+	 *   @param filt_len length of each polyphase subfilter
 	 */
 	Resampler(size_t p, size_t q, size_t filt_len = 16);
 	~Resampler();
@@ -58,7 +58,7 @@ public:
 	int rotate(const float *in, size_t in_len, float *out, size_t out_len);
 
 	/* Get filter length
-	 *   @return number of taps in each filter partition 
+	 *   @return number of taps in each filter partition
 	 */
 	size_t len();
 

@@ -96,7 +96,7 @@ const float *RadioBuffer::getReadSegment()
 /*
  * Output direction
  *
- * Write a non-segment length of samples to the buffer. 
+ * Write a non-segment length of samples to the buffer.
  */
 bool RadioBuffer::write(const float *wr, size_t len)
 {

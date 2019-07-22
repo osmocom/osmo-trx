@@ -1,6 +1,6 @@
 /*
  * Polyphase synthesis filter
- * 
+ *
  * Copyright (C) 2012-2014 Tom Tsou <tom@tsou.cc>
  * Copyright (C) 2015 Ettus Research LLC
  *
@@ -74,7 +74,7 @@ bool Synthesis::resetBuffer(size_t chan)
 	return true;
 }
 
-/* 
+/*
  * Implementation based on material found in:
  *
  * "harris, fred, Multirate Signal Processing, Upper Saddle River, NJ,
@@ -92,8 +92,8 @@ bool Synthesis::rotate(float *out, size_t len)
 
 	cxvec_fft(fftHandle);
 
-	/* 
-	 * Convolve through filterbank while applying and saving sample history 
+	/*
+	 * Convolve through filterbank while applying and saving sample history
 	 */
 	for (size_t i = 0; i < m; i++) {
 		memcpy(&hInputs[i][2 * -hLen], hist[i], hSize);

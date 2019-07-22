@@ -51,7 +51,7 @@ void Resampler::initFilters(float bw)
 	float cutoff;
 	float sum = 0.0f, scale = 0.0f;
 
-	/* 
+	/*
 	 * Allocate partition filters and the temporary prototype filter
 	 * according to numerator of the rational rate. Coefficients are
 	 * real only and must be 16-byte memory aligned for SSE usage.
@@ -60,10 +60,10 @@ void Resampler::initFilters(float bw)
 	for (auto &part : partitions)
 		part = (complex<float> *) memalign(16, filt_len * sizeof(complex<float>));
 
-	/* 
+	/*
 	 * Generate the prototype filter with a Blackman-harris window.
 	 * Scale coefficients with DC filter gain set to unity divided
-	 * by the number of filter partitions. 
+	 * by the number of filter partitions.
 	 */
 	float a0 = 0.35875;
 	float a1 = 0.48829;
@@ -137,8 +137,8 @@ int Resampler::rotate(const float *in, size_t in_len, float *out, size_t out_len
 
 	/* Generate output from precomputed input/output paths */
 	for (size_t i = 0; i < out_len; i++) {
-		n = in_index[i]; 
-		path = out_path[i]; 
+		n = in_index[i];
+		path = out_path[i];
 
 		convolve_real(in, in_len,
 			      reinterpret_cast<float *>(partitions[path]),

@@ -1,6 +1,6 @@
 /*
  * Polyphase channelizer
- * 
+ *
  * Copyright (C) 2012-2014 Tom Tsou <tom@tsou.cc>
  * Copyright (C) 2015 Ettus Research LLC
  *
@@ -63,7 +63,7 @@ float *Channelizer::outputBuffer(size_t chan) const
 	return hInputs[chan];
 }
 
-/* 
+/*
  * Implementation based on material found in:
  *
  * "harris, fred, Multirate Signal Processing, Upper Saddle River, NJ,
@@ -78,8 +78,8 @@ bool Channelizer::rotate(const float *in, size_t len)
 
 	deinterleave(in, len, hInputs, blockLen, m);
 
-	/* 
-	 * Convolve through filterbank while applying and saving sample history 
+	/*
+	 * Convolve through filterbank while applying and saving sample history
 	 */
 	for (size_t i = 0; i < m; i++) {
 		memcpy(&hInputs[i][2 * -hLen], hist[i], hSize);

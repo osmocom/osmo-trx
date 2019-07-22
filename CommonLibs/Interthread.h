@@ -53,7 +53,7 @@ template <class T, class Fifo=PointerFIFO> class InterthreadQueue {
 
 	protected:
 
-	Fifo mQ;	
+	Fifo mQ;
 	mutable Mutex mLock;
 	mutable Signal mWriteSignal;
 
@@ -160,7 +160,7 @@ template <class T, class Fifo=PointerFIFO> class InterthreadQueue2 {
 
 	protected:
 
-	Fifo mQ;	
+	Fifo mQ;
 	mutable Mutex mLock;
 	mutable Signal mWriteSignal;
 
@@ -256,7 +256,7 @@ template <class T, class Fifo=PointerFIFO> class InterthreadQueue2 {
 		// This recurs (and the InterthreadQueue fills up with data)
 		// until the read thread's accumulated temporary priority causes it to
 		// get a second pre-emptive activation over the writing thread,
-		// resulting in bursts of activity by the read thread. 
+		// resulting in bursts of activity by the read thread.
 		{ ScopedLock lock(mLock);
 		  mQ.put(val);
 		}
@@ -281,7 +281,7 @@ template <class T> class InterthreadQueueWithWait {
 
 	protected:
 
-	PointerFIFO mQ;	
+	PointerFIFO mQ;
 	mutable Mutex mLock;
 	mutable Signal mWriteSignal;
 	mutable Signal mReadSignal;

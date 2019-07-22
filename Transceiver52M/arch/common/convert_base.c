@@ -31,4 +31,3 @@ void base_convert_short_float(float *out, const short *in, int len)
 	for (int i = 0; i < len; i++)
 		out[i] = in[i];
 }
-

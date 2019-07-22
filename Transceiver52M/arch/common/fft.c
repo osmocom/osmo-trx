@@ -1,18 +1,18 @@
 /*
- * Fast Fourier transform 
+ * Fast Fourier transform
  *
  * Copyright (C) 2012 Tom Tsou <tom@tsou.cc>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  * See the COPYING file in the main directory for details.
@@ -32,9 +32,9 @@ struct fft_hdl {
 	fftwf_plan fft_plan;
 };
 
-/*! \brief Initialize FFT backend 
+/*! \brief Initialize FFT backend
  *  \param[in] reverse FFT direction
- *  \param[in] m FFT length 
+ *  \param[in] m FFT length
  *  \param[in] istride input stride count
  *  \param[in] ostride output stride count
  *  \param[in] in input buffer (FFTW aligned)
@@ -92,7 +92,7 @@ void fft_free(void *ptr)
 	free(ptr);
 }
 
-/*! \brief Free FFT backend resources 
+/*! \brief Free FFT backend resources
  */
 void free_fft(struct fft_hdl *hdl)
 {
