@@ -218,8 +218,8 @@ private:
   unsigned mMaxExpectedDelayAB;        ///< maximum expected time-of-arrival offset in GSM symbols for Access Bursts (RACH)
   unsigned mMaxExpectedDelayNB;        ///< maximum expected time-of-arrival offset in GSM symbols for Normal Bursts
   unsigned mWriteBurstToDiskMask;      ///< debug: bitmask to indicate which timeslots to dump to disk
-  unsigned mVersionTRXD;               ///< Format version to use for TRXD protocol communication
 
+  std::vector<unsigned> mVersionTRXD;  ///< Format version to use for TRXD protocol communication, per channel
   std::vector<TransceiverState> mStates;
 
   /** Start and stop I/O threads through the control socket API */

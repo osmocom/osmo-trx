@@ -129,7 +129,7 @@ Transceiver::Transceiver(int wBasePort,
     mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mExtRACH(false), mEdge(false),
     mOn(false), mForceClockInterface(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
-    mWriteBurstToDiskMask(0), mVersionTRXD(0)
+    mWriteBurstToDiskMask(0)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
@@ -198,6 +198,7 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
   mTxPriorityQueues.resize(mChans);
   mReceiveFIFO.resize(mChans);
   mStates.resize(mChans);
+  mVersionTRXD.resize(mChans);
 
   /* Filler table retransmissions - support only on channel 0 */
   if (filler == FILLER_DUMMY)
@@ -885,14 +886,14 @@ void Transceiver::driveControl(size_t chan)
     // set TRXD protocol version
     unsigned version_recv;
     sscanf(params, "%u", &version_recv);
-    LOGC(DTRXCTRL, INFO) << "BTS requests TRXD version switch: " << version_recv;
+    LOGCHAN(chan, DTRXCTRL, INFO) << "BTS requests TRXD version switch: " << version_recv;
     if (version_recv > TRX_DATA_FORMAT_VER) {
-      LOGC(DTRXCTRL, INFO) << "rejecting TRXD version " << version_recv
-                           << "in favor of " <<  TRX_DATA_FORMAT_VER;
+      LOGCHAN(chan, DTRXCTRL, INFO) << "rejecting TRXD version " << version_recv
+                                    << "in favor of " <<  TRX_DATA_FORMAT_VER;
       sprintf(response, "RSP SETFORMAT %u %u", TRX_DATA_FORMAT_VER, version_recv);
     } else {
-      LOGC(DTRXCTRL, NOTICE) << "switching to TRXD version " << version_recv;
-      mVersionTRXD = version_recv;
+      LOGCHAN(chan, DTRXCTRL, NOTICE) << "switching to TRXD version " << version_recv;
+      mVersionTRXD[chan] = version_recv;
       sprintf(response, "RSP SETFORMAT %u %u", version_recv, version_recv);
     }
   } else if (match_cmd(command, "_SETBURSTTODISKMASK", &params)) {
@@ -1023,7 +1024,7 @@ void Transceiver::driveReceiveFIFO(size_t chan)
   if (!bi.idle)
        logRxBurst(chan, &bi);
 
-  switch (mVersionTRXD) {
+  switch (mVersionTRXD[chan]) {
     case 0:
       trxd_send_burst_ind_v0(chan, mDataSockets[chan], &bi);
       break;
