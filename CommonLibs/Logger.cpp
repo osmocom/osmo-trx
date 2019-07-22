@@ -1,6 +1,7 @@
 /*
 * Copyright (C) 2018 sysmocom - s.f.m.c. GmbH
 *
+* SPDX-License-Identifier: AGPL-3.0+
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.

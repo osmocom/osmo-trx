@@ -1,6 +1,7 @@
 /*
 * Copyright 2008 Free Software Foundation, Inc.
 *
+* SPDX-License-Identifier: AGPL-3.0+
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.

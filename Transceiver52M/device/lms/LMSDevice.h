@@ -1,7 +1,10 @@
 /*
 * Copyright 2018 sysmocom - s.f.m.c. GmbH
 *
-* This software is distributed under multiple licenses; see the COPYING file in the main directory for licensing information for this specific distribuion.
+* SPDX-License-Identifier: AGPL-3.0+
+*
+* This software is distributed under multiple licenses; see the COPYING file in
+* the main directory for licensing information for this specific distribuion.
 *
 * This use of this software may be subject to additional restrictions.
 * See the LEGAL file in the main directory for details.

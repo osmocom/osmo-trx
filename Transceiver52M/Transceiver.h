@@ -1,6 +1,8 @@
 /*
 * Copyright 2008 Free Software Foundation, Inc.
 *
+* SPDX-License-Identifier: GPL-3.0+
+*
 * This software is distributed under the terms of the GNU Public License.
 * See the COPYING file in the main directory for details.
 *
