@@ -602,7 +602,7 @@ int main(int argc, char *argv[])
 	if (rc < 0)
 		exit(1);
 
-	g_ctrlh = ctrl_interface_setup(NULL, OSMO_CTRL_PORT_TRX, NULL);
+	g_ctrlh = ctrl_interface_setup_dynip(NULL, ctrl_vty_get_bind_addr(), OSMO_CTRL_PORT_TRX, NULL);
 	if (!g_ctrlh) {
 		LOG(ERROR) << "Failed to create CTRL interface.\n";
 		exit(1);
