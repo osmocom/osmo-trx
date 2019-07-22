@@ -39,19 +39,9 @@ extern "C" {
 class Transceiver;
 
 /** Channel descriptor for transceiver object and channel number pair */
-struct TransceiverChannel {
-  TransceiverChannel(Transceiver *trx, int num)
-  {
-    this->trx = trx;
-    this->num = num;
-  }
-
-  ~TransceiverChannel()
-  {
-  }
-
-  Transceiver *trx;
-  size_t num;
+struct TrxChanThParams {
+	Transceiver *trx;
+	size_t num;
 };
 
 /** Internal transceiver state variables */
@@ -248,15 +238,11 @@ protected:
   */
   bool driveTxPriorityQueue(size_t chan);
 
-  friend void *RxUpperLoopAdapter(TransceiverChannel *);
-
-  friend void *TxUpperLoopAdapter(TransceiverChannel *);
-
-  friend void *RxLowerLoopAdapter(Transceiver *);
-
-  friend void *TxLowerLoopAdapter(Transceiver *);
-
-  friend void *ControlServiceLoopAdapter(TransceiverChannel *);
+  friend void *RxUpperLoopAdapter(TrxChanThParams *params);
+  friend void *TxUpperLoopAdapter(TrxChanThParams *params);
+  friend void *RxLowerLoopAdapter(Transceiver *transceiver);
+  friend void *TxLowerLoopAdapter(Transceiver *transceiver);
+  friend void *ControlServiceLoopAdapter(TrxChanThParams *params);
 
 
   void reset();
@@ -267,14 +253,14 @@ protected:
   void logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi);
 };
 
-void *RxUpperLoopAdapter(TransceiverChannel *);
+void *RxUpperLoopAdapter(TrxChanThParams *params);
 
 /** Main drive threads */
-void *RxLowerLoopAdapter(Transceiver *);
-void *TxLowerLoopAdapter(Transceiver *);
+void *RxLowerLoopAdapter(Transceiver *transceiver);
+void *TxLowerLoopAdapter(Transceiver *transceiver);
 
 /** control message handler thread loop */
-void *ControlServiceLoopAdapter(TransceiverChannel *);
+void *ControlServiceLoopAdapter(TrxChanThParams *params);
 
 /** transmit queueing thread loop */
-void *TxUpperLoopAdapter(TransceiverChannel *);
+void *TxUpperLoopAdapter(TrxChanThParams *params);

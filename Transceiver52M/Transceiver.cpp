@@ -240,10 +240,12 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
 
   /* Start control threads */
   for (size_t i = 0; i < mChans; i++) {
-    TransceiverChannel *chan = new TransceiverChannel(this, i);
+    TrxChanThParams *params = (TrxChanThParams *)malloc(sizeof(struct TrxChanThParams));
+    params->trx = this;
+    params->num = i;
     mControlServiceLoopThreads[i] = new Thread(stackSize);
     mControlServiceLoopThreads[i]->start((void * (*)(void*))
-                                 ControlServiceLoopAdapter, (void*) chan);
+                                 ControlServiceLoopAdapter, (void*) params);
 
     if (i && filler == FILLER_DUMMY)
       filler = FILLER_ZERO;
@@ -292,15 +294,19 @@ bool Transceiver::start()
 
   /* Launch uplink and downlink burst processing threads */
   for (size_t i = 0; i < mChans; i++) {
-    TransceiverChannel *chan = new TransceiverChannel(this, i);
+    TrxChanThParams *params = (TrxChanThParams *)malloc(sizeof(struct TrxChanThParams));
+    params->trx = this;
+    params->num = i;
     mRxServiceLoopThreads[i] = new Thread(stackSize);
     mRxServiceLoopThreads[i]->start((void * (*)(void*))
-                            RxUpperLoopAdapter, (void*) chan);
+                            RxUpperLoopAdapter, (void*) params);
 
-    chan = new TransceiverChannel(this, i);
+    params = (TrxChanThParams *)malloc(sizeof(struct TrxChanThParams));
+    params->trx = this;
+    params->num = i;
     mTxPriorityQueueServiceLoopThreads[i] = new Thread(stackSize);
     mTxPriorityQueueServiceLoopThreads[i]->start((void * (*)(void*))
-                            TxUpperLoopAdapter, (void*) chan);
+                            TxUpperLoopAdapter, (void*) params);
   }
 
   mForceClockInterface = true;
@@ -1108,13 +1114,13 @@ void Transceiver::writeClockInterface()
 
 }
 
-void *RxUpperLoopAdapter(TransceiverChannel *chan)
+void *RxUpperLoopAdapter(TrxChanThParams *params)
 {
   char thread_name[16];
-  Transceiver *trx = chan->trx;
-  size_t num = chan->num;
+  Transceiver *trx = params->trx;
+  size_t num = params->num;
 
-  delete chan;
+  free(params);
 
   snprintf(thread_name, 16, "RxUpper%zu", num);
   set_selfthread_name(thread_name);
@@ -1154,13 +1160,13 @@ void *TxLowerLoopAdapter(Transceiver *transceiver)
   return NULL;
 }
 
-void *ControlServiceLoopAdapter(TransceiverChannel *chan)
+void *ControlServiceLoopAdapter(TrxChanThParams *params)
 {
   char thread_name[16];
-  Transceiver *trx = chan->trx;
-  size_t num = chan->num;
+  Transceiver *trx = params->trx;
+  size_t num = params->num;
 
-  delete chan;
+  free(params);
 
   snprintf(thread_name, 16, "CtrlService%zu", num);
   set_selfthread_name(thread_name);
@@ -1172,13 +1178,13 @@ void *ControlServiceLoopAdapter(TransceiverChannel *chan)
   return NULL;
 }
 
-void *TxUpperLoopAdapter(TransceiverChannel *chan)
+void *TxUpperLoopAdapter(TrxChanThParams *params)
 {
   char thread_name[16];
-  Transceiver *trx = chan->trx;
-  size_t num = chan->num;
+  Transceiver *trx = params->trx;
+  size_t num = params->num;
 
-  delete chan;
+  free(params);
 
   snprintf(thread_name, 16, "TxUpper%zu", num);
   set_selfthread_name(thread_name);
