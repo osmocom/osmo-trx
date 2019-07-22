@@ -9,9 +9,9 @@ Copyright: 2008-2013 Free Software Foundation
            2010-2012 Range Networks, Inc.
 License: AGPL-3+
 
-Files: Transceiver52M/arm/*
-       Transceiver52M/x86/*
-       Transceiver52M/common/*
+Files: Transceiver52M/arch/arm/*
+       Transceiver52M/arch/x86/*
+       Transceiver52M/arch/common/*
        Transceiver52M/Resampler.cpp
        Transceiver52M/Resampler.h
        Transceiver52M/osmo-trx.cpp
