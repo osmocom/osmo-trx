@@ -12,7 +12,7 @@ Example configuration files for different devices and setups can be found in
 
 === Documented example
 
-.Example: Static GGSN/APN configuration (single catch-all GGSN)
+.Example: Single carrier configuration
 ----
 trx
  bind-ip 127.0.0.1 <1>
