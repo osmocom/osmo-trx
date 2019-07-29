@@ -72,7 +72,7 @@ fi
 mkdir "$deps" || true
 
 osmo-build-dep.sh libosmocore "" "--enable-sanitize --disable-doxygen --disable-pcsc"
-osmo-build-dep.sh libusrp
+PARALLEL_MAKE="" osmo-build-dep.sh libusrp
 
 export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="$inst/lib"
