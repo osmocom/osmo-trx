@@ -36,10 +36,9 @@ SUBDIRS = \
 	tests
 
 EXTRA_DIST = \
-	INSTALLATION \
 	LEGAL \
 	COPYING \
-	README
+	README.md
 
 AM_DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
