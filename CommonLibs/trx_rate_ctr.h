@@ -4,11 +4,12 @@
 #include <osmocom/vty/command.h>
 
 enum TrxCtr {
-	TRX_CTR_RX_UNDERRUNS,
 	TRX_CTR_RX_OVERRUNS,
 	TRX_CTR_TX_UNDERRUNS,
 	TRX_CTR_RX_DROP_EV,
 	TRX_CTR_RX_DROP_SMPL,
+	TRX_CTR_TX_DROP_EV,
+	TRX_CTR_TX_DROP_SMPL,
 };
 
 struct ctr_threshold {

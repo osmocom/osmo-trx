@@ -1247,26 +1247,21 @@
         <param name='&lt;1-32&gt;' doc='Real time priority' />
       </params>
     </command>
-    <command id='stack-size &lt;0-2147483647&gt;'>
-      <params>
-        <param name='stack-size' doc='Set the stack size for the spawned threads' />
-        <param name='&lt;0-2147483647&gt;' doc='Stack size in BYTE' />
-      </params>
-    </command>
     <command id='filler dummy'>
       <params>
         <param name='filler' doc='Enable C0 filler table' />
         <param name='dummy' doc='Dummy method' />
       </params>
     </command>
-    <command id='ctr-error-threshold (rx_underruns|rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples) &lt;0-65535&gt; (per-second|per-minute|per-hour|per-day)'>
+    <command id='ctr-error-threshold (rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples|tx_drop_events|tx_drop_samples) &lt;0-65535&gt; (per-second|per-minute|per-hour|per-day)'>
       <params>
         <param name='ctr-error-threshold' doc='Threshold rate for error counter' />
-        <param name='rx_underruns' doc='Set threshold value for rate_ctr device:rx_underruns' />
         <param name='rx_overruns' doc='Set threshold value for rate_ctr device:rx_overruns' />
         <param name='tx_underruns' doc='Set threshold value for rate_ctr device:tx_underruns' />
         <param name='rx_drop_events' doc='Set threshold value for rate_ctr device:rx_drop_events' />
         <param name='rx_drop_samples' doc='Set threshold value for rate_ctr device:rx_drop_samples' />
+        <param name='tx_drop_events' doc='Set threshold value for rate_ctr device:tx_drop_events' />
+        <param name='tx_drop_samples' doc='Set threshold value for rate_ctr device:tx_drop_samples' />
         <param name='&lt;0-65535&gt;' doc='Value to set for threshold' />
         <param name='per-second' doc='Threshold value sampled per-second' />
         <param name='per-minute' doc='Threshold value sampled per-minute' />
@@ -1274,20 +1269,27 @@
         <param name='per-day' doc='Threshold value sampled per-day' />
       </params>
     </command>
-    <command id='no ctr-error-threshold (rx_underruns|rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples) &lt;0-65535&gt; (per-second|per-minute|per-hour|per-day)'>
+    <command id='no ctr-error-threshold (rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples|tx_drop_events|tx_drop_samples) &lt;0-65535&gt; (per-second|per-minute|per-hour|per-day)'>
       <params>
         <param name='no' doc='Negate a command or set its defaults' />
         <param name='ctr-error-threshold' doc='Threshold rate for error counter' />
-        <param name='rx_underruns' doc='Set threshold value for rate_ctr device:rx_underruns' />
         <param name='rx_overruns' doc='Set threshold value for rate_ctr device:rx_overruns' />
         <param name='tx_underruns' doc='Set threshold value for rate_ctr device:tx_underruns' />
         <param name='rx_drop_events' doc='Set threshold value for rate_ctr device:rx_drop_events' />
         <param name='rx_drop_samples' doc='Set threshold value for rate_ctr device:rx_drop_samples' />
+        <param name='tx_drop_events' doc='Set threshold value for rate_ctr device:tx_drop_events' />
+        <param name='tx_drop_samples' doc='Set threshold value for rate_ctr device:tx_drop_samples' />
         <param name='&lt;0-65535&gt;' doc='Value to set for threshold' />
         <param name='per-second' doc='Threshold value sampled per-second' />
         <param name='per-minute' doc='Threshold value sampled per-minute' />
         <param name='per-hour' doc='Threshold value sampled per-hour' />
         <param name='per-day' doc='Threshold value sampled per-day' />
+      </params>
+    </command>
+    <command id='stack-size &lt;0-2147483647&gt;'>
+      <params>
+        <param name='stack-size' doc='Set the stack size per thread in BYTE, 0 = OS default' />
+        <param name='&lt;0-2147483647&gt;' doc='Stack size per thread in BYTE' />
       </params>
     </command>
     <command id='chan &lt;0-100&gt;'>

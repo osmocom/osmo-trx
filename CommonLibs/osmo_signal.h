@@ -48,9 +48,10 @@ enum SS_DEVICE {
 /* signal cb for signal <SS_DEVICE,S_DEVICE_COUNTER_CHANGE> */
 struct device_counters {
 	size_t chan;
-	unsigned int rx_underruns;
 	unsigned int rx_overruns;
 	unsigned int tx_underruns;
 	unsigned int rx_dropped_events;
 	unsigned int rx_dropped_samples;
+	unsigned int tx_dropped_events;
+	unsigned int tx_dropped_samples;
 };

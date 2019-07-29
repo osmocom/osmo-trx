@@ -93,20 +93,22 @@ const struct value_string rate_ctr_intv[] = {
 };
 
 const struct value_string trx_chan_ctr_names[] = {
-	{ TRX_CTR_RX_UNDERRUNS,	"rx_underruns" },
 	{ TRX_CTR_RX_OVERRUNS,	"rx_overruns" },
 	{ TRX_CTR_TX_UNDERRUNS,	"tx_underruns" },
 	{ TRX_CTR_RX_DROP_EV,	"rx_drop_events" },
 	{ TRX_CTR_RX_DROP_SMPL,	"rx_drop_samples" },
+	{ TRX_CTR_TX_DROP_EV,	"tx_drop_events" },
+	{ TRX_CTR_TX_DROP_SMPL,	"tx_drop_samples" },
 	{ 0, NULL }
 };
 
 static const struct rate_ctr_desc trx_chan_ctr_desc[] = {
-	[TRX_CTR_RX_UNDERRUNS]		= { "device:rx_underruns",	"Number of Rx underruns" },
-	[TRX_CTR_RX_OVERRUNS]		= { "device:rx_overruns",	"Number of Rx overruns" },
-	[TRX_CTR_TX_UNDERRUNS]		= { "device:tx_underruns",	"Number of Tx underruns" },
+	[TRX_CTR_RX_OVERRUNS]		= { "device:rx_overruns",	"Number of Rx overruns in FIFO queue" },
+	[TRX_CTR_TX_UNDERRUNS]		= { "device:tx_underruns",	"Number of Tx underruns in FIFO queue" },
 	[TRX_CTR_RX_DROP_EV]		= { "device:rx_drop_events",	"Number of times Rx samples were dropped by HW" },
 	[TRX_CTR_RX_DROP_SMPL]		= { "device:rx_drop_samples",	"Number of Rx samples dropped by HW" },
+	[TRX_CTR_TX_DROP_EV]		= { "device:tx_drop_events",	"Number of times Tx samples were dropped by HW" },
+	[TRX_CTR_TX_DROP_SMPL]		= { "device:tx_drop_samples",	"Number of Tx samples dropped by HW" }
 };
 
 static const struct rate_ctr_group_desc trx_chan_ctr_group_desc = {
@@ -126,8 +128,6 @@ static int rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 		if (ctrs_pending[chan].chan == PENDING_CHAN_NONE)
 			continue;
 		LOGCHAN(chan, DMAIN, INFO) << "rate_ctr update";
-		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_RX_UNDERRUNS];
-		rate_ctr_add(ctr, ctrs_pending[chan].rx_underruns - ctr->current);
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_RX_OVERRUNS];
 		rate_ctr_add(ctr, ctrs_pending[chan].rx_overruns - ctr->current);
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TX_UNDERRUNS];
@@ -136,6 +136,10 @@ static int rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 		rate_ctr_add(ctr, ctrs_pending[chan].rx_dropped_events - ctr->current);
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_RX_DROP_SMPL];
 		rate_ctr_add(ctr, ctrs_pending[chan].rx_dropped_samples - ctr->current);
+		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TX_DROP_EV];
+		rate_ctr_add(ctr, ctrs_pending[chan].tx_dropped_events - ctr->current);
+		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TX_DROP_SMPL];
+		rate_ctr_add(ctr, ctrs_pending[chan].tx_dropped_samples - ctr->current);
 
 		/* Mark as done */
 		ctrs_pending[chan].chan = PENDING_CHAN_NONE;

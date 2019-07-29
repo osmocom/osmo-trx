@@ -574,38 +574,37 @@ GSM::Time LMSDevice::minLatency() {
 	/* UNUSED on limesdr (only used on usrp1/2) */
 	return GSM::Time(0,0);
 }
-
-void LMSDevice::update_stream_stats(size_t chan, bool * underrun, bool * overrun)
+/*!
+ * Issue tracking description of several events: https://github.com/myriadrf/LimeSuite/issues/265
+ */
+void LMSDevice::update_stream_stats_rx(size_t chan, bool *overrun)
 {
 	lms_stream_status_t status;
 	bool changed = false;
 
 	if (LMS_GetStreamStatus(&m_lms_stream_rx[chan], &status) != 0) {
-		LOGCHAN(chan, DDEV, ERROR) << "LMS_GetStreamStatus failed";
+		LOGCHAN(chan, DDEV, ERROR) << "Rx LMS_GetStreamStatus failed";
 		return;
 	}
 
-	if (status.underrun) {
-		changed = true;
-		*underrun = true;
-		LOGCHAN(chan, DDEV, ERROR) << "recv Underrun! ("
-					   << m_ctr[chan].rx_underruns << " -> "
-					   << status.underrun << ")";
-	}
-	m_ctr[chan].rx_underruns += status.underrun;
-
+	/* FIFO overrun is counted when Rx FIFO is full but new data comes from
+	   the board and oldest samples in FIFO are overwritte. Value count
+	   since the last call to LMS_GetStreamStatus(stream). */
 	if (status.overrun) {
 		changed = true;
 		*overrun = true;
-		LOGCHAN(chan, DDEV, ERROR) << "recv Overrun! ("
+		LOGCHAN(chan, DDEV, ERROR) << "Rx Overrun! ("
 					   << m_ctr[chan].rx_overruns << " -> "
 					   << status.overrun << ")";
 	}
 	m_ctr[chan].rx_overruns += status.overrun;
 
+	/* Dropped packets in Rx are counted when gaps in Rx timestamps are
+	   detected (likely because buffer oveflow in hardware). Value count
+	   since the last call to LMS_GetStreamStatus(stream). */
 	if (status.droppedPackets) {
 		changed = true;
-		LOGCHAN(chan, DDEV, ERROR) << "recv Dropped packets by HW! ("
+		LOGCHAN(chan, DDEV, ERROR) << "Rx Dropped packets by HW! ("
 					   << m_ctr[chan].rx_dropped_samples << " -> "
 					   << m_ctr[chan].rx_dropped_samples +
 					      status.droppedPackets
@@ -653,7 +652,7 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 		while ((avail_smpls = rx_buffers[i]->avail_smpls(timestamp)) < len) {
 			thread_enable_cancel(false);
 			num_smpls = LMS_RecvStream(&m_lms_stream_rx[i], bufs[i], len - avail_smpls, &rx_metadata, 100);
-			update_stream_stats(i, underrun, overrun);
+			update_stream_stats_rx(i, overrun);
 			thread_enable_cancel(true);
 			if (num_smpls <= 0) {
 				LOGCHAN(i, DDEV, ERROR) << "Device receive timed out (" << rc << " vs exp " << len << ").";
@@ -697,13 +696,53 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 	return len;
 }
 
+void LMSDevice::update_stream_stats_tx(size_t chan, bool *underrun)
+{
+	lms_stream_status_t status;
+	bool changed = false;
+
+	if (LMS_GetStreamStatus(&m_lms_stream_tx[chan], &status) != 0) {
+		LOGCHAN(chan, DDEV, ERROR) << "Tx LMS_GetStreamStatus failed";
+		return;
+	}
+
+	/* FIFO underrun is counted when Tx is running but FIFO is empty for
+	   >100 ms (500ms in older versions). Value count since the last call to
+	   LMS_GetStreamStatus(stream). */
+	if (status.underrun) {
+		changed = true;
+		*underrun = true;
+		LOGCHAN(chan, DDEV, ERROR) << "Tx Underrun! ("
+					   << m_ctr[chan].tx_underruns << " -> "
+					   << status.underrun << ")";
+	}
+	m_ctr[chan].tx_underruns += status.underrun;
+
+	/* Dropped packets in Tx are counted only when timestamps are enabled
+	   and SDR drops packet because of late timestamp. Value count since the
+	   last call to LMS_GetStreamStatus(stream). */
+	if (status.droppedPackets) {
+		changed = true;
+		LOGCHAN(chan, DDEV, ERROR) << "Tx Dropped packets by HW! ("
+					   << m_ctr[chan].tx_dropped_samples << " -> "
+					   << m_ctr[chan].tx_dropped_samples +
+					      status.droppedPackets
+					   << ")";
+		m_ctr[chan].tx_dropped_events++;
+	}
+	m_ctr[chan].tx_dropped_samples += status.droppedPackets;
+
+	if (changed)
+		osmo_signal_dispatch(SS_DEVICE, S_DEVICE_COUNTER_CHANGE, &m_ctr[chan]);
+
+}
+
 int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
 			    bool * underrun, unsigned long long timestamp,
 			    bool isControl)
 {
 	int rc = 0;
 	unsigned int i;
-	lms_stream_status_t status;
 	lms_stream_meta_t tx_metadata = {};
 	tx_metadata.flushPartialPacket = false;
 	tx_metadata.waitForTimestamp = true;
@@ -725,19 +764,12 @@ int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
 		LOGCHAN(i, DDEV, DEBUG) << "send buffer of len " << len << " timestamp " << std::hex << tx_metadata.timestamp;
 		thread_enable_cancel(false);
 		rc = LMS_SendStream(&m_lms_stream_tx[i], bufs[i], len, &tx_metadata, 100);
-		if (rc != len) {
-			LOGCHAN(i, DDEV, ERROR) << "LMS: Device send timed out";
-		}
-
-		if (LMS_GetStreamStatus(&m_lms_stream_tx[i], &status) == 0) {
-			if (status.underrun > m_ctr[i].tx_underruns) {
-				*underrun = true;
-				m_ctr[i].tx_underruns = status.underrun;
-				osmo_signal_dispatch(SS_DEVICE, S_DEVICE_COUNTER_CHANGE, &m_ctr[i]);
-			}
-
-		}
+		update_stream_stats_tx(i, underrun);
 		thread_enable_cancel(true);
+		if (rc != len) {
+			LOGCHAN(i, DDEV, ERROR) << "LMS: Device Tx timed out (" << rc << " vs exp " << len << ").";
+			return -1;
+		}
 	}
 
 	return rc;
