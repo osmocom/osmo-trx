@@ -377,7 +377,7 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
     return len;
   }
 
-  if (underrun) *underrun = false;
+  *underrun = false;
 
   uint32_t readBuf[2000];
 
@@ -427,7 +427,7 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	continue;
       }
       if ((word0 >> 28) & 0x04) {
-	if (underrun) *underrun = true;
+	*underrun = true;
 	LOGC(DDEV, DEBUG) << "UNDERRUN in TRX->USRP interface";
       }
       if (RSSI) *RSSI = (word0 >> 21) & 0x3f;
