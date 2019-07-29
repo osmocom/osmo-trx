@@ -48,11 +48,6 @@ Copyright: 2008-2010 Free Software Foundation
            2010-2012 Range Networks, Inc.
 License: GPL-3+
 
-Files: autogen.sh
-Copyright: 2005-2009 United States Government as represented by
-                     the U.S. Army Research Laboratory.
-License: BSD-3-clause
-
 Files: debian/*
 Copyright: 2015 Ruben Undheim <ruben.undheim@gmail.com>
 License: GPL-3+
@@ -66,7 +61,7 @@ License: AGPL-3+
  .
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU Affero General Public License for more details.
  .
  You should have received a copy of the GNU Affero General Public License

@@ -36,7 +36,6 @@ SUBDIRS = \
 	tests
 
 EXTRA_DIST = \
-	autogen.sh \
 	INSTALLATION \
 	LEGAL \
 	COPYING \
