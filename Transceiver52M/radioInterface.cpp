@@ -348,6 +348,7 @@ int RadioInterface::pullBuffer()
 /* Send timestamped chunk to the device with arbitrary size */
 bool RadioInterface::pushBuffer()
 {
+  bool local_underrun;
   size_t numSent, segmentLen = sendBuffer[0]->getSegmentLen();
 
   if (sendBuffer[0]->getAvailSegments() < 1)
@@ -363,8 +364,9 @@ bool RadioInterface::pushBuffer()
   /* Send the all samples in the send buffer */
   numSent = mRadio->writeSamples(convertSendBuffer,
                                  segmentLen,
-                                 &underrun,
+                                 &local_underrun,
                                  writeTimestamp);
+  underrun |= local_underrun;
   writeTimestamp += numSent;
 
   return true;
