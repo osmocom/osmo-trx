@@ -27,12 +27,6 @@ AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/arch/common -I${srcd
 AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
 AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
 
-rev2dir = $(datadir)/usrp/rev2
-rev4dir = $(datadir)/usrp/rev4
-
-dist_rev2_DATA = std_inband.rbf
-dist_rev4_DATA = std_inband.rbf
-
 noinst_LTLIBRARIES = libtransceiver_common.la
 
 COMMON_SOURCES = \
