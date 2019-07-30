@@ -29,6 +29,8 @@ flags, which can be found in each subsection relative to each backend below.
 
 The binary _osmo-trx-usrp1_ is used to drive this device, see <<backend_usrp1>>.
 
+include::./device-usrp-inband-signaling-usb.adoc[]
+
 [[dev_ettus_b200]]
 === Ettus B200
 
