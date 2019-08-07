@@ -24,6 +24,7 @@
 */
 
 #include <stdio.h>
+#include <netinet/in.h>
 #include <iomanip>      // std::setprecision
 #include <fstream>
 #include "Transceiver.h"
