@@ -1,3 +1,129 @@
+osmo-trx (1.1.0) unstable; urgency=medium
+
+  [ Sylvain Munaut ]
+  * arm/convolve: Fix the vfp4 real convolution for h_len=12
+  * convolve: Remove support for step, offset parameters
+  * tests: Rework the convolve_test
+  * tests: Re-enable the convolve_test by default
+  * sigProcLib: Add C/I (Carrier-to-Interference ratio) computation
+
+  [ Vadim Yanitskiy ]
+  * VTY: add extended (11-bit) RACH detection toggle
+  * doc/configuration.adoc: fix incorrect number of physical RF channels for B210
+  * driveTxPriorityQueue(): cosmetic: use proper type for TDMA TN
+  * driveTxPriorityQueue(): use trxd_hdr_common for message parsing
+  * driveTxPriorityQueue(): check if message header format is supported
+  * driveTxPriorityQueue(): enrich logging message
+  * trxd_fill_common(): fix TRXD header version coding
+  * manuals/configuration.adoc: fix copy-paste error in config example
+
+  [ Pau Espin Pedrol ]
+  * osmo-trx: Avoid handling signals after shutdown triggered
+  * osmo-trx: Use signalfd to serialize signals in main thread ctx
+  * osmo-trx: Check return code of osmo_fd_register
+  * lms: flush_recv: alloc buf on stack instead of heap
+  * lms: Improve log during flush recv error
+  * cosmetic: Threads.h: Remove trailing whitespace
+  * Move duplicated thread_enable_cancel to CommonLibs
+  * lms: Log underrun/overrun events
+  * lms: Remove references to ALERT loglevel
+  * lms: Remove unused var m_last_tx_overruns
+  * lms: Catch and log dropped packets by HW during recv
+  * cosmetic: uhd: Move smpl_buf out of UHDDevice, move UHDDevice class definition to .h
+  * uhd: smpl_buf: Drop UHD specifics out back to UHDDevice
+  * uhd: smpl_buf: Use TIMESTAMP type in str_status
+  * cosmetic: uhd: Use loglevel ERROR instead of ERR
+  * uhd: Avoid reallocation of buffers every read
+  * Move smpl_buf out of uhd dir to re-use it in other devices
+  * device: Drop unused numberRead/numberWritten APIs
+  * smpl_buf: Remove unused clk_rt variable
+  * smpl_buf: Remove unused clk_rt variable (fixup)
+  * smpl_buf: Remove dbg log line with duplicated info
+  * Introduce LOGCHAN macro to standarize logging channel info
+  * smpl_buf: Move it to device/common and create libdevice_common.la
+  * lms: Use smpl_buf to recover from timestamp jumps
+  * lms: Fix stream_stats checks with droppedPackets
+  * Add rate_ctr support to store/retrieve SDR errors through VTY
+  * Rename and move STOP signal from Transceiver to main
+  * doc: vty: Update trx_vty_reference.xml
+  * lms: Drop unusued variable masterClockRate
+  * lms: Fix stream_stats checks with overrun/underrun
+  * Add VTY commands to set error ctr thresholds
+  * Remove AUTHORS file
+  * trx_{vty,rate_ctr}: Set proper license AGPLv3+
+  * Introduce structs to encode TRXD packets
+  * Transceiver: refactor: gather uplink burst parameters in struct
+  * Transceiver: Drop unused rssi_valid struct field
+  * Transceiver: Move nbits burst size calculation to pullRadioVector()
+  * Transceiver: Move calculation of normalized values (rssiOffset) to pullRadioVector()
+  * Transceiver: Move soft bits normalization to pullRadioVector()
+  * Transceiver: Drop use of GSM::Time from trx_ul_burst_ind
+  * Transceiver: Get rid of SoftVector in struct trx_ul_burst_ind
+  * Transceiver: replace UDPSocket with libosmocore socket API
+  * Transceiver: Avoid noise calculation formula in 2 branches in pullRadioVector
+  * Transceiver: Simplify code on early error return when calling detectAnyBurst
+  * Transceiver: pullRadioVector(): Move initialization of var to start of function
+  * Transceiver: Support pulling idle frames in pullRadioVector()
+  * sigProcLib: detectAnyBurst() family: Use struct to gather all out params
+  * sigProcLib: detectAnyBurst(): make TSC used to detect burst available to caller
+  * Logger: global Log mutex is now available from C code
+  * Transceiver: Move out TRXD socket send code to prepare for TRXDv1
+  * Transceiver: Support SETFORMAT command
+  * Transceiver: Support TRXD v1
+  * Transceiver: Initialize mExtRACH in constructor
+  * debian/copyright: Remove non existent radioInterfaceDiversity.cpp from list
+  * debian/copyright: Update wrong paths in license list
+  * debian/copyright: Add missing file Utils.* to LGPL-2.1+ list
+  * cosmetic: Fix trailing whitespace in several files
+  * Add SPDX annotation
+  * Bind CTRL port to IP addr specified in VTY config
+  * Transceiver: Store TRXD version per channel
+  * Transceiver: Clean up code passing parameters to threads
+  * Remove empty ChangeLog fnd NEWS files
+  * Remove unused autogen.sh
+  * radioInterface: Clarify how underruns are handled driving a radioDevice
+  * usrp1: don't check for non-null underrun pointer
+  * jenkins.sh: Workaround libusrp build race conditon
+  * lms: Drop rx_underruns rate ctr, add tx_drop_* rate ctr
+  * Move inband-signaling-usb documentation to UserManual
+  * Move matlab files under utils/matlab
+  * Move Transceiver52/README to UserManual
+  * Move README.DFEsymbolspaced to utils/matlab
+  * Move std_inband.rbf under device/usrp1/ dir
+  * Drop old README information, provide new updated README
+  * Transceiver: Add missing include netinet/in.h
+  * Require newer version of libosmocore to avoid build failure
+
+  [ Tom Tsou ]
+  * multi-ARFCN: fix maximum number of carriers limitation
+
+  [ Harald Welte ]
+  * use BSC_FD_READ and not OSMO_FD_READ
+  * proto_trxd.c: Use bit-wise AND, not boolean AND
+  * Timeval: Restore output stream flags after changing them
+  * ChannelizerBase: fix initialization of class members
+  * CorrelationSequence: fix initialization of class members
+  * radioInterface.cpp: Fix missing member initialization of RadioInterface()
+
+  [ Joachim Steiger ]
+  * lms: Remove wrong unused code copied from -uhd
+  * lms: move LMS_EnableChannel from Start/Stop to Open/Close device
+  * lms: move LMS_GetLPFBWRange and LMS_Calibrate calls from open to start
+  * lms: add device type detection and device specific gains
+  * lms: properly call close if set_antennas() fails, add some comments
+
+  [ Oliver Smith ]
+  * debian: create -doc subpackage with pdf manuals
+  * contrib/jenkins.sh: run "make maintainer-clean"
+
+  [ Eric Wild ]
+  * Add option to set stack size in config file, default == 0 == OS default
+
+  [ Ruben Undheim ]
+  * Fix spelling discovered by lintian
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Wed, 07 Aug 2019 21:12:56 +0200
+
 osmo-trx (1.0.0) unstable; urgency=medium
 
   [ Pau Espin Pedrol ]
