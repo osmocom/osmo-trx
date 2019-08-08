@@ -1,3 +1,9 @@
+osmo-trx (1.1.1) unstable; urgency=medium
+
+  * UNRELEASED
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Thu, 08 Aug 2019 13:00:05 +0200
+
 osmo-trx (1.1.0) unstable; urgency=medium
 
   [ Sylvain Munaut ]
