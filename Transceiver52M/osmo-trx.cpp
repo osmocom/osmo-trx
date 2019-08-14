@@ -173,11 +173,11 @@ static void sig_handler(int signo)
 		   action like printing */
 		return;
 
-	fprintf(stdout, "signal %d received\n", signo);
+	fprintf(stderr, "signal %d received\n", signo);
 	switch (signo) {
 	case SIGINT:
 	case SIGTERM:
-		fprintf(stdout, "shutting down\n");
+		fprintf(stderr, "shutting down\n");
 		gshutdown = true;
 		break;
 	case SIGABRT:
