@@ -150,7 +150,7 @@ static void lms_log_callback(int lvl, const char *msg)
 {
 	/* map lime specific log levels */
 	static const int lvl_map[5] = {
-		[0] = LOGL_FATAL,
+		[LMS_LOG_CRITICAL] = LOGL_FATAL,
 		[LMS_LOG_ERROR] = LOGL_ERROR,
 		[LMS_LOG_WARNING] = LOGL_NOTICE,
 		[LMS_LOG_INFO] = LOGL_INFO,
