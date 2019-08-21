@@ -127,9 +127,6 @@ public:
   /** returns the full-scale receive amplitude **/
   double fullScaleOutputValue();
 
-  /** set thread priority on current thread */
-  void setPriority(float prio = 0.5) { mRadio->setPriority(prio); }
-
   /** get transport window type of attached device */
   enum RadioDevice::TxWindowType getWindowType() { return mRadio->getWindowType(); }
 

@@ -125,7 +125,6 @@ static const std::map<dev_key, dev_desc> dev_param_map {
 void *async_event_loop(uhd_device *dev)
 {
 	set_selfthread_name("UHDAsyncEvent");
-	dev->setPriority(0.43);
 
 	while (1) {
 		dev->recv_async_msg();
@@ -641,12 +640,6 @@ bool uhd_device::stop()
 
 	started = false;
 	return true;
-}
-
-void uhd_device::setPriority(float prio)
-{
-	uhd::set_thread_priority_safe(prio);
-	return;
 }
 
 int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)

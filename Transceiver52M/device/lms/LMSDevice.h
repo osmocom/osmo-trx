@@ -85,10 +85,6 @@ public:
 	/** Stop the LMS */
 	bool stop();
 
-	/** Set priority not supported */
-	void setPriority(float prio = 0.5) {
-	}
-
 	enum TxWindowType getWindowType() {
 		return TX_WINDOW_LMS1;
 	}

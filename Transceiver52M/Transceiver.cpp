@@ -1126,8 +1126,6 @@ void *RxUpperLoopAdapter(TrxChanThParams *params)
   snprintf(thread_name, 16, "RxUpper%zu", num);
   set_selfthread_name(thread_name);
 
-  trx->setPriority(0.42);
-
   while (1) {
     trx->driveReceiveFIFO(num);
     pthread_testcancel();
@@ -1139,8 +1137,6 @@ void *RxLowerLoopAdapter(Transceiver *transceiver)
 {
   set_selfthread_name("RxLower");
 
-  transceiver->setPriority(0.45);
-
   while (1) {
     transceiver->driveReceiveRadio();
     pthread_testcancel();
@@ -1151,8 +1147,6 @@ void *RxLowerLoopAdapter(Transceiver *transceiver)
 void *TxLowerLoopAdapter(Transceiver *transceiver)
 {
   set_selfthread_name("TxLower");
-
-  transceiver->setPriority(0.44);
 
   while (1) {
     transceiver->driveTxFIFO();
@@ -1189,8 +1183,6 @@ void *TxUpperLoopAdapter(TrxChanThParams *params)
 
   snprintf(thread_name, 16, "TxUpper%zu", num);
   set_selfthread_name(thread_name);
-
-  trx->setPriority(0.40);
 
   while (1) {
     trx->driveTxPriorityQueue(num);

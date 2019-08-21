@@ -71,7 +71,6 @@ public:
 	bool start();
 	bool stop();
 	bool restart();
-	void setPriority(float prio);
 	enum TxWindowType getWindowType() { return tx_window; }
 
 	int readSamples(std::vector<short *> &bufs, int len, bool *overrun,

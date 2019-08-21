@@ -247,9 +247,6 @@ protected:
 
   void reset();
 
-  /** set priority on current thread */
-  void setPriority(float prio = 0.5) { mRadioInterface->setPriority(prio); }
-
   void logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi);
 };
 

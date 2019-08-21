@@ -107,9 +107,6 @@ private:
   /** Stop the USRP */
   bool stop();
 
-  /** Set priority not supported */
-  void setPriority(float prio = 0.5) { }
-
   enum TxWindowType getWindowType() { return TX_WINDOW_USRP1; }
 
   /**
