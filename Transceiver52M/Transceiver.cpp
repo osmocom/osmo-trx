@@ -587,6 +587,7 @@ void writeToFile(radioVector *radio_burst, size_t chan)
 /*
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled.
+ * returns true on success (bi filled), false on error (bi content undefined).
  */
 bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 {
@@ -708,7 +709,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 ret_idle:
   bi->idle = true;
   delete radio_burst;
-  return false;
+  return true;
 }
 
 void Transceiver::reset()
