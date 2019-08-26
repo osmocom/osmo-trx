@@ -212,6 +212,8 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
 				    mLocalAddr.c_str(), mBasePort,
 				    mRemoteAddr.c_str(), mBasePort + 100,
 				    OSMO_SOCK_F_BIND | OSMO_SOCK_F_CONNECT);
+  if (mClockSocket < 0)
+    return false;
 
   for (size_t i = 0; i < mChans; i++) {
     c_srcport = mBasePort + 2 * i + 1;
