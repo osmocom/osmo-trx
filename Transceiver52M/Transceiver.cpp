@@ -558,8 +558,8 @@ CorrType Transceiver::expectedCorrType(GSM::Time currTime,
       return mExtRACH ? EXT_RACH : RACH;
     else if ((mod52 == 25) || (mod52 == 51))
       return IDLE;
-    else
-      return TSC;
+    else /* Enable 8-PSK burst detection if EDGE is enabled */
+      return mEdge ? EDGE : TSC;
     break;
   }
   case LOOPBACK:
@@ -609,10 +609,6 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   /* Set time and determine correlation type */
   burstTime = radio_burst->getTime();
   CorrType type = expectedCorrType(burstTime, chan);
-
-  /* Enable 8-PSK burst detection if EDGE is enabled */
-  if (mEdge && (type == TSC))
-    type = EDGE;
 
   /* Debug: dump bursts to disk */
   /* bits 0-7  - chan 0 timeslots
