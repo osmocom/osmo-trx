@@ -929,8 +929,8 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
 {
   int msgLen;
   int burstLen;
-  char buffer[EDGE_BURST_NBITS + 50];
-  struct trxd_hdr_common *chdr;
+  struct trxd_hdr_v01_dl *dl;
+  char buffer[sizeof(*dl) + EDGE_BURST_NBITS];
   uint32_t fn;
 
   // check data socket
@@ -940,54 +940,53 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
     return false;
   }
 
-  if (msgLen == gSlotLen + 1 + 4 + 1) {
-    burstLen = gSlotLen;
-  } else if (msgLen == EDGE_BURST_NBITS + 1 + 4 + 1) {
-    if (mSPSTx != 4)
+  switch (msgLen) {
+    case sizeof(*dl) + gSlotLen: /* GSM burst */
+      burstLen = gSlotLen;
+      break;
+    case sizeof(*dl) + EDGE_BURST_NBITS: /* EDGE burst */
+      if (mSPSTx != 4) {
+        LOG(ERR) << "EDGE burst received but SPS is set to " << mSPSTx;
+        return false;
+      }
+      burstLen = EDGE_BURST_NBITS;
+      break;
+    default:
+      LOG(ERR) << "badly formatted packet on GSM->TRX interface (len="<< msgLen << ")";
       return false;
-
-    burstLen = EDGE_BURST_NBITS;
-  } else {
-    LOG(ERR) << "badly formatted packet on GSM->TRX interface";
-    return false;
   }
 
-  /* Common header part: HDR version, TDMA TN & FN */
-  chdr = (struct trxd_hdr_common *) buffer;
+  dl = (struct trxd_hdr_v01_dl *) buffer;
 
   /* Convert TDMA FN to the host endianness */
-  fn = osmo_load32be(&chdr->fn);
+  fn = osmo_load32be(&dl->common.fn);
 
   /* Make sure we support the received header format */
-  switch (chdr->version) {
+  switch (dl->common.version) {
   case 0:
   /* Version 1 has the same format */
   case 1:
     break;
-
   default:
-    LOG(ERR) << "Rx TRXD message with unknown header version " << chdr->version;
+    LOG(ERR) << "Rx TRXD message with unknown header version " << dl->common.version;
     return false;
   }
 
-  LOG(DEBUG) << "Rx TRXD message (hdr_ver=" << chdr->version << "): "
-             << "fn=" << fn << ", tn=" << chdr->tn << ", "
+  LOG(DEBUG) << "Rx TRXD message (hdr_ver=" << dl->common.version << "): "
+             << "fn=" << fn << ", tn=" << dl->common.tn << ", "
              << "burst_len=" << burstLen;
 
-  int RSSI = (int) buffer[5];
   BitVector newBurst(burstLen);
   BitVector::iterator itr = newBurst.begin();
-  char *bufferItr = buffer+6;
+  uint8_t *bufferItr = dl->soft_bits;
   while (itr < newBurst.end())
     *itr++ = *bufferItr++;
 
-  GSM::Time currTime = GSM::Time(fn, chdr->tn);
+  GSM::Time currTime = GSM::Time(fn, dl->common.tn);
 
-  addRadioVector(chan, newBurst, RSSI, currTime);
+  addRadioVector(chan, newBurst, dl->tx_att, currTime);
 
   return true;
-
-
 }
 
 void Transceiver::driveReceiveRadio()

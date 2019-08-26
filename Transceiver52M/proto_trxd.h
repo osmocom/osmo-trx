@@ -66,6 +66,13 @@ struct trxd_hdr_v0 {
 	uint8_t soft_bits[0];
 } __attribute__ ((packed));
 
+/* Downlink burst (BTS->TRX), v0 anf v1 use same format */
+struct trxd_hdr_v01_dl {
+	struct trxd_hdr_common common;
+	uint8_t tx_att; /* Tx Attentuation */
+	uint8_t soft_bits[0];
+} __attribute__ ((packed));
+
 
 #define TRXD_MODULATION_GMSK(ts_set) (0b0000 | (ts_set & 0b0011))
 #define TRXD_MODULATION_8PSK(ts_set) (0b0100 | (ts_set & 0b0001))
