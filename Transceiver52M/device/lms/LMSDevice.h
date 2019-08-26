@@ -63,6 +63,7 @@ private:
 
 	bool do_calib(size_t chan);
 	bool do_filters(size_t chan);
+	void log_ant_list(bool dir_tx, size_t chan, std::ostringstream& os);
 	int get_ant_idx(const std::string & name, bool dir_tx, size_t chan);
 	bool flush_recv(size_t num_pkts);
 	void update_stream_stats_rx(size_t chan, bool *overrun);

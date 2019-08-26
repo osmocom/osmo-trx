@@ -431,6 +431,20 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 	return dB;
 }
 
+void LMSDevice::log_ant_list(bool dir_tx, size_t chan, std::ostringstream& os)
+{
+	lms_name_t name_list[MAX_ANTENNA_LIST_SIZE]; /* large enough list for antenna names. */
+	int num_names;
+	int i;
+
+	num_names = LMS_GetAntennaList(m_lms_dev, dir_tx, chan, name_list);
+	for (i = 0; i < num_names; i++) {
+		if (i)
+			os << ", ";
+		os << "'" << name_list[i] << "'";
+	}
+}
+
 int LMSDevice::get_ant_idx(const std::string & name, bool dir_tx, size_t chan)
 {
 	lms_name_t name_list[MAX_ANTENNA_LIST_SIZE]; /* large enough list for antenna names. */
@@ -484,7 +498,10 @@ bool LMSDevice::setRxAntenna(const std::string & ant, size_t chan)
 
 	idx = get_ant_idx(ant, LMS_CH_RX, chan);
 	if (idx < 0) {
-		LOGCHAN(chan, DDEV, ERROR) << "Invalid Rx Antenna";
+		std::ostringstream os;
+		LOGCHAN(chan, DDEV, ERROR) << "Invalid Rx Antenna: " << ant;
+		log_ant_list(LMS_CH_RX, chan, os);
+		LOGCHAN(chan, DDEV, NOTICE) << "Available Rx Antennas: " << os;
 		return false;
 	}
 
@@ -530,7 +547,10 @@ bool LMSDevice::setTxAntenna(const std::string & ant, size_t chan)
 
 	idx = get_ant_idx(ant, LMS_CH_TX, chan);
 	if (idx < 0) {
-		LOGCHAN(chan, DDEV, ERROR) << "Invalid Rx Antenna";
+		std::ostringstream os;
+		LOGCHAN(chan, DDEV, ERROR) << "Invalid Tx Antenna: " << ant;
+		log_ant_list(LMS_CH_TX, chan, os);
+		LOGCHAN(chan, DDEV, NOTICE) << "Available Tx Antennas: " << os;
 		return false;
 	}
 
