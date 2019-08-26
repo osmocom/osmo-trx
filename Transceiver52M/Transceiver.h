@@ -191,7 +191,7 @@ private:
   CorrType expectedCorrType(GSM::Time currTime, size_t chan);
 
   /** send messages over the clock socket */
-  void writeClockInterface(void);
+  bool writeClockInterface(void);
 
   int mSPSTx;                          ///< number of samples per Tx symbol
   int mSPSRx;                          ///< number of samples per Rx symbol
@@ -221,16 +221,16 @@ private:
 
 protected:
   /** drive lower receive I/O and burst generation */
-  void driveReceiveRadio();
+  bool driveReceiveRadio();
 
   /** drive demodulation of GSM bursts */
-  void driveReceiveFIFO(size_t chan);
+  bool driveReceiveFIFO(size_t chan);
 
   /** drive transmission of GSM bursts */
   void driveTxFIFO();
 
   /** drive handling of control messages from GSM core */
-  void driveControl(size_t chan);
+  bool driveControl(size_t chan);
 
   /**
     drive modulation and sorting of GSM bursts from GSM core

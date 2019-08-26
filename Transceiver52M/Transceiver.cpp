@@ -750,7 +750,7 @@ static bool match_cmd(char *buf,
   return true;
 }
 
-void Transceiver::driveControl(size_t chan)
+bool Transceiver::driveControl(size_t chan)
 {
   char buffer[MAX_PACKET_LENGTH + 1];
   char response[MAX_PACKET_LENGTH + 1];
@@ -761,7 +761,7 @@ void Transceiver::driveControl(size_t chan)
   msgLen = read(mCtrlSockets[chan], buffer, MAX_PACKET_LENGTH);
   if (msgLen <= 0) {
     LOGCHAN(chan, DTRXCTRL, WARNING) << "mCtrlSockets read(" << mCtrlSockets[chan] << ") failed: " << msgLen;
-    return;
+    return false;
   }
 
   /* Zero-terminate received string */
@@ -770,7 +770,7 @@ void Transceiver::driveControl(size_t chan)
   /* Verify a command signature */
   if (strncmp(buffer, "CMD ", 4)) {
     LOGC(DTRXCTRL, WARNING) << "bogus message on control interface";
-    return;
+    return false;
   }
 
   /* Set command pointer */
@@ -889,7 +889,7 @@ void Transceiver::driveControl(size_t chan)
     if ((timeslot < 0) || (timeslot > 7)) {
       LOGC(DTRXCTRL, WARNING) << "bogus message on control interface";
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
-      return;
+      return true;
     }
     mStates[chan].chanType[timeslot] = (ChannelCombination) corrCode;
     setModulus(timeslot, chan);
@@ -922,8 +922,11 @@ void Transceiver::driveControl(size_t chan)
 
   LOGCHAN(chan, DTRXCTRL, INFO) << "response is '" << response << "'";
   msgLen = write(mCtrlSockets[chan], response, strlen(response) + 1);
-  if (msgLen <= 0)
+  if (msgLen <= 0) {
     LOGCHAN(chan, DTRXCTRL, WARNING) << "mCtrlSockets write(" << mCtrlSockets[chan] << ") failed: " << msgLen;
+    return false;
+  }
+  return true;
 }
 
 bool Transceiver::driveTxPriorityQueue(size_t chan)
@@ -990,18 +993,21 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   return true;
 }
 
-void Transceiver::driveReceiveRadio()
+bool Transceiver::driveReceiveRadio()
 {
   int rc = mRadioInterface->driveReceiveRadio();
   if (rc == 0) {
     usleep(100000);
-  } else if (rc < 0) {
-    LOG(FATAL) << "radio Interface receive failed, requesting stop.";
-    osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
-  } else if (mForceClockInterface || mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0)) {
-    mForceClockInterface = false;
-    writeClockInterface();
+    return true;
   }
+  if (rc < 0)
+    return false;
+
+  if (mForceClockInterface || mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0)) {
+    mForceClockInterface = false;
+    return writeClockInterface();
+  }
+  return true;
 }
 
 void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
@@ -1026,22 +1032,21 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
     << " bits: "   << os;
 }
 
-void Transceiver::driveReceiveFIFO(size_t chan)
+bool Transceiver::driveReceiveFIFO(size_t chan)
 {
   struct trx_ul_burst_ind bi;
 
   if (!pullRadioVector(chan, &bi))
-        return;
+    return false;
+
   if (!bi.idle)
-       logRxBurst(chan, &bi);
+    logRxBurst(chan, &bi);
 
   switch (mVersionTRXD[chan]) {
     case 0:
-      trxd_send_burst_ind_v0(chan, mDataSockets[chan], &bi);
-      break;
+      return trxd_send_burst_ind_v0(chan, mDataSockets[chan], &bi);
     case 1:
-      trxd_send_burst_ind_v1(chan, mDataSockets[chan], &bi);
-      break;
+      return trxd_send_burst_ind_v1(chan, mDataSockets[chan], &bi);
     default:
       OSMO_ASSERT(false);
   }
@@ -1102,7 +1107,7 @@ void Transceiver::driveTxFIFO()
 
 
 
-void Transceiver::writeClockInterface()
+bool Transceiver::writeClockInterface()
 {
   int msgLen;
   char command[50];
@@ -1112,11 +1117,13 @@ void Transceiver::writeClockInterface()
   LOG(INFO) << "ClockInterface: sending " << command;
 
   msgLen = write(mClockSocket, command, strlen(command) + 1);
-  if (msgLen <= 0)
-    LOG(WARNING) << "mClockSocket write(" << mClockSocket << ") failed: " << msgLen;
+  if (msgLen <= 0) {
+    LOG(ERROR) << "mClockSocket write(" << mClockSocket << ") failed: " << msgLen;
+    return false;
+  }
 
   mLastClockUpdateTime = mTransmitDeadlineClock;
-
+  return true;
 }
 
 void *RxUpperLoopAdapter(TrxChanThParams *params)
@@ -1131,7 +1138,11 @@ void *RxUpperLoopAdapter(TrxChanThParams *params)
   set_selfthread_name(thread_name);
 
   while (1) {
-    trx->driveReceiveFIFO(num);
+    if (!trx->driveReceiveFIFO(num)) {
+      LOGCHAN(num, DMAIN, FATAL) << "Something went wrong in thread " << thread_name << ", requesting stop";
+      osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
+      break;
+    }
     pthread_testcancel();
   }
   return NULL;
@@ -1142,7 +1153,11 @@ void *RxLowerLoopAdapter(Transceiver *transceiver)
   set_selfthread_name("RxLower");
 
   while (1) {
-    transceiver->driveReceiveRadio();
+    if (!transceiver->driveReceiveRadio()) {
+      LOG(FATAL) << "Something went wrong in thread RxLower, requesting stop";
+      osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
+      break;
+    }
     pthread_testcancel();
   }
   return NULL;
@@ -1171,7 +1186,11 @@ void *ControlServiceLoopAdapter(TrxChanThParams *params)
   set_selfthread_name(thread_name);
 
   while (1) {
-    trx->driveControl(num);
+    if (!trx->driveControl(num)) {
+      LOGCHAN(num, DTRXCTRL, FATAL) << "Something went wrong in thread " << thread_name << ", requesting stop";
+      osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
+      break;
+    }
     pthread_testcancel();
   }
   return NULL;
@@ -1189,7 +1208,11 @@ void *TxUpperLoopAdapter(TrxChanThParams *params)
   set_selfthread_name(thread_name);
 
   while (1) {
-    trx->driveTxPriorityQueue(num);
+    if (!trx->driveTxPriorityQueue(num)) {
+      LOGCHAN(num, DMAIN, FATAL) << "Something went wrong in thread " << thread_name << ", requesting stop";
+      osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
+      break;
+    }
     pthread_testcancel();
   }
   return NULL;
