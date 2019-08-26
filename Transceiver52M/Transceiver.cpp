@@ -151,9 +151,11 @@ Transceiver::~Transceiver()
     close(mClockSocket);
 
   for (size_t i = 0; i < mChans; i++) {
-    mControlServiceLoopThreads[i]->cancel();
-    mControlServiceLoopThreads[i]->join();
-    delete mControlServiceLoopThreads[i];
+    if (mControlServiceLoopThreads[i]) {
+      mControlServiceLoopThreads[i]->cancel();
+      mControlServiceLoopThreads[i]->join();
+      delete mControlServiceLoopThreads[i];
+    }
 
     mTxPriorityQueues[i].clear();
     if (mCtrlSockets[i] >= 0)
