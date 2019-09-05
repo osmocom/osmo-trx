@@ -288,7 +288,7 @@ int RadioInterfaceMulti::pullBuffer()
 		complex *dst = history[lchan]->begin();
 		float *fsrc = &buf[2 * (cLen - hLen)];
 		for (i = 0; i < hLen; i++) {
-			*dst = complex(fdst[0], fdst[1]);
+			*dst = complex(fsrc[0], fsrc[1]);
 			fsrc += 2;
 			dst++;
 		}
