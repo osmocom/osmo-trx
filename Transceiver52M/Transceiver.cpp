@@ -603,8 +603,10 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
-  if (!radio_burst)
+  if (!radio_burst) {
+    LOGCHAN(chan, DMAIN, ERROR) << "ReceiveFIFO->read() returned no burst";
     return false;
+  }
 
   /* Set time and determine correlation type */
   burstTime = radio_burst->getTime();
