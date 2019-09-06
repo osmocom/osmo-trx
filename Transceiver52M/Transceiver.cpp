@@ -587,9 +587,11 @@ void writeToFile(radioVector *radio_burst, size_t chan)
 /*
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled.
- * returns true on success (bi filled), false on error (bi content undefined).
+ * returns 0 on success (bi filled), negative on error (bi content undefined):
+ *        -ENOENT: timeslot is off (fn and tn in bi are filled),
+ *        -EIO: read error
  */
-bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
+int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 {
   int rc;
   struct estim_burst_params ebp;
@@ -605,7 +607,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
   if (!radio_burst) {
     LOGCHAN(chan, DMAIN, ERROR) << "ReceiveFIFO->read() returned no burst";
-    return false;
+    return -EIO;
   }
 
   /* Set time and determine correlation type */
@@ -635,7 +637,7 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
    * Not even power level or noise calculation. */
   if (type == OFF) {
     delete radio_burst;
-    return false;
+    return -ENOENT;
   }
 
   /* Select the diversity channel with highest energy */
@@ -702,12 +704,12 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 
   delete rxBurst;
   delete radio_burst;
-  return true;
+  return 0;
 
 ret_idle:
   bi->idle = true;
   delete radio_burst;
-  return true;
+  return 0;
 }
 
 void Transceiver::reset()
@@ -1032,9 +1034,15 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
 bool Transceiver::driveReceiveFIFO(size_t chan)
 {
   struct trx_ul_burst_ind bi;
+  int rc;
 
-  if (!pullRadioVector(chan, &bi))
-    return false;
+  if ((rc = pullRadioVector(chan, &bi)) < 0) {
+    if (rc == -ENOENT) { /* timeslot off, continue processing */
+      LOGCHAN(chan, DMAIN, DEBUG) << unsigned(bi.tn) << ":" << bi.fn << " timeslot is off";
+      return true;
+    }
+    return false; /* other errors: we want to stop the process */
+  }
 
   if (!bi.idle)
     logRxBurst(chan, &bi);

@@ -182,7 +182,7 @@ private:
   void pushRadioVector(GSM::Time &nowTime);
 
   /** Pull and demodulate a burst from the receive FIFO */
-  bool pullRadioVector(size_t chan, struct trx_ul_burst_ind *ind);
+  int pullRadioVector(size_t chan, struct trx_ul_burst_ind *ind);
 
   /** Set modulus for specific timeslot */
   void setModulus(size_t timeslot, size_t chan);
