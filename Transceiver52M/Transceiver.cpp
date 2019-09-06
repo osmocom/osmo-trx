@@ -968,12 +968,12 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   case 1:
     break;
   default:
-    LOG(ERR) << "Rx TRXD message with unknown header version " << dl->common.version;
+    LOG(ERR) << "Rx TRXD message with unknown header version " << unsigned(dl->common.version);
     return false;
   }
 
-  LOG(DEBUG) << "Rx TRXD message (hdr_ver=" << dl->common.version << "): "
-             << "fn=" << fn << ", tn=" << dl->common.tn << ", "
+  LOG(DEBUG) << "Rx TRXD message (hdr_ver=" << unsigned(dl->common.version) << "): "
+             << "fn=" << fn << ", tn=" << unsigned(dl->common.tn) << ", "
              << "burst_len=" << burstLen;
 
   BitVector newBurst(burstLen);
@@ -1018,7 +1018,7 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
 
   LOG(DEBUG) << std::fixed << std::right
     << " chan: "   << chan
-    << " time: "   << bi->tn << ":" << bi->fn
+    << " time: "   << unsigned(bi->tn) << ":" << bi->fn
     << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - rssiOffset)
                    << "dBFS/" << std::setw(6) << -bi->rssi << "dBm"
     << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - rssiOffset)
