@@ -1016,8 +1016,7 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
     else os << "-";
   }
 
-  LOG(DEBUG) << std::fixed << std::right
-    << " chan: "   << chan
+  LOGCHAN(chan, DMAIN, DEBUG) << std::fixed << std::right
     << " time: "   << unsigned(bi->tn) << ":" << bi->fn
     << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - rssiOffset)
                    << "dBFS/" << std::setw(6) << -bi->rssi << "dBm"
