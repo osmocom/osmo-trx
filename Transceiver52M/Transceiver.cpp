@@ -612,19 +612,6 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   burstTime = radio_burst->getTime();
   CorrType type = expectedCorrType(burstTime, chan);
 
-  /* Debug: dump bursts to disk */
-  /* bits 0-7  - chan 0 timeslots
-   * bits 8-15 - chan 1 timeslots */
-  if (mWriteBurstToDiskMask & ((1<<bi->tn) << (8*chan)))
-    writeToFile(radio_burst, chan);
-
-  /* No processing if the timeslot is off.
-   * Not even power level or noise calculation. */
-  if (type == OFF) {
-    delete radio_burst;
-    return false;
-  }
-
   /* Initialize struct bi */
   bi->nbits = 0;
   bi->fn = burstTime.FN();
@@ -637,6 +624,19 @@ bool Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   bi->tss = 0; /* TODO: we only support tss 0 right now */
   bi->tsc = 0;
   bi->ci = 0.0;
+
+  /* Debug: dump bursts to disk */
+  /* bits 0-7  - chan 0 timeslots
+   * bits 8-15 - chan 1 timeslots */
+  if (mWriteBurstToDiskMask & ((1<<bi->tn) << (8*chan)))
+    writeToFile(radio_burst, chan);
+
+  /* No processing if the timeslot is off.
+   * Not even power level or noise calculation. */
+  if (type == OFF) {
+    delete radio_burst;
+    return false;
+  }
 
   /* Select the diversity channel with highest energy */
   for (size_t i = 0; i < radio_burst->chans(); i++) {
