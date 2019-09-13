@@ -405,3 +405,12 @@ double RadioInterfaceMulti::setRxGain(double db, size_t chan)
   else
     return mDevice->getRxGain();
 }
+
+double RadioInterfaceMulti::setTxGain(double dB, size_t chan)
+{
+	if (chan == 0)
+		return mDevice->setTxGain(dB);
+	else
+		return mDevice->getTxGain();
+
+}

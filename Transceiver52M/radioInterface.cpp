@@ -112,7 +112,7 @@ int RadioInterface::setPowerAttenuation(int atten, size_t chan)
   if (atten < 0.0)
     atten = 0.0;
 
-  rfGain = mDevice->setTxGain(mDevice->maxTxGain() - (double) atten, chan);
+  rfGain = setTxGain(mDevice->maxTxGain() - (double) atten, chan);
   digAtten = (double) atten - mDevice->maxTxGain() + rfGain;
 
   if (digAtten < 1.0)
@@ -305,6 +305,11 @@ VectorFIFO* RadioInterface::receiveFIFO(size_t chan)
 double RadioInterface::setRxGain(double dB, size_t chan)
 {
   return mDevice->setRxGain(dB, chan);
+}
+
+double RadioInterface::setTxGain(double dB, size_t chan)
+{
+  return mDevice->setTxGain(dB, chan);
 }
 
 /* Receive a timestamped chunk from the device */

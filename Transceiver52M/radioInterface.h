@@ -134,6 +134,9 @@ protected:
   /** drive synchronization of Tx/Rx of USRP */
   void alignRadio();
 
+  /** set transmit gain */
+  virtual double setTxGain(double dB, size_t chan = 0);
+
   friend void *AlignRadioServiceLoopAdapter(RadioInterface*);
 };
 
@@ -157,6 +160,7 @@ class RadioInterfaceMulti : public RadioInterface {
 private:
   bool pushBuffer();
   int pullBuffer();
+  virtual double setTxGain(double dB, size_t chan);
 
   signalVector *outerSendBuffer;
   signalVector *outerRecvBuffer;
