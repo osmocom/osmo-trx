@@ -309,6 +309,7 @@ int RadioInterfaceMulti::pullBuffer()
 /* Send a timestamped chunk to the device */
 bool RadioInterfaceMulti::pushBuffer()
 {
+	bool local_underrun;
 	if (sendBuffer[0]->getAvailSegments() <= 0)
 		return false;
 
@@ -341,12 +342,13 @@ bool RadioInterfaceMulti::pushBuffer()
 
 	size_t num = mDevice->writeSamples(convertSendBuffer,
 					  outerSendBuffer->size(),
-					  &underrun,
+					  &local_underrun,
 					  writeTimestamp);
 	if (num != outerSendBuffer->size()) {
 		LOG(ALERT) << "Transmit error " << num;
 	}
 
+	underrun |= local_underrun;
 	writeTimestamp += num;
 
 	return true;
