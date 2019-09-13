@@ -28,6 +28,8 @@
 #ifndef THREADS_H
 #define THREADS_H
 
+#include "config.h"
+
 #include <pthread.h>
 #include <iostream>
 #include <assert.h>
@@ -188,8 +190,30 @@ class Thread {
 	void cancel() { pthread_cancel(mThread); }
 };
 
+#ifdef HAVE_ATOMIC_OPS
+#define osmo_trx_sync_fetch_and_and(ptr, value) __sync_fetch_and_and((ptr), (value))
+#define osmo_trx_sync_or_and_fetch(ptr, value) __sync_or_and_fetch((ptr), (value))
+#else
+extern pthread_mutex_t atomic_ops_mutex;
+static inline int osmo_trx_sync_fetch_and_and(int *ptr, int value)
+{
+	pthread_mutex_lock(&atomic_ops_mutex);
+	int tmp = *ptr;
+	*ptr &= value;
+	pthread_mutex_unlock(&atomic_ops_mutex);
+	return tmp;
+}
 
-
+static inline int osmo_trx_sync_or_and_fetch(int *ptr, int value)
+{
+	int tmp;
+	pthread_mutex_lock(&atomic_ops_mutex);
+	*ptr |= value;
+	tmp = *ptr;
+	pthread_mutex_unlock(&atomic_ops_mutex);
+	return tmp;
+}
+#endif
 
 #endif
 // vim: ts=4 sw=4

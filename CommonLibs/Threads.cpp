@@ -40,7 +40,9 @@
 
 using namespace std;
 
-
+#ifndef HAVE_ATOMIC_OPS
+	pthread_mutex_t atomic_ops_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 
 Mutex gStreamLock;		///< Global lock to control access to cout and cerr.

@@ -190,28 +190,38 @@ dnl Check if the compiler supports specified GCC's built-in function
 AC_DEFUN([CHECK_BUILTIN_SUPPORT], [
   AC_CACHE_CHECK(
     [whether ${CC} has $1 built-in],
-    [osmo_cv_cc_has_builtin], [
+    [osmo_cv_cc_has_$1], [
       AC_LINK_IFELSE([
         AC_LANG_PROGRAM([], [
-          __builtin_cpu_supports("sse");
+          $2
         ])
       ],
-      [AS_VAR_SET([osmo_cv_cc_has_builtin], [yes])],
-      [AS_VAR_SET([osmo_cv_cc_has_builtin], [no])])
+      [AS_VAR_SET([osmo_cv_cc_has_$1], [yes])],
+      [AS_VAR_SET([osmo_cv_cc_has_$1], [no])])
     ]
   )
 
-  AS_IF([test yes = AS_VAR_GET([osmo_cv_cc_has_builtin])], [
+  AS_IF([test yes = AS_VAR_GET([osmo_cv_cc_has_$1])], [
     AC_DEFINE_UNQUOTED(AS_TR_CPP(HAVE_$1), 1,
       [Define to 1 if compiler has the '$1' built-in function])
   ], [
-    AC_MSG_WARN($2)
+    AC_MSG_WARN($3)
   ])
 ])
 
 dnl Check if the compiler supports runtime SIMD detection
-CHECK_BUILTIN_SUPPORT([__builtin_cpu_supports],
+CHECK_BUILTIN_SUPPORT([__builtin_cpu_supports], [__builtin_cpu_supports("sse");],
   [Runtime SIMD detection will be disabled])
+
+dnl Check for __sync_fetch_and_add().
+CHECK_BUILTIN_SUPPORT([__sync_fetch_and_and], [int x;__sync_fetch_and_and(&x,1);],
+  [Atomic operation not available, will use mutex])
+dnl Check for __sync_or_and_fetch().
+CHECK_BUILTIN_SUPPORT([__sync_or_and_fetch], [int x;__sync_or_and_fetch(&x,1);],
+  [Atomic operation not available, will use mutex])
+AS_IF([test "x$osmo_cv_cc_has___sync_fetch_and_and" = "xyes" && test "x$osmo_cv_cc_has___sync_or_and_fetch" = "xyes"], [
+    AC_DEFINE(HAVE_ATOMIC_OPS, 1, [Support all required atomic operations], [AC_MSG_WARN("At least one aotmic operation missing, will use mutex")])
+])
 
 AM_CONDITIONAL(DEVICE_UHD, [test "x$with_uhd" != "xno"])
 AM_CONDITIONAL(DEVICE_USRP1, [test "x$with_usrp1" = "xyes"])

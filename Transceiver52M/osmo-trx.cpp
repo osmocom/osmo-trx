@@ -571,6 +571,11 @@ int main(int argc, char *argv[])
 #endif
 #endif
 
+#ifndef HAVE_ATOMIC_OPS
+#pragma message ("Built without atomic operation support. Using Mutex, it may affect performance!")
+	printf("Built without atomic operation support. Using Mutex, it may affect performance!\n");
+#endif
+
 	if (!log_mutex_init()) {
 		fprintf(stderr, "Failed to initialize log mutex!\n");
 		exit(2);

@@ -251,7 +251,7 @@ int RadioInterfaceMulti::pullBuffer()
 	convert_short_float((float *) outerRecvBuffer->begin(),
 			    convertRecvBuffer[0], 2 * outerRecvBuffer->size());
 
-	underrun |= local_underrun;
+	osmo_trx_sync_or_and_fetch(&underrun, local_underrun);
 	readTimestamp += num;
 
 	channelizer->rotate((float *) outerRecvBuffer->begin(),
@@ -348,7 +348,7 @@ bool RadioInterfaceMulti::pushBuffer()
 		LOG(ALERT) << "Transmit error " << num;
 	}
 
-	underrun |= local_underrun;
+	osmo_trx_sync_or_and_fetch(&underrun, local_underrun);
 	writeTimestamp += num;
 
 	return true;

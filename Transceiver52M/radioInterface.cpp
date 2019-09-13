@@ -24,6 +24,7 @@
 #include "radioInterface.h"
 #include "Resampler.h"
 #include <Logger.h>
+#include <Threads.h>
 
 extern "C" {
 #include "convert.h"
@@ -288,9 +289,9 @@ int RadioInterface::driveReceiveRadio()
 
 bool RadioInterface::isUnderrun()
 {
-  bool retVal = underrun;
-  underrun = false;
-
+  bool retVal;
+  /* atomically get previous value of "underrun" and set the var to false */
+  retVal = osmo_trx_sync_fetch_and_and(&underrun, false);
   return retVal;
 }
 
@@ -340,7 +341,7 @@ int RadioInterface::pullBuffer()
 			segmentLen * 2);
   }
 
-  underrun |= local_underrun;
+  osmo_trx_sync_or_and_fetch(&underrun, local_underrun);
   readTimestamp += numRecv;
   return 0;
 }
@@ -366,7 +367,7 @@ bool RadioInterface::pushBuffer()
                                  segmentLen,
                                  &local_underrun,
                                  writeTimestamp);
-  underrun |= local_underrun;
+  osmo_trx_sync_or_and_fetch(&underrun, local_underrun);
   writeTimestamp += numSent;
 
   return true;

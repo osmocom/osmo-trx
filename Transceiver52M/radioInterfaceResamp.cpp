@@ -184,7 +184,7 @@ int RadioInterfaceResamp::pullBuffer()
 	convert_short_float((float *) outerRecvBuffer->begin(),
 			    convertRecvBuffer[0], 2 * resamp_outchunk);
 
-	underrun |= local_underrun;
+	osmo_trx_sync_or_and_fetch(&underrun, local_underrun);
 	readTimestamp += (TIMESTAMP) resamp_outchunk;
 
 	/* Write to the end of the inner receive buffer */
@@ -232,7 +232,7 @@ bool RadioInterfaceResamp::pushBuffer()
 		LOG(ALERT) << "Transmit error " << numSent;
 	}
 
-	underrun |= local_underrun;
+	osmo_trx_sync_or_and_fetch(&underrun, local_underrun);
 	writeTimestamp += resamp_outchunk;
 
 	return true;

@@ -48,7 +48,7 @@ protected:
   std::vector<short *> convertRecvBuffer;
   std::vector<short *> convertSendBuffer;
   std::vector<float> powerScaling;
-  bool underrun;			      ///< indicates writes to USRP are too slow
+  int underrun;			              ///< indicates writes to USRP are too slow
   bool overrun;				      ///< indicates reads from USRP are too slow
   TIMESTAMP writeTimestamp;		      ///< sample timestamp of next packet written to USRP
   TIMESTAMP readTimestamp;		      ///< sample timestamp of next packet read from USRP
