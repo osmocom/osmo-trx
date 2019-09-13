@@ -36,7 +36,7 @@ protected:
 
   std::vector<VectorFIFO>  mReceiveFIFO;      ///< FIFO that holds receive  bursts
 
-  RadioDevice *mRadio;			      ///< the USRP object
+  RadioDevice *mDevice;			      ///< the USRP object
 
   size_t mSPSTx;
   size_t mSPSRx;
@@ -84,7 +84,7 @@ public:
   virtual void close();
 
   /** constructor */
-  RadioInterface(RadioDevice* wRadio, size_t tx_sps, size_t rx_sps,
+  RadioInterface(RadioDevice* wDevice, size_t tx_sps, size_t rx_sps,
                  size_t chans = 1, int receiveOffset = 3,
                  GSM::Time wStartTime = GSM::Time(0));
 
@@ -128,10 +128,10 @@ public:
   double fullScaleOutputValue();
 
   /** get transport window type of attached device */
-  enum RadioDevice::TxWindowType getWindowType() { return mRadio->getWindowType(); }
+  enum RadioDevice::TxWindowType getWindowType() { return mDevice->getWindowType(); }
 
   /** Minimum latency that the device can achieve */
-  GSM::Time minLatency()  { return mRadio->minLatency(); }
+  GSM::Time minLatency()  { return mDevice->minLatency(); }
 
 protected:
   /** drive synchronization of Tx/Rx of USRP */
@@ -149,7 +149,7 @@ private:
   int pullBuffer();
 
 public:
-  RadioInterfaceResamp(RadioDevice* wRadio, size_t tx_sps, size_t rx_sps);
+  RadioInterfaceResamp(RadioDevice* wDevice, size_t tx_sps, size_t rx_sps);
   ~RadioInterfaceResamp();
 
   bool init(int type);

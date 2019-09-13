@@ -238,7 +238,7 @@ int RadioInterfaceMulti::pullBuffer()
 		return -1;
 
 	/* Outer buffer access size is fixed */
-	num = mRadio->readSamples(convertRecvBuffer,
+	num = mDevice->readSamples(convertRecvBuffer,
 				  outerRecvBuffer->size(),
 				  &overrun,
 				  readTimestamp,
@@ -339,7 +339,7 @@ bool RadioInterfaceMulti::pushBuffer()
 			    (float *) outerSendBuffer->begin(),
 			    1.0 / (float) mChans, 2 * outerSendBuffer->size());
 
-	size_t num = mRadio->writeSamples(convertSendBuffer,
+	size_t num = mDevice->writeSamples(convertSendBuffer,
 					  outerSendBuffer->size(),
 					  &underrun,
 					  writeTimestamp);
@@ -368,9 +368,9 @@ bool RadioInterfaceMulti::tuneTx(double freq, size_t chan)
   double shift = (double) getFreqShift(mChans);
 
   if (!chan)
-    return mRadio->setTxFreq(freq + shift * MCBTS_SPACING);
+    return mDevice->setTxFreq(freq + shift * MCBTS_SPACING);
 
-  double center = mRadio->getTxFreq();
+  double center = mDevice->getTxFreq();
   if (!fltcmp(freq, center + (double) (chan - shift) * MCBTS_SPACING)) {
     LOG(NOTICE) << "Channel " << chan << " RF frequency offset is "
                 << freq / 1e6 << " MHz";
@@ -387,9 +387,9 @@ bool RadioInterfaceMulti::tuneRx(double freq, size_t chan)
   double shift = (double) getFreqShift(mChans);
 
   if (!chan)
-    return mRadio->setRxFreq(freq + shift * MCBTS_SPACING);
+    return mDevice->setRxFreq(freq + shift * MCBTS_SPACING);
 
-  double center = mRadio->getRxFreq();
+  double center = mDevice->getRxFreq();
   if (!fltcmp(freq, center + (double) (chan - shift) * MCBTS_SPACING)) {
     LOG(NOTICE) << "Channel " << chan << " RF frequency offset is "
                 << freq / 1e6 << " MHz";
@@ -401,7 +401,7 @@ bool RadioInterfaceMulti::tuneRx(double freq, size_t chan)
 double RadioInterfaceMulti::setRxGain(double db, size_t chan)
 {
   if (!chan)
-    return mRadio->setRxGain(db);
+    return mDevice->setRxGain(db);
   else
-    return mRadio->getRxGain();
+    return mDevice->getRxGain();
 }

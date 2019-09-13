@@ -59,9 +59,9 @@ static size_t resamp_inchunk = 0;
 static size_t resamp_outrate = 0;
 static size_t resamp_outchunk = 0;
 
-RadioInterfaceResamp::RadioInterfaceResamp(RadioDevice *wRadio,
+RadioInterfaceResamp::RadioInterfaceResamp(RadioDevice *wDevice,
 					   size_t tx_sps, size_t rx_sps)
-	: RadioInterface(wRadio, tx_sps, rx_sps, 1),
+	: RadioInterface(wDevice, tx_sps, rx_sps, 1),
 	  outerSendBuffer(NULL), outerRecvBuffer(NULL)
 {
 }
@@ -171,7 +171,7 @@ int RadioInterfaceResamp::pullBuffer()
 		return -1;
 
 	/* Outer buffer access size is fixed */
-	num_recv = mRadio->readSamples(convertRecvBuffer,
+	num_recv = mDevice->readSamples(convertRecvBuffer,
 				       resamp_outchunk,
 				       &overrun,
 				       readTimestamp,
@@ -223,7 +223,7 @@ bool RadioInterfaceResamp::pushBuffer()
 			    (float *) outerSendBuffer->begin(),
 			    powerScaling[0], 2 * resamp_outchunk);
 
-	numSent = mRadio->writeSamples(convertSendBuffer,
+	numSent = mDevice->writeSamples(convertSendBuffer,
 				       resamp_outchunk,
 				       &underrun,
 				       writeTimestamp);

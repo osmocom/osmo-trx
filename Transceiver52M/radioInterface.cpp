@@ -32,10 +32,10 @@ extern "C" {
 #define CHUNK		625
 #define NUMCHUNKS	4
 
-RadioInterface::RadioInterface(RadioDevice *wRadio, size_t tx_sps,
+RadioInterface::RadioInterface(RadioDevice *wDevice, size_t tx_sps,
                                size_t rx_sps, size_t chans,
                                int wReceiveOffset, GSM::Time wStartTime)
-  : mRadio(wRadio), mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans),
+  : mDevice(wDevice), mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans),
     underrun(false), overrun(false), writeTimestamp(0), readTimestamp(0),
     receiveOffset(wReceiveOffset), mOn(false)
 {
@@ -93,11 +93,11 @@ void RadioInterface::close()
 }
 
 double RadioInterface::fullScaleInputValue(void) {
-  return mRadio->fullScaleInputValue();
+  return mDevice->fullScaleInputValue();
 }
 
 double RadioInterface::fullScaleOutputValue(void) {
-  return mRadio->fullScaleOutputValue();
+  return mDevice->fullScaleOutputValue();
 }
 
 int RadioInterface::setPowerAttenuation(int atten, size_t chan)
@@ -112,8 +112,8 @@ int RadioInterface::setPowerAttenuation(int atten, size_t chan)
   if (atten < 0.0)
     atten = 0.0;
 
-  rfGain = mRadio->setTxGain(mRadio->maxTxGain() - (double) atten, chan);
-  digAtten = (double) atten - mRadio->maxTxGain() + rfGain;
+  rfGain = mDevice->setTxGain(mDevice->maxTxGain() - (double) atten, chan);
+  digAtten = (double) atten - mDevice->maxTxGain() + rfGain;
 
   if (digAtten < 1.0)
     powerScaling[chan] = 1.0;
@@ -148,12 +148,12 @@ int RadioInterface::unRadioifyVector(signalVector *newVector, size_t chan)
 
 bool RadioInterface::tuneTx(double freq, size_t chan)
 {
-  return mRadio->setTxFreq(freq, chan);
+  return mDevice->setTxFreq(freq, chan);
 }
 
 bool RadioInterface::tuneRx(double freq, size_t chan)
 {
-  return mRadio->setRxFreq(freq, chan);
+  return mDevice->setRxFreq(freq, chan);
 }
 
 /** synchronization thread loop */
@@ -169,7 +169,7 @@ void *AlignRadioServiceLoopAdapter(RadioInterface *radioInterface)
 }
 
 void RadioInterface::alignRadio() {
-  mRadio->updateAlignment(writeTimestamp+ (TIMESTAMP) 10000);
+  mDevice->updateAlignment(writeTimestamp+ (TIMESTAMP) 10000);
 }
 
 bool RadioInterface::start()
@@ -178,12 +178,12 @@ bool RadioInterface::start()
     return true;
 
   LOG(INFO) << "Starting radio device";
-  if (mRadio->requiresRadioAlign())
+  if (mDevice->requiresRadioAlign())
         mAlignRadioServiceLoopThread.start(
                                 (void * (*)(void*))AlignRadioServiceLoopAdapter,
                                 (void*)this);
 
-  if (!mRadio->start())
+  if (!mDevice->start())
     return false;
 
   for (size_t i = 0; i < mChans; i++) {
@@ -191,11 +191,11 @@ bool RadioInterface::start()
     recvBuffer[i]->reset();
   }
 
-  writeTimestamp = mRadio->initialWriteTimestamp();
-  readTimestamp = mRadio->initialReadTimestamp();
+  writeTimestamp = mDevice->initialWriteTimestamp();
+  readTimestamp = mDevice->initialReadTimestamp();
 
-  mRadio->updateAlignment(writeTimestamp-10000);
-  mRadio->updateAlignment(writeTimestamp-10000);
+  mDevice->updateAlignment(writeTimestamp-10000);
+  mDevice->updateAlignment(writeTimestamp-10000);
 
   mOn = true;
   LOG(INFO) << "Radio started";
@@ -211,7 +211,7 @@ bool RadioInterface::start()
  */
 bool RadioInterface::stop()
 {
-  if (!mOn || !mRadio->stop())
+  if (!mOn || !mDevice->stop())
     return false;
 
   mOn = false;
@@ -304,12 +304,12 @@ VectorFIFO* RadioInterface::receiveFIFO(size_t chan)
 
 double RadioInterface::setRxGain(double dB, size_t chan)
 {
-  return mRadio->setRxGain(dB, chan);
+  return mDevice->setRxGain(dB, chan);
 }
 
 double RadioInterface::getRxGain(size_t chan)
 {
-  return mRadio->getRxGain(chan);
+  return mDevice->getRxGain(chan);
 }
 
 /* Receive a timestamped chunk from the device */
@@ -323,7 +323,7 @@ int RadioInterface::pullBuffer()
     return -1;
 
   /* Outer buffer access size is fixed */
-  numRecv = mRadio->readSamples(convertRecvBuffer,
+  numRecv = mDevice->readSamples(convertRecvBuffer,
                                 segmentLen,
                                 &overrun,
                                 readTimestamp,
@@ -362,7 +362,7 @@ bool RadioInterface::pushBuffer()
   }
 
   /* Send the all samples in the send buffer */
-  numSent = mRadio->writeSamples(convertSendBuffer,
+  numSent = mDevice->writeSamples(convertSendBuffer,
                                  segmentLen,
                                  &local_underrun,
                                  writeTimestamp);
