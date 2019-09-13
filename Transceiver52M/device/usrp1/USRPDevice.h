@@ -80,6 +80,7 @@ private:
   unsigned long lastPktTimestamp;
 
   double rxGain;
+  double txGain;
 
 #ifdef SWLOOPBACK
   short loopbackBuffer[1000000];

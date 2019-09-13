@@ -71,6 +71,7 @@ USRPDevice::USRPDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface,
   decimRate = (unsigned int) round(masterClockRate/((GSMRATE) * (double) tx_sps));
   actualSampleRate = masterClockRate/decimRate;
   rxGain = 0;
+  txGain = 0;
 
   /*
    * Undetermined delay b/w ping response timestamp and true
@@ -279,10 +280,11 @@ double USRPDevice::setTxGain(double dB, size_t chan)
 
   if (!m_dbTx->set_gain(dB))
     LOGC(DDEV, ERR) << "Error setting TX gain";
-
+  else
+    txGain = dB;
   writeLock.unlock();
 
-  return dB;
+  return txGain;
 }
 
 
