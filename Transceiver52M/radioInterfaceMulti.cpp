@@ -400,7 +400,7 @@ bool RadioInterfaceMulti::tuneRx(double freq, size_t chan)
 
 double RadioInterfaceMulti::setRxGain(double db, size_t chan)
 {
-  if (!chan)
+  if (chan == 0)
     return mDevice->setRxGain(db);
   else
     return mDevice->getRxGain();
