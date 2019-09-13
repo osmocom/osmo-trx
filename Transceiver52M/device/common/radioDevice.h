@@ -131,6 +131,9 @@ class RadioDevice {
   /** sets the transmit chan gain, returns the gain setting **/
   virtual double setTxGain(double dB, size_t chan = 0) = 0;
 
+  /** get transmit gain */
+  virtual double getTxGain(size_t chan = 0) = 0;
+
   /** return maximum Tx Gain **/
   virtual double maxTxGain(void) = 0;
 

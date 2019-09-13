@@ -310,6 +310,19 @@ double uhd_device::getRxGain(size_t chan)
 	return rx_gains[chan];
 }
 
+double uhd_device::getTxGain(size_t chan)
+{
+	if (iface == MULTI_ARFCN)
+		chan = 0;
+
+	if (chan >= tx_gains.size()) {
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
+		return 0.0f;
+	}
+
+	return tx_gains[chan];
+}
+
 /*
     Parse the UHD device tree and mboard name to find out what device we're
     dealing with. We need the window type so that the transceiver knows how to

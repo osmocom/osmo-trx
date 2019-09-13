@@ -96,6 +96,7 @@ public:
 	double minRxGain(void) { return rx_gain_min; }
 
 	double setTxGain(double db, size_t chan);
+	double getTxGain(size_t chan = 0);
 	double maxTxGain(void) { return tx_gain_max; }
 	double minTxGain(void) { return tx_gain_min; }
 

@@ -171,6 +171,9 @@ private:
   /** sets the transmit chan gain, returns the gain setting **/
   double setTxGain(double dB, size_t chan = 0);
 
+  /** get transmit gain */
+  double getTxGain(size_t chan = 0) { return txGain; }
+
   /** return maximum Tx Gain **/
   double maxTxGain(void);
 
