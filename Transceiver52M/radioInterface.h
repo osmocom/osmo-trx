@@ -109,9 +109,6 @@ public:
   /** set receive gain */
   double setRxGain(double dB, size_t chan = 0);
 
-  /** get receive gain */
-  double getRxGain(size_t chan = 0);
-
   /** drive transmission of GSM bursts */
   void driveTransmitRadio(std::vector<signalVector *> &bursts,
                           std::vector<bool> &zeros);

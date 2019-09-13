@@ -307,11 +307,6 @@ double RadioInterface::setRxGain(double dB, size_t chan)
   return mDevice->setRxGain(dB, chan);
 }
 
-double RadioInterface::getRxGain(size_t chan)
-{
-  return mDevice->getRxGain(chan);
-}
-
 /* Receive a timestamped chunk from the device */
 int RadioInterface::pullBuffer()
 {
