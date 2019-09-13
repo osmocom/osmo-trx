@@ -58,7 +58,7 @@ private:
 
 	TIMESTAMP ts_initial, ts_offset;
 
-	double rxGain;
+	std::vector<double> tx_gains, rx_gains;
 	double maxTxGainClamp;
 
 	bool do_calib(size_t chan);
@@ -150,7 +150,7 @@ public:
 
 	/** get the current receive gain */
 	double getRxGain(size_t chan = 0) {
-		return rxGain;
+		return rx_gains[chan];
 	}
 
 	/** return maximum Rx Gain **/

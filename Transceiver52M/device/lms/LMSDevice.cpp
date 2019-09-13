@@ -55,6 +55,8 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 
 	m_lms_stream_rx.resize(chans);
 	m_lms_stream_tx.resize(chans);
+	rx_gains.resize(chans);
+	tx_gains.resize(chans);
 
 	rx_buffers.resize(chans);
 }
@@ -412,8 +414,9 @@ double LMSDevice::setTxGain(double dB, size_t chan)
 
 	if (LMS_SetGaindB(m_lms_dev, LMS_CH_TX, chan, dB) < 0)
 		LOGCHAN(chan, DDEV, ERR) << "Error setting TX gain to " << dB << " dB";
-
-	return dB;
+	else
+		tx_gains[chan] = dB;
+	return tx_gains[chan];
 }
 
 double LMSDevice::setRxGain(double dB, size_t chan)
@@ -427,8 +430,9 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 
 	if (LMS_SetGaindB(m_lms_dev, LMS_CH_RX, chan, dB) < 0)
 		LOGCHAN(chan, DDEV, ERR) << "Error setting RX gain to " << dB << " dB";
-
-	return dB;
+	else
+		rx_gains[chan] = dB;
+	return rx_gains[chan];
 }
 
 void LMSDevice::log_ant_list(bool dir_tx, size_t chan, std::ostringstream& os)
