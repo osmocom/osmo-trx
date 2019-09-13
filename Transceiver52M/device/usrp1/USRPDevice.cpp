@@ -305,10 +305,11 @@ double USRPDevice::setRxGain(double dB, size_t chan)
 
   if (!m_dbRx->set_gain(dB))
     LOGC(DDEV, ERR) << "Error setting RX gain";
-
+  else
+    rxGain = dB;
   writeLock.unlock();
 
-  return dB;
+  return rxGain;
 }
 
 bool USRPDevice::setRxAntenna(const std::string &ant, size_t chan)
