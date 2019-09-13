@@ -247,9 +247,6 @@ void uhd_device::set_rates()
 
 double uhd_device::setTxGain(double db, size_t chan)
 {
-	if (iface == MULTI_ARFCN)
-		chan = 0;
-
 	if (chan >= tx_gains.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel" << chan;
 		return 0.0f;
@@ -281,9 +278,6 @@ double uhd_device::setTxGain(double db, size_t chan)
 
 double uhd_device::setRxGain(double db, size_t chan)
 {
-	if (iface == MULTI_ARFCN)
-		chan = 0;
-
 	if (chan >= rx_gains.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return 0.0f;
@@ -299,9 +293,6 @@ double uhd_device::setRxGain(double db, size_t chan)
 
 double uhd_device::getRxGain(size_t chan)
 {
-	if (iface == MULTI_ARFCN)
-		chan = 0;
-
 	if (chan >= rx_gains.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return 0.0f;
@@ -312,9 +303,6 @@ double uhd_device::getRxGain(size_t chan)
 
 double uhd_device::getTxGain(size_t chan)
 {
-	if (iface == MULTI_ARFCN)
-		chan = 0;
-
 	if (chan >= tx_gains.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return 0.0f;
