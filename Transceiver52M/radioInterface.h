@@ -107,7 +107,7 @@ public:
   virtual bool tuneRx(double freq, size_t chan = 0);
 
   /** set receive gain */
-  double setRxGain(double dB, size_t chan = 0);
+  virtual double setRxGain(double dB, size_t chan = 0);
 
   /** drive transmission of GSM bursts */
   void driveTransmitRadio(std::vector<signalVector *> &bursts,
@@ -182,5 +182,5 @@ public:
 
   bool tuneTx(double freq, size_t chan);
   bool tuneRx(double freq, size_t chan);
-  double setRxGain(double dB, size_t chan);
+  virtual double setRxGain(double dB, size_t chan);
 };
