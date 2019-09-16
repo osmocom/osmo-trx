@@ -382,7 +382,6 @@ void uhd_device::set_channels(bool swap)
 		if (dev_type != B200 && dev_type != B210)
 			throw std::invalid_argument("Device does not support MCBTS");
 		dev_type = B2XX_MCBTS;
-		chans = 1;
 	}
 
 	if (chans > dev_param_map.at(dev_key(dev_type, tx_sps, rx_sps)).channels)

@@ -171,12 +171,17 @@ class RadioDevice {
   std::vector<std::string> tx_paths, rx_paths;
   std::vector<struct device_counters> m_ctr;
 
-  RadioDevice(size_t tx_sps, size_t rx_sps, InterfaceType type, size_t chans, double offset,
+  RadioDevice(size_t tx_sps, size_t rx_sps, InterfaceType type, size_t chan_num, double offset,
               const std::vector<std::string>& tx_paths,
               const std::vector<std::string>& rx_paths):
-		tx_sps(tx_sps), rx_sps(rx_sps), iface(type), chans(chans), lo_offset(offset),
+		tx_sps(tx_sps), rx_sps(rx_sps), iface(type), chans(chan_num), lo_offset(offset),
 		tx_paths(tx_paths), rx_paths(rx_paths)
 	{
+		if (iface == MULTI_ARFCN) {
+			LOGC(DDEV, INFO) << "Multi-ARFCN: "<< chan_num << " logical chans -> 1 physical chans";
+			chans = 1;
+		}
+
 		m_ctr.resize(chans);
 		for (size_t i = 0; i < chans; i++) {
 			memset(&m_ctr[i], 0, sizeof(m_ctr[i]));
