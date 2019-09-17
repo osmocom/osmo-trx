@@ -48,9 +48,11 @@ Log::~Log()
 	int neednl = (mlen==0 || mStream.str()[mlen-1] != '\n');
 	const char *fmt = neednl ? "%s\n" : "%s";
 
-	log_mutex_lock_canceldisable(&old_state);
+	/* print related function called inside a C++ destructor, use pthread_setcancelstate() APIs.
+	   See osmo-trx commit 86be40b4eb762d5c12e8e3f7388ca9f254e77b36 for more information */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &old_state);
 	LOGPSRC(mCategory, mPriority, filename, line, fmt, mStream.str().c_str());
-	log_mutex_unlock_canceldisable(old_state);
+	pthread_setcancelstate(old_state, NULL);
 }
 
 ostringstream& Log::get()

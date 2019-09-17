@@ -576,14 +576,11 @@ int main(int argc, char *argv[])
 	printf("Built without atomic operation support. Using Mutex, it may affect performance!\n");
 #endif
 
-	if (!log_mutex_init()) {
-		fprintf(stderr, "Failed to initialize log mutex!\n");
-		exit(2);
-	}
 	convolve_init();
 	convert_init();
 
 	osmo_init_logging2(tall_trx_ctx, &log_info);
+	log_enable_multithread();
 	osmo_stats_init(tall_trx_ctx);
 	vty_init(&g_vty_info);
 	ctrl_vty_init(tall_trx_ctx);
