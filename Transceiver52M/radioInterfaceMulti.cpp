@@ -374,7 +374,7 @@ bool RadioInterfaceMulti::tuneTx(double freq, size_t chan)
 
   double center = mDevice->getTxFreq();
   if (!fltcmp(freq, center + (double) (chan - shift) * MCBTS_SPACING)) {
-    LOG(NOTICE) << "Channel " << chan << " RF frequency offset is "
+    LOG(NOTICE) << "Channel " << chan << " RF Tx frequency offset is "
                 << freq / 1e6 << " MHz";
   }
 
@@ -393,7 +393,7 @@ bool RadioInterfaceMulti::tuneRx(double freq, size_t chan)
 
   double center = mDevice->getRxFreq();
   if (!fltcmp(freq, center + (double) (chan - shift) * MCBTS_SPACING)) {
-    LOG(NOTICE) << "Channel " << chan << " RF frequency offset is "
+    LOG(NOTICE) << "Channel " << chan << " RF Rx frequency offset is "
                 << freq / 1e6 << " MHz";
   }
 
