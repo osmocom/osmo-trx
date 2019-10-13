@@ -3,7 +3,7 @@
 
 This section specifies the format of USB packets used for in-band data
 transmission and signaling on the USRP1. All packets are 512-byte long, and are
-transfered using USB "bulk" transfers.
+transferred using USB "bulk" transfers.
 
 IN packets are sent towards the host. OUT packets are sent away from the host.
 

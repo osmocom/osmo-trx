@@ -38,7 +38,7 @@
  * That signal is processed here in device_sig_cb, where a copy of the "struct
  * device_counters" structure is held and the main thread is instructed through
  * a timerfd to update rate_ctr APIs against this copy. All this is done inside
- * a mutex to avoid different race conditons (between Rx andTx threads, and
+ * a mutex to avoid different race conditions (between Rx andTx threads, and
  * between Rx/Tx and main thread). For the same reason, callers of signal
  * <SS_DEVICE,S_DEVICE_COUNTER_CHANGE> (device_sig_cb), that is Rx/Tx threads,
  * must do so with PTHREAD_CANCEL_DISABLE, in order to avoid possible deadlocks

@@ -47,7 +47,7 @@
 // (pat) The elements in the queue are type T*, and
 // the Fifo class implements the underlying queue.
 // The default is class PointerFIFO, which does not place any restrictions on the type of T,
-// and is implemented by allocating auxilliary structures for the queue,
+// and is implemented by allocating auxiliary structures for the queue,
 // or SingleLinkedList, which implements the queue using an internal pointer in type T,
 // which must implement the functional interface of class SingleLinkListNode,
 // namely: functions T*next() and void setNext(T*).

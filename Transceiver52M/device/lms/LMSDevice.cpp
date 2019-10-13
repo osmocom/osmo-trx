@@ -624,7 +624,7 @@ void LMSDevice::update_stream_stats_rx(size_t chan, bool *overrun)
 	m_ctr[chan].rx_overruns += status.overrun;
 
 	/* Dropped packets in Rx are counted when gaps in Rx timestamps are
-	   detected (likely because buffer oveflow in hardware). Value count
+	   detected (likely because buffer overflow in hardware). Value count
 	   since the last call to LMS_GetStreamStatus(stream). */
 	if (status.droppedPackets) {
 		changed = true;

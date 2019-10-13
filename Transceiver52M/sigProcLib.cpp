@@ -345,7 +345,7 @@ static signalVector *convolve(const signalVector *x, const signalVector *h,
     _x = x;
 
   /*
-   * Four convovle types:
+   * Four convolve types:
    *   1. Complex-Real (aligned)
    *   2. Complex-Complex (aligned)
    *   3. Complex-Real (!aligned)
@@ -723,7 +723,7 @@ static signalVector *mapEdgeSymbols(const BitVector &bits)
  *
  * Delay the EDGE downlink bursts by one symbol in order to match GMSK pulse
  * shaping group delay. The difference in group delay arises from the dual
- * pulse filter combination of the GMSK Laurent represenation whereas 8-PSK
+ * pulse filter combination of the GMSK Laurent representation whereas 8-PSK
  * uses a single pulse linear filter.
  */
 static signalVector *shapeEdgeBurst(const signalVector &symbols)

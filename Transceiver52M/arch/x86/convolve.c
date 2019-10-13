@@ -27,7 +27,7 @@
 #include "config.h"
 #endif
 
-/* Architecture dependant function pointers */
+/* Architecture dependent function pointers */
 struct convolve_cpu_context {
 	void (*conv_cmplx_4n) (const float *, int, const float *, int, float *,
 			       int, int, int);
@@ -66,7 +66,7 @@ int _base_convolve_complex(const float *x, int x_len,
 int bounds_check(int x_len, int h_len, int y_len,
 		 int start, int len);
 
-/* API: Initalize convolve module */
+/* API: Initialize convolve module */
 void convolve_init(void)
 {
 	c.conv_cmplx_4n = (void *)_base_convolve_complex;

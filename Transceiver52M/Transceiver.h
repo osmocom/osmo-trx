@@ -216,7 +216,7 @@ private:
   bool start();
   void stop();
 
-  /** Protect destructor accessable stop call */
+  /** Protect destructor accessible stop call */
   Mutex mLock;
 
 protected:

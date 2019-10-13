@@ -27,7 +27,7 @@
 #include "config.h"
 #endif
 
-/* Architecture dependant function pointers */
+/* Architecture dependent function pointers */
 struct convert_cpu_context {
 	void (*convert_si16_ps_16n) (float *, const short *, int);
 	void (*convert_si16_ps) (float *, const short *, int);

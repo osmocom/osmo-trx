@@ -103,7 +103,7 @@ void free_fft(struct fft_hdl *hdl)
 }
 
 /*! \brief Run multiple DFT operations with the initialized plan
- *  \param[in] hdl handle to an intitialized fft struct
+ *  \param[in] hdl handle to an initialized fft struct
  *
  * Input and output buffers are configured with init_fft().
  */

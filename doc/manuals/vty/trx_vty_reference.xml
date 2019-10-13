@@ -1196,7 +1196,7 @@
     <command id='clock-ref (internal|external|gpsdo)'>
       <params>
         <param name='clock-ref' doc='Set the Reference Clock' />
-        <param name='internal' doc='Enable internal referece (default)' />
+        <param name='internal' doc='Enable internal reference (default)' />
         <param name='external' doc='Enable external 10 MHz reference' />
         <param name='gpsdo' doc='Enable GPSDO reference' />
       </params>

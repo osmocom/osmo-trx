@@ -32,7 +32,7 @@ protected:
 	/* Buffer length validity checking */
 	bool checkLen(size_t innerLen, size_t outerLen);
 public:
-	/* Initilize channelizer/synthesis filter internals */
+	/* Initialize channelizer/synthesis filter internals */
 	bool init();
 };
 

@@ -12,7 +12,7 @@ B200 family and Fairwaves UmTRX family, and used to be the default backend used
 for legacy @osmo-trx@ binary when per-backend binaries didn't exist yet.
 
 Any device providing generic support for UHD should theoretically be able to be
-run through this backend without much effort, but pracitcal experience showed
+run through this backend without much effort, but practical experience showed
 that some devices don't play well with it, such as the LimeSDR family of
 devices, which showed far better results when using its native interface.
 

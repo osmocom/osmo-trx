@@ -4,7 +4,7 @@
 * SPDX-License-Identifier: AGPL-3.0+
 *
 * This software is distributed under multiple licenses; see the COPYING file in
-* the main directory for licensing information for this specific distribuion.
+* the main directory for licensing information for this specific distribution.
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.

@@ -37,7 +37,7 @@ using namespace std;
 
 
 /**
-  Apply a Galois polymonial to a binary seqeunce.
+  Apply a Galois polymonial to a binary sequence.
   @param val The input sequence.
   @param poly The polynomial.
   @param order The order of the polynomial.

@@ -15,7 +15,7 @@ substr() { [ -z "${2##*$1*}" ]; }
 mychroot_nocwd() {
         # LC_ALL + LANGUAGE set to avoid lots of print errors due to locale not being set inside container
         # PATH is needed to be able to reach binaries like ldconfig without logging in to root, which adds the paths to PATH.
-        # PROOT_NO_SECCOMP is requried due to proot bug #106
+        # PROOT_NO_SECCOMP is required due to proot bug #106
         LC_ALL=C LANGUAGE=C PATH="$PATH:/usr/sbin:/sbin" PROOT_NO_SECCOMP=1 proot -r "$ROOTFS" -w / -b /proc --root-id -q qemu-arm-static "$@"
 }
 

@@ -33,7 +33,7 @@
 /*
     Sample Buffer - Allows reading and writing of timed samples using osmo-trx
                     timestamps. Time conversions are handled
-                    internally or accessable through the static convert calls.
+                    internally or accessible through the static convert calls.
 */
 class smpl_buf {
 public:

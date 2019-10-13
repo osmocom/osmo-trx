@@ -909,7 +909,7 @@ bool Transceiver::driveControl(size_t chan)
       sprintf(response, "RSP SETFORMAT %u %u", version_recv, version_recv);
     }
   } else if (match_cmd(command, "_SETBURSTTODISKMASK", &params)) {
-    // debug command! may change or disapear without notice
+    // debug command! may change or disappear without notice
     // set a mask which bursts to dump to disk
     int mask;
     sscanf(params, "%d", &mask);

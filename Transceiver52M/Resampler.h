@@ -35,12 +35,12 @@ public:
 	Resampler(size_t p, size_t q, size_t filt_len = 16);
 	~Resampler();
 
-	/* Initilize resampler filterbank.
+	/* Initialize resampler filterbank.
 	 *   @param bw bandwidth factor on filter generation (pre-window)
 	 *   @return false on error, zero otherwise
 	 *
 	 * Automatic setting is to compute the filter to prevent aliasing with
-	 * a Blackman-Harris window. Adjustment is made through a bandwith
+	 * a Blackman-Harris window. Adjustment is made through a bandwidth
 	 * factor to shift the cutoff and/or the constituent filter lengths.
 	 * Calculation of specific rolloff factors or 3-dB cutoff points is
 	 * left as an excersize for the reader.

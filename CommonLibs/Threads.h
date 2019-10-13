@@ -186,7 +186,7 @@ class Thread {
 		}
 	}
 
-	/** Send cancelation to thread */
+	/** Send cancellation to thread */
 	void cancel() { pthread_cancel(mThread); }
 };
 

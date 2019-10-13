@@ -146,9 +146,9 @@ struct test_vec
 	float *h;
 	float *y;
 
-	int x_len;	/* Theses are in # of _floats_ ! */
-	int h_len;	/* Theses are in # of _floats_ ! */
-	int y_len;	/* Theses are in # of _floats_ ! */
+	int x_len;	/* These are in # of _floats_ ! */
+	int h_len;	/* These are in # of _floats_ ! */
+	int y_len;	/* These are in # of _floats_ ! */
 };
 
 /* Reset test vectors */

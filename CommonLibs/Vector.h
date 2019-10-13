@@ -36,7 +36,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-// We cant use Logger.h in this file...
+// We can't use Logger.h in this file...
 extern int gVectorDebug;
 #define BVDEBUG(msg) if (gVectorDebug) {std::cout << msg;}
 

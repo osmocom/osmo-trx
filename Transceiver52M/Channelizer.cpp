@@ -98,7 +98,7 @@ bool Channelizer::rotate(const float *in, size_t len)
 	return true;
 }
 
-/* Setup channelizer paramaters */
+/* Setup channelizer parameters */
 Channelizer::Channelizer(size_t m, size_t blockLen, size_t hLen)
 	: ChannelizerBase(m, blockLen, hLen)
 {

@@ -222,7 +222,7 @@ DEFUN(cfg_test_rach_delay, cfg_test_rach_delay_cmd,
 DEFUN(cfg_clock_ref, cfg_clock_ref_cmd,
 	"clock-ref (internal|external|gpsdo)",
 	"Set the Reference Clock\n"
-	"Enable internal referece (default)\n"
+	"Enable internal reference (default)\n"
 	"Enable external 10 MHz reference\n"
 	"Enable GPSDO reference\n")
 {

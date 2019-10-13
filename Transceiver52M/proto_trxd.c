@@ -72,7 +72,7 @@ bool trxd_send_burst_ind_v0(size_t chan, int fd, const struct trx_ul_burst_ind *
 	if(bi->idle)
 		return true;
 
-	/* +2: Historically (OpenBTS times), two extra non-used bytes are sent appeneded to each burst */
+	/* +2: Historically (OpenBTS times), two extra non-used bytes are sent appended to each burst */
 	char buf[sizeof(struct trxd_hdr_v0) + bi->nbits + 2];
 	struct trxd_hdr_v0* pkt = (struct trxd_hdr_v0*)buf;
 
