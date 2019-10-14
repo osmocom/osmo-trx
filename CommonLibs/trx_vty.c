@@ -48,14 +48,24 @@ static const struct value_string clock_ref_names[] = {
 	{ 0,		NULL }
 };
 
-static const struct value_string filler_names[] = {
-	{ FILLER_DUMMY,		"Dummy bursts" },
-	{ FILLER_ZERO,		"Disabled" },
-	{ FILLER_NORM_RAND,	"Normal bursts with random payload" },
-	{ FILLER_EDGE_RAND,	"EDGE bursts with random payload" },
-	{ FILLER_ACCESS_RAND,	"Access bursts with random payload" },
+const struct value_string filler_names[] = {
+	{ FILLER_DUMMY,		"Dummy bursts (C0 only)" },
+	{ FILLER_ZERO,		"Empty bursts" },
+	{ FILLER_NORM_RAND,	"GMSK Normal Bursts with random payload" },
+	{ FILLER_EDGE_RAND,	"8-PSK Normal Bursts with random payload" },
+	{ FILLER_ACCESS_RAND,	"Access Bursts with random payload" },
 	{ 0,			NULL }
 };
+
+static const struct value_string filler_types[] = {
+	{ FILLER_DUMMY,		"dummy" },
+	{ FILLER_ZERO,		"zero" },
+	{ FILLER_NORM_RAND,	"random-nb-gmsk" },
+	{ FILLER_EDGE_RAND,	"random-nb-8psk" },
+	{ FILLER_ACCESS_RAND,	"random-ab" },
+	{ 0,			NULL }
+};
+
 
 struct trx_ctx *trx_from_vty(struct vty *v)
 {
@@ -168,53 +178,6 @@ DEFUN(cfg_rx_sps, cfg_rx_sps_cmd,
 	struct trx_ctx *trx = trx_from_vty(vty);
 
 	trx->cfg.rx_sps = atoi(argv[0]);
-
-	return CMD_SUCCESS;
-}
-
-DEFUN(cfg_test_rtsc, cfg_test_rtsc_cmd,
-	"test rtsc <0-7>",
-	"Set the Random Normal Burst test mode with TSC\n"
-	"TSC\n")
-{
-	struct trx_ctx *trx = trx_from_vty(vty);
-
-	if (trx->cfg.rach_delay_set) {
-		vty_out(vty, "rach-delay and rtsc options are mutual-exclusive%s",
-			VTY_NEWLINE);
-		return CMD_WARNING;
-	}
-
-	trx->cfg.rtsc_set = true;
-	trx->cfg.rtsc = atoi(argv[0]);
-	if (!trx->cfg.egprs) /* Don't override egprs which sets different filler */
-		trx->cfg.filler = FILLER_NORM_RAND;
-
-	return CMD_SUCCESS;
-}
-
-DEFUN(cfg_test_rach_delay, cfg_test_rach_delay_cmd,
-	"test rach-delay <0-68>",
-	"Set the Random Access Burst test mode with delay\n"
-	"RACH delay\n")
-{
-	struct trx_ctx *trx = trx_from_vty(vty);
-
-	if (trx->cfg.rtsc_set) {
-		vty_out(vty, "rach-delay and rtsc options are mutual-exclusive%s",
-			VTY_NEWLINE);
-		return CMD_WARNING;
-	}
-
-	if (trx->cfg.egprs) {
-		vty_out(vty, "rach-delay and egprs options are mutual-exclusive%s",
-			VTY_NEWLINE);
-		return CMD_WARNING;
-	}
-
-	trx->cfg.rach_delay_set = true;
-	trx->cfg.rach_delay = atoi(argv[0]);
-	trx->cfg.filler = FILLER_ACCESS_RAND;
 
 	return CMD_SUCCESS;
 }
@@ -351,14 +314,57 @@ DEFUN(cfg_stack_size, cfg_stack_size_cmd,
 	return CMD_SUCCESS;
 }
 
-DEFUN(cfg_filler, cfg_filler_cmd,
-	"filler dummy",
-	"Enable C0 filler table\n"
-	"Dummy method\n")
+DEFUN(cfg_filler, cfg_filler_type_cmd,
+	"filler type (zero|dummy|random-nb-gmsk|random-nb-8psk|random-ab)",
+	"Filler burst settings\n"
+	"Filler burst type (default=zero)\n"
+	"Send an empty burst when there is nothing to send (default)\n"
+	"Send a dummy burst when there is nothing to send on C0 (TRX0) and empty burst on other channels."
+	" Use for OpenBTS compatibility only, don't use with OsmoBTS as it breaks encryption.\n"
+	"Send a GMSK modulated Normal Burst with random bits when there is nothing to send."
+	" Use for spectrum mask testing. Configure 'filler tsc' to set training sequence.\n"
+	"Send an 8-PSK modulated Normal Burst with random bits when there is nothing to send."
+	" Use for spectrum mask testing. Configure 'filler tsc' to set training sequence.\n"
+	"Send an Access Burst with random bits when there is nothing to send. Use for Rx/Tx alignment."
+	" Configure 'filler access-burst-delay' to introduce artificial delay.\n"
+)
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+	// trx->cfg.filler is unsigned, so we need an interim int var to detect errors
+	int type = get_string_value(filler_types, argv[0]);
+
+	if (type < 0) {
+		trx->cfg.filler = FILLER_ZERO;
+		return CMD_WARNING;
+	}
+	trx->cfg.filler = type;
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_test_rtsc, cfg_filler_tsc_cmd,
+	"filler tsc <0-7>",
+	"Filler burst settings\n"
+	"Set the TSC for GMSK/8-PSK Normal Burst random fillers. Used only with 'random-nb-gmsk' and"
+	" 'random-nb-8psk' filler types. (default=0)\n"
+	"TSC\n")
 {
 	struct trx_ctx *trx = trx_from_vty(vty);
 
-	trx->cfg.filler = FILLER_DUMMY;
+	trx->cfg.rtsc = atoi(argv[0]);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_test_rach_delay, cfg_filler_rach_delay_cmd,
+	"filler access-burst-delay <0-68>",
+	"Filler burst settings\n"
+	"Set the delay for Access Burst random fillers. Used only with 'random-ab' filler type. (default=0)\n"
+	"RACH delay in symbols\n")
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.rach_delay = atoi(argv[0]);
 
 	return CMD_SUCCESS;
 }
@@ -546,10 +552,6 @@ static int config_write_trx(struct vty *vty)
 		vty_out(vty, " tx-sps %u%s", trx->cfg.tx_sps, VTY_NEWLINE);
 	if (trx->cfg.rx_sps != DEFAULT_RX_SPS)
 		vty_out(vty, " rx-sps %u%s", trx->cfg.rx_sps, VTY_NEWLINE);
-	if (trx->cfg.rtsc_set)
-		vty_out(vty, " test rtsc %u%s", trx->cfg.rtsc, VTY_NEWLINE);
-	if (trx->cfg.rach_delay_set)
-		vty_out(vty, " test rach-delay %u%s", trx->cfg.rach_delay, VTY_NEWLINE);
 	if (trx->cfg.clock_ref != REF_INTERNAL)
 		vty_out(vty, " clock-ref %s%s", get_value_string(clock_ref_names, trx->cfg.clock_ref), VTY_NEWLINE);
 	vty_out(vty, " multi-arfcn %s%s", trx->cfg.multi_arfcn ? "enable" : "disable", VTY_NEWLINE);
@@ -562,6 +564,12 @@ static int config_write_trx(struct vty *vty)
 	vty_out(vty, " ext-rach %s%s", trx->cfg.ext_rach ? "enable" : "disable", VTY_NEWLINE);
 	if (trx->cfg.sched_rr != 0)
 		vty_out(vty, " rt-prio %u%s", trx->cfg.sched_rr, VTY_NEWLINE);
+	if (trx->cfg.filler != FILLER_ZERO)
+		vty_out(vty, " filler type %s%s", get_value_string(filler_types, trx->cfg.filler), VTY_NEWLINE);
+	if (trx->cfg.rtsc > 0)
+		vty_out(vty, " filler tsc %u%s", trx->cfg.rtsc, VTY_NEWLINE);
+	if (trx->cfg.rach_delay > 0)
+		vty_out(vty, " filler access-burst-delay %u%s", trx->cfg.rach_delay, VTY_NEWLINE);
 	if (trx->cfg.stack_size != 0)
 		vty_out(vty, " stack-size %u%s", trx->cfg.stack_size, VTY_NEWLINE);
 	trx_rate_ctr_threshold_write_config(vty, " ");
@@ -589,11 +597,9 @@ static void trx_dump_vty(struct vty *vty, struct trx_ctx *trx)
 	vty_out(vty, " Device args: %s%s", trx->cfg.dev_args, VTY_NEWLINE);
 	vty_out(vty, " Tx Samples-per-Symbol: %u%s", trx->cfg.tx_sps, VTY_NEWLINE);
 	vty_out(vty, " Rx Samples-per-Symbol: %u%s", trx->cfg.rx_sps, VTY_NEWLINE);
-	vty_out(vty, " Test Mode: TSC: %u (%s)%s", trx->cfg.rtsc,
-		trx->cfg.rtsc_set ? "Enabled" : "Disabled", VTY_NEWLINE);
-	vty_out(vty, " Test Mode: RACH Delay: %u (%s)%s", trx->cfg.rach_delay,
-		trx->cfg.rach_delay_set ? "Enabled" : "Disabled", VTY_NEWLINE);
-	vty_out(vty, " C0 Filler Table: %s%s", get_value_string(filler_names, trx->cfg.filler), VTY_NEWLINE);
+	vty_out(vty, " Filler Burst Type: %s%s", get_value_string(filler_names, trx->cfg.filler), VTY_NEWLINE);
+	vty_out(vty, " Filler Burst TSC: %u%s", trx->cfg.rtsc, VTY_NEWLINE);
+	vty_out(vty, " Filler Burst RACH Delay: %u%s", trx->cfg.rach_delay, VTY_NEWLINE);
 	vty_out(vty, " Clock Reference: %s%s", get_value_string(clock_ref_names, trx->cfg.clock_ref), VTY_NEWLINE);
 	vty_out(vty, " Multi-Carrier: %s%s", trx->cfg.multi_arfcn ? "Enabled" : "Disabled", VTY_NEWLINE);
 	vty_out(vty, " Tuning offset: %f%s", trx->cfg.offset, VTY_NEWLINE);
@@ -662,6 +668,7 @@ static int trx_vty_go_parent(struct vty *vty)
 static const char trx_copyright[] =
 	"Copyright (C) 2007-2014 Free Software Foundation, Inc.\r\n"
 	"Copyright (C) 2013 Thomas Tsou <tom@tsou.cc>\r\n"
+	"Copyright (C) 2013-2019 Fairwaves, Inc.\r\n"
 	"Copyright (C) 2015 Ettus Research LLC\r\n"
 	"Copyright (C) 2017-2018 by sysmocom s.f.m.c. GmbH <info@sysmocom.de>\r\n"
 	"License AGPLv3+: GNU AGPL version 3 or later <http://gnu.org/licenses/agpl-3.0.html>\r\n"
@@ -704,8 +711,6 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_dev_args_cmd);
 	install_element(TRX_NODE, &cfg_tx_sps_cmd);
 	install_element(TRX_NODE, &cfg_rx_sps_cmd);
-	install_element(TRX_NODE, &cfg_test_rtsc_cmd);
-	install_element(TRX_NODE, &cfg_test_rach_delay_cmd);
 	install_element(TRX_NODE, &cfg_clock_ref_cmd);
 	install_element(TRX_NODE, &cfg_multi_arfcn_cmd);
 	install_element(TRX_NODE, &cfg_offset_cmd);
@@ -714,7 +719,9 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_egprs_cmd);
 	install_element(TRX_NODE, &cfg_ext_rach_cmd);
 	install_element(TRX_NODE, &cfg_rt_prio_cmd);
-	install_element(TRX_NODE, &cfg_filler_cmd);
+	install_element(TRX_NODE, &cfg_filler_type_cmd);
+	install_element(TRX_NODE, &cfg_filler_tsc_cmd);
+	install_element(TRX_NODE, &cfg_filler_rach_delay_cmd);
 	install_element(TRX_NODE, &cfg_ctr_error_threshold_cmd);
 	install_element(TRX_NODE, &cfg_no_ctr_error_threshold_cmd);
 	install_element(TRX_NODE, &cfg_stack_size_cmd);

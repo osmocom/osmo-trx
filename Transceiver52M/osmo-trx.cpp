@@ -334,14 +334,12 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 			break;
 		case 'r':
 			print_deprecated(option);
-			trx->cfg.rtsc_set = true;
 			trx->cfg.rtsc = atoi(optarg);
 			if (!trx->cfg.egprs) /* Don't override egprs which sets different filler */
 				trx->cfg.filler = FILLER_NORM_RAND;
 			break;
 		case 'A':
 			print_deprecated(option);
-			trx->cfg.rach_delay_set = true;
 			trx->cfg.rach_delay = atoi(optarg);
 			trx->cfg.filler = FILLER_ACCESS_RAND;
 			break;
@@ -459,7 +457,9 @@ static void print_config(struct trx_ctx *trx)
 	ost << "   EDGE support............ " << trx->cfg.egprs << std::endl;
 	ost << "   Extended RACH support... " << trx->cfg.ext_rach << std::endl;
 	ost << "   Reference............... " << trx->cfg.clock_ref << std::endl;
-	ost << "   C0 Filler Table......... " << trx->cfg.filler << std::endl;
+	ost << "   Filler Burst Type....... " << get_value_string(filler_names, trx->cfg.filler) << std::endl;
+	ost << "   Filler Burst TSC........ " << trx->cfg.rtsc << std::endl;
+	ost << "   Filler Burst RACH Delay. " << trx->cfg.rach_delay << std::endl;
 	ost << "   Multi-Carrier........... " << trx->cfg.multi_arfcn << std::endl;
 	ost << "   Tuning offset........... " << trx->cfg.offset << std::endl;
 	ost << "   RSSI to dBm offset...... " << trx->cfg.rssi_offset << std::endl;

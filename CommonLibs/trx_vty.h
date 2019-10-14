@@ -5,6 +5,7 @@
 #include "config_defs.h"
 
 extern struct vty_app_info g_vty_info;
+extern const struct value_string filler_names[];
 
 /* Maximum number of physical RF channels */
 #define TRX_CHAN_MAX 8
@@ -51,9 +52,7 @@ struct trx_ctx {
 		unsigned int tx_sps;
 		unsigned int rx_sps;
 		unsigned int rtsc;
-		bool rtsc_set;
 		unsigned int rach_delay;
-		bool rach_delay_set;
 		enum ReferenceType clock_ref;
 		enum FillerType filler;
 		bool multi_arfcn;
