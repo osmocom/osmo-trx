@@ -305,7 +305,6 @@ DEFUN(cfg_egprs, cfg_egprs_cmd,
 		trx->cfg.egprs = false;
 	} else if (strcmp("enable", argv[0]) == 0) {
 		trx->cfg.egprs = true;
-		trx->cfg.filler = FILLER_EDGE_RAND;
 	} else {
 		return CMD_WARNING;
 	}
