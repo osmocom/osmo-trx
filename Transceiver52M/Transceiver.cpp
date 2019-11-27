@@ -794,7 +794,7 @@ bool Transceiver::driveControl(size_t chan)
     unsigned ts = 0, ss = 0;
     sscanf(params, "%u %u", &ts, &ss);
     if (ts > 7 || ss > 7) {
-      sprintf(response, "RSP NOHANDOVER 1 %u %u", ts, ss);
+      sprintf(response, "RSP HANDOVER 1 %u %u", ts, ss);
     } else {
       mHandover[ts][ss] = true;
       sprintf(response, "RSP HANDOVER 0 %u %u", ts, ss);
