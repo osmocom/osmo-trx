@@ -381,6 +381,11 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 		}
 	}
 
+	if (argc > optind) {
+		LOG(ERROR) << "Unsupported positional arguments on command line";
+		goto bad_config;
+	}
+
 	/* Cmd line option specific validation & setup */
 
 	if (trx->cfg.num_chans > TRX_CHAN_MAX) {
