@@ -742,7 +742,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 		for (size_t i = 0; i < rx_buffers.size(); i++) {
 			rc = rx_buffers[i]->write((short *) &pkt_bufs[i].front(),
 						  num_smpls,
-						  metadata.time_spec.to_ticks(rx_rate));
+						  ts.to_ticks(rx_rate));
 
 			// Continue on local overrun, exit on other errors
 			if ((rc < 0)) {
