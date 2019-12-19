@@ -35,10 +35,28 @@ static const struct log_info_cat default_categories[] = {
 		.color = NULL,
 		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
+	[DTRXCLK] = {
+			.name = "DTRXCLK",
+			.description = "TRX Master Clock",
+			.color = NULL,
+			.enabled = 1, .loglevel = LOGL_NOTICE,
+	},
 	[DTRXCTRL] = {
 			.name = "DTRXCTRL",
 			.description = "TRX CTRL interface",
 			.color = "\033[1;33m",
+			.enabled = 1, .loglevel = LOGL_NOTICE,
+	},
+	[DTRXDDL] = {
+			.name = "DTRXDDL",
+			.description = "TRX Data interface Downlink",
+			.color = NULL,
+			.enabled = 1, .loglevel = LOGL_NOTICE,
+	},
+	[DTRXDUL] = {
+			.name = "DTRXDUL",
+			.description = "TRX CTRL interface Uplink",
+			.color = NULL,
 			.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
 	[DDEV] = {

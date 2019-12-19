@@ -180,12 +180,12 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
   int d_srcport, d_dstport, c_srcport, c_dstport;
 
   if (!mChans) {
-    LOG(ALERT) << "No channels assigned";
+    LOG(FATAL) << "No channels assigned";
     return false;
   }
 
   if (!sigProcLibSetup()) {
-    LOG(ALERT) << "Failed to initialize signal processing library";
+    LOG(FATAL) << "Failed to initialize signal processing library";
     return false;
   }
 
@@ -285,7 +285,7 @@ bool Transceiver::start()
   mLatencyUpdateTime = time;
 
   if (!mRadioInterface->start()) {
-    LOG(ALERT) << "Device failed to start";
+    LOG(FATAL) << "Device failed to start";
     return false;
   }
 
@@ -371,12 +371,12 @@ void Transceiver::addRadioVector(size_t chan, BitVector &bits,
   radioVector *radio_burst;
 
   if (chan >= mTxPriorityQueues.size()) {
-    LOG(ALERT) << "Invalid channel " << chan;
+    LOGCHAN(chan, DTRXDDL, FATAL) << "Invalid channel";
     return;
   }
 
   if (wTime.TN() > 7) {
-    LOG(ALERT) << "Received burst with invalid slot " << wTime.TN();
+    LOGCHAN(chan, DTRXDDL, FATAL) << "Received burst with invalid slot " << wTime.TN();
     return;
   }
 
@@ -419,7 +419,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     state = &mStates[i];
 
     while ((burst = mTxPriorityQueues[i].getStaleBurst(nowTime))) {
-      LOGCHAN(i, DMAIN, NOTICE) << "dumping STALE burst in TRX->SDR interface ("
+      LOGCHAN(i, DTRXDDL, NOTICE) << "dumping STALE burst in TRX->SDR interface ("
                   << burst->getTime() <<" vs " << nowTime << "), retrans=" << state->mRetrans;
       if (state->mRetrans)
         updateFillerTable(i, burst);
@@ -606,7 +606,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
   if (!radio_burst) {
-    LOGCHAN(chan, DMAIN, ERROR) << "ReceiveFIFO->read() returned no burst";
+    LOGCHAN(chan, DTRXDUL, ERROR) << "ReceiveFIFO->read() returned no burst";
     return -EIO;
   }
 
@@ -651,7 +651,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   }
 
   if (max_i < 0) {
-    LOG(ALERT) << "Received empty burst";
+    LOGCHAN(chan, DTRXDUL, FATAL) << "Received empty burst";
     goto ret_idle;
   }
 
@@ -678,9 +678,9 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, max_toa, &ebp);
   if (rc <= 0) {
     if (rc == -SIGERR_CLIP)
-      LOG(WARNING) << "Clipping detected on received RACH or Normal Burst";
+      LOGCHAN(chan, DTRXDUL, NOTICE) << "Clipping detected on received RACH or Normal Burst";
     else if (rc != SIGERR_NONE)
-      LOG(WARNING) << "Unhandled RACH or Normal Burst detection error";
+      LOGCHAN(chan, DTRXDUL, NOTICE) << "Unhandled RACH or Normal Burst detection error";
     goto ret_idle;
   }
 
@@ -760,7 +760,7 @@ bool Transceiver::driveControl(size_t chan)
   /* Attempt to read from control socket */
   msgLen = read(mCtrlSockets[chan], buffer, MAX_PACKET_LENGTH);
   if (msgLen <= 0) {
-    LOGCHAN(chan, DTRXCTRL, WARNING) << "mCtrlSockets read(" << mCtrlSockets[chan] << ") failed: " << msgLen;
+    LOGCHAN(chan, DTRXCTRL, NOTICE) << "mCtrlSockets read(" << mCtrlSockets[chan] << ") failed: " << msgLen;
     return false;
   }
 
@@ -769,7 +769,7 @@ bool Transceiver::driveControl(size_t chan)
 
   /* Verify a command signature */
   if (strncmp(buffer, "CMD ", 4)) {
-    LOGC(DTRXCTRL, WARNING) << "bogus message on control interface";
+    LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus message on control interface";
     return false;
   }
 
@@ -854,7 +854,7 @@ bool Transceiver::driveControl(size_t chan)
     sscanf(params, "%d", &freqKhz);
     mRxFreq = freqKhz * 1e3;
     if (!mRadioInterface->tuneRx(mRxFreq, chan)) {
-       LOGC(DTRXCTRL, ALERT) << "RX failed to tune";
+       LOGCHAN(chan, DTRXCTRL, FATAL) << "RX failed to tune";
        sprintf(response,"RSP RXTUNE 1 %d",freqKhz);
     }
     else
@@ -865,7 +865,7 @@ bool Transceiver::driveControl(size_t chan)
     sscanf(params, "%d", &freqKhz);
     mTxFreq = freqKhz * 1e3;
     if (!mRadioInterface->tuneTx(mTxFreq, chan)) {
-       LOGC(DTRXCTRL, ALERT) << "TX failed to tune";
+       LOGCHAN(chan, DTRXCTRL, FATAL) << "TX failed to tune";
        sprintf(response,"RSP TXTUNE 1 %d",freqKhz);
     }
     else
@@ -887,7 +887,7 @@ bool Transceiver::driveControl(size_t chan)
     int  timeslot;
     sscanf(params, "%d %d", &timeslot, &corrCode);
     if ((timeslot < 0) || (timeslot > 7)) {
-      LOGC(DTRXCTRL, WARNING) << "bogus message on control interface";
+      LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus message on control interface";
       sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
       return true;
     }
@@ -916,14 +916,14 @@ bool Transceiver::driveControl(size_t chan)
     mWriteBurstToDiskMask = mask;
     sprintf(response,"RSP _SETBURSTTODISKMASK 0 %d",mask);
   } else {
-    LOGC(DTRXCTRL, WARNING) << "bogus command " << command << " on control interface.";
+    LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus command " << command << " on control interface.";
     sprintf(response,"RSP ERR 1");
   }
 
   LOGCHAN(chan, DTRXCTRL, INFO) << "response is '" << response << "'";
   msgLen = write(mCtrlSockets[chan], response, strlen(response) + 1);
   if (msgLen <= 0) {
-    LOGCHAN(chan, DTRXCTRL, WARNING) << "mCtrlSockets write(" << mCtrlSockets[chan] << ") failed: " << msgLen;
+    LOGCHAN(chan, DTRXCTRL, NOTICE) << "mCtrlSockets write(" << mCtrlSockets[chan] << ") failed: " << msgLen;
     return false;
   }
   return true;
@@ -940,7 +940,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   // check data socket
   msgLen = read(mDataSockets[chan], buffer, sizeof(buffer));
   if (msgLen <= 0) {
-    LOGCHAN(chan, DTRXCTRL, WARNING) << "mDataSockets read(" << mCtrlSockets[chan] << ") failed: " << msgLen;
+    LOGCHAN(chan, DTRXDDL, NOTICE) << "mDataSockets read(" << mCtrlSockets[chan] << ") failed: " << msgLen;
     return false;
   }
 
@@ -950,13 +950,13 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
       break;
     case sizeof(*dl) + EDGE_BURST_NBITS: /* EDGE burst */
       if (mSPSTx != 4) {
-        LOG(ERR) << "EDGE burst received but SPS is set to " << mSPSTx;
+        LOGCHAN(chan, DTRXDDL, ERROR) << "EDGE burst received but SPS is set to " << mSPSTx;
         return false;
       }
       burstLen = EDGE_BURST_NBITS;
       break;
     default:
-      LOG(ERR) << "badly formatted packet on GSM->TRX interface (len="<< msgLen << ")";
+      LOGCHAN(chan, DTRXDDL, ERROR) << "badly formatted packet on GSM->TRX interface (len="<< msgLen << ")";
       return false;
   }
 
@@ -972,13 +972,12 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   case 1:
     break;
   default:
-    LOG(ERR) << "Rx TRXD message with unknown header version " << unsigned(dl->common.version);
+    LOGCHAN(chan, DTRXDDL, ERROR) << "Rx TRXD message with unknown header version " << unsigned(dl->common.version);
     return false;
   }
 
-  LOG(DEBUG) << "Rx TRXD message (hdr_ver=" << unsigned(dl->common.version) << "): "
-             << "fn=" << fn << ", tn=" << unsigned(dl->common.tn) << ", "
-             << "burst_len=" << burstLen;
+  LOGCHAN(chan, DTRXDDL, DEBUG) << "Rx TRXD message (hdr_ver=" << unsigned(dl->common.version)
+    << "): fn=" << fn << ", tn=" << unsigned(dl->common.tn) << ", burst_len=" << burstLen;
 
   BitVector newBurst(burstLen);
   BitVector::iterator itr = newBurst.begin();
@@ -1020,7 +1019,7 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
     else os << "-";
   }
 
-  LOGCHAN(chan, DMAIN, DEBUG) << std::fixed << std::right
+  LOGCHAN(chan, DTRXDUL, DEBUG) << std::fixed << std::right
     << " time: "   << unsigned(bi->tn) << ":" << bi->fn
     << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - rssiOffset)
                    << "dBFS/" << std::setw(6) << -bi->rssi << "dBm"
@@ -1038,7 +1037,7 @@ bool Transceiver::driveReceiveFIFO(size_t chan)
 
   if ((rc = pullRadioVector(chan, &bi)) < 0) {
     if (rc == -ENOENT) { /* timeslot off, continue processing */
-      LOGCHAN(chan, DMAIN, DEBUG) << unsigned(bi.tn) << ":" << bi.fn << " timeslot is off";
+      LOGCHAN(chan, DTRXDUL, DEBUG) << unsigned(bi.tn) << ":" << bi.fn << " timeslot is off";
       return true;
     }
     return false; /* other errors: we want to stop the process */
@@ -1075,7 +1074,7 @@ void Transceiver::driveTxFIFO()
 
   if (mOn) {
     //radioClock->wait(); // wait until clock updates
-    LOG(DEBUG) << "radio clock " << radioClock->get();
+    LOGC(DTRXCLK, DEBUG) << "radio clock " << radioClock->get();
     while (radioClock->get() + mTransmitLatency > mTransmitDeadlineClock) {
       // if underrun, then we're not providing bursts to radio/USRP fast
       //   enough.  Need to increase latency by one GSM frame.
@@ -1084,8 +1083,9 @@ void Transceiver::driveTxFIFO()
           // only update latency at the defined frame interval
           if (radioClock->get() > mLatencyUpdateTime + GSM::Time(USB_LATENCY_INTRVL)) {
             mTransmitLatency = mTransmitLatency + GSM::Time(1,0);
-            LOG(INFO) << "new latency: " << mTransmitLatency << " (underrun "
-                      << radioClock->get() << " vs " << mLatencyUpdateTime + GSM::Time(USB_LATENCY_INTRVL) << ")";
+            LOGC(DTRXCLK, INFO) << "new latency: " << mTransmitLatency << " (underrun "
+                                << radioClock->get() << " vs "
+                                << mLatencyUpdateTime + GSM::Time(USB_LATENCY_INTRVL) << ")";
             mLatencyUpdateTime = radioClock->get();
           }
         }
@@ -1095,7 +1095,7 @@ void Transceiver::driveTxFIFO()
           if (mTransmitLatency > mRadioInterface->minLatency()) {
               if (radioClock->get() > mLatencyUpdateTime + GSM::Time(216,0)) {
               mTransmitLatency.decTN();
-              LOG(INFO) << "reduced latency: " << mTransmitLatency;
+              LOGC(DTRXCLK, INFO) << "reduced latency: " << mTransmitLatency;
               mLatencyUpdateTime = radioClock->get();
             }
           }
@@ -1119,11 +1119,11 @@ bool Transceiver::writeClockInterface()
   // FIXME -- This should be adaptive.
   sprintf(command,"IND CLOCK %llu",(unsigned long long) (mTransmitDeadlineClock.FN()+2));
 
-  LOG(INFO) << "ClockInterface: sending " << command;
+  LOGC(DTRXCLK, INFO) << "sending " << command;
 
   msgLen = write(mClockSocket, command, strlen(command) + 1);
   if (msgLen <= 0) {
-    LOG(ERROR) << "mClockSocket write(" << mClockSocket << ") failed: " << msgLen;
+    LOGC(DTRXCLK, ERROR) << "mClockSocket write(" << mClockSocket << ") failed: " << msgLen;
     return false;
   }
 
@@ -1144,7 +1144,7 @@ void *RxUpperLoopAdapter(TrxChanThParams *params)
 
   while (1) {
     if (!trx->driveReceiveFIFO(num)) {
-      LOGCHAN(num, DMAIN, FATAL) << "Something went wrong in thread " << thread_name << ", requesting stop";
+      LOGCHAN(num, DTRXDUL, FATAL) << "Something went wrong in thread " << thread_name << ", requesting stop";
       osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
       break;
     }
@@ -1159,7 +1159,7 @@ void *RxLowerLoopAdapter(Transceiver *transceiver)
 
   while (1) {
     if (!transceiver->driveReceiveRadio()) {
-      LOG(FATAL) << "Something went wrong in thread RxLower, requesting stop";
+      LOGC(DTRXDUL, FATAL) << "Something went wrong in thread RxLower, requesting stop";
       osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
       break;
     }
@@ -1214,7 +1214,7 @@ void *TxUpperLoopAdapter(TrxChanThParams *params)
 
   while (1) {
     if (!trx->driveTxPriorityQueue(num)) {
-      LOGCHAN(num, DMAIN, FATAL) << "Something went wrong in thread " << thread_name << ", requesting stop";
+      LOGCHAN(num, DTRXDDL, FATAL) << "Something went wrong in thread " << thread_name << ", requesting stop";
       osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
       break;
     }

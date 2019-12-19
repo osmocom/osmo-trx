@@ -10,7 +10,10 @@ extern const struct log_info log_info;
 /* Debug Areas of the code */
 enum {
 	DMAIN,
+	DTRXCLK,
 	DTRXCTRL,
+	DTRXDDL,
+	DTRXDUL,
 	DDEV,
 	DLMS,
 };
