@@ -156,16 +156,24 @@ public:
   void close();
 };
 
+struct freq_cfg_state {
+  bool set;
+  double freq_hz;
+};
+
 class RadioInterfaceMulti : public RadioInterface {
 private:
   bool pushBuffer();
   int pullBuffer();
+  bool verify_arfcn_consistency(double freq, size_t chan, bool tx);
   virtual double setTxGain(double dB, size_t chan);
 
   signalVector *outerSendBuffer;
   signalVector *outerRecvBuffer;
   std::vector<signalVector *> history;
   std::vector<bool> active;
+  std::vector<struct freq_cfg_state> rx_freq_state;
+  std::vector<struct freq_cfg_state> tx_freq_state;
 
   Resampler *dnsampler;
   Resampler *upsampler;

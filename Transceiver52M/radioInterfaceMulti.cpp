@@ -73,6 +73,8 @@ void RadioInterfaceMulti::close()
 	powerScaling.resize(0);
 	history.resize(0);
 	active.resize(0);
+	rx_freq_state.resize(0);
+	tx_freq_state.resize(0);
 
 	RadioInterface::close();
 }
@@ -148,6 +150,8 @@ bool RadioInterfaceMulti::init(int type)
 	mReceiveFIFO.resize(mChans);
 	powerScaling.resize(mChans);
 	history.resize(mChans);
+	rx_freq_state.resize(mChans);
+	tx_freq_state.resize(mChans);
 	active.resize(MCHANS, false);
 
 	inchunk = RESAMP_INRATE * 4;
@@ -362,42 +366,67 @@ static bool fltcmp(double a, double b)
 	return fabs(a - b) < FREQ_DELTA_LIMIT ? true : false;
 }
 
+bool RadioInterfaceMulti::verify_arfcn_consistency(double freq, size_t chan, bool tx)
+{
+	double freq_i;
+	std::string str_dir = tx ? "Tx" : "Rx";
+	std::vector<struct freq_cfg_state> &v = tx ? tx_freq_state : rx_freq_state;
+
+	for (size_t i = 0; i < mChans; i++) {
+		if (i == chan)
+			continue;
+		if (!v[i].set)
+			continue;
+
+		freq_i = v[i].freq_hz + (double) ((int)chan - (int)i) * MCBTS_SPACING;
+		if (!fltcmp(freq, freq_i)) {
+			LOGCHAN(chan, DMAIN, ERROR)
+				<< "Setting " << str_dir << " frequency " << freq
+				<< " is incompatible: already configured channel "
+				<< i << " uses frequency " << v[i].freq_hz
+				<< " (expected " << freq_i << ")";
+			return false;
+		}
+	}
+	v[chan].set = true;
+	v[chan].freq_hz = freq;
+	return true;
+}
+
 bool RadioInterfaceMulti::tuneTx(double freq, size_t chan)
 {
-  if (chan >= mChans)
-    return false;
+	double shift;
 
-  double shift = (double) getFreqShift(mChans);
+	if (chan >= mChans)
+		return false;
 
-  if (!chan)
-    return mDevice->setTxFreq(freq + shift * MCBTS_SPACING);
+	if (!verify_arfcn_consistency(freq, chan, true))
+		return false;
 
-  double center = mDevice->getTxFreq();
-  if (!fltcmp(freq, center + (double) (chan - shift) * MCBTS_SPACING)) {
-    LOG(NOTICE) << "Channel " << chan << " RF Tx frequency offset is "
-                << freq / 1e6 << " MHz";
-  }
+	if (chan == 0) {
+		shift = (double) getFreqShift(mChans);
+		return mDevice->setTxFreq(freq + shift * MCBTS_SPACING);
+	}
 
-  return true;
+	return true;
 }
 
 bool RadioInterfaceMulti::tuneRx(double freq, size_t chan)
 {
-  if (chan >= mChans)
-    return false;
+	double shift;
 
-  double shift = (double) getFreqShift(mChans);
+	if (chan >= mChans)
+		return false;
 
-  if (!chan)
-    return mDevice->setRxFreq(freq + shift * MCBTS_SPACING);
+	if (!verify_arfcn_consistency(freq, chan, false))
+		return false;
 
-  double center = mDevice->getRxFreq();
-  if (!fltcmp(freq, center + (double) (chan - shift) * MCBTS_SPACING)) {
-    LOG(NOTICE) << "Channel " << chan << " RF Rx frequency offset is "
-                << freq / 1e6 << " MHz";
-  }
+	if (chan == 0) {
+		shift = (double) getFreqShift(mChans);
+		return mDevice->setRxFreq(freq + shift * MCBTS_SPACING);
+	}
 
-  return true;
+	return true;
 }
 
 double RadioInterfaceMulti::setRxGain(double db, size_t chan)
