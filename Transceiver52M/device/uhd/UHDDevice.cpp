@@ -566,7 +566,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	init_gains();
 
 	// Print configuration
-	LOGC(DDEV, INFO) << "\n" << usrp_dev->get_pp_string();
+	LOGC(DDEV, INFO) << "Device configuration: " << usrp_dev->get_pp_string();
 
 	if (iface == MULTI_ARFCN)
 		return MULTI_ARFCN;
@@ -919,15 +919,18 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 	std::vector<double> freqs;
 	uhd::tune_result_t tres;
 	uhd::tune_request_t treq = select_freq(freq, chan, tx);
+	std::string str_dir;
 
 	if (tx) {
 		tres = usrp_dev->set_tx_freq(treq, chan);
 		tx_freqs[chan] = usrp_dev->get_tx_freq(chan);
+		str_dir = "Tx";
 	} else {
 		tres = usrp_dev->set_rx_freq(treq, chan);
 		rx_freqs[chan] = usrp_dev->get_rx_freq(chan);
+		str_dir = "Rx";
 	}
-	LOGC(DDEV, INFO) << "\n" << tres.to_pp_string() << std::endl;
+	LOGCHAN(chan, DDEV, INFO) << "set_freq(" << freq << ", " << str_dir << "): " << tres.to_pp_string() << std::endl;
 
 	if ((chans == 1) || ((chans == 2) && dev_type == UMTRX))
 		return true;
@@ -947,7 +950,7 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 			rx_freqs[!chan] = usrp_dev->get_rx_freq(!chan);
 
 		}
-		LOGC(DDEV, INFO) << "\n" << tres.to_pp_string() << std::endl;
+		LOGCHAN(chan, DDEV, INFO) << "set_freq(" << freq << ", " << str_dir << "): " << tres.to_pp_string() << std::endl;
 	}
 
 	return true;
