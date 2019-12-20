@@ -33,11 +33,12 @@
 #include "config.h"
 #endif
 
-#ifndef USE_UHD_3_11
+#ifdef USE_UHD_3_11
+#include <uhd/utils/log_add.hpp>
+#include <uhd/utils/thread.hpp>
+#else
 #include <uhd/utils/msg.hpp>
 #include <uhd/utils/thread_priority.hpp>
-#else
-#include <uhd/utils/thread.hpp>
 #endif
 
 #define USRP_TX_AMPL     0.3
@@ -134,23 +135,52 @@ void *async_event_loop(uhd_device *dev)
 	return NULL;
 }
 
-#ifndef USE_UHD_3_11
+#ifdef USE_UHD_3_11
+static void uhd_log_handler(const uhd::log::logging_info &info)
+{
+	int level;
+
+	switch (info.verbosity)
+	{
+	case uhd::log::trace:
+	case uhd::log::debug:
+		level = LOGL_DEBUG;
+		break;
+	case uhd::log::info:
+		level = LOGL_INFO;
+		break;
+	case uhd::log::warning:
+		level = LOGL_NOTICE;
+		break;
+	case uhd::log::error:
+		level = LOGL_ERROR;
+		break;
+	case uhd::log::fatal:
+		level = LOGL_FATAL;
+		break;
+	default:
+		level = LOGL_NOTICE;
+	}
+
+	LOGSRC(DDEVDRV, level, info.file.c_str(), info.line) << "[" << info.component << "] " << info.message;
+}
+#else
 /*
     Catch and drop underrun 'U' and overrun 'O' messages from stdout
     since we already report using the logging facility. Direct
     everything else appropriately.
  */
-void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
+static void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 {
 	switch (type) {
 	case uhd::msg::status:
-		LOGC(DDEV, INFO) << msg;
+		LOGC(DDEVDRV, INFO) << msg;
 		break;
 	case uhd::msg::warning:
-		LOGC(DDEV, WARNING) << msg;
+		LOGC(DDEVDRV, NOTICE) << msg;
 		break;
 	case uhd::msg::error:
-		LOGC(DDEV, ERROR) << msg;
+		LOGC(DDEVDRV, ERROR) << msg;
 		break;
 	case uhd::msg::fastpath:
 		break;
@@ -418,6 +448,16 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 {
 	const char *refstr;
 
+	/* Register msg handler. Different APIs depending on UHD version */
+#ifdef USE_UHD_3_11
+	uhd::log::add_logger("OsmoTRX", &uhd_log_handler);
+	uhd::log::set_log_level(uhd::log::debug);
+	uhd::log::set_console_level(uhd::log::off);
+	uhd::log::set_logger_level("OsmoTRX", uhd::log::debug);
+#else
+	uhd::msg::register_handler(&uhd_msg_handler);
+#endif
+
 	// Find UHD devices
 	uhd::device_addr_t addr(args);
 	uhd::device_addrs_t dev_addrs = uhd::device::find(addr);
@@ -604,10 +644,6 @@ bool uhd_device::start()
 		return false;
 	}
 
-#ifndef USE_UHD_3_11
-	// Register msg handler
-	uhd::msg::register_handler(&uhd_msg_handler);
-#endif
 	// Start asynchronous event (underrun check) loop
 	async_event_thrd = new Thread();
 	async_event_thrd->start((void * (*)(void*))async_event_loop, (void*)this);

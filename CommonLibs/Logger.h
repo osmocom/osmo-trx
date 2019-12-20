@@ -58,6 +58,9 @@ extern "C" {
 #define LOGLV(category, level) \
 	Log(category, level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "] "
 
+#define LOGSRC(category, level, file, line) \
+	Log(category, level, file, line).get() <<  "[tid=" << pthread_self() << "] "
+
 #define LOGCHAN(chan, category, level) \
 	Log(category, LOGL_##level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "][chan=" << chan << "] "
 
