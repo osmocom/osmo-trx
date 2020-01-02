@@ -93,7 +93,7 @@ static void lms_log_callback(int lvl, const char *msg)
 	if ((unsigned int) lvl >= ARRAY_SIZE(lvl_map))
 		lvl = ARRAY_SIZE(lvl_map)-1;
 
-	LOGLV(DLMS, lvl_map[lvl]) << msg;
+	LOGLV(DDEVDRV, lvl_map[lvl]) << msg;
 }
 
 static void print_range(const char* name, lms_range_t *range)

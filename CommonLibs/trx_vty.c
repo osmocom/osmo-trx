@@ -32,6 +32,7 @@
 #include <osmocom/core/rate_ctr.h>
 
 #include <osmocom/vty/command.h>
+#include <osmocom/vty/logging.h>
 #include <osmocom/vty/vty.h>
 #include <osmocom/vty/misc.h>
 
@@ -730,6 +731,8 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_node(&chan_node, dummy_config_write);
 	install_element(CHAN_NODE, &cfg_chan_rx_path_cmd);
 	install_element(CHAN_NODE, &cfg_chan_tx_path_cmd);
+
+	logging_vty_add_deprecated_subsys(g_trx_ctx, "lms");
 
 	return 0;
 }

@@ -15,7 +15,7 @@ enum {
 	DTRXDDL,
 	DTRXDUL,
 	DDEV,
-	DLMS,
+	DDEVDRV,
 };
 
 #define CLOGC(category, level, fmt, args...) do { \

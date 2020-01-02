@@ -588,10 +588,10 @@ int main(int argc, char *argv[])
 	log_enable_multithread();
 	osmo_stats_init(tall_trx_ctx);
 	vty_init(&g_vty_info);
+	logging_vty_add_cmds();
 	ctrl_vty_init(tall_trx_ctx);
 	trx_vty_init(g_trx_ctx);
 
-	logging_vty_add_cmds();
 	osmo_talloc_vty_add_cmds();
 	osmo_stats_vty_add_cmds();
 

@@ -65,9 +65,9 @@ static const struct log_info_cat default_categories[] = {
 		.color = NULL,
 		.enabled = 1, .loglevel = LOGL_INFO,
 	},
-	[DLMS] = {
-		.name = "DLMS",
-		.description = "Logging from within LimeSuite itself",
+	[DDEVDRV] = {
+		.name = "DDEVDRV",
+		.description = "Logging from external device driver library implementing lower level specifics",
 		.color = NULL,
 		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
