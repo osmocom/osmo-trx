@@ -18,10 +18,11 @@
         <param name='terminal' doc='Write to terminal' />
       </params>
     </command>
-    <command id='write file'>
+    <command id='write file [PATH]'>
       <params>
         <param name='write' doc='Write running configuration to memory, network, or terminal' />
         <param name='file' doc='Write to configuration file' />
+        <param name='[PATH]' doc='Set file path to store the config, or replace if already exists' />
       </params>
     </command>
     <command id='write memory'>
@@ -94,12 +95,6 @@
       <params>
         <param name='show' doc='Show running system information' />
         <param name='history' doc='Display the session command history' />
-      </params>
-    </command>
-    <command id='show trx'>
-      <params>
-        <param name='show' doc='Show running system information' />
-        <param name='trx' doc='Display information on the TRX' />
       </params>
     </command>
     <command id='logging enable'>
@@ -193,14 +188,17 @@
         <param name='MASK' doc='List of logging categories to log, e.g. &apos;abc:mno:xyz&apos;. Available log categories depend on the specific application, refer to the &apos;logging level&apos; command. Optionally add individual log levels like &apos;abc,1:mno,3:xyz,5&apos;, where the level numbers are LOGL_DEBUG=1 LOGL_INFO=3 LOGL_NOTICE=5 LOGL_ERROR=7 LOGL_FATAL=8' />
       </params>
     </command>
-    <command id='logging level (main|trxctrl|dev|lms|lglobal|llapd|linp|lmux|lmi|lmib|lsms|lctrl|lgtp|lstats|lgsup|loap|lss7|lsccp|lsua|lm3ua|lmgcp|ljibuf|lrspro) (debug|info|notice|error|fatal)'>
+    <command id='logging level (main|trxclk|trxctrl|trxddl|trxdul|dev|devdrv|lglobal|llapd|linp|lmux|lmi|lmib|lsms|lctrl|lgtp|lstats|lgsup|loap|lss7|lsccp|lsua|lm3ua|lmgcp|ljibuf|lrspro) (debug|info|notice|error|fatal)'>
       <params>
         <param name='logging' doc='Configure logging' />
         <param name='level' doc='Set the log level for a specified category' />
         <param name='main' doc='Main generic category' />
+        <param name='trxclk' doc='TRX Master Clock' />
         <param name='trxctrl' doc='TRX CTRL interface' />
+        <param name='trxddl' doc='TRX Data interface Downlink' />
+        <param name='trxdul' doc='TRX CTRL interface Uplink' />
         <param name='dev' doc='Device/Driver specific code' />
-        <param name='lms' doc='Logging from within LimeSuite itself' />
+        <param name='devdrv' doc='Logging from external device driver library implementing lower level specifics' />
         <param name='lglobal' doc='Library-internal global log family' />
         <param name='llapd' doc='LAPD in libosmogsm' />
         <param name='linp' doc='A-bis Intput Subsystem' />
@@ -259,6 +257,43 @@
         <param name='force-all' doc='Release any globally forced log level set with &apos;logging level force-all &lt;level&gt;&apos;' />
       </params>
     </command>
+    <command id='logp (main|trxclk|trxctrl|trxddl|trxdul|dev|devdrv|lglobal|llapd|linp|lmux|lmi|lmib|lsms|lctrl|lgtp|lstats|lgsup|loap|lss7|lsccp|lsua|lm3ua|lmgcp|ljibuf|lrspro) (debug|info|notice|error|fatal) .LOGMESSAGE'>
+      <params>
+        <param name='logp' doc='Print a message on all log outputs; useful for placing markers in test logs' />
+        <param name='main' doc='Main generic category' />
+        <param name='trxclk' doc='TRX Master Clock' />
+        <param name='trxctrl' doc='TRX CTRL interface' />
+        <param name='trxddl' doc='TRX Data interface Downlink' />
+        <param name='trxdul' doc='TRX CTRL interface Uplink' />
+        <param name='dev' doc='Device/Driver specific code' />
+        <param name='devdrv' doc='Logging from external device driver library implementing lower level specifics' />
+        <param name='lglobal' doc='Library-internal global log family' />
+        <param name='llapd' doc='LAPD in libosmogsm' />
+        <param name='linp' doc='A-bis Intput Subsystem' />
+        <param name='lmux' doc='A-bis B-Subchannel TRAU Frame Multiplex' />
+        <param name='lmi' doc='A-bis Input Driver for Signalling' />
+        <param name='lmib' doc='A-bis Input Driver for B-Channels (voice)' />
+        <param name='lsms' doc='Layer3 Short Message Service (SMS)' />
+        <param name='lctrl' doc='Control Interface' />
+        <param name='lgtp' doc='GPRS GTP library' />
+        <param name='lstats' doc='Statistics messages and logging' />
+        <param name='lgsup' doc='Generic Subscriber Update Protocol' />
+        <param name='loap' doc='Osmocom Authentication Protocol' />
+        <param name='lss7' doc='libosmo-sigtran Signalling System 7' />
+        <param name='lsccp' doc='libosmo-sigtran SCCP Implementation' />
+        <param name='lsua' doc='libosmo-sigtran SCCP User Adaptation' />
+        <param name='lm3ua' doc='libosmo-sigtran MTP3 User Adaptation' />
+        <param name='lmgcp' doc='libosmo-mgcp Media Gateway Control Protocol' />
+        <param name='ljibuf' doc='libosmo-netif Jitter Buffer' />
+        <param name='lrspro' doc='Remote SIM protocol' />
+        <param name='debug' doc='Log debug messages and higher levels' />
+        <param name='info' doc='Log informational messages and higher levels' />
+        <param name='notice' doc='Log noticeable messages and higher levels' />
+        <param name='error' doc='Log error messages and higher levels' />
+        <param name='fatal' doc='Log only fatal messages' />
+        <param name='.LOGMESSAGE' doc='Arbitrary message to log on given category and log level' />
+      </params>
+    </command>
     <command id='show logging vty'>
       <params>
         <param name='show' doc='Show running system information' />
@@ -270,6 +305,12 @@
       <params>
         <param name='show' doc='Show running system information' />
         <param name='alarms' doc='Show current logging configuration' />
+      </params>
+    </command>
+    <command id='show trx'>
+      <params>
+        <param name='show' doc='Show running system information' />
+        <param name='trx' doc='Display information on the TRX' />
       </params>
     </command>
     <command id='show talloc-context (application|all) (full|brief|DEPTH)'>
@@ -415,12 +456,6 @@
         <param name='monitor' doc='Copy debug output to the current terminal line' />
       </params>
     </command>
-    <command id='show trx'>
-      <params>
-        <param name='show' doc='Show running system information' />
-        <param name='trx' doc='Display information on the TRX' />
-      </params>
-    </command>
     <command id='logging enable'>
       <params>
         <param name='logging' doc='Configure logging' />
@@ -512,14 +547,17 @@
         <param name='MASK' doc='List of logging categories to log, e.g. &apos;abc:mno:xyz&apos;. Available log categories depend on the specific application, refer to the &apos;logging level&apos; command. Optionally add individual log levels like &apos;abc,1:mno,3:xyz,5&apos;, where the level numbers are LOGL_DEBUG=1 LOGL_INFO=3 LOGL_NOTICE=5 LOGL_ERROR=7 LOGL_FATAL=8' />
       </params>
     </command>
-    <command id='logging level (main|trxctrl|dev|lms|lglobal|llapd|linp|lmux|lmi|lmib|lsms|lctrl|lgtp|lstats|lgsup|loap|lss7|lsccp|lsua|lm3ua|lmgcp|ljibuf|lrspro) (debug|info|notice|error|fatal)'>
+    <command id='logging level (main|trxclk|trxctrl|trxddl|trxdul|dev|devdrv|lglobal|llapd|linp|lmux|lmi|lmib|lsms|lctrl|lgtp|lstats|lgsup|loap|lss7|lsccp|lsua|lm3ua|lmgcp|ljibuf|lrspro) (debug|info|notice|error|fatal)'>
       <params>
         <param name='logging' doc='Configure logging' />
         <param name='level' doc='Set the log level for a specified category' />
         <param name='main' doc='Main generic category' />
+        <param name='trxclk' doc='TRX Master Clock' />
         <param name='trxctrl' doc='TRX CTRL interface' />
+        <param name='trxddl' doc='TRX Data interface Downlink' />
+        <param name='trxdul' doc='TRX CTRL interface Uplink' />
         <param name='dev' doc='Device/Driver specific code' />
-        <param name='lms' doc='Logging from within LimeSuite itself' />
+        <param name='devdrv' doc='Logging from external device driver library implementing lower level specifics' />
         <param name='lglobal' doc='Library-internal global log family' />
         <param name='llapd' doc='LAPD in libosmogsm' />
         <param name='linp' doc='A-bis Intput Subsystem' />
@@ -578,6 +616,43 @@
         <param name='force-all' doc='Release any globally forced log level set with &apos;logging level force-all &lt;level&gt;&apos;' />
       </params>
     </command>
+    <command id='logp (main|trxclk|trxctrl|trxddl|trxdul|dev|devdrv|lglobal|llapd|linp|lmux|lmi|lmib|lsms|lctrl|lgtp|lstats|lgsup|loap|lss7|lsccp|lsua|lm3ua|lmgcp|ljibuf|lrspro) (debug|info|notice|error|fatal) .LOGMESSAGE'>
+      <params>
+        <param name='logp' doc='Print a message on all log outputs; useful for placing markers in test logs' />
+        <param name='main' doc='Main generic category' />
+        <param name='trxclk' doc='TRX Master Clock' />
+        <param name='trxctrl' doc='TRX CTRL interface' />
+        <param name='trxddl' doc='TRX Data interface Downlink' />
+        <param name='trxdul' doc='TRX CTRL interface Uplink' />
+        <param name='dev' doc='Device/Driver specific code' />
+        <param name='devdrv' doc='Logging from external device driver library implementing lower level specifics' />
+        <param name='lglobal' doc='Library-internal global log family' />
+        <param name='llapd' doc='LAPD in libosmogsm' />
+        <param name='linp' doc='A-bis Intput Subsystem' />
+        <param name='lmux' doc='A-bis B-Subchannel TRAU Frame Multiplex' />
+        <param name='lmi' doc='A-bis Input Driver for Signalling' />
+        <param name='lmib' doc='A-bis Input Driver for B-Channels (voice)' />
+        <param name='lsms' doc='Layer3 Short Message Service (SMS)' />
+        <param name='lctrl' doc='Control Interface' />
+        <param name='lgtp' doc='GPRS GTP library' />
+        <param name='lstats' doc='Statistics messages and logging' />
+        <param name='lgsup' doc='Generic Subscriber Update Protocol' />
+        <param name='loap' doc='Osmocom Authentication Protocol' />
+        <param name='lss7' doc='libosmo-sigtran Signalling System 7' />
+        <param name='lsccp' doc='libosmo-sigtran SCCP Implementation' />
+        <param name='lsua' doc='libosmo-sigtran SCCP User Adaptation' />
+        <param name='lm3ua' doc='libosmo-sigtran MTP3 User Adaptation' />
+        <param name='lmgcp' doc='libosmo-mgcp Media Gateway Control Protocol' />
+        <param name='ljibuf' doc='libosmo-netif Jitter Buffer' />
+        <param name='lrspro' doc='Remote SIM protocol' />
+        <param name='debug' doc='Log debug messages and higher levels' />
+        <param name='info' doc='Log informational messages and higher levels' />
+        <param name='notice' doc='Log noticeable messages and higher levels' />
+        <param name='error' doc='Log error messages and higher levels' />
+        <param name='fatal' doc='Log only fatal messages' />
+        <param name='.LOGMESSAGE' doc='Arbitrary message to log on given category and log level' />
+      </params>
+    </command>
     <command id='show logging vty'>
       <params>
         <param name='show' doc='Show running system information' />
@@ -589,6 +664,12 @@
       <params>
         <param name='show' doc='Show running system information' />
         <param name='alarms' doc='Show current logging configuration' />
+      </params>
+    </command>
+    <command id='show trx'>
+      <params>
+        <param name='show' doc='Show running system information' />
+        <param name='trx' doc='Display information on the TRX' />
       </params>
     </command>
     <command id='show talloc-context (application|all) (full|brief|DEPTH)'>
@@ -772,16 +853,6 @@
         <param name='history' doc='Display the session command history' />
       </params>
     </command>
-    <command id='ctrl'>
-      <params>
-        <param name='ctrl' doc='Configure the Control Interface' />
-      </params>
-    </command>
-    <command id='trx'>
-      <params>
-        <param name='trx' doc='Configure the TRX' />
-      </params>
-    </command>
     <command id='log stderr'>
       <params>
         <param name='log' doc='Configure logging sub-system' />
@@ -859,6 +930,16 @@
         <param name='log' doc='Configure logging sub-system' />
         <param name='gsmtap' doc='Logging via GSMTAP' />
         <param name='[HOSTNAME]' doc='Host name to send the GSMTAP logging to (UDP port 4729)' />
+      </params>
+    </command>
+    <command id='ctrl'>
+      <params>
+        <param name='ctrl' doc='Configure the Control Interface' />
+      </params>
+    </command>
+    <command id='trx'>
+      <params>
+        <param name='trx' doc='Configure the TRX' />
       </params>
     </command>
     <command id='stats reporter statsd'>
@@ -973,14 +1054,17 @@
         <param name='[last]' doc='Log source file info at the end of a log line. If omitted, log source file info just before the log text.' />
       </params>
     </command>
-    <command id='logging level (main|trxctrl|dev|lms|lglobal|llapd|linp|lmux|lmi|lmib|lsms|lctrl|lgtp|lstats|lgsup|loap|lss7|lsccp|lsua|lm3ua|lmgcp|ljibuf|lrspro) (debug|info|notice|error|fatal)'>
+    <command id='logging level (main|trxclk|trxctrl|trxddl|trxdul|dev|devdrv|lglobal|llapd|linp|lmux|lmi|lmib|lsms|lctrl|lgtp|lstats|lgsup|loap|lss7|lsccp|lsua|lm3ua|lmgcp|ljibuf|lrspro) (debug|info|notice|error|fatal)'>
       <params>
         <param name='logging' doc='Configure logging' />
         <param name='level' doc='Set the log level for a specified category' />
         <param name='main' doc='Main generic category' />
+        <param name='trxclk' doc='TRX Master Clock' />
         <param name='trxctrl' doc='TRX CTRL interface' />
+        <param name='trxddl' doc='TRX Data interface Downlink' />
+        <param name='trxdul' doc='TRX CTRL interface Uplink' />
         <param name='dev' doc='Device/Driver specific code' />
-        <param name='lms' doc='Logging from within LimeSuite itself' />
+        <param name='devdrv' doc='Logging from external device driver library implementing lower level specifics' />
         <param name='lglobal' doc='Library-internal global log family' />
         <param name='llapd' doc='LAPD in libosmogsm' />
         <param name='linp' doc='A-bis Intput Subsystem' />
@@ -1179,20 +1263,6 @@
         <param name='4' doc='(null)' />
       </params>
     </command>
-    <command id='test rtsc &lt;0-7&gt;'>
-      <params>
-        <param name='test' doc='Set the Random Normal Burst test mode with TSC' />
-        <param name='rtsc' doc='TSC' />
-        <param name='&lt;0-7&gt;' doc='(null)' />
-      </params>
-    </command>
-    <command id='test rach-delay &lt;0-68&gt;'>
-      <params>
-        <param name='test' doc='Set the Random Access Burst test mode with delay' />
-        <param name='rach-delay' doc='RACH delay' />
-        <param name='&lt;0-68&gt;' doc='(null)' />
-      </params>
-    </command>
     <command id='clock-ref (internal|external|gpsdo)'>
       <params>
         <param name='clock-ref' doc='Set the Reference Clock' />
@@ -1247,10 +1317,29 @@
         <param name='&lt;1-32&gt;' doc='Real time priority' />
       </params>
     </command>
-    <command id='filler dummy'>
+    <command id='filler type (zero|dummy|random-nb-gmsk|random-nb-8psk|random-ab)'>
       <params>
-        <param name='filler' doc='Enable C0 filler table' />
-        <param name='dummy' doc='Dummy method' />
+        <param name='filler' doc='Filler burst settings' />
+        <param name='type' doc='Filler burst type (default=zero)' />
+        <param name='zero' doc='Send an empty burst when there is nothing to send (default)' />
+        <param name='dummy' doc='Send a dummy burst when there is nothing to send on C0 (TRX0) and empty burst on other channels. Use for OpenBTS compatibility only, don&apos;t use with OsmoBTS as it breaks encryption.' />
+        <param name='random-nb-gmsk' doc='Send a GMSK modulated Normal Burst with random bits when there is nothing to send. Use for spectrum mask testing. Configure &apos;filler tsc&apos; to set training sequence.' />
+        <param name='random-nb-8psk' doc='Send an 8-PSK modulated Normal Burst with random bits when there is nothing to send. Use for spectrum mask testing. Configure &apos;filler tsc&apos; to set training sequence.' />
+        <param name='random-ab' doc='Send an Access Burst with random bits when there is nothing to send. Use for Rx/Tx alignment. Configure &apos;filler access-burst-delay&apos; to introduce artificial delay.' />
+      </params>
+    </command>
+    <command id='filler tsc &lt;0-7&gt;'>
+      <params>
+        <param name='filler' doc='Filler burst settings' />
+        <param name='tsc' doc='Set the TSC for GMSK/8-PSK Normal Burst random fillers. Used only with &apos;random-nb-gmsk&apos; and &apos;random-nb-8psk&apos; filler types. (default=0)' />
+        <param name='&lt;0-7&gt;' doc='TSC' />
+      </params>
+    </command>
+    <command id='filler access-burst-delay &lt;0-68&gt;'>
+      <params>
+        <param name='filler' doc='Filler burst settings' />
+        <param name='access-burst-delay' doc='Set the delay for Access Burst random fillers. Used only with &apos;random-ab&apos; filler type. (default=0)' />
+        <param name='&lt;0-68&gt;' doc='RACH delay in symbols' />
       </params>
     </command>
     <command id='ctr-error-threshold (rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples|tx_drop_events|tx_drop_samples) &lt;0-65535&gt; (per-second|per-minute|per-hour|per-day)'>
