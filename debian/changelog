@@ -1,3 +1,55 @@
+osmo-trx (1.2.0) unstable; urgency=medium
+
+  [ Pau Espin Pedrol ]
+  * osmo-trx: log to stderr on signal received
+  * Drop old setPriority related code
+  * Transceiver: fix segfault during init if IP addr binding fails
+  * Transceiver: Check return value when binding IP addr for clock socket
+  * Transceiver: Clean up receival of downlink bursts
+  * Transceiver: Fix idle ul burst indications being dropped
+  * Transceiver: exit process when BTS drops connection
+  * Transceiver: Enable EDGE detection only on PDCH timeslots
+  * lms: Log available antennas if requested antenna fails
+  * device: Use LOGCHAN in set_antennas()
+  * Transceiver: Fix logging TN and version
+  * Transceiver: Use LOGCHAN in logRxBurst to unify log format
+  * Transceiver: Log error condition no burst in pullRadioVector()
+  * Transceiver: pullRadioVector(): Fix use of uninitialized value bi->tn
+  * Transceiver: Don't stop TRX if pulling from OFF timeslot
+  * radioInterface: Rename mRadio to mDevice
+  * radioInterfaceMulti: Check equals zero explicitly
+  * USRPDevice: Fix setRxGain return on error and getRxGain() returning always 0
+  * USRPDevice: Return previous txGain if setting value failed
+  * LMSDevice: Return previous txGain/rxGain if setting value failed
+  * radioInterface: Remove unusued getRxGain()
+  * radioDevice: Introduce getTxGain() API
+  * radioInterfaceMulti: Override setTxGain() to avoid chan!=0 calls
+  * UHDDevice: Drop unneeded MULTI_ARFCN checks
+  * radioInterface{Multi,Resamp}: Fix successful writeSamples() masking underrun from readSamples()
+  * radioInterface: Mark setRxGain as virtual
+  * Move multi-ARFCN chan amount modification from UHDDevice to parent class
+  * radioInterface: Atomically fetch and change underrun variable
+  * radioInterfaceMulti: write frequency offset direction (rx/tx) in log line
+  * Use new libosmocore logging lock API
+  * Transceiver: Fix wrong response upon CMD HANDOVER failure
+  * uhd: use value already cached in tmp variable
+  * Transceiver.cpp: Introduce and use new logging categories
+
+  [ Timo Jacobus ]
+  * Transceiver: Fixed copying of history into and from channelizer buffer.
+
+  [ Alexander Chemeris ]
+  * vty: Don't enable random filler bursts automatically with EDGE.
+  * vty: Simplify filler burst settings and improve help and readability.
+
+  [ Martin Hauke ]
+  * Fix common misspellings and typos
+
+  [ Harald Welte ]
+  * trx: exit() on unsupported positional arguments on command line
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Fri, 03 Jan 2020 19:54:00 +0100
+
 osmo-trx (1.1.1) unstable; urgency=medium
 
   * UNRELEASED
