@@ -39,7 +39,6 @@ extern "C" {
 using namespace std;
 
 #define MAX_ANTENNA_LIST_SIZE 10
-#define LMS_SAMPLE_RATE GSMRATE*32
 #define GSM_CARRIER_BW 270000.0 /* 270kHz */
 #define LMS_MIN_BW_SUPPORTED 2.5e6 /* 2.5mHz, minimum supported by LMS */
 #define LMS_CALIBRATE_BW_HZ OSMO_MAX(GSM_CARRIER_BW, LMS_MIN_BW_SUPPORTED)
