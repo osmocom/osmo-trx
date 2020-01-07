@@ -49,7 +49,7 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 		     const std::vector<std::string>& tx_paths,
 		     const std::vector<std::string>& rx_paths):
 	RadioDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths),
-	m_lms_dev(NULL)
+	m_lms_dev(NULL), started(false)
 {
 	LOGC(DDEV, INFO) << "creating LMS device...";
 
@@ -247,8 +247,6 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	/* Set up per-channel Rx timestamp based Ring buffers */
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		rx_buffers[i] = new smpl_buf(SAMPLE_BUF_SZ / sizeof(uint32_t));
-
-	started = false;
 
 	return NORMAL;
 
