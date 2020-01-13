@@ -154,7 +154,7 @@ std::string smpl_buf::str_status(TIMESTAMP timestamp) const
 	return ost.str();
 }
 
-std::string smpl_buf::str_code(ssize_t code)
+std::string smpl_buf::str_code(int code)
 {
 	switch (code) {
 	case ERROR_TIMESTAMP:
@@ -166,6 +166,8 @@ std::string smpl_buf::str_code(ssize_t code)
 	case ERROR_OVERFLOW:
 		return "Sample buffer: Overrun";
 	default:
-		return "Sample buffer: Unknown error";
+		std::stringstream ss;
+		ss << "Sample buffer: Unknown error " << code;
+		return ss.str();
 	}
 }

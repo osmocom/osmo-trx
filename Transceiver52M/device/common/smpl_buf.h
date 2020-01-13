@@ -68,7 +68,7 @@ public:
 	    @param code an error code
 	    @return a formatted error string
 	*/
-	static std::string str_code(ssize_t code);
+	static std::string str_code(int code);
 
 	enum err_code {
 		ERROR_TIMESTAMP = -1,
