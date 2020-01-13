@@ -61,10 +61,10 @@ const dboardConfigType dboardConfig = TXA_RXB;
 const double USRPDevice::masterClockRate = 52.0e6;
 
 USRPDevice::USRPDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface,
-		       size_t chans, double lo_offset,
+		       size_t chan_num, double lo_offset,
 		       const std::vector<std::string>& tx_paths,
 		       const std::vector<std::string>& rx_paths):
-		RadioDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths)
+		RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths)
 {
   LOGC(DDEV, INFO) << "creating USRP device...";
 

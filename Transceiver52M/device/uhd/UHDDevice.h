@@ -62,7 +62,7 @@ enum uhd_dev_type {
 class uhd_device : public RadioDevice {
 public:
 	uhd_device(size_t tx_sps, size_t rx_sps, InterfaceType type,
-		   size_t chans, double offset,
+		   size_t chan_num, double offset,
 		   const std::vector<std::string>& tx_paths,
 		   const std::vector<std::string>& rx_paths);
 	~uhd_device();

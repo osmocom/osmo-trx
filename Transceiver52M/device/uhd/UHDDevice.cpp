@@ -189,10 +189,10 @@ static void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 #endif
 
 uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
-		       InterfaceType iface, size_t chans, double lo_offset,
+		       InterfaceType iface, size_t chan_num, double lo_offset,
 		       const std::vector<std::string>& tx_paths,
 		       const std::vector<std::string>& rx_paths)
-	: RadioDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths),
+	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
 	  tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  tx_spp(0), rx_spp(0),

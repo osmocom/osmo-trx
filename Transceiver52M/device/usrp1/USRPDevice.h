@@ -95,7 +95,7 @@ private:
  public:
 
   /** Object constructor */
-  USRPDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chans, double lo_offset,
+  USRPDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
 		const std::vector<std::string>& tx_paths,
 		const std::vector<std::string>& rx_paths);
 

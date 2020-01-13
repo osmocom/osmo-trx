@@ -72,7 +72,7 @@ private:
 public:
 
 	/** Object constructor */
-	LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chans, double lo_offset,
+	LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
 		  const std::vector<std::string>& tx_paths,
 		  const std::vector<std::string>& rx_paths);
 	~LMSDevice();
