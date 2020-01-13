@@ -708,8 +708,9 @@ int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
 	for (size_t i = 0; i < rx_buffers.size(); i++) {
 		rc = rx_buffers[i]->read(bufs[i], len, timestamp);
 		if ((rc < 0) || (rc != len)) {
-			LOGC(DDEV, ERROR) << rx_buffers[i]->str_code(rc);
-			LOGC(DDEV, ERROR) << rx_buffers[i]->str_status(timestamp);
+			LOGCHAN(i, DDEV, ERROR) << rx_buffers[i]->str_code(rc) << ". "
+						<< rx_buffers[i]->str_status(timestamp)
+						<< ", (len=" << len << ")";
 			return 0;
 		}
 	}
