@@ -138,6 +138,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	float_type sr_host, sr_rf;
 	unsigned int i, n;
 	int rc, dev_id;
+	int sample_rate;
 
 	LOGC(DDEV, INFO) << "Opening LMS device..";
 
@@ -226,8 +227,10 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	print_range("Sample Rate", &range_sr);
 
-	LOGC(DDEV, INFO) << "Setting sample rate to " << GSMRATE*tx_sps << " " << tx_sps;
-	if (LMS_SetSampleRate(m_lms_dev, GSMRATE*tx_sps, 32) < 0)
+	sample_rate = (iface == MULTI_ARFCN ? MCBTS_SPACING : GSMRATE) * tx_sps;
+
+	LOGC(DDEV, INFO) << "Setting sample rate to " << sample_rate << " " << tx_sps;
+	if (LMS_SetSampleRate(m_lms_dev, sample_rate, 32) < 0)
 		goto out_close;
 
 	if (LMS_GetSampleRate(m_lms_dev, LMS_CH_RX, 0, &sr_host, &sr_rf))
@@ -235,7 +238,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	LOGC(DDEV, INFO) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
 
 	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
-	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE * tx_sps); /* time * sample_rate */
+	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * sample_rate);
 
 	/* configure antennas */
 	if (!set_antennas()) {
@@ -247,7 +250,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		rx_buffers[i] = new smpl_buf(SAMPLE_BUF_SZ / sizeof(uint32_t));
 
-	return NORMAL;
+	return iface == MULTI_ARFCN ? MULTI_ARFCN : NORMAL;
 
 out_close:
 	LOGC(DDEV, FATAL) << "Error in LMS open, closing: " << LMS_GetLastErrorMessage();
