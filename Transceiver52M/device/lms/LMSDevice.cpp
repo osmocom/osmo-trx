@@ -69,17 +69,21 @@ struct dev_desc {
 	double max_tx_gain;
 	/* Sample rate coef (without having TX/RX samples per symbol into account) */
 	double rate;
+	/* Sample rate coef (without having TX/RX samples per symbol into account), if multi-arfcn is enabled */
+	double rate_multiarfcn;
 	/* Coefficient multiplied by TX sample rate in order to shift Tx time */
 	double ts_offset_coef;
+	/* Coefficient multiplied by TX sample rate in order to shift Tx time, if multi-arfcn is enabled */
+	double ts_offset_coef_multiarfcn;
 	/* Device Name Prefix as presented by LimeSuite API LMS_GetDeviceInfo() */
 	std::string name_prefix;
 };
 
 static const std::map<enum lms_dev_type, struct dev_desc> dev_param_map {
-	{ LMS_DEV_SDR_USB,   { true,  true,  73.0, GSMRATE, 8.9e-5, LMS_DEV_SDR_USB_PREFIX_NAME } },
-	{ LMS_DEV_SDR_MINI,  { false, true,  66.0, GSMRATE, 8.9e-5, LMS_DEV_SDR_MINI_PREFIX_NAME } },
-	{ LMS_DEV_NET_MICRO, { true,  false, 71.0, GSMRATE, 8.9e-5, LMS_DEV_NET_MICRO_PREFIX_NAME } },
-	{ LMS_DEV_UNKNOWN,   { true,  true,  73.0, GSMRATE, 8.9e-5, "UNKNOWN" } },
+	{ LMS_DEV_SDR_USB,   { true,  true,  73.0, GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, LMS_DEV_SDR_USB_PREFIX_NAME } },
+	{ LMS_DEV_SDR_MINI,  { false, true,  66.0, GSMRATE, MCBTS_SPACING, 8.9e-5, 8.2e-5, LMS_DEV_SDR_MINI_PREFIX_NAME } },
+	{ LMS_DEV_NET_MICRO, { true,  false, 71.0, GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, LMS_DEV_NET_MICRO_PREFIX_NAME } },
+	{ LMS_DEV_UNKNOWN,   { true,  true,  73.0, GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, "UNKNOWN" } },
 };
 
 static enum lms_dev_type parse_dev_type(lms_device_t *m_lms_dev)
@@ -281,7 +285,10 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	print_range("Sample Rate", &range_sr);
 
-	sr_host = dev_desc.rate * tx_sps;
+	if (iface == MULTI_ARFCN)
+		sr_host = dev_desc.rate_multiarfcn * tx_sps;
+	else
+		sr_host = dev_desc.rate * tx_sps;
 	LOGC(DDEV, INFO) << "Setting sample rate to " << sr_host << " " << tx_sps;
 	if (LMS_SetSampleRate(m_lms_dev, sr_host, 32) < 0)
 		goto out_close;
@@ -290,7 +297,10 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	LOGC(DDEV, INFO) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
 
-	ts_offset = static_cast<TIMESTAMP>(dev_desc.ts_offset_coef * sr_host);
+	if (iface == MULTI_ARFCN)
+		ts_offset = static_cast<TIMESTAMP>(dev_desc.ts_offset_coef_multiarfcn * sr_host);
+	else
+		ts_offset = static_cast<TIMESTAMP>(dev_desc.ts_offset_coef * sr_host);
 
 	/* configure antennas */
 	if (!set_antennas()) {
@@ -298,7 +308,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	}
 
-	return NORMAL;
+	return iface == MULTI_ARFCN ? MULTI_ARFCN : NORMAL;
 
 out_close:
 	LOGC(DDEV, FATAL) << "Error in LMS open, closing: " << LMS_GetLastErrorMessage();
