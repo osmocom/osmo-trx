@@ -5,6 +5,7 @@
 #include "config_defs.h"
 
 extern struct vty_app_info g_vty_info;
+extern const struct value_string clock_ref_names[];
 extern const struct value_string filler_names[];
 
 /* Maximum number of physical RF channels */

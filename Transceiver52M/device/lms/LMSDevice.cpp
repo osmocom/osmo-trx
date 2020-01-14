@@ -20,6 +20,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include <map>
+
+#include "trx_vty.h"
 #include "Logger.h"
 #include "Threads.h"
 #include "LMSDevice.h"
@@ -44,11 +48,61 @@ using namespace std;
 #define LMS_CALIBRATE_BW_HZ OSMO_MAX(GSM_CARRIER_BW, LMS_MIN_BW_SUPPORTED)
 #define SAMPLE_BUF_SZ    (1 << 20) /* Size of Rx timestamp based Ring buffer, in bytes */
 
+
+/* Device Name Prefixes as presented by LimeSuite API LMS_GetDeviceInfo(): */
+#define LMS_DEV_SDR_USB_PREFIX_NAME "LimeSDR-USB"
+#define LMS_DEV_SDR_MINI_PREFIX_NAME "LimeSDR-Mini"
+#define LMS_DEV_NET_MICRO_PREFIX_NAME "LimeNET-Micro"
+
+/* Device parameter descriptor */
+struct dev_desc {
+	/* Does LimeSuite allow switching the clock source for this device?
+	 * LimeSDR-Mini does not have switches but needs soldering to select
+	 * external/internal clock. Any call to LMS_SetClockFreq() will fail.
+	 */
+	bool clock_src_switchable;
+	/* Does LimeSuite allow using REF_INTERNAL for this device?
+	 * LimeNET-Micro does not like selecting internal clock
+	 */
+	bool clock_src_int_usable;
+	/* Device specific maximum tx levels selected by phasenoise measurements, in dB */
+	double max_tx_gain;
+	/* Device Name Prefix as presented by LimeSuite API LMS_GetDeviceInfo() */
+	std::string name_prefix;
+};
+
+static const std::map<enum lms_dev_type, struct dev_desc> dev_param_map {
+	{ LMS_DEV_SDR_USB,   { true,  true,  73.0, LMS_DEV_SDR_USB_PREFIX_NAME } },
+	{ LMS_DEV_SDR_MINI,  { false, true,  66.0, LMS_DEV_SDR_MINI_PREFIX_NAME } },
+	{ LMS_DEV_NET_MICRO, { true,  false, 71.0, LMS_DEV_NET_MICRO_PREFIX_NAME } },
+	{ LMS_DEV_UNKNOWN,   { true,  true,  73.0, "UNKNOWN" } },
+};
+
+static enum lms_dev_type parse_dev_type(lms_device_t *m_lms_dev)
+{
+	std::map<enum lms_dev_type, struct dev_desc>::const_iterator it = dev_param_map.begin();
+
+	const lms_dev_info_t* device_info = LMS_GetDeviceInfo(m_lms_dev);
+
+	while (it != dev_param_map.end())
+	{
+		enum lms_dev_type dev_type = it->first;
+		struct dev_desc desc = it->second;
+
+		if (strncmp(device_info->deviceName, desc.name_prefix.c_str(), desc.name_prefix.length()) == 0) {
+			LOGC(DDEV, INFO) << "Device identified as " << desc.name_prefix;
+			return dev_type;
+		}
+		it++;
+	}
+	return LMS_DEV_UNKNOWN;
+}
+
 LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
 		     const std::vector<std::string>& tx_paths,
 		     const std::vector<std::string>& rx_paths):
 	RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
-	m_lms_dev(NULL), started(false)
+	m_lms_dev(NULL), started(false), m_dev_type(LMS_DEV_UNKNOWN)
 {
 	LOGC(DDEV, INFO) << "creating LMS device...";
 
@@ -138,11 +192,11 @@ int info_list_find(lms_info_str_t* info_list, unsigned int count, const std::str
 int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 {
 	lms_info_str_t* info_list;
-	const lms_dev_info_t* device_info;
 	lms_range_t range_sr;
 	float_type sr_host, sr_rf;
 	unsigned int i, n;
 	int rc, dev_id;
+	struct dev_desc dev_desc;
 
 	LOGC(DDEV, INFO) << "Opening LMS device..";
 
@@ -179,19 +233,20 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 
 	delete [] info_list;
 
-	device_info = LMS_GetDeviceInfo(m_lms_dev);
+	m_dev_type = parse_dev_type(m_lms_dev);
+	dev_desc = dev_param_map.at(m_dev_type);
 
 	if ((ref != REF_EXTERNAL) && (ref != REF_INTERNAL)){
 		LOGC(DDEV, ERROR) << "Invalid reference type";
 		goto out_close;
 	}
 
-	/* if reference clock is external setup must happen _before_ calling LMS_Init */
-	/* FIXME make external reference frequency configurable */
+	/* if reference clock is external, setup must happen _before_ calling LMS_Init */
 	if (ref == REF_EXTERNAL) {
 		LOGC(DDEV, INFO) << "Setting External clock reference to 10MHz";
-		/* Assume an external 10 MHz reference clock */
-		if (LMS_SetClockFreq(m_lms_dev, LMS_CLOCK_EXTREF, 10000000.0) < 0)
+		/* FIXME: Assume an external 10 MHz reference clock. make
+		   external reference frequency configurable */
+		if (!do_clock_src_freq(REF_EXTERNAL, 10000000.0))
 			goto out_close;
 	}
 
@@ -201,22 +256,13 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	}
 
-	/* LimeSDR-Mini does not have switches but needs soldering to select external/internal clock */
-	/* LimeNET-Micro also does not like selecting internal clock*/
-	/* also set device specific maximum tx levels selected by phasenoise measurements*/
-	if (strncmp(device_info->deviceName,"LimeSDR-USB",11) == 0){
-		/* if reference clock is internal setup must happen _after_ calling LMS_Init */
-		/* according to lms using LMS_CLOCK_EXTREF with a frequency <= 0 is the correct way to set clock to internal reference*/
-		if (ref == REF_INTERNAL) {
-			LOGC(DDEV, INFO) << "Setting Internal clock reference";
-			if (LMS_SetClockFreq(m_lms_dev, LMS_CLOCK_EXTREF, -1) < 0)
-				goto out_close;
-		}
-		maxTxGainClamp = 73.0;
-	} else if (strncmp(device_info->deviceName,"LimeSDR-Mini",12) == 0)
-		maxTxGainClamp = 66.0;
-	else
-		maxTxGainClamp = 71.0; /* "LimeNET-Micro", etc FIXME pciE based LMS boards?*/
+	/* if reference clock is internal, setup must happen _after_ calling LMS_Init */
+	if (ref == REF_INTERNAL) {
+		LOGC(DDEV, INFO) << "Setting Internal clock reference";
+		/* Internal freq param is not used */
+		if (!do_clock_src_freq(REF_INTERNAL, 0))
+			goto out_close;
+	}
 
 	/* enable all used channels */
 	for (i=0; i<chans; i++) {
@@ -342,6 +388,43 @@ bool LMSDevice::stop()
 	return true;
 }
 
+bool LMSDevice::do_clock_src_freq(enum ReferenceType ref, double freq)
+{
+	struct dev_desc dev_desc = dev_param_map.at(m_dev_type);
+	size_t lms_clk_id;
+
+	switch (ref) {
+	case REF_EXTERNAL:
+		lms_clk_id = LMS_CLOCK_EXTREF;
+		break;
+	case REF_INTERNAL:
+		if (!dev_desc.clock_src_int_usable) {
+			LOGC(DDEV, ERROR) << "Device type " << dev_desc.name_prefix
+					  << " doesn't support internal reference clock";
+			return false;
+		}
+		/* According to lms using LMS_CLOCK_EXTREF with a
+		   frequency <= 0 is the correct way to set clock to
+		   internal reference */
+		lms_clk_id = LMS_CLOCK_EXTREF;
+		freq = -1;
+		break;
+	default:
+		LOGC(DDEV, ERROR) << "Invalid reference type " << get_value_string(clock_ref_names, ref);
+		return false;
+	}
+
+	if (dev_desc.clock_src_switchable) {
+		if (LMS_SetClockFreq(m_lms_dev, lms_clk_id, freq) < 0)
+			return false;
+	} else {
+		LOGC(DDEV, INFO) << "Device type " << dev_desc.name_prefix
+				 << " doesn't support switching clock source through SW";
+	}
+
+	return true;
+}
+
 /* do rx/tx calibration - depends on gain, freq and bw */
 bool LMSDevice::do_calib(size_t chan)
 {
@@ -383,7 +466,7 @@ bool LMSDevice::do_filters(size_t chan)
 
 double LMSDevice::maxTxGain()
 {
-	return maxTxGainClamp;
+	return dev_param_map.at(m_dev_type).max_tx_gain;
 }
 
 double LMSDevice::minTxGain()

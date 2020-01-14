@@ -42,7 +42,7 @@
 
 static struct trx_ctx* g_trx_ctx;
 
-static const struct value_string clock_ref_names[] = {
+const struct value_string clock_ref_names[] = {
 	{ REF_INTERNAL,	"internal" },
 	{ REF_EXTERNAL,	"external" },
 	{ REF_GPS,	"gpsdo" },

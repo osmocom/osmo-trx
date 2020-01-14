@@ -41,6 +41,13 @@
  * 	A^2 = 1 */
 #define LIMESDR_TX_AMPL  0.707
 
+enum lms_dev_type {
+	LMS_DEV_SDR_USB,   /* LimeSDR-USB */
+	LMS_DEV_SDR_MINI,  /* LimeSDR-Mini */
+	LMS_DEV_NET_MICRO, /* LimeNet-micro */
+	LMS_DEV_UNKNOWN,
+};
+
 /** A class to handle a LimeSuite supported device */
 class LMSDevice:public RadioDevice {
 
@@ -59,7 +66,8 @@ private:
 	TIMESTAMP ts_initial, ts_offset;
 
 	std::vector<double> tx_gains, rx_gains;
-	double maxTxGainClamp;
+
+	enum lms_dev_type m_dev_type;
 
 	bool do_calib(size_t chan);
 	bool do_filters(size_t chan);
@@ -68,6 +76,7 @@ private:
 	bool flush_recv(size_t num_pkts);
 	void update_stream_stats_rx(size_t chan, bool *overrun);
 	void update_stream_stats_tx(size_t chan, bool *underrun);
+	bool do_clock_src_freq(enum ReferenceType ref, double freq);
 
 public:
 
