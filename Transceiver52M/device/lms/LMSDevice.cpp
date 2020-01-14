@@ -67,15 +67,19 @@ struct dev_desc {
 	bool clock_src_int_usable;
 	/* Device specific maximum tx levels selected by phasenoise measurements, in dB */
 	double max_tx_gain;
+	/* Sample rate coef (without having TX/RX samples per symbol into account) */
+	double rate;
+	/* Coefficient multiplied by TX sample rate in order to shift Tx time */
+	double ts_offset_coef;
 	/* Device Name Prefix as presented by LimeSuite API LMS_GetDeviceInfo() */
 	std::string name_prefix;
 };
 
 static const std::map<enum lms_dev_type, struct dev_desc> dev_param_map {
-	{ LMS_DEV_SDR_USB,   { true,  true,  73.0, LMS_DEV_SDR_USB_PREFIX_NAME } },
-	{ LMS_DEV_SDR_MINI,  { false, true,  66.0, LMS_DEV_SDR_MINI_PREFIX_NAME } },
-	{ LMS_DEV_NET_MICRO, { true,  false, 71.0, LMS_DEV_NET_MICRO_PREFIX_NAME } },
-	{ LMS_DEV_UNKNOWN,   { true,  true,  73.0, "UNKNOWN" } },
+	{ LMS_DEV_SDR_USB,   { true,  true,  73.0, GSMRATE, 8.9e-5, LMS_DEV_SDR_USB_PREFIX_NAME } },
+	{ LMS_DEV_SDR_MINI,  { false, true,  66.0, GSMRATE, 8.9e-5, LMS_DEV_SDR_MINI_PREFIX_NAME } },
+	{ LMS_DEV_NET_MICRO, { true,  false, 71.0, GSMRATE, 8.9e-5, LMS_DEV_NET_MICRO_PREFIX_NAME } },
+	{ LMS_DEV_UNKNOWN,   { true,  true,  73.0, GSMRATE, 8.9e-5, "UNKNOWN" } },
 };
 
 static enum lms_dev_type parse_dev_type(lms_device_t *m_lms_dev)
@@ -277,16 +281,16 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		goto out_close;
 	print_range("Sample Rate", &range_sr);
 
-	LOGC(DDEV, INFO) << "Setting sample rate to " << GSMRATE*tx_sps << " " << tx_sps;
-	if (LMS_SetSampleRate(m_lms_dev, GSMRATE*tx_sps, 32) < 0)
+	sr_host = dev_desc.rate * tx_sps;
+	LOGC(DDEV, INFO) << "Setting sample rate to " << sr_host << " " << tx_sps;
+	if (LMS_SetSampleRate(m_lms_dev, sr_host, 32) < 0)
 		goto out_close;
 
 	if (LMS_GetSampleRate(m_lms_dev, LMS_CH_RX, 0, &sr_host, &sr_rf))
 		goto out_close;
 	LOGC(DDEV, INFO) << "Sample Rate: Host=" << sr_host << " RF=" << sr_rf;
 
-	/* FIXME: make this device/model dependent, like UHDDevice:dev_param_map! */
-	ts_offset = static_cast<TIMESTAMP>(8.9e-5 * GSMRATE * tx_sps); /* time * sample_rate */
+	ts_offset = static_cast<TIMESTAMP>(dev_desc.ts_offset_coef * sr_host);
 
 	/* configure antennas */
 	if (!set_antennas()) {
