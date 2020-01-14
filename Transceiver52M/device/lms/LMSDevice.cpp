@@ -58,6 +58,11 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 	tx_gains.resize(chans);
 
 	rx_buffers.resize(chans);
+
+	/* Set up per-channel Rx timestamp based Ring buffers */
+	for (size_t i = 0; i < rx_buffers.size(); i++)
+		rx_buffers[i] = new smpl_buf(SAMPLE_BUF_SZ / sizeof(uint32_t));
+
 }
 
 LMSDevice::~LMSDevice()
@@ -242,10 +247,6 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 		LOGC(DDEV, FATAL) << "LMS antenna setting failed";
 		goto out_close;
 	}
-
-	/* Set up per-channel Rx timestamp based Ring buffers */
-	for (size_t i = 0; i < rx_buffers.size(); i++)
-		rx_buffers[i] = new smpl_buf(SAMPLE_BUF_SZ / sizeof(uint32_t));
 
 	return NORMAL;
 
