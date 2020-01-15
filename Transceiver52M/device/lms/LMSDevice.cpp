@@ -109,7 +109,7 @@ static void print_range(const char* name, lms_range_t *range)
 int info_list_find(lms_info_str_t* info_list, unsigned int count, const std::string &args)
 {
 	unsigned int i, j;
-	vector<string> filters;
+	std::vector<string> filters;
 
 	filters = comma_delimited_to_vector(args.c_str());
 
