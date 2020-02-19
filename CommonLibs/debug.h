@@ -25,5 +25,5 @@ pid_t my_gettid(void);
 } while(0)
 
 #define CLOGCHAN(chan, category, level, fmt, args...) do { \
-	LOGP(category, level, "[tid=%ld][chan=%lu] " fmt, (long int) my_gettid(), chan, ##args);  \
+	LOGP(category, level, "[tid=%ld][chan=%zu] " fmt, (long int) my_gettid(), chan, ##args);  \
 } while(0)
