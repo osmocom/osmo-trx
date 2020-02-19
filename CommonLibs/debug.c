@@ -21,7 +21,17 @@
  * See the COPYING file in the main directory for details.
  */
 
-#include <pthread.h>
+#include "config.h"
+
+/* If HAVE_GETTID, then "_GNU_SOURCE" may need to be defined to use gettid() */
+#if HAVE_GETTID
+#define _GNU_SOURCE
+#endif
+
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include "config.h"
 
 #include <osmocom/core/logging.h>
 #include <osmocom/core/utils.h>
@@ -77,3 +87,15 @@ const struct log_info log_info = {
 	.cat = default_categories,
 	.num_cat = ARRAY_SIZE(default_categories),
 };
+
+pid_t my_gettid(void)
+{
+#if HAVE_GETTID
+	return gettid();
+#elif defined(LINUX) && defined(__NR_gettid)
+	return (pid_t) syscall(__NR_gettid);
+#else
+	#pragma message ("use pid as tid")
+	return getpid();
+#endif
+}

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include <pthread.h>
+#include <sys/types.h>
 
 #include <osmocom/core/logging.h>
 
@@ -18,10 +18,12 @@ enum {
 	DDEVDRV,
 };
 
+pid_t my_gettid(void);
+
 #define CLOGC(category, level, fmt, args...) do { \
-	LOGP(category, level, "[tid=%lu] " fmt, pthread_self(), ##args);  \
+	LOGP(category, level, "[tid=%ld] " fmt, (long int) my_gettid(), ##args);  \
 } while(0)
 
 #define CLOGCHAN(chan, category, level, fmt, args...) do { \
-	LOGP(category, level, "[tid=%lu][chan=%lu] " fmt, pthread_self(), chan, ##args);  \
+	LOGP(category, level, "[tid=%ld][chan=%lu] " fmt, (long int) my_gettid(), chan, ##args);  \
 } while(0)
