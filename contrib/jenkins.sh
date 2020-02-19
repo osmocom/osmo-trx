@@ -23,14 +23,7 @@ mychroot() {
         mychroot_nocwd -w / "$@"
 }
 
-base="$PWD"
-deps="$base/deps"
-inst="$deps/install"
-export deps inst
-
 if [ -z "${INSIDE_CHROOT}" ]; then
-
-        osmo-clean-workspace.sh
 
         # Only use ARM chroot if host is not ARM and the target is ARM:
         if ! $(substr "arm" "$(uname -m)") && [ "x${INSTR}" = "x--with-neon" -o "x${INSTR}" = "x--with-neon-vfpv4" ]; then
@@ -68,6 +61,20 @@ if [ -z "${INSIDE_CHROOT}" ]; then
                 exit 0
         fi
 fi
+
+set -ex
+
+if ! [ -x "$(command -v osmo-build-dep.sh)" ]; then
+	echo "Error: We need to have scripts/osmo-deps.sh from http://git.osmocom.org/osmo-ci/ in PATH !"
+	exit 2
+fi
+
+base="$PWD"
+deps="$base/deps"
+inst="$deps/install"
+export deps inst
+
+osmo-clean-workspace.sh
 
 mkdir "$deps" || true
 
