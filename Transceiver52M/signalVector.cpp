@@ -47,7 +47,7 @@ void signalVector::operator=(const signalVector& vector)
 	complex *src = vector.mData;
 	for (i = 0; i < size(); i++, src++, dst++)
 		*dst = *src;
-	/* TODO: optimize for non non-trivially copyable types: */
+	/* TODO: optimize for non non-trivially copiable types: */
 	/*memcpy(mData, vector.mData, bytes()); */
 	mStart = mData + vector.getStart();
 }
@@ -70,7 +70,7 @@ size_t signalVector::updateHistory()
 	complex *src = mStart + this->size() - num;
 	for (i = 0; i < num; i++, src++, dst++)
 		*dst = *src;
-	/* TODO: optimize for non non-trivially copyable types: */
+	/* TODO: optimize for non non-trivially copiable types: */
 	/*memmove(mData, mStart + this->size() - num, num * sizeof(complex)); */
 
 	return num;

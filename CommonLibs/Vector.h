@@ -232,7 +232,7 @@ template <class T> class Vector {
 		assert(mStart+span<=mEnd);
 		for (i = 0; i < span; i++, src++, dst++)
 			*dst = *src;
-		/*TODO if not non-trivially copyable type class, optimize:
+		/*TODO if not non-trivially copiable type class, optimize:
 		memcpy(dst,mStart,span*sizeof(T)); */
 	}
 
