@@ -804,7 +804,7 @@ int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 }
 
 int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
-			     unsigned long long timestamp,bool isControl)
+			     unsigned long long timestamp)
 {
 	uhd::tx_metadata_t metadata;
 	metadata.has_time_spec = true;
@@ -813,12 +813,6 @@ int uhd_device::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 	metadata.time_spec = uhd::time_spec_t::from_ticks(timestamp, tx_rate);
 
 	*underrun = false;
-
-	// No control packets
-	if (isControl) {
-		LOGC(DDEV, ERROR) << "Control packets not supported";
-		return 0;
-	}
 
 	if (bufs.size() != chans) {
 		LOGC(DDEV, ALERT) << "Invalid channel combination " << bufs.size();

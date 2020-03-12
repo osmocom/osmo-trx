@@ -117,12 +117,10 @@ public:
 	@param len number of samples to write.
 	@param underrun Set if LMS does not have data to transmit, e.g. data not being sent fast enough
 	@param timestamp The timestamp of the first sample of the data buffer.
-	@param isControl Set if data is a control packet, e.g. a ping command
 	@return The number of samples actually written
 	*/
 	int writeSamples(std::vector < short *>&bufs, int len, bool * underrun,
-			 TIMESTAMP timestamp = 0xffffffff, bool isControl =
-			 false);
+			 TIMESTAMP timestamp = 0xffffffff);
 
 	/** Update the alignment between the read and write timestamps */
 	bool updateAlignment(TIMESTAMP timestamp);

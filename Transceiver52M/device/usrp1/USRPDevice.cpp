@@ -515,9 +515,8 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 #endif
 }
 
-int USRPDevice::writeSamples(std::vector<short *> &bufs, int len,
-                             bool *underrun, unsigned long long timestamp,
-                             bool isControl)
+int USRPDevice::writeSamplesControl(std::vector<short *> &bufs, int len,
+                             bool *underrun, unsigned long long timestamp, bool isControl)
 {
   writeLock.lock();
 
@@ -571,6 +570,12 @@ int USRPDevice::writeSamples(std::vector<short *> &bufs, int len,
 #endif
 }
 
+int USRPDevice::writeSamples(std::vector<short *> &bufs, int len,
+                             bool *underrun, unsigned long long timestamp)
+{
+  return writeSamplesControl(bufs, len, underrun, timestamp, false);
+}
+
 bool USRPDevice::updateAlignment(TIMESTAMP timestamp)
 {
 #ifndef SWLOOPBACK
@@ -580,7 +585,7 @@ bool USRPDevice::updateAlignment(TIMESTAMP timestamp)
   bool tmpUnderrun;
 
   std::vector<short *> buf(1, data);
-  if (writeSamples(buf, 1, &tmpUnderrun, timestamp & 0x0ffffffffll, true)) {
+  if (writeSamplesControl(buf, 1, &tmpUnderrun, timestamp & 0x0ffffffffll, true)) {
     pingTimestamp = timestamp;
     return true;
   }

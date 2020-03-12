@@ -77,7 +77,7 @@ public:
 			TIMESTAMP timestamp, bool *underrun);
 
 	int writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
-			 TIMESTAMP timestamp, bool isControl);
+			 TIMESTAMP timestamp);
 
 	bool updateAlignment(TIMESTAMP timestamp);
 

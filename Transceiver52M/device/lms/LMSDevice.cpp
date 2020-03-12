@@ -858,8 +858,7 @@ void LMSDevice::update_stream_stats_tx(size_t chan, bool *underrun)
 }
 
 int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
-			    bool * underrun, unsigned long long timestamp,
-			    bool isControl)
+			    bool * underrun, unsigned long long timestamp)
 {
 	int rc = 0;
 	unsigned int i;
@@ -867,11 +866,6 @@ int LMSDevice::writeSamples(std::vector < short *>&bufs, int len,
 	tx_metadata.flushPartialPacket = false;
 	tx_metadata.waitForTimestamp = true;
 	tx_metadata.timestamp = timestamp - ts_offset;	/* Shift Tx time by offset */
-
-	if (isControl) {
-		LOGC(DDEV, ERROR) << "Control packets not supported";
-		return 0;
-	}
 
 	if (bufs.size() != chans) {
 		LOGC(DDEV, ERROR) << "Invalid channel combination " << bufs.size();

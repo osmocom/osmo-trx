@@ -87,11 +87,10 @@ class RadioDevice {
         @param len number of samples to write.
         @param underrun Set if radio does not have data to transmit, e.g. data not being sent fast enough
         @param timestamp The timestamp of the first sample of the data buffer.
-        @param isControl Set if data is a control packet, e.g. a ping command
         @return The number of samples actually written
   */
   virtual int writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
-                           TIMESTAMP timestamp, bool isControl = false) = 0;
+                           TIMESTAMP timestamp) = 0;
 
   /** Update the alignment between the read and write timestamps */
   virtual bool updateAlignment(TIMESTAMP timestamp)=0;
