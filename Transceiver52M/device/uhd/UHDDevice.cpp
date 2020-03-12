@@ -721,7 +721,7 @@ int uhd_device::check_rx_md_err(uhd::rx_metadata_t &md, ssize_t num_smpls)
 }
 
 int uhd_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
-			    TIMESTAMP timestamp, bool *underrun, unsigned *RSSI)
+			    TIMESTAMP timestamp, bool *underrun)
 {
 	ssize_t rc;
 	uhd::time_spec_t ts;

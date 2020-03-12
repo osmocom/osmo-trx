@@ -365,7 +365,7 @@ GSM::Time USRPDevice::minLatency() {
 
 // NOTE: Assumes sequential reads
 int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
-                            TIMESTAMP timestamp, bool *underrun, unsigned *RSSI)
+                            TIMESTAMP timestamp, bool *underrun)
 {
 #ifndef SWLOOPBACK
   if (!m_uRx)
@@ -433,8 +433,10 @@ int USRPDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 	*underrun = true;
 	LOGC(DDEV, DEBUG) << "UNDERRUN in TRX->USRP interface";
       }
-      if (RSSI) *RSSI = (word0 >> 21) & 0x3f;
-
+#if 0
+      /* FIXME: Do something with this ? */
+      unsigned RSSI = (word0 >> 21) & 0x3f;
+#endif
       if (!isAligned) continue;
 
       unsigned cursorStart = pktTimestamp - timeStart + dataStart;

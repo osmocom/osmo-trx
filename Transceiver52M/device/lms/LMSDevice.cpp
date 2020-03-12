@@ -739,7 +739,7 @@ void LMSDevice::update_stream_stats_rx(size_t chan, bool *overrun)
 
 // NOTE: Assumes sequential reads
 int LMSDevice::readSamples(std::vector < short *>&bufs, int len, bool * overrun,
-			   TIMESTAMP timestamp, bool * underrun, unsigned *RSSI)
+			   TIMESTAMP timestamp, bool * underrun)
 {
 	int rc, num_smpls, expect_smpls;
 	ssize_t avail_smpls;

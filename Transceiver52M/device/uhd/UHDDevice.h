@@ -74,7 +74,7 @@ public:
 	enum TxWindowType getWindowType() { return tx_window; }
 
 	int readSamples(std::vector<short *> &bufs, int len, bool *overrun,
-			TIMESTAMP timestamp, bool *underrun, unsigned *RSSI);
+			TIMESTAMP timestamp, bool *underrun);
 
 	int writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
 			 TIMESTAMP timestamp, bool isControl);

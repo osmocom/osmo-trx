@@ -77,12 +77,10 @@ class RadioDevice {
 	@param overrun Set if read buffer has been overrun, e.g. data not being read fast enough
 	@param timestamp The timestamp of the first samples to be read
 	@param underrun Set if radio does not have data to transmit, e.g. data not being sent fast enough
-	@param RSSI The received signal strength of the read result
 	@return The number of samples actually read
   */
   virtual int readSamples(std::vector<short *> &bufs, int len, bool *overrun,
-                          TIMESTAMP timestamp = 0xffffffff, bool *underrun = 0,
-                          unsigned *RSSI = 0) = 0;
+                          TIMESTAMP timestamp = 0xffffffff, bool *underrun = 0) = 0;
   /**
         Write samples to the radio.
         @param buf Contains the data to be written.

@@ -106,12 +106,11 @@ public:
 	@param overrun Set if read buffer has been overrun, e.g. data not being read fast enough
 	@param timestamp The timestamp of the first samples to be read
 	@param underrun Set if LMS does not have data to transmit, e.g. data not being sent fast enough
-	@param RSSI The received signal strength of the read result
 	@return The number of samples actually read
 	*/
 	int readSamples(std::vector < short *>&buf, int len, bool * overrun,
 			TIMESTAMP timestamp = 0xffffffff, bool * underrun =
-			NULL, unsigned *RSSI = NULL);
+			NULL);
 	/**
 	Write samples to the LMS.
 	@param buf Contains the data to be written.
