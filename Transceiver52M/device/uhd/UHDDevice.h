@@ -50,6 +50,7 @@ enum uhd_dev_type {
 	X3XX,
 	UMTRX,
 	LIMESDR,
+	OCR01,
 };
 
 /*

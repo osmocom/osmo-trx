@@ -121,6 +121,7 @@ static const std::map<dev_key, dev_desc> dev_param_map {
 	{ std::make_tuple(UMTRX, 4, 4), { 2, 0.0,  GSMRATE, 5.1503e-5,  "UmTRX 4 SPS"        } },
 	{ std::make_tuple(LIMESDR, 4, 4), { 1, GSMRATE*32, GSMRATE, 8.9e-5, "LimeSDR 4 SPS"  } },
 	{ std::make_tuple(B2XX_MCBTS, 4, 4), { 1, 51.2e6, MCBTS_SPACING*4, B2XX_TIMING_MCBTS, "B200/B210 4 SPS Multi-ARFCN" } },
+	{ std::make_tuple(OCR01, 4, 1), { 2, 26e6, GSMRATE, B2XX_TIMING_4SPS, "OCR01 4/1 Tx/Rx SPS"} },
 };
 
 void *async_event_loop(uhd_device *dev)
@@ -368,6 +369,7 @@ bool uhd_device::parse_dev_type()
 		{ "USRP2",    { USRP2,   TX_WINDOW_FIXED } },
 		{ "UmTRX",    { UMTRX,   TX_WINDOW_FIXED } },
 		{ "LimeSDR",  { LIMESDR, TX_WINDOW_FIXED } },
+		{ "OCR01",    { OCR01,   TX_WINDOW_USRP1 } },
 	};
 
 	// Compare UHD motherboard and device strings */
@@ -409,7 +411,7 @@ static bool uhd_e3xx_version_chk()
 void uhd_device::set_channels(bool swap)
 {
 	if (iface == MULTI_ARFCN) {
-		if (dev_type != B200 && dev_type != B210)
+		if (dev_type != B200 && dev_type != B210 && dev_type != OCR01)
 			throw std::invalid_argument("Device does not support MCBTS");
 		dev_type = B2XX_MCBTS;
 	}
@@ -421,6 +423,7 @@ void uhd_device::set_channels(bool swap)
 	switch (dev_type) {
 	case B210:
 	case E3XX:
+	case OCR01:
 		if (chans == 1)
 			subdev_string = swap ? "A:B" : "A:A";
 		else if (chans == 2)
@@ -582,6 +585,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	case E1XX:
 	case E3XX:
 	case LIMESDR:
+	case OCR01:
 	default:
 		break;
 	}
