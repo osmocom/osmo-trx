@@ -122,6 +122,7 @@ static const std::map<dev_key, dev_desc> dev_param_map {
 	{ std::make_tuple(LIMESDR, 4, 4), { 1, GSMRATE*32, GSMRATE, 8.9e-5, "LimeSDR 4 SPS"  } },
 	{ std::make_tuple(B2XX_MCBTS, 4, 4), { 1, 51.2e6, MCBTS_SPACING*4, B2XX_TIMING_MCBTS, "B200/B210 4 SPS Multi-ARFCN" } },
 	{ std::make_tuple(OCR01, 4, 1), { 2, 26e6, GSMRATE, B2XX_TIMING_4SPS, "OCR01 4/1 Tx/Rx SPS"} },
+	{ std::make_tuple(OCR01, 4, 4), { 2, 26e6, GSMRATE, B2XX_TIMING_4_4SPS, "OCR01 4/4 Tx/Rx SPS"} },
 };
 
 void *async_event_loop(uhd_device *dev)
