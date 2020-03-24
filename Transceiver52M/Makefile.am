@@ -104,3 +104,10 @@ osmo_trx_lms_LDADD = \
 	$(LMS_LIBS)
 osmo_trx_lms_CPPFLAGS  = $(AM_CPPFLAGS) $(LMS_CFLAGS)
 endif
+
+bin_PROGRAMS += osmo-trx-ipc
+osmo_trx_ipc_SOURCES = osmo-trx.cpp
+osmo_trx_ipc_LDADD = \
+	$(builddir)/device/ipc/libdevice.la \
+	$(COMMON_LDADD)
+oosmo_trx_ipc_CPPFLAGS  = $(AM_CPPFLAGS)

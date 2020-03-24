@@ -324,6 +324,7 @@ AC_CONFIG_FILES([\
     Transceiver52M/device/uhd/Makefile \
     Transceiver52M/device/usrp1/Makefile \
     Transceiver52M/device/lms/Makefile \
+    Transceiver52M/device/ipc/Makefile \
     tests/Makefile \
     tests/CommonLibs/Makefile \
     tests/Transceiver52M/Makefile \
