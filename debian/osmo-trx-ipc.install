@@ -1,0 +1,4 @@
+etc/osmocom/osmo-trx-ipc.cfg
+lib/systemd/system/osmo-trx-ipc.service
+/usr/bin/osmo-trx-ipc
+/usr/share/doc/osmo-trx/examples/osmo-trx-ipc/osmo-trx-ipc.cfg /usr/share/doc/osmo-trx/examples/osmo-trx-ipc/

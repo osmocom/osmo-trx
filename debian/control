@@ -30,7 +30,7 @@ Package: osmo-trx-dbg
 Architecture: any
 Section: debug
 Priority: extra
-Depends: osmo-trx-uhd (= ${binary:Version}), osmo-trx-usrp1 (= ${binary:Version}), osmo-trx-lms (= ${binary:Version}), ${misc:Depends}
+Depends: osmo-trx-uhd (= ${binary:Version}), osmo-trx-usrp1 (= ${binary:Version}), osmo-trx-lms (= ${binary:Version}), osmo-trx-ipc (= ${binary:Version}), ${misc:Depends}
 Description: Debug symbols for the osmo-trx-*
  Make debugging possible
 
@@ -76,6 +76,25 @@ Package: osmo-trx-lms
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: SDR transceiver that implements Layer 1 of a GSM BTS (LimeSuite)
+ OsmoTRX is a software-defined radio transceiver that implements the Layer 1
+ physical layer of a BTS comprising the following 3GPP specifications:
+ .
+ TS 05.01 "Physical layer on the radio path"
+ TS 05.02 "Multiplexing and Multiple Access on the Radio Path"
+ TS 05.04 "Modulation"
+ TS 05.10 "Radio subsystem synchronization"
+ .
+ In this context, BTS is "Base transceiver station". It's the stations that
+ connect mobile phones to the mobile network.
+ .
+ 3GPP is the "3rd Generation Partnership Project" which is the collaboration
+ between different telecommunication associations for developing new
+ generations of mobile phone networks. (post-2G/GSM)
+
+Package: osmo-trx-ipc
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: SDR transceiver that implements Layer 1 of a GSM BTS (generic IPC)
  OsmoTRX is a software-defined radio transceiver that implements the Layer 1
  physical layer of a BTS comprising the following 3GPP specifications:
  .

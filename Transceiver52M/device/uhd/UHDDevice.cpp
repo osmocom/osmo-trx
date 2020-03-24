@@ -152,7 +152,7 @@ static const std::map<dev_band_key, dev_band_desc> dev_band_nom_power_param_map 
 void *async_event_loop(uhd_device *dev)
 {
 	set_selfthread_name("UHDAsyncEvent");
-	OSMO_ASSERT(osmo_cpu_sched_vty_apply_localthread() == 0);
+	osmo_cpu_sched_vty_apply_localthread();
 
 	while (1) {
 		dev->recv_async_msg();
@@ -1316,6 +1316,7 @@ std::string uhd_device::str_code(uhd::async_metadata_t metadata)
 	return ost.str();
 }
 
+#ifndef IPCMAGIC
 RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
 			       InterfaceType iface, size_t chans, double lo_offset,
 			       const std::vector<std::string>& tx_paths,
@@ -1323,3 +1324,4 @@ RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
 {
 	return new uhd_device(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
 }
+#endif
