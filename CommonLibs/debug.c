@@ -73,7 +73,7 @@ static const struct log_info_cat default_categories[] = {
 		.name = "DDEV",
 		.description = "Device/Driver specific code",
 		.color = NULL,
-		.enabled = 1, .loglevel = LOGL_INFO,
+		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
 	[DDEVDRV] = {
 		.name = "DDEVDRV",
