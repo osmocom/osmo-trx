@@ -16,6 +16,47 @@
 
 */
 
+/*
+https://www.softprayog.in/programming/interprocess-communication-using-posix-shared-memory-in-linux
+
+man shm_open: link with -lrt
+Link with -pthread.
+
+#include <sys/mman.h>
+#include <sys/stat.h>        // For mode constants
+#include <fcntl.h>           // For O_* constants
+#include <semaphore.h>
+
+On start:
+int fd = shm_open(const char *name, int oflag, mode_t mode);
+* name must start with "/" and not contain more slashes.
+* name must be a null-terminted string of up to NAME_MAX (255)
+* oflag: O_CREAT|O_RDWR|O_EXCL
+* mode: check man open
+
+ftruncate(fd, len = sizeof(struct myshamemorystruct) to expand the memory region
+
+shm = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+
+int sem_init(sem_t *&(shm->sem), 1, unsigned int value) == 0;
+
+close(fd); // After a call to mmap(2) the file descriptor may be closed without affecting the memory mapping.
+
+
+On exit:
+int shm_unlink(const char *name);
+
+
+sem_t *sem_open(const char *name, int oflag,
+                       mode_t mode, unsigned int value);
+*  by a name of the form /somename; that is, a null-terminated string of up to NAME_MAX-4 (i.e., 251) characters
+              consisting of an initial slash, followed by one or more characters, none of which are slashes.
+
+
+* unamed semaphore: sem_init + sem_destroy
+* Programs using the POSIX semaphores API must be compiled with cc -pthread to link against the real-time library, librt
+*/
+
 #include <stdint.h>
 #include <unistd.h>
 #include <limits.h>
