@@ -33,10 +33,13 @@
 
 extern "C" {
 #include <osmocom/core/signal.h>
+#include <osmocom/core/select.h>
 #include "config_defs.h"
 }
 
 class Transceiver;
+
+extern Transceiver *transceiver;
 
 /** Channel descriptor for transceiver object and channel number pair */
 struct TrxChanThParams {
@@ -142,12 +145,33 @@ public:
   } ChannelCombination;
 
 private:
+
+struct ctrl_msg {
+  char data[101];
+  ctrl_msg() {};
+};
+
+struct ctrl_sock_state {
+  osmo_fd conn_bfd;
+  std::deque<ctrl_msg> txmsgqueue;
+  ctrl_sock_state() {
+      conn_bfd.fd =  -1;
+  }
+  ~ctrl_sock_state() {
+      if(conn_bfd.fd >= 0) {
+          close(conn_bfd.fd);
+          conn_bfd.fd = -1;
+          osmo_fd_unregister(&conn_bfd);
+      }
+  }
+};
+
   int mBasePort;
   std::string mLocalAddr;
   std::string mRemoteAddr;
 
   std::vector<int> mDataSockets;  ///< socket for writing to/reading from GSM core
-  std::vector<int> mCtrlSockets;  ///< socket for writing/reading control commands from GSM core
+  std::vector<ctrl_sock_state> mCtrlSockets;  ///< socket for writing/reading control commands from GSM core
   int mClockSocket;               ///< socket for writing clock updates to GSM core
 
   std::vector<VectorQueue> mTxPriorityQueues;   ///< priority queue of transmit bursts received from GSM core
@@ -156,7 +180,6 @@ private:
   std::vector<Thread *> mRxServiceLoopThreads;  ///< thread to pull bursts into receive FIFO
   Thread *mRxLowerLoopThread;                   ///< thread to pull bursts into receive FIFO
   Thread *mTxLowerLoopThread;                   ///< thread to push bursts into transmit FIFO
-  std::vector<Thread *> mControlServiceLoopThreads;         ///< thread to process control messages from GSM core
   std::vector<Thread *> mTxPriorityQueueServiceLoopThreads; ///< thread to process transmit bursts from GSM core
 
   GSM::Time mTransmitLatency;             ///< latency between basestation clock and transmit deadline clock
@@ -192,6 +215,12 @@ private:
 
   /** send messages over the clock socket */
   bool writeClockInterface(void);
+
+  static int ctrl_sock_cb(struct osmo_fd *bfd, unsigned int flags);
+  int ctrl_sock_write(int chan);
+  void ctrl_sock_send(ctrl_msg& m, int chan);
+  /** drive handling of control messages from GSM core */
+  int ctrl_sock_handle_rx(int chan);
 
   int mSPSTx;                          ///< number of samples per Tx symbol
   int mSPSRx;                          ///< number of samples per Rx symbol
@@ -229,9 +258,6 @@ protected:
   /** drive transmission of GSM bursts */
   void driveTxFIFO();
 
-  /** drive handling of control messages from GSM core */
-  bool driveControl(size_t chan);
-
   /**
     drive modulation and sorting of GSM bursts from GSM core
     @return true if a burst was transferred successfully
@@ -242,7 +268,6 @@ protected:
   friend void *TxUpperLoopAdapter(TrxChanThParams *params);
   friend void *RxLowerLoopAdapter(Transceiver *transceiver);
   friend void *TxLowerLoopAdapter(Transceiver *transceiver);
-  friend void *ControlServiceLoopAdapter(TrxChanThParams *params);
 
 
   void reset();
@@ -255,9 +280,6 @@ void *RxUpperLoopAdapter(TrxChanThParams *params);
 /** Main drive threads */
 void *RxLowerLoopAdapter(Transceiver *transceiver);
 void *TxLowerLoopAdapter(Transceiver *transceiver);
-
-/** control message handler thread loop */
-void *ControlServiceLoopAdapter(TrxChanThParams *params);
 
 /** transmit queueing thread loop */
 void *TxUpperLoopAdapter(TrxChanThParams *params);

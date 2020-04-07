@@ -79,7 +79,6 @@ static struct ctrl_handle *g_ctrlh;
 
 static RadioDevice *usrp;
 static RadioInterface *radio;
-static Transceiver *transceiver;
 
 /* Create radio interface
  *     The interface consists of sample rate changes, frequency shifts,
