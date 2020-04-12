@@ -110,11 +110,11 @@ unsigned int ipc_shm_encode_region(struct ipc_shm_raw_region *root_raw, uint32_t
         if (root_raw)
                 root_raw->num_chans = num_chans;
         for (i = 0; i < num_chans; i++) {
-                if (root_raw) {
-                        root_raw->chan_offset[i] = (start + offset - (uint8_t*)root_raw);
-                        fprintf(stderr, "encode: channel %d chan_offset[i]=%u\n", i, root_raw->chan_offset[i]);
-                        offset += ipc_shm_encode_channel(root_raw, (struct ipc_shm_raw_channel *)(start + offset), num_buffers, buffer_size);
-                }
+                 uint32_t ofs = (start + offset - (uint8_t*)root_raw);
+                if (root_raw)
+                      root_raw->chan_offset[i] = (start + offset - (uint8_t*)root_raw);
+                 fprintf(stderr, "encode: channel %d chan_offset[i]=%u\n", i, ofs);
+                 offset += ipc_shm_encode_channel(root_raw, (struct ipc_shm_raw_channel *)(start + offset), num_buffers, buffer_size);
         }
         //TODO: pass maximum size and verify we didn't go through
         return offset;
