@@ -232,7 +232,7 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
                                       mLocalAddr.c_str(), d_srcport,
                                       mRemoteAddr.c_str(), d_dstport,
 				      OSMO_SOCK_F_BIND | OSMO_SOCK_F_CONNECT);
-    if (mCtrlSockets[i] < 0)
+    if (mDataSockets[i] < 0)
       return false;
   }
 
@@ -940,7 +940,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   // check data socket
   msgLen = read(mDataSockets[chan], buffer, sizeof(buffer));
   if (msgLen <= 0) {
-    LOGCHAN(chan, DTRXDDL, NOTICE) << "mDataSockets read(" << mCtrlSockets[chan] << ") failed: " << msgLen;
+    LOGCHAN(chan, DTRXDDL, NOTICE) << "mDataSockets read(" << mDataSockets[chan] << ") failed: " << msgLen;
     return false;
   }
 
