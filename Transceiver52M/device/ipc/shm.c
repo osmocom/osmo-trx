@@ -8,7 +8,7 @@
 /* Convert offsets to pointers */
 struct ipc_shm_stream *ipc_shm_decode_stream(void *tall_ctx, struct ipc_shm_raw_region *root_raw, struct ipc_shm_raw_stream *stream_raw)
 {
-        int i;
+        unsigned int i;
         struct ipc_shm_stream *stream;
         stream = talloc_zero(tall_ctx, struct ipc_shm_stream);
         stream = talloc_zero_size(tall_ctx, sizeof(struct ipc_shm_stream) +
@@ -38,7 +38,7 @@ struct ipc_shm_channel *ipc_shm_decode_channel(void *tall_ctx, struct ipc_shm_ra
 }
 struct ipc_shm_region *ipc_shm_decode_region(void *tall_ctx, struct ipc_shm_raw_region *root_raw)
 {
-        int i;
+        unsigned int i;
         struct ipc_shm_region *root;
         root = talloc_zero_size(tall_ctx, sizeof(struct ipc_shm_region) +
                                           sizeof(struct ipc_shm_channel*) * root_raw->num_chans);
@@ -66,8 +66,8 @@ unsigned int ipc_shm_encode_smpl_buf(struct ipc_shm_raw_region *root_raw, struct
 
 unsigned int ipc_shm_encode_stream(struct ipc_shm_raw_region *root_raw, struct ipc_shm_raw_stream *stream_raw, uint32_t num_buffers, uint32_t buffer_size)
 {
-        int i;
         uint8_t* start = (uint8_t*)stream_raw;
+        unsigned int i;
         unsigned int offset = sizeof(struct ipc_shm_raw_stream) + sizeof(uint32_t)*num_buffers;
 
         fprintf(stderr, "encode: stream at offset %lu\n", (start - (uint8_t*)root_raw));
@@ -103,8 +103,8 @@ unsigned int ipc_shm_encode_channel(struct ipc_shm_raw_region *root_raw, struct 
 /* if root_raw is NULL, then do a dry run, aka only calculate final offset */
 unsigned int ipc_shm_encode_region(struct ipc_shm_raw_region *root_raw, uint32_t num_chans, uint32_t num_buffers, uint32_t buffer_size)
 {
-        int i;
         uint8_t* start = (uint8_t*)root_raw;
+        unsigned i;
         unsigned int offset = sizeof(struct ipc_shm_raw_region) + sizeof(uint32_t)*num_chans;
 
         if (root_raw)
