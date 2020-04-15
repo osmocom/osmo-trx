@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <osmocom/core/talloc.h>
 
 #include "shm.h"
@@ -66,11 +67,11 @@ unsigned int ipc_shm_encode_smpl_buf(struct ipc_shm_raw_region *root_raw, struct
 
 unsigned int ipc_shm_encode_stream(struct ipc_shm_raw_region *root_raw, struct ipc_shm_raw_stream *stream_raw, uint32_t num_buffers, uint32_t buffer_size)
 {
-        uint8_t* start = (uint8_t*)stream_raw;
         unsigned int i;
+        ptrdiff_t start = (ptrdiff_t)stream_raw;
         unsigned int offset = sizeof(struct ipc_shm_raw_stream) + sizeof(uint32_t)*num_buffers;
 
-        fprintf(stderr, "encode: stream at offset %lu\n", (start - (uint8_t*)root_raw));
+        fprintf(stderr, "encode: stream at offset %lu\n", (start - (ptrdiff_t)root_raw));
 
         if (root_raw) {
                 stream_raw->num_buffers = num_buffers;
@@ -80,7 +81,7 @@ unsigned int ipc_shm_encode_stream(struct ipc_shm_raw_region *root_raw, struct i
         }
         for (i = 0; i < num_buffers; i++) {
                 if (root_raw)
-                        stream_raw->buffer_offset[i] = (start + offset - (uint8_t*)root_raw);
+                        stream_raw->buffer_offset[i] = (start + offset - (ptrdiff_t)root_raw);
                 offset += ipc_shm_encode_smpl_buf(root_raw, (struct ipc_shm_raw_smpl_buf *)(start + offset), buffer_size);
         }
         return offset;
@@ -103,16 +104,16 @@ unsigned int ipc_shm_encode_channel(struct ipc_shm_raw_region *root_raw, struct 
 /* if root_raw is NULL, then do a dry run, aka only calculate final offset */
 unsigned int ipc_shm_encode_region(struct ipc_shm_raw_region *root_raw, uint32_t num_chans, uint32_t num_buffers, uint32_t buffer_size)
 {
-        uint8_t* start = (uint8_t*)root_raw;
         unsigned i;
+        ptrdiff_t start = (ptrdiff_t)root_raw;
         unsigned int offset = sizeof(struct ipc_shm_raw_region) + sizeof(uint32_t)*num_chans;
 
         if (root_raw)
                 root_raw->num_chans = num_chans;
         for (i = 0; i < num_chans; i++) {
-                 uint32_t ofs = (start + offset - (uint8_t*)root_raw);
+                 uint32_t ofs = (start + offset - (ptrdiff_t)root_raw);
                 if (root_raw)
-                      root_raw->chan_offset[i] = (start + offset - (uint8_t*)root_raw);
+                      root_raw->chan_offset[i] = (start + offset - (ptrdiff_t)root_raw);
                  fprintf(stderr, "encode: channel %d chan_offset[i]=%u\n", i, ofs);
                  offset += ipc_shm_encode_channel(root_raw, (struct ipc_shm_raw_channel *)(start + offset), num_buffers, buffer_size);
         }
