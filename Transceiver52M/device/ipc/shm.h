@@ -163,6 +163,7 @@ struct ipc_sk_if_info_cnf {
         double          max_rx_gain;
         double          min_tx_gain;
         double          max_tx_gain;
+        double iq_scaling_val;
         uint32_t        max_num_chans;
         char            dev_desc[200];
         struct ipc_sk_if_info_chan chan_info[0];
