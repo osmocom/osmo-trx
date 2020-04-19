@@ -64,9 +64,9 @@ enum {
 static const struct log_info_cat default_categories[] = {
 	[DMAIN] = {
 		.name = "DMAIN",
+        		.color = NULL,
 		.description = "Main generic category",
-		.color = NULL,
-		.enabled = 1, .loglevel = LOGL_DEBUG,
+		 .loglevel = LOGL_DEBUG,.enabled = 1,
 	},
 };
 
@@ -147,7 +147,7 @@ static int ipc_tx_info_cnf()
 	struct msgb *msg;
 	struct ipc_sk_if *ipc_prim;
         struct ipc_sk_if_info_chan *chan_info;
-        int i;
+        unsigned int i;
 
 	msg = ipc_msgb_alloc(IPC_IF_MSG_INFO_CNF);
 	if (!msg)
@@ -179,7 +179,7 @@ static int ipc_tx_open_cnf(int rc, uint32_t num_chans)
 	struct msgb *msg;
 	struct ipc_sk_if *ipc_prim;
         struct ipc_sk_if_open_cnf_chan *chan_info;
-        int i;
+        unsigned int i;
 
 	msg = ipc_msgb_alloc(IPC_IF_MSG_OPEN_CNF);
 	if (!msg)
@@ -318,7 +318,7 @@ static int ipc_sock_read(struct osmo_fd *bfd)
 		goto close;
 	}
 
-	if (rc < sizeof(*ipc_prim)) {
+	if (rc < (int)sizeof(*ipc_prim)) {
 		LOGP(DMAIN, LOGL_ERROR, "Received %d bytes on Unix Socket, but primitive size "
 		     "is %zu, discarding\n", rc, sizeof(*ipc_prim));
 		msgb_free(msg);
@@ -341,7 +341,7 @@ close:
 
 static int ipc_sock_write(struct osmo_fd *bfd)
 {
-	struct ipc_sock_state *state = bfd->data;
+	struct ipc_sock_state *state = (struct ipc_sock_state *)bfd->data;
 	int rc;
 
 	while (!llist_empty(&state->upqueue)) {
