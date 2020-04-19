@@ -159,6 +159,7 @@ static int ipc_tx_info_cnf()
         ipc_prim->u.info_cnf.max_rx_gain = 70.0;
         ipc_prim->u.info_cnf.min_tx_gain = 0.0;
         ipc_prim->u.info_cnf.max_tx_gain = 63.0;
+        ipc_prim->u.info_cnf.iq_scaling_val = 0.3;
 	ipc_prim->u.info_cnf.max_num_chans = 2;
         OSMO_STRLCPY_ARRAY(ipc_prim->u.info_cnf.dev_desc, "Hello To my Virtual device!");
         chan_info = ipc_prim->u.info_cnf.chan_info;
