@@ -77,28 +77,28 @@ private:
 	bool do_clock_src_freq(enum ReferenceType ref, double freq);
 
 public:
-	void ipc_sock_close();
-	int ipc_sock_read(struct osmo_fd *bfd);
-	int ipc_sock_write(struct osmo_fd *bfd);
-	int ipc_rx(uint8_t msg_type, struct ipc_sk_if *ipc_prim);
-	int ipc_rx_greeting_cnf(const struct ipc_sk_if_greeting *greeting_cnf);
-	int ipc_rx_info_cnf(const struct ipc_sk_if_info_cnf *info_cnf);
-	int ipc_rx_open_cnf(const struct ipc_sk_if_open_cnf *open_cnf);
+	virtual void ipc_sock_close();
+	virtual int ipc_sock_read(struct osmo_fd *bfd);
+	virtual int ipc_sock_write(struct osmo_fd *bfd);
+	virtual int ipc_rx(uint8_t msg_type, struct ipc_sk_if *ipc_prim);
+	virtual int ipc_rx_greeting_cnf(const struct ipc_sk_if_greeting *greeting_cnf);
+	virtual int ipc_rx_info_cnf(const struct ipc_sk_if_info_cnf *info_cnf);
+	virtual int ipc_rx_open_cnf(const struct ipc_sk_if_open_cnf *open_cnf);
 
 	/** Object constructor */
 	IPCDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
 		  const std::vector<std::string>& tx_paths,
 		  const std::vector<std::string>& rx_paths);
-	~IPCDevice();
+	virtual ~IPCDevice();
 
 	/** Instantiate the LMS */
-	int open(const std::string &args, int ref, bool swap_channels);
+	virtual int open(const std::string &args, int ref, bool swap_channels);
 
 	/** Start the LMS */
-	bool start();
+	virtual bool start();
 
 	/** Stop the LMS */
-	bool stop();
+	virtual bool stop();
 
 	enum TxWindowType getWindowType() {
 		return TX_WINDOW_LMS1;
@@ -113,7 +113,7 @@ public:
 	@param underrun Set if LMS does not have data to transmit, e.g. data not being sent fast enough
 	@return The number of samples actually read
 	*/
-	int readSamples(std::vector < short *>&buf, int len, bool * overrun,
+	virtual int readSamples(std::vector < short *>&buf, int len, bool * overrun,
 			TIMESTAMP timestamp = 0xffffffff, bool * underrun =
 			NULL);
 	/**
@@ -124,93 +124,93 @@ public:
 	@param timestamp The timestamp of the first sample of the data buffer.
 	@return The number of samples actually written
 	*/
-	int writeSamples(std::vector < short *>&bufs, int len, bool * underrun,
+	virtual int writeSamples(std::vector < short *>&bufs, int len, bool * underrun,
 			 TIMESTAMP timestamp = 0xffffffff);
 
 	/** Update the alignment between the read and write timestamps */
-	bool updateAlignment(TIMESTAMP timestamp);
+	virtual bool updateAlignment(TIMESTAMP timestamp);
 
 	/** Set the transmitter frequency */
-	bool setTxFreq(double wFreq, size_t chan = 0);
+	virtual bool setTxFreq(double wFreq, size_t chan = 0);
 
 	/** Set the receiver frequency */
-	bool setRxFreq(double wFreq, size_t chan = 0);
+	virtual bool setRxFreq(double wFreq, size_t chan = 0);
 
 	/** Returns the starting write Timestamp*/
-	TIMESTAMP initialWriteTimestamp(void) {
+	virtual TIMESTAMP initialWriteTimestamp(void) {
 		return ts_initial;
 	}
 
 	/** Returns the starting read Timestamp*/
-	TIMESTAMP initialReadTimestamp(void) {
+	virtual TIMESTAMP initialReadTimestamp(void) {
 		return ts_initial;
 	}
 
 	/** returns the full-scale transmit amplitude **/
-	double fullScaleInputValue() {
+	virtual double fullScaleInputValue() {
 		#define LIMESDR_TX_AMPL  0.3
 		return(double) SHRT_MAX * LIMESDR_TX_AMPL;
 	}
 
 	/** returns the full-scale receive amplitude **/
-	double fullScaleOutputValue() {
+	virtual double fullScaleOutputValue() {
 		return (double) SHRT_MAX;
 	}
 
 	/** sets the receive chan gain, returns the gain setting **/
-	double setRxGain(double dB, size_t chan = 0);
+	virtual double setRxGain(double dB, size_t chan = 0);
 
 	/** get the current receive gain */
-	double getRxGain(size_t chan = 0) {
+	virtual double getRxGain(size_t chan = 0) {
 		return rx_gains[chan];
 	}
 
 	/** return maximum Rx Gain **/
-	double maxRxGain(void);
+	virtual double maxRxGain(void);
 
 	/** return minimum Rx Gain **/
-	double minRxGain(void);
+	virtual double minRxGain(void);
 
 	/** sets the transmit chan gain, returns the gain setting **/
-	double setTxGain(double dB, size_t chan = 0);
+	virtual double setTxGain(double dB, size_t chan = 0);
 
 	/** get transmit gain */
-	double getTxGain(size_t chan = 0) {
+	virtual double getTxGain(size_t chan = 0) {
 		return tx_gains[chan];
 	}
 
 	/** return maximum Tx Gain **/
-	double maxTxGain(void);
+	virtual double maxTxGain(void);
 
 	/** return minimum Rx Gain **/
-	double minTxGain(void);
+	virtual double minTxGain(void);
 
 	/** sets the RX path to use, returns true if successful and false otherwise */
-	bool setRxAntenna(const std::string & ant, size_t chan = 0);
+	virtual bool setRxAntenna(const std::string & ant, size_t chan = 0);
 
 	/* return the used RX path */
-	std::string getRxAntenna(size_t chan = 0);
+	virtual std::string getRxAntenna(size_t chan = 0);
 
 	/** sets the RX path to use, returns true if successful and false otherwise */
-	bool setTxAntenna(const std::string & ant, size_t chan = 0);
+	virtual bool setTxAntenna(const std::string & ant, size_t chan = 0);
 
 	/* return the used RX path */
-	std::string getTxAntenna(size_t chan = 0);
+	virtual std::string getTxAntenna(size_t chan = 0);
 
 	/** return whether user drives synchronization of Tx/Rx of USRP */
-        bool requiresRadioAlign();
+   virtual      bool requiresRadioAlign();
 
         /** return whether user drives synchronization of Tx/Rx of USRP */
-        virtual GSM::Time minLatency();
+         virtual GSM::Time minLatency();
 
 	/** Return internal status values */
-	inline double getTxFreq(size_t chan = 0) {
+	virtual inline double getTxFreq(size_t chan = 0) {
 		return 0;
 	}
-	inline double getRxFreq(size_t chan = 0) {
+	virtual inline double getRxFreq(size_t chan = 0) {
 		return 0;
 	}
-	inline double getSampleRate() {
+	virtual inline double getSampleRate() {
 		return actualSampleRate;
 	}
 };

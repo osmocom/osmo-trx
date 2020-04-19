@@ -492,8 +492,14 @@ int ipc_sock_init(const char *path)
 	return 0;
 }
 
-
+#ifdef IPCMAGIC
+extern "C" int osmo_ctx_init 	( 	const char *  	id	);
+int magicmain(int argc, char** argv) {
+    osmo_ctx_init("main");
+    osmo_select_init();
+#else
 int main(int argc, char** argv) {
+#endif
         tall_ctx = talloc_named_const(NULL, 0, "OsmoTRX");
         msgb_talloc_ctx_init(tall_ctx, 0);
         osmo_init_logging2(tall_ctx, &log_info);
