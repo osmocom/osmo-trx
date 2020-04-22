@@ -398,6 +398,7 @@ int IPCDevice::ipc_rx_chan_stop_cnf(ipc_sk_chan_if_op_rc *ret, uint8_t chan_nr)
 }
 int IPCDevice::ipc_rx_chan_setgain_cnf(ipc_sk_chan_if_gain *ret, uint8_t chan_nr)
 {
+	ret->is_tx ? tx_gains[chan_nr] = ret->gain : rx_gains[chan_nr] = ret->gain;
 	return 0;
 }
 int IPCDevice::ipc_rx_chan_setfreq_cnf(ipc_sk_chan_if_freq_cnf *ret, uint8_t chan_nr)
@@ -856,6 +857,9 @@ double IPCDevice::minRxGain()
 
 double IPCDevice::setTxGain(double dB, size_t chan)
 {
+	struct msgb *msg;
+	struct ipc_sk_chan_if *ipc_prim;
+
 	if (dB > maxTxGain())
 		dB = maxTxGain();
 	if (dB < minTxGain())
@@ -863,15 +867,24 @@ double IPCDevice::setTxGain(double dB, size_t chan)
 
 	LOGCHAN(chan, DDEV, NOTICE) << "Setting TX gain to " << dB << " dB";
 
-	//if (IPC_SetGaindB(m_IPC_dev, IPC_CH_TX, chan, dB) < 0)
-	//	LOGCHAN(chan, DDEV, ERR) << "Error setting TX gain to " << dB << " dB";
-	//else
+	msg = ipc_msgb_alloc(IPC_IF_MSG_SETGAIN_REQ);
+	if (!msg)
+		return -ENOMEM;
+	ipc_prim = (struct ipc_sk_chan_if *)msg->data;
+	ipc_prim->u.set_gain_req.is_tx = 1;
+	ipc_prim->u.set_gain_req.gain = dB;
+
+	ipc_sock_send(&sk_chan_state[chan], msg);
+
 	tx_gains[chan] = dB;
 	return tx_gains[chan];
 }
 
 double IPCDevice::setRxGain(double dB, size_t chan)
 {
+	struct msgb *msg;
+	struct ipc_sk_chan_if *ipc_prim;
+
 	if (dB > maxRxGain())
 		dB = maxRxGain();
 	if (dB < minRxGain())
@@ -879,9 +892,15 @@ double IPCDevice::setRxGain(double dB, size_t chan)
 
 	LOGCHAN(chan, DDEV, NOTICE) << "Setting RX gain to " << dB << " dB";
 
-	//if (IPC_SetGaindB(m_IPC_dev, IPC_CH_RX, chan, dB) < 0)
-	//	LOGCHAN(chan, DDEV, ERR) << "Error setting RX gain to " << dB << " dB";
-	//else
+	msg = ipc_msgb_alloc(IPC_IF_MSG_SETGAIN_REQ);
+	if (!msg)
+		return -ENOMEM;
+	ipc_prim = (struct ipc_sk_chan_if *)msg->data;
+	ipc_prim->u.set_gain_req.is_tx = 0;
+	ipc_prim->u.set_gain_req.gain = dB;
+
+	ipc_sock_send(&sk_chan_state[chan], msg);
+
 	rx_gains[chan] = dB;
 	return rx_gains[chan];
 }
