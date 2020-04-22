@@ -347,11 +347,13 @@ int IPCDevice::ipc_rx_open_cnf(const struct ipc_sk_if_open_cnf *open_cnf)
 		return -1;
 	shm_dec = ipc_shm_decode_region(NULL, (ipc_shm_raw_region *)shm);
 	LOGC(DDEV, NOTICE) << "shm: num_chans=" << shm_dec->num_chans;
-	LOGC(DDEV, NOTICE) << "shm: chan0/dl: num_buffers=" << shm_dec->channels[0]->dl_stream->num_buffers;
-	LOGC(DDEV, NOTICE) << "shm: chan0/dl: buffer_size=" << shm_dec->channels[0]->dl_stream->buffer_size;
 
 	/* server inits both producers */
 	for (unsigned int i = 0; i < shm_dec->num_chans; i++) {
+		LOGC(DDEV, NOTICE)
+			<< "shm: chan" << i << "/dl: num_buffers=" << shm_dec->channels[0]->dl_stream->num_buffers;
+		LOGC(DDEV, NOTICE)
+			<< "shm: chan" << i << "/dl: buffer_size=" << shm_dec->channels[0]->dl_stream->buffer_size;
 		shm_io_rx_streams.push_back(ipc_shm_init_consumer(shm_dec->channels[i]->ul_stream));
 		shm_io_tx_streams.push_back(ipc_shm_init_consumer(shm_dec->channels[i]->dl_stream));
 		//		shm_io_tx_streams.push_back(ipc_shm_init_producer(shm_dec->channels[i]->dl_stream));
@@ -402,10 +404,15 @@ int IPCDevice::ipc_rx_chan_setfreq_cnf(ipc_sk_chan_if_freq_cnf *ret, uint8_t cha
 }
 int IPCDevice::ipc_rx_chan_notify_underflow(ipc_sk_chan_if_notfiy *ret, uint8_t chan_nr)
 {
+	m_ctr[chan_nr].tx_underruns += 1;
+	osmo_signal_dispatch(SS_DEVICE, S_DEVICE_COUNTER_CHANGE, &m_ctr[chan_nr]);
+
 	return 0;
 }
 int IPCDevice::ipc_rx_chan_notify_overflow(ipc_sk_chan_if_notfiy *ret, uint8_t chan_nr)
 {
+	m_ctr[chan_nr].rx_overruns += 1;
+	osmo_signal_dispatch(SS_DEVICE, S_DEVICE_COUNTER_CHANGE, &m_ctr[chan_nr]);
 	return 0;
 }
 
@@ -985,9 +992,11 @@ int IPCDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun, T
 
 			//expect_timestamp = timestamp + avail_smpls;
 			if (expect_timestamp != (TIMESTAMP)recv_timestamp)
-				LOGCHAN(i, DDEV, ERROR)
-					<< "Unexpected recv buffer timestamp: expect " << expect_timestamp << " got "
-					<< recv_timestamp << ", diff=" << recv_timestamp - expect_timestamp;
+				LOGCHAN(i, DDEV, ERROR) << "Unexpected recv buffer timestamp: expect "
+							<< expect_timestamp << " got " << recv_timestamp << ", diff="
+							<< ((uint64_t)recv_timestamp > expect_timestamp ?
+								    (uint64_t)recv_timestamp - expect_timestamp :
+								    expect_timestamp - recv_timestamp);
 
 			rc = rx_buffers[i]->write(bufs[i], num_smpls, (TIMESTAMP)recv_timestamp);
 			if (rc < 0) {
