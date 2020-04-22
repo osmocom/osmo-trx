@@ -75,6 +75,12 @@ static const struct log_info_cat default_categories[] = {
 		.description = "Main generic category",
 		 .loglevel = LOGL_DEBUG,.enabled = 1,
 	},
+    [DDEV] = {
+		.name = "DDEV",
+		.description = "Device/Driver specific code",
+		.color = NULL,
+		.enabled = 1, .loglevel = LOGL_DEBUG,
+	},
 };
 
 const struct log_info log_infox = {
