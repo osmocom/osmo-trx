@@ -316,6 +316,8 @@ int IPCDevice::ipc_rx_open_cnf(const struct ipc_sk_if_open_cnf *open_cnf)
 	LOGC(DDEV, NOTICE)
 		<< "Rx Open CNF:"
 		<< " return_code=" << (unsigned int)open_cnf->return_code << " shm_name=" << open_cnf->shm_name;
+	LOGC(DDEV, NOTICE) << "Rx Open CNF:"
+			   << " ipc device path delay: " << (unsigned int)open_cnf->path_delay;
 	for (i = 0; i < chans; i++) {
 		int rc;
 		LOGC(DDEV, NOTICE) << "chan " << i << ": sk_path=" << open_cnf->chan_info[i].chan_ipc_sk_path;
