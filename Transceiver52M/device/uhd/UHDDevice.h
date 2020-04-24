@@ -127,7 +127,7 @@ public:
 		ERROR_UNHANDLED = -4,
 	};
 
-private:
+protected:
 	uhd::usrp::multi_usrp::sptr usrp_dev;
 	uhd::tx_streamer::sptr tx_stream;
 	uhd::rx_streamer::sptr rx_stream;
