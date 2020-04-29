@@ -5,11 +5,11 @@ AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_C
 AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
 AM_LDFLAGS = -lpthread -lrt
 
-noinst_HEADERS = IPCDevice.h shm.h ipcb210.h ../uhd/UHDDevice.h uhdwrap.h
+noinst_HEADERS = IPCDevice.h shm.h ../uhd/UHDDevice.h uhdwrap.h
 
 noinst_LTLIBRARIES = libdevice.la
 
-libdevice_la_SOURCES = ipc-driver-test.c ipcb210.cpp IPCDevice.cpp shm.c ../uhd/UHDDevice.cpp uhdwrap.cpp ipc_shm.c ipc_chan.c ipc_sock.c 
+libdevice_la_SOURCES = ipc-driver-test.c IPCDevice.cpp shm.c ../uhd/UHDDevice.cpp uhdwrap.cpp ipc_shm.c ipc_chan.c ipc_sock.c 
 libdevice_la_LIBADD = $(top_builddir)/Transceiver52M/device/common/libdevice_common.la
 libdevice_la_CXXFLAGS = $(AM_CXXFLAGS) $(UHD_CFLAGS) -DIPCMAGIC
 
