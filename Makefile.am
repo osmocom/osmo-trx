@@ -33,7 +33,8 @@ SUBDIRS = \
 	GSM \
 	Transceiver52M \
 	contrib \
-	tests
+	tests \
+	utils
 
 EXTRA_DIST = \
 	LEGAL \

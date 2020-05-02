@@ -92,6 +92,7 @@ CPPFLAGS=$save_CPPFLAGS
 PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 1.3.0)
 PKG_CHECK_MODULES(LIBOSMOVTY, libosmovty >= 1.3.0)
 PKG_CHECK_MODULES(LIBOSMOCTRL, libosmoctrl >= 1.3.0)
+PKG_CHECK_MODULES(LIBOSMOCODING, libosmocoding >= 1.3.0)
 
 AC_ARG_ENABLE(sanitize,
 	[AS_HELP_STRING(
@@ -327,6 +328,7 @@ AC_CONFIG_FILES([\
     tests/Makefile \
     tests/CommonLibs/Makefile \
     tests/Transceiver52M/Makefile \
+    utils/Makefile \
     doc/Makefile \
     doc/examples/Makefile \
     contrib/Makefile \
