@@ -721,18 +721,26 @@ static int ipc_chan_sock_cb(struct osmo_fd *bfd, unsigned int flags)
 
 int IPCDevice::open(const std::string &args, int ref, bool swap_channels)
 {
-	//float_type sr_host, sr_rf;
-	//unsigned int i, n;
-	//int rc, dev_id;
+	std::string k,v;
+	std::string::size_type keyend;
 	int rc;
 
-	LOGC(DDEV, INFO) << "Opening IPC device..";
+	if ((keyend = args.find('=')) != std::string::npos) {
+		k = args.substr(0, keyend++);
+		v = args.substr(keyend);
+	}
+	if(k != "ipc_msock" || !v.length()) {
+			LOGC(DDEV, ERROR) << "Invalid device args provided, expected  \"dev-args ipc_msock=/path/to/socket\"\n";
+			return -1;
+	}
+
+	LOGC(DDEV, INFO) << "Opening IPC device" << v << "..";
 
 	memset(&sk_state, 0x00, sizeof(sk_state));
 	INIT_LLIST_HEAD(&sk_state.upqueue);
-	rc = osmo_sock_unix_init_ofd(&sk_state.conn_bfd, SOCK_SEQPACKET, 0, IPC_SOCK_PATH, OSMO_SOCK_F_CONNECT);
+	rc = osmo_sock_unix_init_ofd(&sk_state.conn_bfd, SOCK_SEQPACKET, 0, v.c_str(), OSMO_SOCK_F_CONNECT);
 	if (rc < 0) {
-		LOGC(DDEV, ERROR) << "Failed to connect to the BTS (" << IPC_SOCK_PATH << "). "
+		LOGC(DDEV, ERROR) << "Failed to connect to the BTS (" << v << "). "
 				  << "Retrying...\n";
 		osmo_timer_setup(&sk_state.timer, ipc_sock_timeout, NULL);
 		osmo_timer_schedule(&sk_state.timer, 5, 0);

@@ -33,7 +33,7 @@ extern "C" {
 #include <sys/mman.h>
 #include <sys/stat.h> /* For mode constants */
 #include <fcntl.h> /* For O_* constants */
-
+#include <getopt.h>
 
 #include <osmocom/core/application.h>
 #include <osmocom/core/talloc.h>
@@ -193,7 +193,7 @@ static int ipc_tx_open_cnf(int rc, uint32_t num_chans, int32_t timingoffset)
 
 	chan_info = ipc_prim->u.open_cnf.chan_info;
 	for (i = 0; i < num_chans; i++) {
-		snprintf(chan_info->chan_ipc_sk_path, sizeof(chan_info->chan_ipc_sk_path), "%s_%d", IPC_SOCK_PATH, i);
+		snprintf(chan_info->chan_ipc_sk_path, sizeof(chan_info->chan_ipc_sk_path), "%s_%d", IPC_SOCK_PATH_PREFIX, i);
 		/* FIXME: dynamc chan limit, currently 8 */
 		if (i < 8)
 			ipc_sock_init(chan_info->chan_ipc_sk_path, &global_ctrl_socks[i], ipc_chan_sock_accept, i);
@@ -272,7 +272,7 @@ void *downlink_thread(void *x_void_ptr)
 		bool underrun;
 		uhdwrap_write(global_dev, chann, &underrun);
 	}
-    return 0;
+	return 0;
 }
 
 int ipc_rx_chan_start_req(struct ipc_sk_chan_if_op_void *req, uint8_t chan_nr)
@@ -392,6 +392,51 @@ int ipc_sock_init(const char *path, struct ipc_sock_state **global_state_var,
 	return 0;
 }
 
+static void print_help(void)
+{
+	printf(	"ipc-driver-test Usage:\n"
+		" -h  --help		This message\n"
+		" -n  --sock-num NR	Master socket suffix number NR\n"
+	      );
+}
+
+static int msocknum = 0;
+
+static void handle_options(int argc, char **argv)
+{
+	while (1) {
+		int option_index = 0, c;
+		const struct option long_options[] = {
+			{ "help", 0, 0, 'h' },
+			{ "sock-num", 1, 0, 'n' },
+			{0,0,0,0}
+		};
+
+		c = getopt_long(argc, argv, "hn:",
+				long_options, &option_index);
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'h':
+			print_help();
+			exit(0);
+			break;
+		case 'n':
+			msocknum = atoi(optarg);
+			break;
+		default:
+			exit(2);
+			break;
+		}
+	}
+
+	if (argc > optind) {
+		fprintf(stderr, "Unsupported positional arguments on command line\n");
+		exit(2);
+	}
+}
+
 #if defined(IPCMAGIC) && defined(__cplusplus)
 extern "C" int osmo_ctx_init(const char *id);
 
@@ -404,13 +449,17 @@ extern "C" int magicmain(int argc, char **argv)
 int main(int argc, char **argv)
 {
 #endif
+	char ipc_msock_path[sizeof(IPC_SOCK_PATH_PREFIX)+3];
 	tall_ctx = talloc_named_const(NULL, 0, "OsmoTRX");
 	msgb_talloc_ctx_init(tall_ctx, 0);
 	osmo_init_logging2(tall_ctx, &log_infox);
 	log_enable_multithread();
 
+	handle_options(argc, argv);
+	snprintf(ipc_msock_path,sizeof(ipc_msock_path), "%s%d", IPC_SOCK_PATH_PREFIX, msocknum);
+
 	LOGP(DMAIN, LOGL_INFO, "Starting %s\n", argv[0]);
-	ipc_sock_init(IPC_SOCK_PATH, &global_ipc_sock_state, ipc_sock_accept, 0);
+	ipc_sock_init(ipc_msock_path, &global_ipc_sock_state, ipc_sock_accept, 0);
 	while (!ipc_exit_requested)
 		osmo_select_main(0);
 	//ipc_sock_close()
