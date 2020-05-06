@@ -88,7 +88,7 @@ unsigned int ipc_shm_encode_smpl_buf(struct ipc_shm_raw_region *root_raw, struct
 {
 	uint8_t *start = (uint8_t *)smpl_buf_raw;
 	unsigned int offset = sizeof(struct ipc_shm_raw_smpl_buf);
-	offset += (((uintptr_t)offset + 7) & ~0x07ULL);
+	offset = (((uintptr_t)offset + 7) & ~0x07ULL);
 #ifdef ENCDECDEBUG
 	fprintf(stderr, "encode: smpl_buf at offset %lu\n", (start - (uint8_t *)root_raw));
 #endif
@@ -102,7 +102,7 @@ unsigned int ipc_shm_encode_stream(struct ipc_shm_raw_region *root_raw, struct i
 	unsigned int i;
 	ptrdiff_t start = (ptrdiff_t)stream_raw;
 	unsigned int offset = sizeof(struct ipc_shm_raw_stream) + sizeof(uint32_t) * num_buffers;
-	offset += (((uintptr_t)offset + 7) & ~0x07ULL);
+	offset = (((uintptr_t)offset + 7) & ~0x07ULL);
 #ifdef ENCDECDEBUG
 	fprintf(stderr, "encode: stream at offset %lu\n", (start - (ptrdiff_t)root_raw));
 #endif
@@ -125,7 +125,7 @@ unsigned int ipc_shm_encode_channel(struct ipc_shm_raw_region *root_raw, struct 
 {
 	uint8_t *start = (uint8_t *)chan_raw;
 	unsigned int offset = sizeof(struct ipc_shm_raw_channel);
-	offset += (((uintptr_t)offset + 7) & ~0x07ULL);
+	offset = (((uintptr_t)offset + 7) & ~0x07ULL);
 #ifdef ENCDECDEBUG
 	fprintf(stderr, "encode: channel at offset %lu\n", (start - (uint8_t *)root_raw));
 #endif
@@ -146,7 +146,7 @@ unsigned int ipc_shm_encode_region(struct ipc_shm_raw_region *root_raw, uint32_t
 	unsigned i;
 	uintptr_t start = (uintptr_t)root_raw;
 	unsigned int offset = sizeof(struct ipc_shm_raw_region) + sizeof(uint32_t) * num_chans;
-	offset += (((uintptr_t)offset + 7) & ~0x07ULL);
+	offset = (((uintptr_t)offset + 7) & ~0x07ULL);
 
 	if (root_raw)
 		root_raw->num_chans = num_chans;
