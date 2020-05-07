@@ -187,7 +187,9 @@ static void trx_data_init(struct trx_data *trx)
 /* apply any intentional errors to the output of the PRBS sequence */
 static void apply_errors_prbs(struct pchan_data *pchan)
 {
-	for (int i = 0; i < sizeof(pchan->prbs_u)-4; i++) {
+	int i;
+
+	for (i = 0; i < sizeof(pchan->prbs_u)-4; i++) {
 		pchan->sim_flip_codec_bits.i++;
 		if (pchan->sim_flip_codec_bits.i == pchan->sim_flip_codec_bits.nth_bit) {
 			pchan->sim_flip_codec_bits.i = 0;
@@ -237,7 +239,8 @@ static int pchan_get_next_burst(struct pchan_data *pchan, uint32_t fn, ubit_t *b
 		rc = gsm0503_tch_fr_encode(pchan->bursts, pchan->tch_data, GSM_FR_BYTES, 1);
 		OSMO_ASSERT(rc == 0);
 #if 0
-		for (int i = 0; i < sizeof(pchan->bursts); i += GSM_BURST_BITS)
+		int i;
+		for (i = 0; i < sizeof(pchan->bursts); i += GSM_BURST_BITS)
 			printf("\t%s\n", osmo_ubit_dump(pchan->bursts + i, GSM_BURST_BITS));
 
 		dec(pchan->bursts);
