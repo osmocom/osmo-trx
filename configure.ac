@@ -336,4 +336,5 @@ AC_CONFIG_FILES([\
 ])
 
 AC_OUTPUT(
-	doc/manuals/Makefile)
+	doc/manuals/Makefile
+	contrib/osmo-trx.spec)

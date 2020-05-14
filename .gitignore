@@ -63,3 +63,6 @@ doc/manuals/generated/
 doc/manuals/osmomsc-usermanual.xml
 doc/manuals/common
 doc/manuals/build
+
+contrib/osmo-trx.spec
+!contrib/osmo-trx.spec.in
