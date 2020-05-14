@@ -12,33 +12,33 @@
 # license that conforms to the Open Source Definition (Version 1.9)
 # published by the Open Source Initiative.
 
-# Please submit bugfixes or comments via http://bugs.opensuse.org/
-#
-
-
 Name:           osmo-trx
-Version:        1.2.0.33
+Version:        0.0.0
 Release:        0
 Summary:        SDR transceiver that implements Layer 1 of a GSM BTS
 License:        AGPL-3.0-or-later
 Group:          Productivity/Telephony/Servers
 URL:            https://osmocom.org/projects/osmotrx/wiki/OsmoTRX
 Source:         %{name}-%{version}.tar.xz
-Source99:       osmo-trx-rpmlintrc
 BuildRequires:  autoconf
 BuildRequires:  automake
+%if 0%{?suse_version}
 BuildRequires:  fdupes
+%endif
 BuildRequires:  gcc-c++
 BuildRequires:  libtool
 BuildRequires:  pkgconfig >= 0.20
+%if ! 0%{?centos_ver}
 BuildRequires:  pkgconfig(LimeSuite)
+BuildRequires:  pkgconfig(usrp) >= 3.3
+%endif
 BuildRequires:  pkgconfig(fftw3f)
+BuildRequires:  pkgconfig(libosmocoding) >= 1.3.0
 BuildRequires:  pkgconfig(libosmocore) >= 0.12.0
 BuildRequires:  pkgconfig(libosmoctrl) >= 0.12.0
 BuildRequires:  pkgconfig(libosmovty) >= 0.12.0
 BuildRequires:  pkgconfig(libusb-1.0)
 BuildRequires:  pkgconfig(uhd)
-BuildRequires:  pkgconfig(usrp) >= 3.3
 %{?systemd_requires}
 %if 0%{?suse_version} > 1325
 BuildRequires:  libboost_program_options-devel
@@ -85,6 +85,7 @@ connect mobile phones to the mobile network.
 between different telecommunication associations for developing new
 generations of mobile phone networks. (post-2G/GSM)
 
+%if ! 0%{?centos_ver}
 %package usrp1
 Summary:        SDR transceiver that implements Layer 1 of a GSM BTS (USRP1)
 Group:          Productivity/Telephony/Servers
@@ -124,6 +125,7 @@ connect mobile phones to the mobile network.
 3GPP is the "3rd Generation Partnership Project" which is the collaboration
 between different telecommunication associations for developing new
 generations of mobile phone networks. (post-2G/GSM)
+%endif
 
 %prep
 %setup -q
@@ -131,12 +133,22 @@ generations of mobile phone networks. (post-2G/GSM)
 %build
 echo "%{version}" >.tarball-version
 autoreconf -fi
+
+%if 0%{?centos_ver}
+%configure \
+  --docdir=%{_docdir}/%{name} \
+  --with-systemdsystemunitdir=%{_unitdir} \
+  --without-lms \
+  --with-uhd \
+  --without-usrp1
+%else
 %configure \
   --docdir=%{_docdir}/%{name} \
   --with-systemdsystemunitdir=%{_unitdir} \
   --with-lms \
   --with-uhd \
   --with-usrp1
+%endif
 
 make %{?_smp_mflags} V=1
 
@@ -145,6 +157,7 @@ make %{?_smp_mflags} check || (find . -name testsuite.log -exec cat {} +)
 
 %install
 %make_install
+%if 0%{?suse_version}
 %fdupes -s %{buildroot}/%{_datadir}
 
 %pre    lms %service_add_pre    osmo-trx-lms.service
@@ -159,17 +172,20 @@ make %{?_smp_mflags} check || (find . -name testsuite.log -exec cat {} +)
 %post   usrp1 %service_add_post   osmo-trx-usrp1.service
 %preun  usrp1 %service_del_preun  osmo-trx-usrp1.service
 %postun usrp1 %service_del_postun osmo-trx-usrp1.service
+%endif
 
 %files
 %license COPYING
 %doc README.md
 %doc %{_docdir}/%{name}/examples
 
+%if ! 0%{?centos_ver}
 %files lms
 %{_bindir}/osmo-trx-lms
 %dir %{_sysconfdir}/osmocom
 %config %{_sysconfdir}/osmocom/osmo-trx-lms.cfg
 %{_unitdir}/osmo-trx-lms.service
+%endif
 
 %files uhd
 %{_bindir}/osmo-trx-uhd
@@ -177,6 +193,7 @@ make %{?_smp_mflags} check || (find . -name testsuite.log -exec cat {} +)
 %config %{_sysconfdir}/osmocom/osmo-trx-uhd.cfg
 %{_unitdir}/osmo-trx-uhd.service
 
+%if ! 0%{?centos_ver}
 %files usrp1
 %{_bindir}/osmo-trx-usrp1
 %dir %{_datadir}/usrp
@@ -185,5 +202,6 @@ make %{?_smp_mflags} check || (find . -name testsuite.log -exec cat {} +)
 %{_datadir}/usrp/rev2/std_inband.rbf
 %{_datadir}/usrp/rev4/std_inband.rbf
 %{_unitdir}/osmo-trx-usrp1.service
+%endif
 
 %changelog
