@@ -129,6 +129,26 @@ between different telecommunication associations for developing new
 generations of mobile phone networks. (post-2G/GSM)
 %endif
 
+%package ipc
+Summary:        SDR transceiver that implements Layer 1 of a GSM BTS (IPC)
+Group:          Productivity/Telephony/Servers
+
+%description ipc
+OsmoTRX is a software-defined radio transceiver that implements the Layer 1
+physical layer of a BTS comprising the following 3GPP specifications:
+
+TS 05.01 "Physical layer on the radio path"
+TS 05.02 "Multiplexing and Multiple Access on the Radio Path"
+TS 05.04 "Modulation"
+TS 05.10 "Radio subsystem synchronization"
+
+In this context, BTS is "Base transceiver station". It's the stations that
+connect mobile phones to the mobile network.
+
+3GPP is the "3rd Generation Partnership Project" which is the collaboration
+between different telecommunication associations for developing new
+generations of mobile phone networks. (post-2G/GSM)
+
 %prep
 %setup -q
 
@@ -142,14 +162,16 @@ autoreconf -fi
   --with-systemdsystemunitdir=%{_unitdir} \
   --without-lms \
   --with-uhd \
-  --without-usrp1
+  --without-usrp1 \
+  --with-ipc
 %else
 %configure \
   --docdir=%{_docdir}/%{name} \
   --with-systemdsystemunitdir=%{_unitdir} \
   --with-lms \
   --with-uhd \
-  --with-usrp1
+  --with-usrp1 \
+  --with-ipc
 %endif
 
 make %{?_smp_mflags} V=1
@@ -174,6 +196,10 @@ make %{?_smp_mflags} check || (find . -name testsuite.log -exec cat {} +)
 %post   usrp1 %service_add_post   osmo-trx-usrp1.service
 %preun  usrp1 %service_del_preun  osmo-trx-usrp1.service
 %postun usrp1 %service_del_postun osmo-trx-usrp1.service
+%pre    ipc %service_add_pre    osmo-trx-ipc.service
+%post   ipc %service_add_post   osmo-trx-ipc.service
+%preun  ipc %service_del_preun  osmo-trx-ipc.service
+%postun ipc %service_del_postun osmo-trx-ipc.service
 %endif
 
 %files
@@ -205,5 +231,12 @@ make %{?_smp_mflags} check || (find . -name testsuite.log -exec cat {} +)
 %{_datadir}/usrp/rev4/std_inband.rbf
 %{_unitdir}/osmo-trx-usrp1.service
 %endif
+
+%files ipc
+%{_bindir}/osmo-trx-ipc
+%{_bindir}/ipc-driver-test
+%dir %{_sysconfdir}/osmocom
+# FIXME: missing: osmo-trx-ipc.cfg
+%{_unitdir}/osmo-trx-ipc.service
 
 %changelog
