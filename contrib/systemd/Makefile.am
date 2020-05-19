@@ -1,7 +1,8 @@
 EXTRA_DIST = \
   osmo-trx-lms.service \
   osmo-trx-uhd.service \
-  osmo-trx-usrp1.service
+  osmo-trx-usrp1.service \
+  osmo-trx-ipc.service
 
 if HAVE_SYSTEMD
 SYSTEMD_SERVICES =
@@ -16,6 +17,10 @@ endif
 
 if DEVICE_LMS
 SYSTEMD_SERVICES += osmo-trx-lms.service
+endif
+
+if DEVICE_IPC
+SYSTEMD_SERVICES += osmo-trx-ipc.service
 endif
 
 systemdsystemunit_DATA = $(SYSTEMD_SERVICES)
