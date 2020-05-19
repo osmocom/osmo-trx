@@ -38,7 +38,6 @@ extern "C" {
 #include <limits.h>
 #include <string>
 #include <iostream>
-#include <lime/LimeSuite.h>
 
 struct ipc_sock_state {
 	struct osmo_fd conn_bfd; /* fd for connection to the BTS */
