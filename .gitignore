@@ -5,6 +5,7 @@
 Transceiver52M/osmo-trx-uhd
 Transceiver52M/osmo-trx-usrp1
 Transceiver52M/osmo-trx-lms
+Transceiver52M/osmo-trx-ipc
 
 # tests
 tests/CommonLibs/BitVectorTest
@@ -19,6 +20,7 @@ tests/CommonLibs/VectorTest
 tests/CommonLibs/PRBSTest
 tests/Transceiver52M/convolve_test
 tests/Transceiver52M/LMSDeviceTest
+Transceiver52M/device/ipc/ipc-driver-test
 
 # automake/autoconf
 *.in
@@ -66,3 +68,5 @@ doc/manuals/build
 
 contrib/osmo-trx.spec
 !contrib/osmo-trx.spec.in
+
+utils/osmo-prbs-tool
