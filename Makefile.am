@@ -39,7 +39,10 @@ SUBDIRS = \
 EXTRA_DIST = \
 	LEGAL \
 	COPYING \
-	README.md
+	README.md \
+	contrib/osmo-trx.spec.in \
+	debian \
+	$(NULL)
 
 AM_DISTCHECK_CONFIGURE_FLAGS = \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir)
