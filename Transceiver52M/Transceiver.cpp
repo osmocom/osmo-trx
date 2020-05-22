@@ -1053,6 +1053,8 @@ bool Transceiver::driveReceiveRadio()
     return false;
 
   if (mForceClockInterface || mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0)) {
+    if (mForceClockInterface)
+      LOGC(DTRXCLK, NOTICE) << "Sending CLOCK indications";
     mForceClockInterface = false;
     return writeClockInterface();
   }
