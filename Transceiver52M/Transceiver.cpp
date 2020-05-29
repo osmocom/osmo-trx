@@ -887,7 +887,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
               (int) round(20.0 * log10(rxFullScale / lev)));
     }
     else {
-      sprintf(response,"RSP NOISELEV 1  0");
+      sprintf(response,"RSP NOISELEV 1 0");
     }
   } else if (match_cmd(command, "SETPOWER", &params)) {
     int power;
