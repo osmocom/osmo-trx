@@ -100,6 +100,8 @@ public:
 	double maxTxGain(void) { return tx_gain_max; }
 	double minTxGain(void) { return tx_gain_min; }
 
+	int getNominalTxPower(size_t chan = 0);
+
 	double getTxFreq(size_t chan);
 	double getRxFreq(size_t chan);
 	double getRxFreq();

@@ -902,6 +902,12 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     power = mRadioInterface->setPowerAttenuation(power, chan);
     mStates[chan].mPower = power;
     sprintf(response, "RSP ADJPOWER 0 %d", power);
+} else if (match_cmd(command, "NOMTXPOWER", NULL)) {
+    int power = mRadioInterface->getNominalTxPower(chan);
+    if (power > 0)
+      sprintf(response, "RSP NOMTXPOWER 0 %d", power);
+    else
+      sprintf(response, "RSP NOMTXPOWER 1 %d", -power);
   } else if (match_cmd(command, "RXTUNE", &params)) {
     // tune receiver
     int freqKhz;

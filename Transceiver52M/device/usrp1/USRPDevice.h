@@ -180,6 +180,8 @@ private:
   /** return minimum Rx Gain **/
   double minTxGain(void);
 
+  int getNominalTxPower(size_t chan = 0);
+
   /** sets the RX path to use, returns true if successful and false otherwise */
   bool setRxAntenna(const std::string &ant, size_t chan = 0);
 

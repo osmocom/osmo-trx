@@ -530,6 +530,14 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 	return rx_gains[chan];
 }
 
+int LMSDevice::getNominalTxPower(size_t chan)
+{
+	/* TODO: return value based on some experimentally generated table depending on
+	 * band/arfcn, which is known here thanks to TXTUNE
+	 */
+	return 23;
+}
+
 void LMSDevice::log_ant_list(bool dir_tx, size_t chan, std::ostringstream& os)
 {
 	lms_name_t name_list[MAX_ANTENNA_LIST_SIZE]; /* large enough list for antenna names. */

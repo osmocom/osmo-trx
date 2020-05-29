@@ -117,6 +117,7 @@ public:
   int driveReceiveRadio();
 
   int setPowerAttenuation(int atten, size_t chan = 0);
+  int getNominalTxPower(size_t chan = 0);
 
   /** returns the full-scale transmit amplitude **/
   double fullScaleInputValue();

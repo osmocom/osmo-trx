@@ -124,6 +124,16 @@ int RadioInterface::setPowerAttenuation(int atten, size_t chan)
   return atten;
 }
 
+int RadioInterface::getNominalTxPower(size_t chan)
+{
+  if (chan >= mChans) {
+    LOG(ALERT) << "Invalid channel requested";
+    return -1;
+  }
+
+    return mDevice->getNominalTxPower(chan);
+}
+
 int RadioInterface::radioifyVector(signalVector &wVector,
                                    size_t chan, bool zero)
 {

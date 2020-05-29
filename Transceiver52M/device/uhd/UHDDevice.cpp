@@ -341,6 +341,14 @@ double uhd_device::getTxGain(size_t chan)
 	return tx_gains[chan];
 }
 
+int uhd_device::getNominalTxPower(size_t chan)
+{
+	/* TODO: return value based on some experimentally generated table depending on
+	 * band/arfcn, which is known here thanks to TXTUNE
+	 */
+	return 23;
+}
+
 /*
     Parse the UHD device tree and mboard name to find out what device we're
     dealing with. We need the window type so that the transceiver knows how to

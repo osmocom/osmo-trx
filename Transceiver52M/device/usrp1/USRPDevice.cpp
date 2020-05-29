@@ -314,6 +314,14 @@ double USRPDevice::setRxGain(double dB, size_t chan)
   return rxGain;
 }
 
+int USRPDevice::getNominalTxPower(size_t chan)
+{
+	/* TODO: return value based on some experimentally generated table depending on
+	 * band/arfcn, which is known here thanks to TXTUNE
+	 */
+	return 23;
+}
+
 bool USRPDevice::setRxAntenna(const std::string &ant, size_t chan)
 {
 	if (chan >= rx_paths.size()) {

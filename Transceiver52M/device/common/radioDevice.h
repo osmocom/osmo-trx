@@ -128,6 +128,9 @@ class RadioDevice {
   /** sets the transmit chan gain, returns the gain setting **/
   virtual double setTxGain(double dB, size_t chan = 0) = 0;
 
+  /** returns the Nominal transmit output power of the transceiver in dBm, negative on error **/
+  virtual int getNominalTxPower(size_t chan = 0) = 0;
+
   /** get transmit gain */
   virtual double getTxGain(size_t chan = 0) = 0;
 
