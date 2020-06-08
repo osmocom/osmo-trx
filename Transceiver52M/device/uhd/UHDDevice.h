@@ -101,11 +101,6 @@ public:
 	double maxRxGain(void) { return rx_gain_max; }
 	double minRxGain(void) { return rx_gain_min; }
 
-	double setTxGain(double db, size_t chan);
-	double getTxGain(size_t chan = 0);
-	double maxTxGain(void) { return tx_gain_max; }
-	double minTxGain(void) { return tx_gain_min; }
-
 	int getNominalTxPower(size_t chan = 0);
 
 	double getTxFreq(size_t chan);
@@ -136,6 +131,11 @@ public:
 	};
 
 private:
+	double setTxGain(double db, size_t chan);
+	double getTxGain(size_t chan = 0);
+	double maxTxGain(void) { return tx_gain_max; }
+	double minTxGain(void) { return tx_gain_min; }
+
 	uhd::usrp::multi_usrp::sptr usrp_dev;
 	uhd::tx_streamer::sptr tx_stream;
 	uhd::rx_streamer::sptr rx_stream;

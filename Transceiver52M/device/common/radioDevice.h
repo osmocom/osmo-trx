@@ -125,20 +125,8 @@ class RadioDevice {
   /** return minimum Rx Gain **/
   virtual double minRxGain(void) = 0;
 
-  /** sets the transmit chan gain, returns the gain setting **/
-  virtual double setTxGain(double dB, size_t chan = 0) = 0;
-
   /** returns the Nominal transmit output power of the transceiver in dBm, negative on error **/
   virtual int getNominalTxPower(size_t chan = 0) = 0;
-
-  /** get transmit gain */
-  virtual double getTxGain(size_t chan = 0) = 0;
-
-  /** return maximum Tx Gain **/
-  virtual double maxTxGain(void) = 0;
-
-  /** return minimum Tx Gain **/
-  virtual double minTxGain(void) = 0;
 
   /** sets the RX path to use, returns true if successful and false otherwise */
   virtual bool setRxAntenna(const std::string &ant, size_t chan = 0) = 0;
@@ -163,6 +151,18 @@ class RadioDevice {
   virtual double getRxFreq(size_t chan = 0) = 0;
   virtual double getSampleRate()=0;
 
+  /* Default backward-compatible implementation based on TxGain APIs. New
+     implementations should be based on getNominalTxPower() once implemented for
+     the specific backend. */
+  virtual double setPowerAttenuation(int atten, size_t chan) {
+	double rfGain;
+	rfGain = setTxGain(maxTxGain() - atten, chan);
+	return maxTxGain() - rfGain;
+  }
+  virtual double getPowerAttenuation(size_t chan=0) {
+	return maxTxGain() - getTxGain(chan);
+  }
+
   protected:
   size_t tx_sps, rx_sps;
   InterfaceType iface;
@@ -170,6 +170,15 @@ class RadioDevice {
   double lo_offset;
   std::vector<std::string> tx_paths, rx_paths;
   std::vector<struct device_counters> m_ctr;
+
+  /** sets the transmit chan gain, returns the gain setting **/
+  virtual double setTxGain(double dB, size_t chan = 0) = 0;
+
+  /** get transmit gain */
+  virtual double getTxGain(size_t chan = 0) = 0;
+
+  /** return maximum Tx Gain **/
+  virtual double maxTxGain(void) = 0;
 
   RadioDevice(size_t tx_sps, size_t rx_sps, InterfaceType type, size_t chan_num, double offset,
               const std::vector<std::string>& tx_paths,

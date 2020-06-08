@@ -85,6 +85,18 @@ private:
   int writeSamplesControl(std::vector<short *> &bufs, int len, bool *underrun,
                    TIMESTAMP timestamp = 0xffffffff, bool isControl = false);
 
+  /** sets the transmit chan gain, returns the gain setting **/
+  double setTxGain(double dB, size_t chan = 0);
+
+  /** get transmit gain */
+  double getTxGain(size_t chan = 0) { return txGain; }
+
+  /** return maximum Tx Gain **/
+  double maxTxGain(void);
+
+  /** return minimum Rx Gain **/
+  double minTxGain(void);
+
 #ifdef SWLOOPBACK
   short loopbackBuffer[1000000];
   int loopbackBufferSize;
@@ -167,18 +179,6 @@ private:
 
   /** return minimum Rx Gain **/
   double minRxGain(void);
-
-  /** sets the transmit chan gain, returns the gain setting **/
-  double setTxGain(double dB, size_t chan = 0);
-
-  /** get transmit gain */
-  double getTxGain(size_t chan = 0) { return txGain; }
-
-  /** return maximum Tx Gain **/
-  double maxTxGain(void);
-
-  /** return minimum Rx Gain **/
-  double minTxGain(void);
 
   int getNominalTxPower(size_t chan = 0);
 

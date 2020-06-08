@@ -103,7 +103,7 @@ double RadioInterface::fullScaleOutputValue(void) {
 
 int RadioInterface::setPowerAttenuation(int atten, size_t chan)
 {
-  double rfGain, digAtten;
+  double rfAtten, digAtten;
 
   if (chan >= mChans) {
     LOG(ALERT) << "Invalid channel requested";
@@ -113,8 +113,8 @@ int RadioInterface::setPowerAttenuation(int atten, size_t chan)
   if (atten < 0.0)
     atten = 0.0;
 
-  rfGain = setTxGain(mDevice->maxTxGain() - (double) atten, chan);
-  digAtten = (double) atten - mDevice->maxTxGain() + rfGain;
+  rfAtten = mDevice->setPowerAttenuation((double) atten, chan);
+  digAtten = (double) atten - rfAtten;
 
   if (digAtten < 1.0)
     powerScaling[chan] = 1.0;
@@ -316,11 +316,6 @@ VectorFIFO* RadioInterface::receiveFIFO(size_t chan)
 double RadioInterface::setRxGain(double dB, size_t chan)
 {
   return mDevice->setRxGain(dB, chan);
-}
-
-double RadioInterface::setTxGain(double dB, size_t chan)
-{
-  return mDevice->setTxGain(dB, chan);
 }
 
 /* Receive a timestamped chunk from the device */

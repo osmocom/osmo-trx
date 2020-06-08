@@ -116,7 +116,8 @@ public:
   /** drive reception of GSM bursts. -1: Error. 0: Radio off. 1: Received something. */
   int driveReceiveRadio();
 
-  int setPowerAttenuation(int atten, size_t chan = 0);
+  /** set transmit power attenuation */
+  virtual int setPowerAttenuation(int atten, size_t chan = 0);
   int getNominalTxPower(size_t chan = 0);
 
   /** returns the full-scale transmit amplitude **/
@@ -134,9 +135,6 @@ public:
 protected:
   /** drive synchronization of Tx/Rx of USRP */
   void alignRadio();
-
-  /** set transmit gain */
-  virtual double setTxGain(double dB, size_t chan = 0);
 
   friend void *AlignRadioServiceLoopAdapter(RadioInterface*);
 };
@@ -167,7 +165,7 @@ private:
   bool pushBuffer();
   int pullBuffer();
   bool verify_arfcn_consistency(double freq, size_t chan, bool tx);
-  virtual double setTxGain(double dB, size_t chan);
+  virtual int setPowerAttenuation(int atten, size_t chan = 0);
 
   signalVector *outerSendBuffer;
   signalVector *outerRecvBuffer;

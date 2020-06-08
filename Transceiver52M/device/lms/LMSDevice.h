@@ -77,6 +77,19 @@ private:
 	void update_stream_stats_rx(size_t chan, bool *overrun);
 	void update_stream_stats_tx(size_t chan, bool *underrun);
 	bool do_clock_src_freq(enum ReferenceType ref, double freq);
+	/** sets the transmit chan gain, returns the gain setting **/
+	double setTxGain(double dB, size_t chan = 0);
+
+	/** get transmit gain */
+	double getTxGain(size_t chan = 0) {
+		return tx_gains[chan];
+	}
+
+	/** return maximum Tx Gain **/
+	double maxTxGain(void);
+
+	/** return minimum Rx Gain **/
+	double minTxGain(void);
 
 public:
 
@@ -164,20 +177,6 @@ public:
 
 	/** return minimum Rx Gain **/
 	double minRxGain(void);
-
-	/** sets the transmit chan gain, returns the gain setting **/
-	double setTxGain(double dB, size_t chan = 0);
-
-	/** get transmit gain */
-	double getTxGain(size_t chan = 0) {
-		return tx_gains[chan];
-	}
-
-	/** return maximum Tx Gain **/
-	double maxTxGain(void);
-
-	/** return minimum Rx Gain **/
-	double minTxGain(void);
 
 	int getNominalTxPower(size_t chan = 0);
 
