@@ -37,6 +37,10 @@
 #include <uhd/property_tree.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
 
+extern "C" {
+#include <osmocom/gsm/gsm_utils.h>
+}
+
 
 enum uhd_dev_type {
 	USRP1,
@@ -51,6 +55,8 @@ enum uhd_dev_type {
 	UMTRX,
 	LIMESDR,
 };
+
+struct dev_band_desc;
 
 /*
     uhd_device - UHD implementation of the Device interface. Timestamped samples
@@ -143,6 +149,7 @@ private:
 
 	std::vector<double> tx_gains, rx_gains;
 	std::vector<double> tx_freqs, rx_freqs;
+	enum gsm_band band;
 	size_t tx_spp, rx_spp;
 
 	bool started;
@@ -171,6 +178,7 @@ private:
 
 	uhd::tune_request_t select_freq(double wFreq, size_t chan, bool tx);
 	bool set_freq(double freq, size_t chan, bool tx);
+	void get_dev_band_desc(dev_band_desc& desc);
 
 	Thread *async_event_thrd;
 	Mutex tune_lock;

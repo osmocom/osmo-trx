@@ -33,6 +33,10 @@
 #include "config.h"
 #endif
 
+extern "C" {
+#include <osmocom/gsm/gsm_utils.h>
+}
+
 #ifdef USE_UHD_3_11
 #include <uhd/utils/log_add.hpp>
 #include <uhd/utils/thread.hpp>
@@ -123,6 +127,26 @@ static const std::map<dev_key, dev_desc> dev_param_map {
 	{ std::make_tuple(B2XX_MCBTS, 4, 4), { 1, 51.2e6, MCBTS_SPACING*4, B2XX_TIMING_MCBTS, "B200/B210 4 SPS Multi-ARFCN" } },
 };
 
+typedef std::tuple<uhd_dev_type, enum gsm_band> dev_band_key;
+/* Maximum UHD Tx Gain which can be set/used without distorting the
+   output signal, and the resulting real output power measured when that
+   gain is used. Correct measured values only provided for B210 so far. */
+struct dev_band_desc {
+	double nom_uhd_tx_gain;  /* dB */
+	double nom_out_tx_power; /* dBm */
+};
+typedef std::map<dev_band_key, dev_band_desc>::const_iterator dev_band_map_it;
+static const std::map<dev_band_key, dev_band_desc> dev_band_nom_power_param_map {
+	{ std::make_tuple(B200, GSM_BAND_850),	{ 89.75, 13.3 } },
+	{ std::make_tuple(B200, GSM_BAND_900),	{ 89.75, 13.3 } },
+	{ std::make_tuple(B200, GSM_BAND_1800),	{ 89.75, 7.5 } },
+	{ std::make_tuple(B200, GSM_BAND_1900),	{ 89.75, 7.7 } },
+	{ std::make_tuple(B210, GSM_BAND_850),	{ 89.75, 13.3 } },
+	{ std::make_tuple(B210, GSM_BAND_900),	{ 89.75, 13.3 } },
+	{ std::make_tuple(B210, GSM_BAND_1800),	{ 89.75, 7.5 } },
+	{ std::make_tuple(B210, GSM_BAND_1900),	{ 89.75, 7.7 } },
+};
+
 void *async_event_loop(uhd_device *dev)
 {
 	set_selfthread_name("UHDAsyncEvent");
@@ -195,7 +219,7 @@ uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
 	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
 	  tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
-	  tx_spp(0), rx_spp(0),
+	  band((enum gsm_band)0), tx_spp(0), rx_spp(0),
 	  started(false), aligned(false), drop_cnt(0),
 	  prev_ts(0,0), ts_initial(0), ts_offset(0), async_event_thrd(NULL)
 {
@@ -207,6 +231,27 @@ uhd_device::~uhd_device()
 
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		delete rx_buffers[i];
+}
+
+void uhd_device::get_dev_band_desc(dev_band_desc& desc)
+{
+	dev_band_map_it it;
+	enum gsm_band req_band = band;
+
+	if (req_band == 0) {
+		LOGC(DDEV, ERROR) << "Nominal Tx Power requested before Tx Frequency was set! Providing band 900 by default... ";
+		req_band = GSM_BAND_900;
+	}
+	it = dev_band_nom_power_param_map.find(dev_band_key(dev_type, req_band));
+	if (it == dev_band_nom_power_param_map.end()) {
+		dev_desc desc = dev_param_map.at(dev_key(dev_type, tx_sps, rx_sps));
+		LOGC(DDEV, ERROR) << "No Tx Power measurements exist for device "
+				    << desc.str << " on band " << gsm_band_name(req_band)
+				    << ", using B210 ones as fallback";
+		it = dev_band_nom_power_param_map.find(dev_band_key(B210, req_band));
+	}
+	OSMO_ASSERT(it != dev_band_nom_power_param_map.end())
+	desc = it->second;
 }
 
 void uhd_device::init_gains()
@@ -343,10 +388,10 @@ double uhd_device::getTxGain(size_t chan)
 
 int uhd_device::getNominalTxPower(size_t chan)
 {
-	/* TODO: return value based on some experimentally generated table depending on
-	 * band/arfcn, which is known here thanks to TXTUNE
-	 */
-	return 23;
+	dev_band_desc desc;
+	get_dev_band_desc(desc);
+
+	return desc.nom_out_tx_power;
 }
 
 /*
@@ -960,13 +1005,44 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 
 bool uhd_device::setTxFreq(double wFreq, size_t chan)
 {
+	uint16_t req_arfcn;
+	enum gsm_band req_band;
+	dev_band_desc desc;
+
 	if (chan >= tx_freqs.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 	ScopedLock lock(tune_lock);
 
-	return set_freq(wFreq, chan, true);
+	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100 , 0);
+	if (req_arfcn == 0xffff) {
+		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Tx Frequency " << wFreq / 1000 << " kHz";
+		return false;
+	}
+	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
+		LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Tx Frequency " << wFreq
+					   << " Hz (ARFCN " << req_arfcn << " )";
+		return false;
+	}
+
+	if (band != 0 && req_band != band) {
+		LOGCHAN(chan, DDEV, ALERT) << "Requesting Tx Frequency " << wFreq
+					   << " Hz different from previous band " << gsm_band_name(band);
+		return false;
+	}
+
+	if (!set_freq(wFreq, chan, true))
+		return false;
+
+	band = req_band;
+
+	/* Update Max Tx Gain */
+	get_dev_band_desc(desc);
+	tx_gain_max = desc.nom_uhd_tx_gain;
+	LOGCHAN(chan, DDEV, INFO) << "Updating max Gain to " << tx_gain_max
+				   << " dB based on GSM band information";
+	return true;
 }
 
 bool uhd_device::setRxFreq(double wFreq, size_t chan)
