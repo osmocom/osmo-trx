@@ -101,6 +101,9 @@ public:
 	double maxRxGain(void) { return rx_gain_max; }
 	double minRxGain(void) { return rx_gain_min; }
 
+	double setPowerAttenuation(int atten, size_t chan);
+	double getPowerAttenuation(size_t chan = 0);
+
 	int getNominalTxPower(size_t chan = 0);
 
 	double getTxFreq(size_t chan);
@@ -131,10 +134,9 @@ public:
 	};
 
 private:
-	double setTxGain(double db, size_t chan);
-	double getTxGain(size_t chan = 0);
-	double maxTxGain(void) { return tx_gain_max; }
-	double minTxGain(void) { return tx_gain_min; }
+	double setTxGain(double db, size_t chan) {OSMO_ASSERT(false); return 0.0f; }
+	double getTxGain(size_t chan = 0) { OSMO_ASSERT(false); return 0.0f; };
+	double maxTxGain(void) { OSMO_ASSERT(false); return 0.0f; };
 
 	uhd::usrp::multi_usrp::sptr usrp_dev;
 	uhd::tx_streamer::sptr tx_stream;
@@ -144,7 +146,6 @@ private:
 
 	double tx_rate, rx_rate;
 
-	double tx_gain_min, tx_gain_max;
 	double rx_gain_min, rx_gain_max;
 
 	std::vector<double> tx_gains, rx_gains;

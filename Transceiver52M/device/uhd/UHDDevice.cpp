@@ -212,12 +212,23 @@ static void uhd_msg_handler(uhd::msg::type_t type, const std::string &msg)
 }
 #endif
 
+/* So far measurements done for B210 show really close to linear relationship
+ * between gain and real output power, so we simply adjust the measured offset
+ */
+static double TxGain2TxPower(const dev_band_desc &desc, double tx_gain_db)
+{
+	return desc.nom_out_tx_power - (desc.nom_uhd_tx_gain - tx_gain_db);
+}
+static double TxPower2TxGain(const dev_band_desc &desc, double tx_power_dbm)
+{
+	return desc.nom_uhd_tx_gain - (desc.nom_out_tx_power - tx_power_dbm);
+}
+
 uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
 		       InterfaceType iface, size_t chan_num, double lo_offset,
 		       const std::vector<std::string>& tx_paths,
 		       const std::vector<std::string>& rx_paths)
 	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
-	  tx_gain_min(0.0), tx_gain_max(0.0),
 	  rx_gain_min(0.0), rx_gain_max(0.0),
 	  band((enum gsm_band)0), tx_spp(0), rx_spp(0),
 	  started(false), aligned(false), drop_cnt(0),
@@ -256,6 +267,7 @@ void uhd_device::get_dev_band_desc(dev_band_desc& desc)
 
 void uhd_device::init_gains()
 {
+	double tx_gain_min, tx_gain_max;
 	uhd::gain_range_t range;
 
 	if (dev_type == UMTRX) {
@@ -320,37 +332,6 @@ void uhd_device::set_rates()
 	LOGC(DDEV, INFO) << "Rates configured for " << desc.str;
 }
 
-double uhd_device::setTxGain(double db, size_t chan)
-{
-	if (chan >= tx_gains.size()) {
-		LOGC(DDEV, ALERT) << "Requested non-existent channel" << chan;
-		return 0.0f;
-	}
-
-	if (dev_type == UMTRX) {
-		std::vector<std::string> gain_stages = usrp_dev->get_tx_gain_names(0);
-		if (gain_stages[0] == "VGA" || gain_stages[0] == "PA") {
-			usrp_dev->set_tx_gain(db, chan);
-		} else {
-			// New UHD versions support split configuration of
-			// Tx gain stages. We utilize this to set the gain
-			// configuration, optimal for the Tx signal quality.
-			// From our measurements, VGA1 must be 18dB plus-minus
-			// one and VGA2 is the best when 23dB or lower.
-			usrp_dev->set_tx_gain(UMTRX_VGA1_DEF, "VGA1", chan);
-			usrp_dev->set_tx_gain(db-UMTRX_VGA1_DEF, "VGA2", chan);
-		}
-	} else {
-		usrp_dev->set_tx_gain(db, chan);
-	}
-
-	tx_gains[chan] = usrp_dev->get_tx_gain(chan);
-
-	LOGC(DDEV, INFO) << "Set TX gain to " << tx_gains[chan] << "dB (asked for " << db << "dB)";
-
-	return tx_gains[chan];
-}
-
 double uhd_device::setRxGain(double db, size_t chan)
 {
 	if (chan >= rx_gains.size()) {
@@ -376,14 +357,50 @@ double uhd_device::getRxGain(size_t chan)
 	return rx_gains[chan];
 }
 
-double uhd_device::getTxGain(size_t chan)
-{
+double uhd_device::setPowerAttenuation(int atten, size_t chan) {
+	double db;
+	dev_band_desc desc;
+
+	if (chan >= tx_gains.size()) {
+		LOGC(DDEV, ALERT) << "Requested non-existent channel" << chan;
+		return 0.0f;
+	}
+
+	get_dev_band_desc(desc);
+	db = TxPower2TxGain(desc, desc.nom_out_tx_power - atten);
+
+	if (dev_type == UMTRX) {
+		std::vector<std::string> gain_stages = usrp_dev->get_tx_gain_names(0);
+		if (gain_stages[0] == "VGA" || gain_stages[0] == "PA") {
+			usrp_dev->set_tx_gain(db, chan);
+		} else {
+			// New UHD versions support split configuration of
+			// Tx gain stages. We utilize this to set the gain
+			// configuration, optimal for the Tx signal quality.
+			// From our measurements, VGA1 must be 18dB plus-minus
+			// one and VGA2 is the best when 23dB or lower.
+			usrp_dev->set_tx_gain(UMTRX_VGA1_DEF, "VGA1", chan);
+			usrp_dev->set_tx_gain(db-UMTRX_VGA1_DEF, "VGA2", chan);
+		}
+	} else {
+		usrp_dev->set_tx_gain(db, chan);
+	}
+
+	tx_gains[chan] = usrp_dev->get_tx_gain(chan);
+
+	LOGC(DDEV, INFO) << "Set TX gain to " << tx_gains[chan] << "dB (asked for " << db << "dB)";
+
+	return desc.nom_out_tx_power - TxGain2TxPower(desc, tx_gains[chan]);
+}
+double uhd_device::getPowerAttenuation(size_t chan) {
+	dev_band_desc desc;
 	if (chan >= tx_gains.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return 0.0f;
 	}
 
-	return tx_gains[chan];
+	get_dev_band_desc(desc);
+	return desc.nom_out_tx_power - TxGain2TxPower(desc, tx_gains[chan]);
 }
 
 int uhd_device::getNominalTxPower(size_t chan)
@@ -1007,7 +1024,6 @@ bool uhd_device::setTxFreq(double wFreq, size_t chan)
 {
 	uint16_t req_arfcn;
 	enum gsm_band req_band;
-	dev_band_desc desc;
 
 	if (chan >= tx_freqs.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
@@ -1036,12 +1052,6 @@ bool uhd_device::setTxFreq(double wFreq, size_t chan)
 		return false;
 
 	band = req_band;
-
-	/* Update Max Tx Gain */
-	get_dev_band_desc(desc);
-	tx_gain_max = desc.nom_uhd_tx_gain;
-	LOGCHAN(chan, DDEV, INFO) << "Updating max Gain to " << tx_gain_max
-				   << " dB based on GSM band information";
 	return true;
 }
 
