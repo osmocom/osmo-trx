@@ -253,8 +253,10 @@ int IPCDevice::ipc_rx_info_cnf(const struct ipc_sk_if_info_cnf *info_cnf)
 	current_info_cnf = *info_cnf;
 	unsigned int i;
 
-	if (info_cnf->max_num_chans < chans)
+	if (info_cnf->max_num_chans < chans) {
+		LOGC(DDEV, ERROR) << "chan num mismatch:" << info_cnf->max_num_chans << " vs " << chans;
 		return -1;
+	}
 
 	/* Here:
 	 * verify info_cnf->max_num_chans >= requested chans
@@ -353,9 +355,13 @@ int IPCDevice::ipc_rx_open_cnf(const struct ipc_sk_if_open_cnf *open_cnf)
 	/* server inits both producers */
 	for (unsigned int i = 0; i < shm_dec->num_chans; i++) {
 		LOGC(DDEV, NOTICE)
-			<< "shm: chan" << i << "/dl: num_buffers=" << shm_dec->channels[0]->dl_stream->num_buffers;
+			<< "shm: chan" << i << "/dl: num_buffers=" << shm_dec->channels[i]->dl_stream->num_buffers;
 		LOGC(DDEV, NOTICE)
-			<< "shm: chan" << i << "/dl: buffer_size=" << shm_dec->channels[0]->dl_stream->buffer_size;
+			<< "shm: chan" << i << "/dl: buffer_size=" << shm_dec->channels[i]->dl_stream->buffer_size;
+		LOGC(DDEV, NOTICE)
+			<< "shm: chan" << i << "/ul: num_buffers=" << shm_dec->channels[i]->ul_stream->num_buffers;
+		LOGC(DDEV, NOTICE)
+			<< "shm: chan" << i << "/ul: buffer_size=" << shm_dec->channels[i]->ul_stream->buffer_size;
 		shm_io_rx_streams.push_back(ipc_shm_init_consumer(shm_dec->channels[i]->ul_stream));
 		shm_io_tx_streams.push_back(ipc_shm_init_consumer(shm_dec->channels[i]->dl_stream));
 		//		shm_io_tx_streams.push_back(ipc_shm_init_producer(shm_dec->channels[i]->dl_stream));
