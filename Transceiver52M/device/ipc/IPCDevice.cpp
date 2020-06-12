@@ -75,6 +75,7 @@ IPCDevice::IPCDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 		rx_buffers[i] = new smpl_buf(SAMPLE_BUF_SZ / sizeof(uint32_t));
 
 	memset(&sk_chan_state, 0, sizeof(sk_chan_state));
+	memset(&trx_is_started, 0, sizeof(trx_is_started));
 }
 
 IPCDevice::~IPCDevice()
@@ -202,7 +203,8 @@ int IPCDevice::ipc_tx_open_req(struct ipc_sock_state *state, uint32_t num_chans,
 	ipc_prim = (struct ipc_sk_if *)msg->data;
 	ipc_prim->u.open_req.num_chans = num_chans;
 
-	/* FIXME: pass fractional freq */
+	/* FIXME: this is actually the sps value, not the sample rate!
+	 * sample rate is looked up according to the sps rate by uhd backend */
 	ipc_prim->u.open_req.rx_sample_freq_num = rx_sps;
 	ipc_prim->u.open_req.rx_sample_freq_den = 1;
 	ipc_prim->u.open_req.tx_sample_freq_num = tx_sps;
@@ -324,8 +326,8 @@ int IPCDevice::ipc_rx_open_cnf(const struct ipc_sk_if_open_cnf *open_cnf)
 		int rc;
 		LOGC(DDEV, NOTICE) << "chan " << i << ": sk_path=" << open_cnf->chan_info[i].chan_ipc_sk_path;
 
-		/* FIXME: current limit 8 chans, make dynamic */
-		if (i < 8) {
+		/* FIXME: current limit IPC_MAX_NUM_TRX chans, make dynamic */
+		if (i < IPC_MAX_NUM_TRX) {
 			struct ipc_sock_state *state = &sk_chan_state[i];
 			memset(state, 0x00, sizeof(*state));
 
@@ -395,24 +397,50 @@ int IPCDevice::ipc_rx(uint8_t msg_type, struct ipc_sk_if *ipc_prim)
 
 int IPCDevice::ipc_rx_chan_start_cnf(ipc_sk_chan_if_op_rc *ret, uint8_t chan_nr)
 {
-	tmp_state = IPC_IF_MSG_START_CNF;
+	if(chan_nr >= ARRAY_SIZE(trx_is_started)) {
+		LOGC(DDEV, NOTICE) << "shm: illegal start response for chan #" << chan_nr << " ?!?";
+		return 0;
+	}
+
+	trx_is_started[chan_nr] = true;
 	return 0;
 }
 int IPCDevice::ipc_rx_chan_stop_cnf(ipc_sk_chan_if_op_rc *ret, uint8_t chan_nr)
 {
+	if(chan_nr >= ARRAY_SIZE(trx_is_started)) {
+		LOGC(DDEV, NOTICE) << "shm: illegal stop response for chan #" << chan_nr << " ?!?";
+		return 0;
+	}
+
+	trx_is_started[chan_nr] = false;
 	return 0;
 }
 int IPCDevice::ipc_rx_chan_setgain_cnf(ipc_sk_chan_if_gain *ret, uint8_t chan_nr)
 {
+	if(chan_nr >= ARRAY_SIZE(trx_is_started)) {
+		LOGC(DDEV, NOTICE) << "shm: illegal setgain response for chan #" << chan_nr << " ?!?";
+		return 0;
+	}
+
 	ret->is_tx ? tx_gains[chan_nr] = ret->gain : rx_gains[chan_nr] = ret->gain;
 	return 0;
 }
 int IPCDevice::ipc_rx_chan_setfreq_cnf(ipc_sk_chan_if_freq_cnf *ret, uint8_t chan_nr)
 {
+	if(chan_nr >= ARRAY_SIZE(trx_is_started)) {
+		LOGC(DDEV, NOTICE) << "shm: illegal setfreq response for chan #" << chan_nr << " ?!?";
+		return 0;
+	}
+
 	return 0;
 }
 int IPCDevice::ipc_rx_chan_notify_underflow(ipc_sk_chan_if_notfiy *ret, uint8_t chan_nr)
 {
+	if(chan_nr >= ARRAY_SIZE(trx_is_started)) {
+		LOGC(DDEV, NOTICE) << "shm: illegal underfloww notification for chan #" << chan_nr << " ?!?";
+		return 0;
+	}
+
 	m_ctr[chan_nr].tx_underruns += 1;
 	osmo_signal_dispatch(SS_DEVICE, S_DEVICE_COUNTER_CHANGE, &m_ctr[chan_nr]);
 
@@ -420,6 +448,11 @@ int IPCDevice::ipc_rx_chan_notify_underflow(ipc_sk_chan_if_notfiy *ret, uint8_t 
 }
 int IPCDevice::ipc_rx_chan_notify_overflow(ipc_sk_chan_if_notfiy *ret, uint8_t chan_nr)
 {
+	if(chan_nr >= ARRAY_SIZE(trx_is_started)) {
+		LOGC(DDEV, NOTICE) << "shm: illegal overflow notification for chan #" << chan_nr << " ?!?";
+		return 0;
+	}
+
 	m_ctr[chan_nr].rx_overruns += 1;
 	osmo_signal_dispatch(SS_DEVICE, S_DEVICE_COUNTER_CHANGE, &m_ctr[chan_nr]);
 	return 0;
@@ -784,6 +817,17 @@ out_close:
 	return -1;
 }
 
+/* the call stack is rather difficult here, we're already in select:
+>~"#0  IPCDevice::start (this=<optimized out>) at IPCDevice.cpp:789\n"
+>~"#1  in RadioInterface::start (this=0x614000001640) at radioInterface.cpp:187\n"
+>~"#2  in Transceiver::start (this=<optimized out>) at Transceiver.cpp:293\n"
+>~"#3  in Transceiver::ctrl_sock_handle_rx (this=0x61600000b180, chan=0) at Transceiver.cpp:838\n"
+>~"#4  in Transceiver::ctrl_sock_cb (bfd=<optimized out>, flags=1) at Transceiver.cpp:168\n"
+>~"#5  in osmo_fd_disp_fds (_rset=<optimized out>, _wset=<optimized out>, _eset=<optimized out>) at select.c:227\n"
+>~"#6  _osmo_select_main (polling=<optimized out>) at select.c:265\n"
+>~"#7  in osmo_select_main (polling=128) at select.c:274\n"
+>~"#8  in main (argc=<optimized out>, argv=<optimized out>) at osmo-trx.cpp:649\n"
+ * */
 bool IPCDevice::start()
 {
 	LOGC(DDEV, INFO) << "starting IPC...";
@@ -796,15 +840,33 @@ bool IPCDevice::start()
 	struct msgb *msg;
 	struct ipc_sk_chan_if *ipc_prim;
 
-	msg = ipc_msgb_alloc(IPC_IF_MSG_START_REQ);
-	if (!msg)
-		return -ENOMEM;
-	ipc_prim = (struct ipc_sk_chan_if *)msg->data;
-	ipc_prim->u.start_req.dummy = 0;
+	for(int i = 0; i < chans; i++) {
+		msg = ipc_msgb_alloc(IPC_IF_MSG_START_REQ);
+		if (!msg)
+			return -ENOMEM;
+		ipc_prim = (struct ipc_sk_chan_if *)msg->data;
+		ipc_prim->u.start_req.dummy = 0;
 
-	ipc_sock_send(&sk_chan_state[0], msg);
-	while (tmp_state != IPC_IF_MSG_START_CNF)
-		osmo_select_main(0);
+		ipc_sock_send(&sk_chan_state[i], msg);
+	}
+
+	int chan_started_count = 0, retrycount = 0;
+	while (chan_started_count != chans && retrycount < 5) {
+		chan_started_count = 0;
+
+		/* just poll here, we're already in select, so there is no other way to drive
+		 * the fds and "wait" for a response or retry */
+		usleep(100000);
+		osmo_select_main(1);
+
+		for(unsigned int i = 0; i < ARRAY_SIZE(trx_is_started); i++)
+			if(trx_is_started[i] == true)
+				chan_started_count++;
+		retrycount++;
+	}
+
+	if(retrycount >= 5)
+		return false;
 
 	flush_recv(10);
 
@@ -828,7 +890,9 @@ bool IPCDevice::stop()
 	ipc_prim = (struct ipc_sk_chan_if *)msg->data;
 	ipc_prim->u.start_req.dummy = 0;
 
-	ipc_sock_send(&sk_chan_state[0], msg);
+	for(int i = 0; i < chans; i++)
+		if(trx_is_started[i] == true)
+			ipc_sock_send(&sk_chan_state[i], msg);
 
 	started = false;
 	return true;
@@ -1016,6 +1080,9 @@ int IPCDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun, T
 			expect_timestamp = timestamp + avail_smpls;
 			thread_enable_cancel(true);
 
+			if(num_smpls == -ETIMEDOUT)
+				continue;
+
 			LOGCHAN(i, DDEV, DEBUG)
 			"Received timestamp = " << (TIMESTAMP)recv_timestamp << " (" << num_smpls << ")";
 
@@ -1035,7 +1102,7 @@ int IPCDevice::readSamples(std::vector<short *> &bufs, int len, bool *overrun, T
 
 			rc = rx_buffers[i]->write(bufs[i], num_smpls, (TIMESTAMP)recv_timestamp);
 			if (rc < 0) {
-				LOGCHAN(i, DDEV, ERROR) << rx_buffers[i]->str_code(rc);
+				LOGCHAN(i, DDEV, ERROR) << rx_buffers[i]->str_code(rc) << " num smpls: " << num_smpls << " chan: " << i;
 				LOGCHAN(i, DDEV, ERROR) << rx_buffers[i]->str_status(timestamp);
 				if (rc != smpl_buf::ERROR_OVERFLOW)
 					return 0;

@@ -44,13 +44,17 @@ struct ipc_sock_state {
 	struct osmo_timer_list timer; /* socket connect retry timer */
 	struct llist_head upqueue; /* queue for sending messages */
 };
+#define IPC_MAX_NUM_TRX 8
+
+
 
 /** A class to handle a LimeSuite supported device */
 class IPCDevice : public RadioDevice {
     protected:
 	struct ipc_sock_state sk_state;
-	/* FIXME: current limit 8 chans, make dynamic */
-	struct ipc_sock_state sk_chan_state[8];
+	/* FIXME: current limit IPC_MAX_NUM_TRX chans, make dynamic */
+	struct ipc_sock_state sk_chan_state[IPC_MAX_NUM_TRX];
+	bool trx_is_started[IPC_MAX_NUM_TRX];
 	uint8_t tmp_state;
 	char shm_name[SHM_NAME_MAX];
 	int ipc_shm_connect(const char *shm_name);

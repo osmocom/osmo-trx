@@ -99,6 +99,7 @@ static int ipc_chan_sock_read(struct osmo_fd *bfd)
 		return 0;
 	}
 
+	LOGP(DMAIN, LOGL_INFO, "rx on bf priv: %d\n", bfd->priv_nr);
 	rc = ipc_chan_rx(ipc_prim->msg_type, ipc_prim, bfd->priv_nr);
 
 	/* as we always synchronously process the message in IPC_rx() and
@@ -235,6 +236,9 @@ int ipc_chan_sock_accept(struct osmo_fd *bfd, unsigned int flags)
 	conn_bfd->when = BSC_FD_READ;
 	conn_bfd->cb = ipc_chan_sock_cb;
 	conn_bfd->data = state;
+
+	/* copy chan nr, required for proper bfd<->chan # mapping */
+	conn_bfd->priv_nr = bfd->priv_nr;
 
 	if (osmo_fd_register(conn_bfd) != 0) {
 		LOGP(DMAIN, LOGL_ERROR,

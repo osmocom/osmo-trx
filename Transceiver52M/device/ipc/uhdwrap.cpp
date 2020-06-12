@@ -106,6 +106,8 @@ extern "C" void *uhdwrap_open(struct ipc_sk_if_open_req *open_req)
 		rx_paths.push_back(open_req->chan_info[i].rx_path);
 	}
 
+	/* FIXME: this is actually the sps value, not the sample rate!
+	 * sample rate is looked up according to the sps rate by uhd backend */
 	rx_sps = open_req->rx_sample_freq_num / open_req->rx_sample_freq_den;
 	tx_sps = open_req->tx_sample_freq_num / open_req->tx_sample_freq_den;
 	uhd_wrap *uhd_wrap_dev =
@@ -136,7 +138,9 @@ extern "C" int32_t uhdwrap_read(void *dev, uint32_t num_chans)
 	}
 
 	int32_t read = d->wrap_read(&t);
-	if (read < 0)
+
+	/* multi channel rx on b210 will return 0 due to alignment adventures, do not put 0 samples into a ipc buffer... */
+	if (read <= 0)
 		return read;
 
 	for (uint32_t i = 0; i < num_chans; i++) {

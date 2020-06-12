@@ -232,7 +232,7 @@ int ipc_rx_open_req(struct ipc_sk_if_open_req *open_req)
 	/* Here we verify num_chans, rx_path, tx_path, clockref, etc. */
 	int rc = ipc_shm_setup(DEFAULT_SHM_NAME, len);
 	len = ipc_shm_encode_region((struct ipc_shm_raw_region *)shm, open_req->num_chans, 4, shmbuflen);
-	LOGP(DMAIN, LOGL_NOTICE, "%s\n", osmo_hexdump((const unsigned char *)shm, 80));
+//	LOGP(DMAIN, LOGL_NOTICE, "%s\n", osmo_hexdump((const unsigned char *)shm, 80));
 
 	/* set up our own copy of the decoded area, we have to do it here,
 	 *  since the uhd wrapper does not allow starting single channels
@@ -249,10 +249,13 @@ int ipc_rx_open_req(struct ipc_sk_if_open_req *open_req)
 	return 0;
 }
 
+volatile int ul_running = 0;
+volatile int dl_running = 0;
+
 void *uplink_thread(void *x_void_ptr)
 {
 	uint32_t chann = decoded_region->num_chans;
-
+	ul_running = 1;
 	pthread_setname_np(pthread_self(), "uplink rx");
 
 	while (!ipc_exit_requested) {
@@ -266,6 +269,7 @@ void *uplink_thread(void *x_void_ptr)
 void *downlink_thread(void *x_void_ptr)
 {
 	int chann = decoded_region->num_chans;
+	dl_running = 1;
 	pthread_setname_np(pthread_self(), "downlink tx");
 
 	while (!ipc_exit_requested) {
@@ -279,14 +283,21 @@ int ipc_rx_chan_start_req(struct ipc_sk_chan_if_op_void *req, uint8_t chan_nr)
 {
 	struct msgb *msg;
 	struct ipc_sk_chan_if *ipc_prim;
-	int rc;
+	int rc = 0;
 
 	/* no per-chan start/stop */
-	rc = uhdwrap_start(global_dev, chan_nr);
+	if(!dl_running || !ul_running) {
+		rc = uhdwrap_start(global_dev, chan_nr);
 
-	pthread_t rx, tx;
-	pthread_create(&rx, NULL, uplink_thread, 0);
-	pthread_create(&tx, NULL, downlink_thread, 0);
+		/* chan != first chan start will "fail", which is fine, usrp can't start/stop chans independently */
+		if(rc) {
+			LOGP(DMAIN, LOGL_INFO, "starting rx/tx threads.. req for chan:%d\n", chan_nr);
+			pthread_t rx, tx;
+			pthread_create(&rx, NULL, uplink_thread, 0);
+			pthread_create(&tx, NULL, downlink_thread, 0);
+		}
+	} else
+		LOGP(DMAIN, LOGL_INFO, "starting rx/tx threads request ignored.. req for chan:%d\n", chan_nr);
 
 	msg = ipc_msgb_alloc(IPC_IF_MSG_START_CNF);
 	if (!msg)
@@ -462,6 +473,11 @@ int main(int argc, char **argv)
 	ipc_sock_init(ipc_msock_path, &global_ipc_sock_state, ipc_sock_accept, 0);
 	while (!ipc_exit_requested)
 		osmo_select_main(0);
+
+	if (global_dev)
+		for (unsigned int i = 0; i < decoded_region->num_chans; i++)
+			uhdwrap_stop(global_dev, i);
+
 	//ipc_sock_close()
 	return 0;
 }
