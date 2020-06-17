@@ -69,6 +69,7 @@ generations of mobile phone networks. (post-2G/GSM)
 %package uhd
 Summary:        SDR transceiver that implements Layer 1 of a GSM BTS (UHD)
 Group:          Productivity/Telephony/Servers
+Requires:       uhd-firmware
 
 %description uhd
 OsmoTRX is a software-defined radio transceiver that implements the Layer 1
