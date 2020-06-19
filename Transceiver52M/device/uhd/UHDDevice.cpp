@@ -358,7 +358,7 @@ double uhd_device::getRxGain(size_t chan)
 }
 
 double uhd_device::setPowerAttenuation(int atten, size_t chan) {
-	double db;
+	double tx_power, db;
 	dev_band_desc desc;
 
 	if (chan >= tx_gains.size()) {
@@ -367,7 +367,8 @@ double uhd_device::setPowerAttenuation(int atten, size_t chan) {
 	}
 
 	get_dev_band_desc(desc);
-	db = TxPower2TxGain(desc, desc.nom_out_tx_power - atten);
+	tx_power = desc.nom_out_tx_power - atten;
+	db = TxPower2TxGain(desc, tx_power);
 
 	if (dev_type == UMTRX) {
 		std::vector<std::string> gain_stages = usrp_dev->get_tx_gain_names(0);
@@ -388,7 +389,9 @@ double uhd_device::setPowerAttenuation(int atten, size_t chan) {
 
 	tx_gains[chan] = usrp_dev->get_tx_gain(chan);
 
-	LOGC(DDEV, INFO) << "Set TX gain to " << tx_gains[chan] << "dB (asked for " << db << "dB)";
+	LOGC(DDEV, INFO) << "Set TX gain to " << tx_gains[chan] << "dB, ~"
+			 <<  TxGain2TxPower(desc, tx_gains[chan]) << " dBm "
+			 << "(asked for " << db << " dB, ~" << tx_power << " dBm)";
 
 	return desc.nom_out_tx_power - TxGain2TxPower(desc, tx_gains[chan]);
 }

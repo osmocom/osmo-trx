@@ -563,7 +563,7 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 
 double LMSDevice::setPowerAttenuation(int atten, size_t chan)
 {
-	double dB;
+	double tx_power, dB;
 	dev_band_desc desc;
 
 	if (chan >= tx_gains.size()) {
@@ -572,12 +572,13 @@ double LMSDevice::setPowerAttenuation(int atten, size_t chan)
 	}
 
 	get_dev_band_desc(desc);
-	dB = TxPower2TxGain(desc, desc.nom_out_tx_power - atten);
+	tx_power = desc.nom_out_tx_power - atten;
+	dB = TxPower2TxGain(desc, tx_power);
 
-	LOGCHAN(chan, DDEV, NOTICE) << "Setting TX gain to " << dB << " dB";
+	LOGCHAN(chan, DDEV, NOTICE) << "Setting TX gain to " << dB << " dB (~" << tx_power << " dBm)";
 
 	if (LMS_SetGaindB(m_lms_dev, LMS_CH_TX, chan, dB) < 0)
-		LOGCHAN(chan, DDEV, ERR) << "Error setting TX gain to " << dB << " dB";
+		LOGCHAN(chan, DDEV, ERR) << "Error setting TX gain to " << dB << " dB (~" << tx_power << " dBm)";
 	else
 		tx_gains[chan] = dB;
 	return desc.nom_out_tx_power - TxGain2TxPower(desc, tx_gains[chan]);
