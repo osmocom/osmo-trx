@@ -65,8 +65,6 @@ struct dev_desc {
 	 * LimeNET-Micro does not like selecting internal clock
 	 */
 	bool clock_src_int_usable;
-	/* Device specific maximum tx levels selected by phasenoise measurements, in dB */
-	double max_tx_gain;
 	/* Sample rate coef (without having TX/RX samples per symbol into account) */
 	double rate;
 	/* Sample rate coef (without having TX/RX samples per symbol into account), if multi-arfcn is enabled */
@@ -80,11 +78,47 @@ struct dev_desc {
 };
 
 static const std::map<enum lms_dev_type, struct dev_desc> dev_param_map {
-	{ LMS_DEV_SDR_USB,   { true,  true,  73.0, GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, LMS_DEV_SDR_USB_PREFIX_NAME } },
-	{ LMS_DEV_SDR_MINI,  { false, true,  66.0, GSMRATE, MCBTS_SPACING, 8.9e-5, 8.2e-5, LMS_DEV_SDR_MINI_PREFIX_NAME } },
-	{ LMS_DEV_NET_MICRO, { true,  false, 71.0, GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, LMS_DEV_NET_MICRO_PREFIX_NAME } },
-	{ LMS_DEV_UNKNOWN,   { true,  true,  73.0, GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, "UNKNOWN" } },
+	{ LMS_DEV_SDR_USB,   { true,  true,  GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, LMS_DEV_SDR_USB_PREFIX_NAME } },
+	{ LMS_DEV_SDR_MINI,  { false, true,  GSMRATE, MCBTS_SPACING, 8.9e-5, 8.2e-5, LMS_DEV_SDR_MINI_PREFIX_NAME } },
+	{ LMS_DEV_NET_MICRO, { true,  false, GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, LMS_DEV_NET_MICRO_PREFIX_NAME } },
+	{ LMS_DEV_UNKNOWN,   { true,  true,  GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, "UNKNOWN" } },
 };
+
+typedef std::tuple<lms_dev_type, enum gsm_band> dev_band_key;
+/* Maximum LimeSuite Tx Gain which can be set/used without distorting the output
+ * signal, and the resulting real output power measured when that gain is used.
+ */
+struct dev_band_desc {
+	double nom_lms_tx_gain;  /* dB */
+	double nom_out_tx_power; /* dBm */
+};
+typedef std::map<dev_band_key, dev_band_desc>::const_iterator dev_band_map_it;
+static const std::map<dev_band_key, dev_band_desc> dev_band_nom_power_param_map {
+	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_850),	{ 73.0, 11.2 } },
+	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_900),	{ 73.0, 10.8 } },
+	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_1800),	{ 65.0, -3.5 } }, /* FIXME: OS#4583: 1800Mhz is failing above TxGain=65, which is around -3.5dBm (already < 0 dBm) */
+	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_1900),	{ 73.0, 1.7 } }, /* FIXME: OS#4583: 1900MHz is failing in all TxGain values */
+	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_850),	{ 66.0, 3.1 } }, /* FIXME: OS#4583: Ensure BAND2 is used at startup */
+	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_900),	{ 66.0, 2.8 } }, /* FIXME: OS#4583: Ensure BAND2 is used at startup */
+	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_1800),	{ 66.0, -11.6 } }, /* OS#4583: Any of BAND1 or BAND2 is fine */
+	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_1900),	{ 66.0, -9.2 } }, /* FIXME: OS#4583: Ensure BAND1 is used at startup */
+	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_850),	{ 71.0, 6.8 } },
+	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_900),	{ 71.0, 6.8 } },
+	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_1800),	{ 65.0, -10.5 } }, /* OS#4583: TxGain=71 (-4.4dBm) FAIL rms phase errors ~10° */
+	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_1900),	{ 71.0, -6.3 } }, /* FIXME: OS#4583: all FAIL, BAND1/BAND2 rms phase errors >23° */
+};
+
+/* So far measurements done for B210 show really close to linear relationship
+ * between gain and real output power, so we simply adjust the measured offset
+ */
+static double TxGain2TxPower(const dev_band_desc &desc, double tx_gain_db)
+{
+	return desc.nom_out_tx_power - (desc.nom_lms_tx_gain - tx_gain_db);
+}
+static double TxPower2TxGain(const dev_band_desc &desc, double tx_power_dbm)
+{
+	return desc.nom_lms_tx_gain - (desc.nom_out_tx_power - tx_power_dbm);
+}
 
 static enum lms_dev_type parse_dev_type(lms_device_t *m_lms_dev)
 {
@@ -110,7 +144,7 @@ LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t c
 		     const std::vector<std::string>& tx_paths,
 		     const std::vector<std::string>& rx_paths):
 	RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
-	m_lms_dev(NULL), started(false), m_dev_type(LMS_DEV_UNKNOWN)
+	m_lms_dev(NULL), started(false), band((enum gsm_band)0), m_dev_type(LMS_DEV_UNKNOWN)
 {
 	LOGC(DDEV, INFO) << "creating LMS device...";
 
@@ -195,6 +229,27 @@ int info_list_find(lms_info_str_t* info_list, unsigned int count, const std::str
 			return i;
 	}
 	return -1;
+}
+
+void LMSDevice::get_dev_band_desc(dev_band_desc& desc)
+{
+	dev_band_map_it it;
+	enum gsm_band req_band = band;
+
+	if (req_band == 0) {
+		LOGC(DDEV, ERROR) << "Nominal Tx Power requested before Tx Frequency was set! Providing band 900 by default... ";
+		req_band = GSM_BAND_900;
+	}
+	it = dev_band_nom_power_param_map.find(dev_band_key(m_dev_type, req_band));
+	if (it == dev_band_nom_power_param_map.end()) {
+		dev_desc desc = dev_param_map.at(m_dev_type);
+		LOGC(DDEV, ERROR) << "No Tx Power measurements exist for device "
+				    << desc.name_prefix << " on band " << gsm_band_name(req_band)
+				    << ", using LimeSDR-USB ones as fallback";
+		it = dev_band_nom_power_param_map.find(dev_band_key(LMS_DEV_SDR_USB, req_band));
+	}
+	OSMO_ASSERT(it != dev_band_nom_power_param_map.end())
+	desc = it->second;
 }
 
 int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
@@ -322,17 +377,20 @@ bool LMSDevice::start()
 	LOGC(DDEV, INFO) << "starting LMS...";
 
 	unsigned int i;
+	dev_band_desc desc;
 
 	if (started) {
 		LOGC(DDEV, ERR) << "Device already started";
 		return false;
 	}
 
+	get_dev_band_desc(desc);
+
 	/* configure the channels/streams */
 	for (i=0; i<chans; i++) {
 		/* Set gains for calibration/filter setup */
 		/* TX gain to maximum */
-		setTxGain(maxTxGain(), i);
+		LMS_SetGaindB(m_lms_dev, LMS_CH_TX, i, TxPower2TxGain(desc, desc.nom_out_tx_power));
 		/* RX gain to midpoint */
 		setRxGain((minRxGain() + maxRxGain()) / 2, i);
 
@@ -477,17 +535,6 @@ bool LMSDevice::do_filters(size_t chan)
 	return true;
 }
 
-
-double LMSDevice::maxTxGain()
-{
-	return dev_param_map.at(m_dev_type).max_tx_gain;
-}
-
-double LMSDevice::minTxGain()
-{
-	return 0.0;
-}
-
 double LMSDevice::maxRxGain()
 {
 	return 73.0;
@@ -496,22 +543,6 @@ double LMSDevice::maxRxGain()
 double LMSDevice::minRxGain()
 {
 	return 0.0;
-}
-
-double LMSDevice::setTxGain(double dB, size_t chan)
-{
-	if (dB > maxTxGain())
-		dB = maxTxGain();
-	if (dB < minTxGain())
-		dB = minTxGain();
-
-	LOGCHAN(chan, DDEV, NOTICE) << "Setting TX gain to " << dB << " dB";
-
-	if (LMS_SetGaindB(m_lms_dev, LMS_CH_TX, chan, dB) < 0)
-		LOGCHAN(chan, DDEV, ERR) << "Error setting TX gain to " << dB << " dB";
-	else
-		tx_gains[chan] = dB;
-	return tx_gains[chan];
 }
 
 double LMSDevice::setRxGain(double dB, size_t chan)
@@ -530,12 +561,45 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 	return rx_gains[chan];
 }
 
+double LMSDevice::setPowerAttenuation(int atten, size_t chan)
+{
+	double dB;
+	dev_band_desc desc;
+
+	if (chan >= tx_gains.size()) {
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
+		return 0.0f;
+	}
+
+	get_dev_band_desc(desc);
+	dB = TxPower2TxGain(desc, desc.nom_out_tx_power - atten);
+
+	LOGCHAN(chan, DDEV, NOTICE) << "Setting TX gain to " << dB << " dB";
+
+	if (LMS_SetGaindB(m_lms_dev, LMS_CH_TX, chan, dB) < 0)
+		LOGCHAN(chan, DDEV, ERR) << "Error setting TX gain to " << dB << " dB";
+	else
+		tx_gains[chan] = dB;
+	return desc.nom_out_tx_power - TxGain2TxPower(desc, tx_gains[chan]);
+}
+
+double LMSDevice::getPowerAttenuation(size_t chan) {
+	dev_band_desc desc;
+	if (chan >= tx_gains.size()) {
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
+		return 0.0f;
+	}
+
+	get_dev_band_desc(desc);
+	return desc.nom_out_tx_power - TxGain2TxPower(desc, tx_gains[chan]);
+}
+
 int LMSDevice::getNominalTxPower(size_t chan)
 {
-	/* TODO: return value based on some experimentally generated table depending on
-	 * band/arfcn, which is known here thanks to TXTUNE
-	 */
-	return 23;
+	dev_band_desc desc;
+	get_dev_band_desc(desc);
+
+	return desc.nom_out_tx_power;
 }
 
 void LMSDevice::log_ant_list(bool dir_tx, size_t chan, std::ostringstream& os)
@@ -904,13 +968,39 @@ bool LMSDevice::updateAlignment(TIMESTAMP timestamp)
 
 bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 {
+	uint16_t req_arfcn;
+	enum gsm_band req_band;
+
+	if (chan >= chans) {
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
+		return false;
+	}
+
 	LOGCHAN(chan, DDEV, NOTICE) << "Setting Tx Freq to " << wFreq << " Hz";
+
+	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100 , 0);
+	if (req_arfcn == 0xffff) {
+		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Tx Frequency " << wFreq / 1000 << " kHz";
+		return false;
+	}
+	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
+		LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Tx Frequency " << wFreq
+					   << " Hz (ARFCN " << req_arfcn << " )";
+		return false;
+	}
+
+	if (band != 0 && req_band != band) {
+		LOGCHAN(chan, DDEV, ALERT) << "Requesting Tx Frequency " << wFreq
+					   << " Hz different from previous band " << gsm_band_name(band);
+		return false;
+	}
 
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_TX, chan, wFreq) < 0) {
 		LOGCHAN(chan, DDEV, ERROR) << "Error setting Tx Freq to " << wFreq << " Hz";
 		return false;
 	}
 
+	band = req_band;
 	return true;
 }
 

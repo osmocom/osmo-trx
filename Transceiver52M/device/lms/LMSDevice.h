@@ -32,6 +32,10 @@
 #include <iostream>
 #include <lime/LimeSuite.h>
 
+extern "C" {
+#include <osmocom/gsm/gsm_utils.h>
+}
+
 /* Definition of LIMESDR_TX_AMPL limits maximum amplitude of I and Q
  * channels separately. Hence LIMESDR_TX_AMPL value must be 1/sqrt(2) =
  * 0.7071.... to get an amplitude of 1 of the complex signal:
@@ -47,6 +51,8 @@ enum lms_dev_type {
 	LMS_DEV_NET_MICRO, /* LimeNet-micro */
 	LMS_DEV_UNKNOWN,
 };
+
+struct dev_band_desc;
 
 /** A class to handle a LimeSuite supported device */
 class LMSDevice:public RadioDevice {
@@ -66,6 +72,7 @@ private:
 	TIMESTAMP ts_initial, ts_offset;
 
 	std::vector<double> tx_gains, rx_gains;
+	enum gsm_band band;
 
 	enum lms_dev_type m_dev_type;
 
@@ -77,19 +84,11 @@ private:
 	void update_stream_stats_rx(size_t chan, bool *overrun);
 	void update_stream_stats_tx(size_t chan, bool *underrun);
 	bool do_clock_src_freq(enum ReferenceType ref, double freq);
-	/** sets the transmit chan gain, returns the gain setting **/
-	double setTxGain(double dB, size_t chan = 0);
+	void get_dev_band_desc(dev_band_desc& desc);
 
-	/** get transmit gain */
-	double getTxGain(size_t chan = 0) {
-		return tx_gains[chan];
-	}
-
-	/** return maximum Tx Gain **/
-	double maxTxGain(void);
-
-	/** return minimum Rx Gain **/
-	double minTxGain(void);
+	double setTxGain(double db, size_t chan) {OSMO_ASSERT(false); return 0.0f; }
+	double getTxGain(size_t chan = 0) { OSMO_ASSERT(false); return 0.0f; };
+	double maxTxGain(void) { OSMO_ASSERT(false); return 0.0f; };
 
 public:
 
@@ -177,6 +176,10 @@ public:
 
 	/** return minimum Rx Gain **/
 	double minRxGain(void);
+
+
+	double setPowerAttenuation(int atten, size_t chan);
+	double getPowerAttenuation(size_t chan = 0);
 
 	int getNominalTxPower(size_t chan = 0);
 
