@@ -86,10 +86,6 @@ private:
 	bool do_clock_src_freq(enum ReferenceType ref, double freq);
 	void get_dev_band_desc(dev_band_desc& desc);
 
-	double setTxGain(double db, size_t chan) {OSMO_ASSERT(false); return 0.0f; }
-	double getTxGain(size_t chan = 0) { OSMO_ASSERT(false); return 0.0f; };
-	double maxTxGain(void) { OSMO_ASSERT(false); return 0.0f; };
-
 public:
 
 	/** Object constructor */

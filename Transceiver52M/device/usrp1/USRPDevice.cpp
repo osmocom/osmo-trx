@@ -205,8 +205,8 @@ bool USRPDevice::start()
   writeLock.unlock();
 
   // Set gains to midpoint
-  setTxGain((minTxGain() + maxTxGain()) / 2);
-  setRxGain((minRxGain() + maxRxGain()) / 2);
+  setTxGain((m_dbTx->gain_min() + m_dbTx->gain_max()) / 2);
+  setRxGain((m_dbTx->gain_min() + m_dbTx->gain_max()) / 2);
 
   data = new short[currDataSize];
   dataStart = 0;
@@ -243,16 +243,6 @@ bool USRPDevice::stop()
 #endif
 }
 
-double USRPDevice::maxTxGain()
-{
-  return m_dbTx->gain_max();
-}
-
-double USRPDevice::minTxGain()
-{
-  return m_dbTx->gain_min();
-}
-
 double USRPDevice::maxRxGain()
 {
   return m_dbRx->gain_max();
@@ -271,10 +261,10 @@ double USRPDevice::setTxGain(double dB, size_t chan)
   }
 
   writeLock.lock();
-  if (dB > maxTxGain())
-    dB = maxTxGain();
-  if (dB < minTxGain())
-    dB = minTxGain();
+  if (dB > m_dbTx->gain_max())
+    dB = m_dbTx->gain_max();
+  if (dB < m_dbTx->gain_min())
+    dB = m_dbTx->gain_min();
 
   LOGC(DDEV, NOTICE) << "Setting TX gain to " << dB << " dB.";
 
@@ -312,6 +302,15 @@ double USRPDevice::setRxGain(double dB, size_t chan)
   writeLock.unlock();
 
   return rxGain;
+}
+
+double USRPDevice::setPowerAttenuation(int atten, size_t chan) {
+      double rfGain;
+      rfGain = setTxGain(m_dbTx->gain_max() - atten, chan);
+      return m_dbTx->gain_max() - rfGain;
+}
+double USRPDevice::getPowerAttenuation(size_t chan) {
+      return m_dbTx->gain_max() - getTxGain(chan);
 }
 
 int USRPDevice::getNominalTxPower(size_t chan)

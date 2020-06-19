@@ -91,12 +91,6 @@ private:
   /** get transmit gain */
   double getTxGain(size_t chan = 0) { return txGain; }
 
-  /** return maximum Tx Gain **/
-  double maxTxGain(void);
-
-  /** return minimum Rx Gain **/
-  double minTxGain(void);
-
 #ifdef SWLOOPBACK
   short loopbackBuffer[1000000];
   int loopbackBufferSize;
@@ -179,6 +173,9 @@ private:
 
   /** return minimum Rx Gain **/
   double minRxGain(void);
+
+  double setPowerAttenuation(int atten, size_t chan);
+  double getPowerAttenuation(size_t chan=0);
 
   int getNominalTxPower(size_t chan = 0);
 
