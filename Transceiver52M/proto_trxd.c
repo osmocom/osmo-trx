@@ -62,7 +62,7 @@ static void trxd_fill_burst_normalized255(uint8_t* soft_bits, const struct trx_u
 {
 	unsigned i;
 	for (i = 0; i < bi->nbits; i++)
-		soft_bits[i] = (char) round(bi->rx_burst[i] * 255.0);
+		soft_bits[i] = (uint8_t) round(bi->rx_burst[i] * 255.0);
 }
 
 bool trxd_send_burst_ind_v0(size_t chan, int fd, const struct trx_ul_burst_ind *bi) {
