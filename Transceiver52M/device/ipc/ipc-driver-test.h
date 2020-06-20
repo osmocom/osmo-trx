@@ -40,3 +40,5 @@ int ipc_rx_chan_start_req(struct ipc_sk_chan_if_op_void *req, uint8_t chan_nr);
 int ipc_rx_chan_stop_req(struct ipc_sk_chan_if_op_void *req, uint8_t chan_nr);
 int ipc_rx_chan_setgain_req(struct ipc_sk_chan_if_gain *req, uint8_t chan_nr);
 int ipc_rx_chan_setfreq_req(struct ipc_sk_chan_if_freq_req *req, uint8_t chan_nr);
+int ipc_rx_chan_settxatten_req(struct ipc_sk_chan_if_tx_attenuation *req, uint8_t chan_nr);
+

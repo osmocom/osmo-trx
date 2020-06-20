@@ -26,6 +26,7 @@
 extern "C" {
 #include <osmocom/core/select.h>
 #include <osmocom/core/timer.h>
+#include <osmocom/core/utils.h>
 #include "shm.h"
 #include "ipc_shm.h"
 }
@@ -51,10 +52,11 @@ struct ipc_sock_state {
 /** A class to handle a LimeSuite supported device */
 class IPCDevice : public RadioDevice {
     protected:
-	struct ipc_sock_state sk_state;
+	struct ipc_sock_state master_sk_state;
 	/* FIXME: current limit IPC_MAX_NUM_TRX chans, make dynamic */
 	struct ipc_sock_state sk_chan_state[IPC_MAX_NUM_TRX];
 	bool trx_is_started[IPC_MAX_NUM_TRX];
+	uint32_t tx_attenuation[IPC_MAX_NUM_TRX];
 	uint8_t tmp_state;
 	char shm_name[SHM_NAME_MAX];
 	int ipc_shm_connect(const char *shm_name);
@@ -65,7 +67,6 @@ class IPCDevice : public RadioDevice {
 	double actualSampleRate; ///< the actual USRP sampling rate
 
 	bool started; ///< flag indicates LMS has started
-	bool skipRx; ///< set if LMS is transmit-only.
 
 	TIMESTAMP ts_initial, ts_offset;
 
@@ -78,15 +79,12 @@ class IPCDevice : public RadioDevice {
 	std::vector<struct ipc_shm_io *> shm_io_rx_streams;
 	std::vector<struct ipc_shm_io *> shm_io_tx_streams;
 
-	bool do_calib(size_t chan);
-	bool do_filters(size_t chan);
-	int get_ant_idx(const std::string &name, bool dir_tx, size_t chan);
 	virtual bool flush_recv(size_t num_pkts);
 	void update_stream_stats_rx(size_t chan, bool *overrun);
 	void update_stream_stats_tx(size_t chan, bool *underrun);
 	bool do_clock_src_freq(enum ReferenceType ref, double freq);
 
-    public:
+public:
 	virtual void ipc_sock_close(ipc_sock_state *state);
 	virtual int ipc_sock_read(struct osmo_fd *bfd);
 	virtual int ipc_sock_write(struct osmo_fd *bfd);
@@ -110,6 +108,7 @@ class IPCDevice : public RadioDevice {
 	/** Stop the LMS */
 	virtual bool stop() override;
 
+	/* FIXME: any != USRP1 will do for now... */
 	enum TxWindowType getWindowType() override
 	{
 		return TX_WINDOW_LMS1;
@@ -179,20 +178,10 @@ class IPCDevice : public RadioDevice {
 	/** return minimum Rx Gain **/
 	virtual double minRxGain(void) override;
 
-	/** sets the transmit chan gain, returns the gain setting **/
-	virtual double setTxGain(double dB, size_t chan = 0) override;
+	double setPowerAttenuation(int atten, size_t chan) override;
+	double getPowerAttenuation(size_t chan = 0) override;
 
-	/** get transmit gain */
-	virtual double getTxGain(size_t chan = 0) override
-	{
-		return tx_gains[chan];
-	}
-
-	/** return maximum Tx Gain **/
-	virtual double maxTxGain(void) override;
-
-	/** return minimum Rx Gain **/
-	virtual double minTxGain(void) override;
+	virtual int getNominalTxPower(size_t chan = 0) override;
 
 	/** sets the RX path to use, returns true if successful and false otherwise */
 	virtual bool setRxAntenna(const std::string &ant, size_t chan = 0) override;
@@ -234,6 +223,7 @@ class IPCDevice : public RadioDevice {
 	int ipc_rx_chan_setfreq_cnf(ipc_sk_chan_if_freq_cnf *ret, uint8_t chan_nr);
 	int ipc_rx_chan_notify_underflow(ipc_sk_chan_if_notfiy *ret, uint8_t chan_nr);
 	int ipc_rx_chan_notify_overflow(ipc_sk_chan_if_notfiy *ret, uint8_t chan_nr);
+	int ipc_rx_chan_settxattn_cnf(ipc_sk_chan_if_tx_attenuation *ret, uint8_t chan_nr);
 };
 
 #endif // _IPC_DEVICE_H_

@@ -99,6 +99,11 @@ struct ipc_shm_region *ipc_shm_decode_region(void *tall_ctx, struct ipc_shm_raw_
 struct ipc_sk_if_info_chan {
 	char tx_path[MAX_NUM_RF_PATHS][RF_PATH_NAME_SIZE];
 	char rx_path[MAX_NUM_RF_PATHS][RF_PATH_NAME_SIZE];
+	double min_rx_gain;
+	double max_rx_gain;
+	double min_tx_gain;
+	double max_tx_gain;
+	double nominal_tx_power; /* dBm */
 } __attribute__((packed));
 
 struct ipc_sk_if_open_req_chan {
@@ -120,15 +125,11 @@ struct ipc_sk_if_info_req {
 
 struct ipc_sk_if_info_cnf {
 	uint32_t feature_mask;
-	double min_rx_gain;
-	double max_rx_gain;
-	double min_tx_gain;
-	double max_tx_gain;
-	double iq_scaling_val_rx;
+	double iq_scaling_val_rx; /* for scaling, sample format is 16 bit, but adc/dac might be less */
 	double iq_scaling_val_tx;
 	uint32_t max_num_chans;
 	char dev_desc[200];
-	struct ipc_sk_if_info_chan chan_info[0];
+	struct ipc_sk_if_info_chan chan_info[MAX_NUM_CHANS];
 } __attribute__((packed));
 
 struct ipc_sk_if_open_req {
@@ -139,14 +140,14 @@ struct ipc_sk_if_open_req {
 	uint32_t tx_sample_freq_num;
 	uint32_t tx_sample_freq_den;
 	uint32_t bandwidth;
-	struct ipc_sk_if_open_req_chan chan_info[0];
+	struct ipc_sk_if_open_req_chan chan_info[MAX_NUM_CHANS];
 } __attribute__((packed));
 
 struct ipc_sk_if_open_cnf {
 	uint8_t return_code;
 	uint32_t path_delay;
 	char shm_name[SHM_NAME_MAX];
-	struct ipc_sk_if_open_cnf_chan chan_info[0];
+	struct ipc_sk_if_open_cnf_chan chan_info[MAX_NUM_CHANS];
 } __attribute__((packed));
 
 struct ipc_sk_if {
@@ -167,17 +168,20 @@ struct ipc_sk_if {
 // Channel socket
 //////////////////
 #define IPC_IF_CHAN_MSG_OFFSET 50
-#define IPC_IF_MSG_START_REQ IPC_IF_CHAN_MSG_OFFSET + 0x00
-#define IPC_IF_MSG_START_CNF IPC_IF_CHAN_MSG_OFFSET + 0x01
-#define IPC_IF_MSG_STOP_REQ IPC_IF_CHAN_MSG_OFFSET + 0x02
-#define IPC_IF_MSG_STOP_CNF IPC_IF_CHAN_MSG_OFFSET + 0x03
-#define IPC_IF_MSG_SETGAIN_REQ IPC_IF_CHAN_MSG_OFFSET + 0x04
-#define IPC_IF_MSG_SETGAIN_CNF IPC_IF_CHAN_MSG_OFFSET + 0x05
-#define IPC_IF_MSG_SETFREQ_REQ IPC_IF_CHAN_MSG_OFFSET + 0x06
-#define IPC_IF_MSG_SETFREQ_CNF IPC_IF_CHAN_MSG_OFFSET + 0x07
+#define IPC_IF_MSG_START_REQ IPC_IF_CHAN_MSG_OFFSET + 0
+#define IPC_IF_MSG_START_CNF IPC_IF_CHAN_MSG_OFFSET + 1
+#define IPC_IF_MSG_STOP_REQ IPC_IF_CHAN_MSG_OFFSET + 2
+#define IPC_IF_MSG_STOP_CNF IPC_IF_CHAN_MSG_OFFSET + 3
+#define IPC_IF_MSG_SETGAIN_REQ IPC_IF_CHAN_MSG_OFFSET + 4
+#define IPC_IF_MSG_SETGAIN_CNF IPC_IF_CHAN_MSG_OFFSET + 5
+#define IPC_IF_MSG_SETFREQ_REQ IPC_IF_CHAN_MSG_OFFSET + 6
+#define IPC_IF_MSG_SETFREQ_CNF IPC_IF_CHAN_MSG_OFFSET + 7
 
-#define IPC_IF_NOTIFY_UNDERFLOW IPC_IF_CHAN_MSG_OFFSET + 0x08
-#define IPC_IF_NOTIFY_OVERFLOW IPC_IF_CHAN_MSG_OFFSET + 0x09
+#define IPC_IF_NOTIFY_UNDERFLOW IPC_IF_CHAN_MSG_OFFSET + 8
+#define IPC_IF_NOTIFY_OVERFLOW IPC_IF_CHAN_MSG_OFFSET + 9
+
+#define IPC_IF_MSG_SETTXATTN_REQ IPC_IF_CHAN_MSG_OFFSET + 10
+#define IPC_IF_MSG_SETTXATTN_CNF IPC_IF_CHAN_MSG_OFFSET + 11
 
 struct ipc_sk_chan_if_op_void {
 	// at least one dummy byte, to allow c/c++ compatibility
@@ -206,6 +210,10 @@ struct ipc_sk_chan_if_notfiy {
 	uint8_t dummy;
 } __attribute__((packed));
 
+struct ipc_sk_chan_if_tx_attenuation {
+	double attenuation;
+} __attribute__((packed));
+
 struct ipc_sk_chan_if {
 	uint8_t msg_type; /* message type */
 	uint8_t spare[2];
@@ -220,5 +228,7 @@ struct ipc_sk_chan_if {
 		struct ipc_sk_chan_if_freq_req set_freq_req;
 		struct ipc_sk_chan_if_freq_cnf set_freq_cnf;
 		struct ipc_sk_chan_if_notfiy notify;
+		struct ipc_sk_chan_if_tx_attenuation txatten_req;
+		struct ipc_sk_chan_if_tx_attenuation txatten_cnf;
 	} u;
 } __attribute__((packed));

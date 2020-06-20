@@ -59,7 +59,7 @@ static int ipc_chan_sock_cb(struct osmo_fd *bfd, unsigned int flags);
 IPCDevice::IPCDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
 		     const std::vector<std::string> &tx_paths, const std::vector<std::string> &rx_paths)
 	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
-	  tmp_state(IPC_IF_MSG_GREETING_REQ), shm(NULL), started(false)
+	   tx_attenuation(), tmp_state(IPC_IF_MSG_GREETING_REQ), shm(NULL), shm_dec(0), started(false)
 {
 	LOGC(DDEV, INFO) << "creating IPC device...";
 
@@ -87,6 +87,8 @@ IPCDevice::~IPCDevice()
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		delete rx_buffers[i];
 
+	ipc_sock_close(&master_sk_state);
+
 	for (unsigned int i = 0; i < ARRAY_SIZE(sk_chan_state); i++)
 		ipc_sock_close(&sk_chan_state[i]);
 
@@ -94,6 +96,9 @@ IPCDevice::~IPCDevice()
 		ipc_shm_close(i);
 	for (auto i : shm_io_tx_streams)
 		ipc_shm_close(i);
+
+	if(shm_dec)
+		talloc_free(shm_dec);
 }
 
 int IPCDevice::ipc_shm_connect(const char *shm_name)
@@ -126,7 +131,7 @@ int IPCDevice::ipc_shm_connect(const char *shm_name)
 		goto err_mmap;
 	}
 	LOGP(DDEV, LOGL_NOTICE, "mmap'ed shared memory at addr %p\n", shm);
-	LOGP(DDEV, LOGL_NOTICE, "%s\n", osmo_hexdump((const unsigned char *)shm, 80));
+//	LOGP(DDEV, LOGL_NOTICE, "%s\n", osmo_hexdump((const unsigned char *)shm, 80));
 	/* After a call to mmap(2) the file descriptor may be closed without affecting the memory mapping. */
 	close(fd);
 	return 0;
@@ -270,15 +275,15 @@ int IPCDevice::ipc_rx_info_cnf(const struct ipc_sk_if_info_cnf *info_cnf)
 
 	LOGC(DDEV, NOTICE) << "Rx Info CNF:"
 			   << " name=" << info_cnf->dev_desc << std::endl
-			   << " max_num_chans=" << info_cnf->max_num_chans << " feature_mask=" << info_cnf->feature_mask
-			   << " min_rx_gain=" << info_cnf->min_rx_gain << " max_rx_gain=" << info_cnf->max_rx_gain
-			   << " min_tx_gain=" << info_cnf->min_tx_gain << " max_tx_gain=" << info_cnf->max_tx_gain;
+			   << " max_num_chans=" << info_cnf->max_num_chans << " feature_mask=" << info_cnf->feature_mask;
 	for (i = 0; i < info_cnf->max_num_chans; i++) {
 		int j = 0;
 		bool rx_found = false, tx_found = false;
 		while (strcmp(info_cnf->chan_info[i].rx_path[j], "") != 0) {
 			LOGC(DDEV, NOTICE)
-				<< "chan " << i << ": RxPath[" << j << "]: " << info_cnf->chan_info[i].rx_path[j];
+				<< "chan " << i << ": RxPath[" << j << "]: " << info_cnf->chan_info[i].rx_path[j]
+				<< " min_rx_gain=" << info_cnf->chan_info[i].min_rx_gain << " max_rx_gain=" << info_cnf->chan_info[i].max_rx_gain
+				<< " min_tx_gain=" << info_cnf->chan_info[i].min_tx_gain << " max_tx_gain=" << info_cnf->chan_info[i].max_tx_gain;
 
 			if (rx_paths.size() < (i + 1) ||
 			    strcmp(rx_paths[i].c_str(), info_cnf->chan_info[i].rx_path[j]) == 0) {
@@ -425,6 +430,16 @@ int IPCDevice::ipc_rx_chan_setgain_cnf(ipc_sk_chan_if_gain *ret, uint8_t chan_nr
 	ret->is_tx ? tx_gains[chan_nr] = ret->gain : rx_gains[chan_nr] = ret->gain;
 	return 0;
 }
+int IPCDevice::ipc_rx_chan_settxattn_cnf(ipc_sk_chan_if_tx_attenuation *ret, uint8_t chan_nr)
+{
+	if(chan_nr >= ARRAY_SIZE(trx_is_started)) {
+		LOGC(DDEV, NOTICE) << "shm: illegal tx attn response for chan #" << chan_nr << " ?!?";
+		return 0;
+	}
+
+//	trx_is_started[chan_nr] = false;
+	return 0;
+}
 int IPCDevice::ipc_rx_chan_setfreq_cnf(ipc_sk_chan_if_freq_cnf *ret, uint8_t chan_nr)
 {
 	if(chan_nr >= ARRAY_SIZE(trx_is_started)) {
@@ -480,6 +495,9 @@ int IPCDevice::ipc_chan_rx(uint8_t msg_type, struct ipc_sk_chan_if *ipc_prim, ui
 		break;
 	case IPC_IF_NOTIFY_OVERFLOW:
 		rc = ipc_rx_chan_notify_overflow(&ipc_prim->u.notify, chan_nr);
+		break;
+	case IPC_IF_MSG_SETTXATTN_CNF:
+		rc = ipc_rx_chan_settxattn_cnf(&ipc_prim->u.txatten_cnf, chan_nr);
 		break;
 	default:
 		LOGP(DMAIN, LOGL_ERROR, "Received unknown IPC msg type %d\n", msg_type);
@@ -581,7 +599,7 @@ int IPCDevice::ipc_sock_read(struct osmo_fd *bfd)
 
 close:
 	msgb_free(msg);
-	ipc_sock_close(&sk_state);
+	ipc_sock_close(&master_sk_state);
 	return -1;
 }
 
@@ -636,12 +654,12 @@ int IPCDevice::ipc_sock_write(struct osmo_fd *bfd)
 {
 	int rc;
 
-	while (!llist_empty(&sk_state.upqueue)) {
+	while (!llist_empty(&master_sk_state.upqueue)) {
 		struct msgb *msg, *msg2;
 		struct ipc_sk_if *ipc_prim;
 
 		/* peek at the beginning of the queue */
-		msg = llist_entry(sk_state.upqueue.next, struct msgb, list);
+		msg = llist_entry(master_sk_state.upqueue.next, struct msgb, list);
 		ipc_prim = (struct ipc_sk_if *)msg->data;
 
 		bfd->when &= ~BSC_FD_WRITE;
@@ -669,14 +687,14 @@ int IPCDevice::ipc_sock_write(struct osmo_fd *bfd)
 
 	dontsend:
 		/* _after_ we send it, we can deueue */
-		msg2 = msgb_dequeue(&sk_state.upqueue);
+		msg2 = msgb_dequeue(&master_sk_state.upqueue);
 		assert(msg == msg2);
 		msgb_free(msg);
 	}
 	return 0;
 
 close:
-	ipc_sock_close(&sk_state);
+	ipc_sock_close(&master_sk_state);
 	return -1;
 }
 
@@ -775,30 +793,30 @@ int IPCDevice::open(const std::string &args, int ref, bool swap_channels)
 
 	LOGC(DDEV, INFO) << "Opening IPC device" << v << "..";
 
-	memset(&sk_state, 0x00, sizeof(sk_state));
-	INIT_LLIST_HEAD(&sk_state.upqueue);
-	rc = osmo_sock_unix_init_ofd(&sk_state.conn_bfd, SOCK_SEQPACKET, 0, v.c_str(), OSMO_SOCK_F_CONNECT);
+	memset(&master_sk_state, 0x00, sizeof(master_sk_state));
+	INIT_LLIST_HEAD(&master_sk_state.upqueue);
+	rc = osmo_sock_unix_init_ofd(&master_sk_state.conn_bfd, SOCK_SEQPACKET, 0, v.c_str(), OSMO_SOCK_F_CONNECT);
 	if (rc < 0) {
 		LOGC(DDEV, ERROR) << "Failed to connect to the BTS (" << v << "). "
 				  << "Retrying...\n";
-		osmo_timer_setup(&sk_state.timer, ipc_sock_timeout, NULL);
-		osmo_timer_schedule(&sk_state.timer, 5, 0);
+		osmo_timer_setup(&master_sk_state.timer, ipc_sock_timeout, NULL);
+		osmo_timer_schedule(&master_sk_state.timer, 5, 0);
 		return -1;
 	}
-	sk_state.conn_bfd.cb = ipc_sock_cb;
-	sk_state.conn_bfd.data = this;
+	master_sk_state.conn_bfd.cb = ipc_sock_cb;
+	master_sk_state.conn_bfd.data = this;
 
-	ipc_tx_greeting_req(&sk_state, IPC_SOCK_API_VERSION);
+	ipc_tx_greeting_req(&master_sk_state, IPC_SOCK_API_VERSION);
 	/* Wait until confirmation is recieved */
 	while (tmp_state != IPC_IF_MSG_GREETING_CNF)
 		osmo_select_main(0);
 
-	ipc_tx_info_req(&sk_state);
+	ipc_tx_info_req(&master_sk_state);
 	/* Wait until confirmation is recieved */
 	while (tmp_state != IPC_IF_MSG_INFO_CNF)
 		osmo_select_main(0);
 
-	ipc_tx_open_req(&sk_state, chans, ref);
+	ipc_tx_open_req(&master_sk_state, chans, ref);
 	/* Wait until confirmation is recieved */
 	while (tmp_state != IPC_IF_MSG_OPEN_CNF)
 		osmo_select_main(0);
@@ -876,86 +894,92 @@ bool IPCDevice::start()
 
 bool IPCDevice::stop()
 {
-	//unsigned int i;
+	struct msgb *msg;
+	struct ipc_sk_chan_if *ipc_prim;
 
 	if (!started)
 		return true;
 
-	struct msgb *msg;
-	struct ipc_sk_chan_if *ipc_prim;
+	for(int i = 0; i < chans; i++) {
+		if(trx_is_started[i] == true) {
+			msg = ipc_msgb_alloc(IPC_IF_MSG_STOP_REQ);
+			if (!msg)
+				return -ENOMEM;
+			ipc_prim = (struct ipc_sk_chan_if *)msg->data;
+			ipc_prim->u.start_req.dummy = 0;
 
-	msg = ipc_msgb_alloc(IPC_IF_MSG_STOP_REQ);
-	if (!msg)
-		return -ENOMEM;
-	ipc_prim = (struct ipc_sk_chan_if *)msg->data;
-	ipc_prim->u.start_req.dummy = 0;
 
-	for(int i = 0; i < chans; i++)
-		if(trx_is_started[i] == true)
 			ipc_sock_send(&sk_chan_state[i], msg);
+		}
+	}
+
+	int chan_started_count = 0, retrycount = 0;
+	do {
+		chan_started_count = 0;
+
+		/* just poll here, we're already in select, so there is no other way to drive
+		 * the fds and "wait" for a response or retry */
+		usleep(100000);
+		osmo_select_main(1);
+
+		for(unsigned int i = 0; i < ARRAY_SIZE(trx_is_started); i++)
+			if(trx_is_started[i] == true)
+				chan_started_count++;
+		retrycount++;
+	} while (chan_started_count > 0 && retrycount < 5);
+
+	if(retrycount > 4)
+		LOGC(DDEV, ERR) << "No response to stop  msg received, terminating anyway...";
+	else
+		LOGC(DDEV, NOTICE) << "All chanels stopped, termianting...";
 
 	started = false;
 	return true;
 }
 
-/* do rx/tx calibration - depends on gain, freq and bw */
-bool IPCDevice::do_calib(size_t chan)
-{
-	LOGCHAN(chan, DDEV, INFO) << "Calibrating";
-	return true;
-}
-
-/* do rx/tx filter config - depends on bw only? */
-bool IPCDevice::do_filters(size_t chan)
-{
-	LOGCHAN(chan, DDEV, INFO) << "Setting filters";
-	return true;
-}
-
-double IPCDevice::maxTxGain()
-{
-	//return dev_param_map.at(m_dev_type).max_tx_gain;
-	return current_info_cnf.max_tx_gain;
-}
-
-double IPCDevice::minTxGain()
-{
-	return current_info_cnf.min_tx_gain;
-}
-
 double IPCDevice::maxRxGain()
 {
-	return current_info_cnf.max_rx_gain;
+	return current_info_cnf.chan_info[0].max_rx_gain;
 }
 
 double IPCDevice::minRxGain()
 {
-	return current_info_cnf.min_rx_gain;
+	return current_info_cnf.chan_info[0].min_rx_gain;
 }
 
-double IPCDevice::setTxGain(double dB, size_t chan)
+
+int IPCDevice::getNominalTxPower(size_t chan)
 {
+	return current_info_cnf.chan_info[chan].nominal_tx_power;
+}
+
+double IPCDevice::setPowerAttenuation(int atten, size_t chan) {
 	struct msgb *msg;
 	struct ipc_sk_chan_if *ipc_prim;
 
-	if (dB > maxTxGain())
-		dB = maxTxGain();
-	if (dB < minTxGain())
-		dB = minTxGain();
+	if(chan >= chans)
+		return 0;
 
-	LOGCHAN(chan, DDEV, NOTICE) << "Setting TX gain to " << dB << " dB";
+	LOGCHAN(chan, DDEV, NOTICE) << "Setting TX attenuation to " << atten << " dB" << " chan " << chan;
 
-	msg = ipc_msgb_alloc(IPC_IF_MSG_SETGAIN_REQ);
+	msg = ipc_msgb_alloc(IPC_IF_MSG_SETTXATTN_REQ);
 	if (!msg)
 		return -ENOMEM;
 	ipc_prim = (struct ipc_sk_chan_if *)msg->data;
-	ipc_prim->u.set_gain_req.is_tx = 1;
-	ipc_prim->u.set_gain_req.gain = dB;
+	ipc_prim->u.txatten_req.attenuation = atten;
 
 	ipc_sock_send(&sk_chan_state[chan], msg);
 
-	tx_gains[chan] = dB;
-	return tx_gains[chan];
+	tx_attenuation[chan] = atten;
+	return atten;
+}
+
+double IPCDevice::getPowerAttenuation(size_t chan) {
+
+	if(chan >= chans)
+		return 0;
+
+	return tx_attenuation[chan];
 }
 
 double IPCDevice::setRxGain(double dB, size_t chan)

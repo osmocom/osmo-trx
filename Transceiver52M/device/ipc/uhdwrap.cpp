@@ -176,10 +176,16 @@ extern "C" double uhdwrap_set_freq(void *dev, double f, size_t chan, bool for_tx
 extern "C" double uhdwrap_set_gain(void *dev, double f, size_t chan, bool for_tx)
 {
 	uhd_wrap *d = (uhd_wrap *)dev;
-	if (for_tx)
-		return d->setTxGain(f, chan);
-	else
+//	if (for_tx)
+//		return d->setTxGain(f, chan);
+//	else
 		return d->setRxGain(f, chan);
+}
+
+extern "C"  double uhdwrap_set_txatt(void *dev, double a, size_t chan)
+{
+	uhd_wrap *d = (uhd_wrap *)dev;
+	return d->setPowerAttenuation(a, chan);
 }
 
 extern "C" int32_t uhdwrap_start(void *dev, int chan)
@@ -224,10 +230,6 @@ extern "C" void uhdwrap_fill_info_cnf(struct ipc_sk_if *ipc_prim)
 	// at least one duplex channel
 	auto num_chans = rxchans == txchans ? txchans : 1;
 
-	ipc_prim->u.info_cnf.min_rx_gain = rx_range.start();
-	ipc_prim->u.info_cnf.max_rx_gain = rx_range.stop();
-	ipc_prim->u.info_cnf.min_tx_gain = tx_range.start();
-	ipc_prim->u.info_cnf.max_tx_gain = tx_range.stop();
 	ipc_prim->u.info_cnf.iq_scaling_val_rx = 0.3;
 	ipc_prim->u.info_cnf.iq_scaling_val_tx = 1;
 	ipc_prim->u.info_cnf.max_num_chans = num_chans;
@@ -242,6 +244,11 @@ extern "C" void uhdwrap_fill_info_cnf(struct ipc_sk_if *ipc_prim)
 		for (unsigned int j = 0; j < rxant.size(); j++) {
 			OSMO_STRLCPY_ARRAY(chan_info->rx_path[j], rxant[j].c_str());
 		}
+		chan_info->min_rx_gain = rx_range.start();
+		chan_info->max_rx_gain = rx_range.stop();
+		chan_info->min_tx_gain = tx_range.start();
+		chan_info->max_tx_gain = tx_range.stop();
+		chan_info->nominal_tx_power = 7.5; // FIXME: would require uhd dev + freq info
 		chan_info++;
 	}
 }

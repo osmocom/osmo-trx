@@ -47,20 +47,29 @@ static int ipc_chan_rx(uint8_t msg_type, struct ipc_sk_chan_if *ipc_prim, uint8_
 	switch (msg_type) {
 	case IPC_IF_MSG_START_REQ:
 		rc = ipc_rx_chan_start_req(&ipc_prim->u.start_req, chan_nr);
+		fprintf(stderr, "%s:%d: IPC_IF_MSG_START_REQ chan priv no %d\n", __FILE__, __LINE__, chan_nr);
 		break;
 	case IPC_IF_MSG_STOP_REQ:
 		rc = ipc_rx_chan_stop_req(&ipc_prim->u.stop_req, chan_nr);
+		fprintf(stderr, "%s:%d: IPC_IF_MSG_STOP_REQ chan priv no %d\n", __FILE__, __LINE__, chan_nr);
 		break;
 	case IPC_IF_MSG_SETGAIN_REQ:
 		rc = ipc_rx_chan_setgain_req(&ipc_prim->u.set_gain_req, chan_nr);
+		fprintf(stderr, "%s:%d: IPC_IF_MSG_SETGAIN_REQ chan priv no %d\n", __FILE__, __LINE__, chan_nr);
 		break;
 	case IPC_IF_MSG_SETFREQ_REQ:
 		rc = ipc_rx_chan_setfreq_req(&ipc_prim->u.set_freq_req, chan_nr);
+		fprintf(stderr, "%s:%d: IPC_IF_MSG_SETFREQ_REQ chan priv no %d\n", __FILE__, __LINE__, chan_nr);
+		break;
+	case IPC_IF_MSG_SETTXATTN_REQ:
+		rc = ipc_rx_chan_settxatten_req(&ipc_prim->u.txatten_req, chan_nr);
+		fprintf(stderr, "%s:%d: IPC_IF_MSG_SETTXATTN_REQ chan priv no %d\n", __FILE__, __LINE__, chan_nr);
 		break;
 	default:
-		LOGP(DMAIN, LOGL_ERROR, "Received unknown IPC msg type %d\n", msg_type);
+		fprintf(stderr, "Received unknown IPC msg type %d\n", msg_type);
 		rc = -EINVAL;
 	}
+	fflush(stderr);
 
 	return rc;
 }
@@ -99,7 +108,6 @@ static int ipc_chan_sock_read(struct osmo_fd *bfd)
 		return 0;
 	}
 
-	LOGP(DMAIN, LOGL_INFO, "rx on bf priv: %d\n", bfd->priv_nr);
 	rc = ipc_chan_rx(ipc_prim->msg_type, ipc_prim, bfd->priv_nr);
 
 	/* as we always synchronously process the message in IPC_rx() and

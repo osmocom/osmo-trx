@@ -74,6 +74,8 @@ int32_t uhdwrap_start(void *dev, int chan);
 int32_t uhdwrap_stop(void *dev, int chan);
 
 void uhdwrap_fill_info_cnf(struct ipc_sk_if *ipc_prim);
+
+double uhdwrap_set_txatt(void *dev, double a, size_t chan);
 #endif
 
 #endif // IPC_B210_H

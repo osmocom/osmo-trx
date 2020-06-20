@@ -359,6 +359,23 @@ int ipc_rx_chan_setfreq_req(struct ipc_sk_chan_if_freq_req *req, uint8_t chan_nr
 	return ipc_chan_sock_send(msg, chan_nr);
 }
 
+int ipc_rx_chan_settxatten_req(struct ipc_sk_chan_if_tx_attenuation *req, uint8_t chan_nr)
+{
+	struct msgb *msg;
+	struct ipc_sk_chan_if *ipc_prim;
+	double rv;
+
+	rv = uhdwrap_set_txatt(global_dev, req->attenuation, chan_nr);
+
+	msg = ipc_msgb_alloc(IPC_IF_MSG_SETTXATTN_CNF);
+	if (!msg)
+		return -ENOMEM;
+	ipc_prim = (struct ipc_sk_chan_if *)msg->data;
+	ipc_prim->u.txatten_cnf.attenuation = rv;
+
+	return ipc_chan_sock_send(msg, chan_nr);
+}
+
 int ipc_sock_init(const char *path, struct ipc_sock_state **global_state_var,
 		  int (*sock_callback_fn)(struct osmo_fd *fd, unsigned int what), int n)
 {
