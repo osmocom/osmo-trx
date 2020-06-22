@@ -185,14 +185,14 @@ make %{?_smp_mflags} check || (find . -name testsuite.log -exec cat {} +)
 %files lms
 %{_bindir}/osmo-trx-lms
 %dir %{_sysconfdir}/osmocom
-%config %{_sysconfdir}/osmocom/osmo-trx-lms.cfg
+%config(noreplace) %{_sysconfdir}/osmocom/osmo-trx-lms.cfg
 %{_unitdir}/osmo-trx-lms.service
 %endif
 
 %files uhd
 %{_bindir}/osmo-trx-uhd
 %dir %{_sysconfdir}/osmocom
-%config %{_sysconfdir}/osmocom/osmo-trx-uhd.cfg
+%config(noreplace) %{_sysconfdir}/osmocom/osmo-trx-uhd.cfg
 %{_unitdir}/osmo-trx-uhd.service
 
 %if ! 0%{?centos_ver}
