@@ -886,7 +886,12 @@ bool IPCDevice::start()
 	if(retrycount >= 5)
 		return false;
 
-	flush_recv(10);
+	int max_bufs_to_flush = 0;
+	for(unsigned int i = 0; i < shm_dec->num_chans; i++) {
+		int buf_per_chan = shm_dec->channels[i]->ul_stream->num_buffers;
+		max_bufs_to_flush = max_bufs_to_flush < buf_per_chan ? buf_per_chan : max_bufs_to_flush;
+	}
+	flush_recv(max_bufs_to_flush);
 
 	started = true;
 	return true;
@@ -1015,7 +1020,7 @@ bool IPCDevice::flush_recv(size_t num_pkts)
 
 	for (uint32_t j = 0; j < num_pkts; j++) {
 		for (unsigned int i = 0; i < chans; i++)
-			read = ipc_shm_read(shm_io_rx_streams[i], (uint16_t *)&tmp.front(), 4096 / 2, &tmps, 1);
+			read = ipc_shm_read(shm_io_rx_streams[i], (uint16_t *)&tmp.front(), 4096 / 2, &tmps, 3);
 	}
 	ts_initial = tmps + read;
 	return ts_initial;
