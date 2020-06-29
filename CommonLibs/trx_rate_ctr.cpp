@@ -255,7 +255,7 @@ static void threshold_timer_update_intv() {
 
 	llist_for_each_entry(ctr, &threshold_list, list) {
 		secs = ctr_threshold_2_seconds(ctr);
-		if( min_secs > secs)
+		if (min_secs > secs)
 			min_secs = secs;
 	}
 
