@@ -43,6 +43,7 @@ enum SS_DEVICE {
 	   (struct device_counters). Must be sent with PTHREAD_CANCEL_DISABLE
 	   to avoid deadlocks in case osmo-trx process is asked to exit. */
 	S_DEVICE_COUNTER_CHANGE,
+	S_TRX_COUNTER_CHANGE, /* same, but for Transceiver class */
 };
 
 /* signal cb for signal <SS_DEVICE,S_DEVICE_COUNTER_CHANGE> */
@@ -54,4 +55,10 @@ struct device_counters {
 	unsigned int rx_dropped_samples;
 	unsigned int tx_dropped_events;
 	unsigned int tx_dropped_samples;
+};
+
+/* signal cb for signal <SS_DEVICE,S_TRX_COUNTER_CHANGE> */
+struct trx_counters {
+	size_t chan;
+	unsigned int tx_stale_bursts; /* Amount of Tx bursts dropped to to arriving too late from TRXD */
 };

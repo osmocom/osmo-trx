@@ -83,6 +83,9 @@ struct TransceiverState {
 
   /* Shadowed downlink attenuation */
   int mPower;
+
+  /* counters */
+  struct trx_counters ctrs;
 };
 
 /** The Transceiver class, responsible for physical layer of basestation */

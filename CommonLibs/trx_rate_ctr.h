@@ -10,6 +10,7 @@ enum TrxCtr {
 	TRX_CTR_DEV_RX_DROP_SMPL,
 	TRX_CTR_DEV_TX_DROP_EV,
 	TRX_CTR_DEV_TX_DROP_SMPL,
+	TRX_CTR_TRX_TX_STALE_BURSTS,
 };
 
 struct ctr_threshold {

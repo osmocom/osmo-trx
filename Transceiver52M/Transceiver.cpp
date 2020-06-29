@@ -420,16 +420,27 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
   std::vector<signalVector *> bursts(mChans);
   std::vector<bool> zeros(mChans);
   std::vector<bool> filler(mChans, true);
+  bool stale_bursts_changed;
 
   for (size_t i = 0; i < mChans; i ++) {
     state = &mStates[i];
+    stale_bursts_changed = false;
 
     while ((burst = mTxPriorityQueues[i].getStaleBurst(nowTime))) {
       LOGCHAN(i, DTRXDDL, NOTICE) << "dumping STALE burst in TRX->SDR interface ("
                   << burst->getTime() <<" vs " << nowTime << "), retrans=" << state->mRetrans;
+      state->ctrs.tx_stale_bursts++;
+      stale_bursts_changed = true;
       if (state->mRetrans)
         updateFillerTable(i, burst);
       delete burst;
+    }
+
+    if (stale_bursts_changed) {
+      thread_enable_cancel(false);
+      state->ctrs.chan = i;
+      osmo_signal_dispatch(SS_DEVICE, S_TRX_COUNTER_CHANGE, &state->ctrs);
+      thread_enable_cancel(true);
     }
 
     TN = nowTime.TN();

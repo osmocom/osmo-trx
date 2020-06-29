@@ -75,9 +75,12 @@ static void *trx_rate_ctr_ctx;
 
 static struct rate_ctr_group** rate_ctrs;
 static struct device_counters* dev_ctrs_pending;
+static struct trx_counters* trx_ctrs_pending;
 static size_t chan_len;
 static struct osmo_fd dev_rate_ctr_timerfd;
+static struct osmo_fd trx_rate_ctr_timerfd;
 static Mutex dev_rate_ctr_mutex;
+static Mutex trx_rate_ctr_mutex;
 
 struct osmo_timer_list threshold_timer;
 static LLIST_HEAD(threshold_list);
@@ -99,6 +102,7 @@ const struct value_string trx_chan_ctr_names[] = {
 	{ TRX_CTR_DEV_RX_DROP_SMPL,	"rx_drop_samples" },
 	{ TRX_CTR_DEV_TX_DROP_EV,	"tx_drop_events" },
 	{ TRX_CTR_DEV_TX_DROP_SMPL,	"tx_drop_samples" },
+	{ TRX_CTR_TRX_TX_STALE_BURSTS,	"tx_stale_bursts" },
 	{ 0, NULL }
 };
 
@@ -108,7 +112,8 @@ static const struct rate_ctr_desc trx_chan_ctr_desc[] = {
 	[TRX_CTR_DEV_RX_DROP_EV]		= { "device:rx_drop_events",	"Number of times Rx samples were dropped by HW" },
 	[TRX_CTR_DEV_RX_DROP_SMPL]		= { "device:rx_drop_samples",	"Number of Rx samples dropped by HW" },
 	[TRX_CTR_DEV_TX_DROP_EV]		= { "device:tx_drop_events",	"Number of times Tx samples were dropped by HW" },
-	[TRX_CTR_DEV_TX_DROP_SMPL]		= { "device:tx_drop_samples",	"Number of Tx samples dropped by HW" }
+	[TRX_CTR_DEV_TX_DROP_SMPL]		= { "device:tx_drop_samples",	"Number of Tx samples dropped by HW" },
+	[TRX_CTR_TRX_TX_STALE_BURSTS]		= { "trx:tx_stale_bursts",	"Number of Tx burts dropped by TRX due to arriving too late" },
 };
 
 static const struct rate_ctr_group_desc trx_chan_ctr_group_desc = {
@@ -150,11 +155,32 @@ static int dev_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 	return 0;
 }
 
+static int trx_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
+	size_t chan;
+	struct rate_ctr *ctr;
+	LOGC(DMAIN, NOTICE) << "Main thread is updating Transceiver counters";
+	dev_rate_ctr_mutex.lock();
+	for (chan = 0; chan < chan_len; chan++) {
+		if (trx_ctrs_pending[chan].chan == PENDING_CHAN_NONE)
+			continue;
+		LOGCHAN(chan, DMAIN, INFO) << "rate_ctr update";
+		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TX_STALE_BURSTS];
+		rate_ctr_add(ctr, trx_ctrs_pending[chan].tx_stale_bursts - ctr->current);
+		/* Mark as done */
+		trx_ctrs_pending[chan].chan = PENDING_CHAN_NONE;
+	}
+	if (osmo_timerfd_disable(&trx_rate_ctr_timerfd) < 0)
+		LOGC(DMAIN, ERROR) << "Failed to disable timerfd";
+	trx_rate_ctr_mutex.unlock();
+	return 0;
+}
+
 /* Callback function to be called every time we receive a signal from DEVICE */
 static int device_sig_cb(unsigned int subsys, unsigned int signal,
 			 void *handler_data, void *signal_data)
 {
-	struct device_counters *ctr;
+	struct device_counters *dev_ctr;
+	struct trx_counters *trx_ctr;
 	/* Delay sched around 20 ms, in case we receive several calls from several
 	 * channels batched */
 	struct timespec next_sched = {.tv_sec = 0, .tv_nsec = 20*1000*1000};
@@ -163,14 +189,24 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 
 	switch (signal) {
 	case S_DEVICE_COUNTER_CHANGE:
-		ctr = (struct device_counters *)signal_data;
-		LOGCHAN(ctr->chan, DMAIN, NOTICE) << "Received counter change from radioDevice";
+		dev_ctr = (struct device_counters *)signal_data;
+		LOGCHAN(dev_ctr->chan, DMAIN, NOTICE) << "Received counter change from radioDevice";
 		dev_rate_ctr_mutex.lock();
-		dev_ctrs_pending[ctr->chan] = *ctr;
+		dev_ctrs_pending[dev_ctr->chan] = *dev_ctr;
 		if (osmo_timerfd_schedule(&dev_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
 			LOGC(DMAIN, ERROR) << "Failed to schedule timerfd: " << errno << " = "<< strerror(errno);
 		}
 		dev_rate_ctr_mutex.unlock();
+		break;
+	case S_TRX_COUNTER_CHANGE:
+		trx_ctr = (struct trx_counters *)signal_data;
+		LOGCHAN(trx_ctr->chan, DMAIN, NOTICE) << "Received counter change from Transceiver";
+		trx_rate_ctr_mutex.lock();
+		trx_ctrs_pending[trx_ctr->chan] = *trx_ctr;
+		if (osmo_timerfd_schedule(&trx_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
+			LOGC(DMAIN, ERROR) << "Failed to schedule timerfd: " << errno << " = "<< strerror(errno);
+		}
+		trx_rate_ctr_mutex.unlock();
 		break;
 	default:
 		break;
@@ -273,10 +309,12 @@ void trx_rate_ctr_init(void *ctx, struct trx_ctx* trx_ctx)
 	trx_rate_ctr_ctx = ctx;
 	chan_len = trx_ctx->cfg.num_chans;
 	dev_ctrs_pending = (struct device_counters*) talloc_zero_size(ctx, chan_len * sizeof(struct device_counters));
+	trx_ctrs_pending = (struct trx_counters*) talloc_zero_size(ctx, chan_len * sizeof(struct trx_counters));
 	rate_ctrs = (struct rate_ctr_group**) talloc_zero_size(ctx, chan_len * sizeof(struct rate_ctr_group*));
 
 	for (i = 0; i < chan_len; i++) {
 		dev_ctrs_pending[i].chan = PENDING_CHAN_NONE;
+		trx_ctrs_pending[i].chan = PENDING_CHAN_NONE;
 		rate_ctrs[i] = rate_ctr_group_alloc(ctx, &trx_chan_ctr_group_desc, i);
 		if (!rate_ctrs[i]) {
 			LOGCHAN(i, DMAIN, ERROR) << "Failed to allocate rate ctr";
@@ -285,6 +323,11 @@ void trx_rate_ctr_init(void *ctx, struct trx_ctx* trx_ctx)
 	}
 	dev_rate_ctr_timerfd.fd = -1;
 	if (osmo_timerfd_setup(&dev_rate_ctr_timerfd, dev_rate_ctr_timerfd_cb, NULL) < 0) {
+		LOGC(DMAIN, ERROR) << "Failed to setup timerfd";
+		exit(1);
+	}
+	trx_rate_ctr_timerfd.fd = -1;
+	if (osmo_timerfd_setup(&trx_rate_ctr_timerfd, trx_rate_ctr_timerfd_cb, NULL) < 0) {
 		LOGC(DMAIN, ERROR) << "Failed to setup timerfd";
 		exit(1);
 	}
