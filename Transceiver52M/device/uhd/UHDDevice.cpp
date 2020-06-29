@@ -1097,7 +1097,14 @@ bool uhd_device::setRxAntenna(const std::string &ant, size_t chan)
 		return false;
 	}
 
-	avail = usrp_dev->get_rx_antennas(chan);
+	/* UHD may throw a LookupError/IndexError here (see OS#4636) */
+	try {
+		avail = usrp_dev->get_rx_antennas(chan);
+	} catch (const uhd::index_error &e) {
+		LOGC(DDEV, ALERT) << "UHD Error: " << e.what();
+		return false;
+	}
+
 	if (std::find(avail.begin(), avail.end(), ant) == avail.end()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent Rx antenna " << ant << " on channel " << chan;
 		LOGC(DDEV, INFO) << "Available Rx antennas: ";
@@ -1133,7 +1140,14 @@ bool uhd_device::setTxAntenna(const std::string &ant, size_t chan)
 		return false;
 	}
 
-	avail = usrp_dev->get_tx_antennas(chan);
+	/* UHD may throw a LookupError/IndexError here (see OS#4636) */
+	try {
+		avail = usrp_dev->get_tx_antennas(chan);
+	} catch (const uhd::index_error &e) {
+		LOGC(DDEV, ALERT) << "UHD Error: " << e.what();
+		return false;
+	}
+
 	if (std::find(avail.begin(), avail.end(), ant) == avail.end()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent Tx antenna " << ant << " on channel " << chan;
 		LOGC(DDEV, INFO) << "Available Tx antennas: ";
