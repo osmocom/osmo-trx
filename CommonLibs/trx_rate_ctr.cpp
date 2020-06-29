@@ -81,7 +81,7 @@ static Mutex rate_ctr_mutex;
 
 struct osmo_timer_list threshold_timer;
 static LLIST_HEAD(threshold_list);
-static int threshold_timer_sched_secs;
+static unsigned int threshold_timer_sched_secs;
 static bool threshold_initied;
 
 const struct value_string rate_ctr_intv[] = {
@@ -260,7 +260,7 @@ static void threshold_timer_update_intv() {
 	}
 
 
-	threshold_timer_sched_secs = OSMO_MAX(min_secs / 2 - 1, 1);
+	threshold_timer_sched_secs = OSMO_MAX((int)(min_secs / 2 - 1), 1);
 	LOGC(DMAIN, INFO) << "New ctr-error-threshold check interval: "
 			  << threshold_timer_sched_secs << " seconds";
 	osmo_timer_schedule(&threshold_timer, threshold_timer_sched_secs, 0);
