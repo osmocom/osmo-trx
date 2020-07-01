@@ -18,12 +18,10 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/mman.h>
-#include <sys/stat.h> /* For mode constants */
-#include <fcntl.h> /* For O_* constants */
+#include <cstdint>
+#include <cstring>
+#include <cstdlib>
+
 
 #include <map>
 
@@ -34,6 +32,10 @@
 #include "IPCDevice.h"
 
 extern "C" {
+#include <sys/mman.h>
+#include <sys/stat.h> /* For mode constants */
+#include <fcntl.h> /* For O_* constants */
+
 #include "osmo_signal.h"
 #include <osmocom/core/application.h>
 #include <osmocom/core/talloc.h>
