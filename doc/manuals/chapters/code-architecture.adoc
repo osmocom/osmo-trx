@@ -39,8 +39,7 @@ trans [label="Transceiver"];
 radioiface [label="RadioInterface"];
 radiodev [label="RadioDevice"];
 
-trans:nw->trans:ne [label="Trx.ControlServiceLoop_0"];
-trans:nw->trans:ne [label="Trx.ControlServiceLoop_1"];
+trans:nw->trans:ne [label="Main"];
 trans:w->radioiface:w [label="Trx.TxPriorityQueueServiceLoop_0"];
 trans:w->radioiface:w [label="Trx.TxPriorityQueueServiceLoop_1"];
 radioiface:e->trans:e [label="Trx.RxServiceLoop_0"];
@@ -92,14 +91,6 @@ Static amount of Threads (1 per `Transceiver` instance):
 
 Dynamic amount of Threads (1 per RF logical channel on the `Transceiver` instance):
 
-* `ControlServiceLoop`: Handles commands from the Per-ARFCN Control Interface
-  socket (<<trx_if_control>>). Each thread is responsible for managing one
-  socket related to one ARFCN or which is the same, to one RF logical channel.
-  These are the only threads expected to use the private `start()` and `stop()`
-  methods of the `Transceiver()` class, since those methods don't stop any of
-  the `ControlServiceLoop` threads as they must keep running to handle new
-  commands (for instance, to re-start processing samples with the _POWERON_
-  command).
 * `RxServiceLoop`: Each thread of this type pulls bursts from the
   `RadioInterface` FIFO for one specific logical RF channel and handles it
   according to the slot and burst correlation type, finally sending proper data
@@ -107,6 +98,10 @@ Dynamic amount of Threads (1 per RF logical channel on the `Transceiver` instanc
 * `TxPriorityQueueServiceLoop`: Blocks reading from one ARFCN specific TRX
   Manager UDP socket (<<trx_if>>), and fills the `RadioInterface` with it
   setting clock related information.
+
+All the Per-ARFCN Control Interface socket (<<trx_if_control>>) commands are
+handled by the event loop runnnig on the main thread. This is the only thread
+expected to use the private `start()` and `stop()` methods.
 
 [[code_component_radioiface]]
 === RadioInterface
