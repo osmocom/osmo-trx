@@ -1025,7 +1025,7 @@ bool IPCDevice::flush_recv(size_t num_pkts)
 			read = ipc_shm_read(shm_io_rx_streams[i], (uint16_t *)&tmp.front(), 4096 / 2, &tmps, 3);
 	}
 	ts_initial = tmps + read;
-	return ts_initial;
+
 	LOGC(DDEV, INFO) << "Initial timestamp " << ts_initial << std::endl;
 	return true;
 }
