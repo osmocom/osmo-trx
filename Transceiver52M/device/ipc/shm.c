@@ -86,7 +86,6 @@ struct ipc_shm_region *ipc_shm_decode_region(void *tall_ctx, struct ipc_shm_raw_
 unsigned int ipc_shm_encode_smpl_buf(struct ipc_shm_raw_region *root_raw, struct ipc_shm_raw_smpl_buf *smpl_buf_raw,
 				     uint32_t buffer_size)
 {
-	uint8_t *start = (uint8_t *)smpl_buf_raw;
 	unsigned int offset = sizeof(struct ipc_shm_raw_smpl_buf);
 	offset = (((uintptr_t)offset + 7) & ~0x07ULL);
 #ifdef ENCDECDEBUG
@@ -151,7 +150,6 @@ unsigned int ipc_shm_encode_region(struct ipc_shm_raw_region *root_raw, uint32_t
 	if (root_raw)
 		root_raw->num_chans = num_chans;
 	for (i = 0; i < num_chans; i++) {
-		uint32_t ofs = (start + offset - (uintptr_t)root_raw);
 		if (root_raw)
 			root_raw->chan_offset[i] = (start + offset - (uintptr_t)root_raw);
 #ifdef ENCDECDEBUG
