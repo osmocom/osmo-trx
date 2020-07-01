@@ -65,6 +65,7 @@ TransceiverState::TransceiverState()
     for (int n = 0; n < 102; n++)
       fillerTable[n][i] = NULL;
   }
+  memset(&ctrs, 0, sizeof(struct trx_counters));
 }
 
 TransceiverState::~TransceiverState()
