@@ -433,9 +433,15 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
   std::vector<bool> filler(mChans, true);
   bool stale_bursts_changed;
 
+  TN = nowTime.TN();
+
   for (size_t i = 0; i < mChans; i ++) {
     state = &mStates[i];
     stale_bursts_changed = false;
+    zeros[i] = state->chanType[TN] == NONE;
+
+    Mutex *mtx = mTxPriorityQueues[i].getMutex();
+    mtx->lock();
 
     while ((burst = mTxPriorityQueues[i].getStaleBurst(nowTime))) {
       LOGCHAN(i, DTRXDDL, NOTICE) << "dumping STALE burst in TRX->SDR interface ("
@@ -446,15 +452,6 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
         updateFillerTable(i, burst);
       delete burst;
     }
-
-    if (stale_bursts_changed)
-      dispatch_trx_rate_ctr_change(state, i);
-
-    TN = nowTime.TN();
-    modFN = nowTime.FN() % state->fillerModulus[TN];
-
-    bursts[i] = state->fillerTable[modFN][TN];
-    zeros[i] = state->chanType[TN] == NONE;
 
     if ((burst = mTxPriorityQueues[i].getCurrentBurst(nowTime))) {
       bursts[i] = burst->getVector();
@@ -467,7 +464,15 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
       }
 
       delete burst;
+    } else {
+      modFN = nowTime.FN() % state->fillerModulus[TN];
+      bursts[i] = state->fillerTable[modFN][TN];
     }
+
+    mtx->unlock();
+
+    if (stale_bursts_changed)
+      dispatch_trx_rate_ctr_change(state, i);
   }
 
   mRadioInterface->driveTransmitRadio(bursts, zeros);

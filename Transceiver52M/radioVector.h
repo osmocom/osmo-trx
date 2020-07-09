@@ -65,6 +65,7 @@ public:
 	GSM::Time nextTime() const;
 	radioVector* getStaleBurst(const GSM::Time& targTime);
 	radioVector* getCurrentBurst(const GSM::Time& targTime);
+	Mutex *getMutex() const { return &mLock; };
 };
 
 #endif /* RADIOVECTOR_H */

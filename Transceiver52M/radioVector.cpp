@@ -120,38 +120,26 @@ GSM::Time VectorQueue::nextTime() const
 
 radioVector* VectorQueue::getStaleBurst(const GSM::Time& targTime)
 {
-	mLock.lock();
-	if ((mQ.size()==0)) {
-		mLock.unlock();
+	if ((mQ.size()==0))
 		return NULL;
-	}
 
 	if (mQ.top()->getTime() < targTime) {
 		radioVector* retVal = mQ.top();
 		mQ.pop();
-		mLock.unlock();
 		return retVal;
 	}
-	mLock.unlock();
-
 	return NULL;
 }
 
 radioVector* VectorQueue::getCurrentBurst(const GSM::Time& targTime)
 {
-	mLock.lock();
-	if ((mQ.size()==0)) {
-		mLock.unlock();
+	if ((mQ.size()==0))
 		return NULL;
-	}
 
 	if (mQ.top()->getTime() == targTime) {
 		radioVector* retVal = mQ.top();
 		mQ.pop();
-		mLock.unlock();
 		return retVal;
 	}
-	mLock.unlock();
-
 	return NULL;
 }
