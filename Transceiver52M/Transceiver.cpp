@@ -431,13 +431,14 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
   std::vector<signalVector *> bursts(mChans);
   std::vector<bool> zeros(mChans);
   std::vector<bool> filler(mChans, true);
-  bool stale_bursts_changed;
+  bool ratectr_changed;
 
   TN = nowTime.TN();
 
   for (size_t i = 0; i < mChans; i ++) {
     state = &mStates[i];
-    stale_bursts_changed = false;
+    ratectr_changed = false;
+
     zeros[i] = state->chanType[TN] == NONE;
 
     Mutex *mtx = mTxPriorityQueues[i].getMutex();
@@ -447,7 +448,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
       LOGCHAN(i, DTRXDDL, NOTICE) << "dumping STALE burst in TRX->SDR interface ("
                   << burst->getTime() <<" vs " << nowTime << "), retrans=" << state->mRetrans;
       state->ctrs.tx_stale_bursts++;
-      stale_bursts_changed = true;
+      ratectr_changed = true;
       if (state->mRetrans)
         updateFillerTable(i, burst);
       delete burst;
@@ -467,11 +468,17 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     } else {
       modFN = nowTime.FN() % state->fillerModulus[TN];
       bursts[i] = state->fillerTable[modFN][TN];
+      if (state->chanType[TN] != NONE) {
+        LOGCHAN(i, DTRXDDL, NOTICE) << "No Tx burst available for " << nowTime
+                                    << ", retrans=" << state->mRetrans;
+        state->ctrs.tx_unavailable_bursts++;
+        ratectr_changed = true;
+      }
     }
 
     mtx->unlock();
 
-    if (stale_bursts_changed)
+    if (ratectr_changed)
       dispatch_trx_rate_ctr_change(state, i);
   }
 
