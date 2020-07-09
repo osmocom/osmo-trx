@@ -390,7 +390,7 @@ static int vty_intv_name_2_id(const char* str) {
 	return -1;
 }
 
-#define THRESHOLD_ARGS "(rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples|tx_drop_events|tx_drop_samples|tx_stale_bursts)"
+#define THRESHOLD_ARGS "(rx_overruns|tx_underruns|rx_drop_events|rx_drop_samples|tx_drop_events|tx_drop_samples|tx_stale_bursts|tx_trxd_fn_repeated|tx_trxd_fn_outoforder|tx_trxd_fn_skipped)"
 #define THRESHOLD_STR_VAL(s) "Set threshold value for rate_ctr device:" OSMO_STRINGIFY_VAL(s) "\n"
 #define THRESHOLD_STRS \
 	THRESHOLD_STR_VAL(rx_overruns) \
@@ -399,7 +399,11 @@ static int vty_intv_name_2_id(const char* str) {
 	THRESHOLD_STR_VAL(rx_drop_samples) \
 	THRESHOLD_STR_VAL(tx_drop_events) \
 	THRESHOLD_STR_VAL(tx_drop_samples) \
-	THRESHOLD_STR_VAL(tx_stale_bursts)
+	THRESHOLD_STR_VAL(tx_stale_bursts) \
+	THRESHOLD_STR_VAL(tx_trxd_fn_repeated) \
+	THRESHOLD_STR_VAL(tx_trxd_fn_outoforder) \
+	THRESHOLD_STR_VAL(tx_trxd_fn_skipped) \
+	""
 #define INTV_ARGS "(per-second|per-minute|per-hour|per-day)"
 #define INTV_STR_VAL(s) "Threshold value sampled " OSMO_STRINGIFY_VAL(s) "\n"
 #define INTV_STRS \

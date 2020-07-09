@@ -103,6 +103,9 @@ const struct value_string trx_chan_ctr_names[] = {
 	{ TRX_CTR_DEV_TX_DROP_EV,	"tx_drop_events" },
 	{ TRX_CTR_DEV_TX_DROP_SMPL,	"tx_drop_samples" },
 	{ TRX_CTR_TRX_TX_STALE_BURSTS,	"tx_stale_bursts" },
+	{ TRX_CTR_TRX_TRXD_FN_REPEATED,	"tx_trxd_fn_repeated" },
+	{ TRX_CTR_TRX_TRXD_FN_OUTOFORDER, "tx_trxd_fn_outoforder" },
+	{ TRX_CTR_TRX_TRXD_FN_SKIPPED,	"tx_trxd_fn_skipped" },
 	{ 0, NULL }
 };
 
@@ -114,6 +117,9 @@ static const struct rate_ctr_desc trx_chan_ctr_desc[] = {
 	[TRX_CTR_DEV_TX_DROP_EV]		= { "device:tx_drop_events",	"Number of times Tx samples were dropped by HW" },
 	[TRX_CTR_DEV_TX_DROP_SMPL]		= { "device:tx_drop_samples",	"Number of Tx samples dropped by HW" },
 	[TRX_CTR_TRX_TX_STALE_BURSTS]		= { "trx:tx_stale_bursts",	"Number of Tx burts dropped by TRX due to arriving too late" },
+	[TRX_CTR_TRX_TRXD_FN_REPEATED]		= { "trx:tx_trxd_fn_repeated",	"Number of Tx burts received from TRXD with repeated FN" },
+	[TRX_CTR_TRX_TRXD_FN_OUTOFORDER]	= { "trx:tx_trxd_fn_outoforder","Number of Tx burts received from TRXD with a past FN" },
+	[TRX_CTR_TRX_TRXD_FN_SKIPPED]		= { "trx:tx_trxd_fn_skipped",	"Number of Tx burts potentially skipped due to FN jumps" },
 };
 
 static const struct rate_ctr_group_desc trx_chan_ctr_group_desc = {
@@ -166,6 +172,12 @@ static int trx_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 		LOGCHAN(chan, DMAIN, INFO) << "rate_ctr update";
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TX_STALE_BURSTS];
 		rate_ctr_add(ctr, trx_ctrs_pending[chan].tx_stale_bursts - ctr->current);
+		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TRXD_FN_REPEATED];
+		rate_ctr_add(ctr, trx_ctrs_pending[chan].tx_trxd_fn_repeated - ctr->current);
+		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TRXD_FN_OUTOFORDER];
+		rate_ctr_add(ctr, trx_ctrs_pending[chan].tx_trxd_fn_outoforder - ctr->current);
+		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TRXD_FN_SKIPPED];
+		rate_ctr_add(ctr, trx_ctrs_pending[chan].tx_trxd_fn_skipped - ctr->current);
 		/* Mark as done */
 		trx_ctrs_pending[chan].chan = PENDING_CHAN_NONE;
 	}

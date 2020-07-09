@@ -63,6 +63,7 @@ struct TransceiverState {
   /* The filler table */
   signalVector *fillerTable[102][8];
   int fillerModulus[8];
+  FillerType mFiller;
   bool mRetrans;
 
   /* Most recent channel estimate of all timeslots */
@@ -86,6 +87,10 @@ struct TransceiverState {
 
   /* counters */
   struct trx_counters ctrs;
+
+  /* Used to keep track of lost and out of order frames */
+  bool first_dl_fn_rcv[8];
+  GSM::Time last_dl_time_rcv[8];
 };
 
 /** The Transceiver class, responsible for physical layer of basestation */

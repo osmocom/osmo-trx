@@ -52,6 +52,14 @@ Transceiver *transceiver;
 /* Number of running values use in noise average */
 #define NOISE_CNT			20
 
+
+static void dispatch_trx_rate_ctr_change(TransceiverState *state, unsigned int chan) {
+        thread_enable_cancel(false);
+        state->ctrs.chan = chan;
+        osmo_signal_dispatch(SS_DEVICE, S_TRX_COUNTER_CHANGE, &state->ctrs);
+        thread_enable_cancel(true);
+}
+
 TransceiverState::TransceiverState()
   : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT), mPower(0.0)
 {
@@ -86,6 +94,8 @@ bool TransceiverState::init(FillerType filler, size_t sps, float scale, size_t r
 
   if ((sps != 1) && (sps != 4))
     return false;
+
+  mFiller = filler;
 
   for (size_t n = 0; n < 8; n++) {
     for (size_t i = 0; i < 102; i++) {
@@ -437,12 +447,8 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
       delete burst;
     }
 
-    if (stale_bursts_changed) {
-      thread_enable_cancel(false);
-      state->ctrs.chan = i;
-      osmo_signal_dispatch(SS_DEVICE, S_TRX_COUNTER_CHANGE, &state->ctrs);
-      thread_enable_cancel(true);
-    }
+    if (stale_bursts_changed)
+      dispatch_trx_rate_ctr_change(state, i);
 
     TN = nowTime.TN();
     modFN = nowTime.FN() % state->fillerModulus[TN];
@@ -1001,6 +1007,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   struct trxd_hdr_v01_dl *dl;
   char buffer[sizeof(*dl) + EDGE_BURST_NBITS];
   uint32_t fn;
+  uint8_t tn;
 
   // check data socket
   msgLen = read(mDataSockets[chan], buffer, sizeof(buffer));
@@ -1029,6 +1036,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
 
   /* Convert TDMA FN to the host endianness */
   fn = osmo_load32be(&dl->common.fn);
+  tn = dl->common.tn;
 
   /* Make sure we support the received header format */
   switch (dl->common.version) {
@@ -1044,13 +1052,48 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   LOGCHAN(chan, DTRXDDL, DEBUG) << "Rx TRXD message (hdr_ver=" << unsigned(dl->common.version)
     << "): fn=" << fn << ", tn=" << unsigned(dl->common.tn) << ", burst_len=" << burstLen;
 
+  TransceiverState *state = &mStates[chan];
+  GSM::Time currTime = GSM::Time(fn, tn);
+
+  /* Verify proper FN order in DL stream */
+  if (state->first_dl_fn_rcv[tn]) {
+    int32_t delta = GSM::FNDelta(currTime.FN(), state->last_dl_time_rcv[tn].FN());
+    if (delta == 1) {
+        /* usual expected scenario, continue code flow */
+    } else if (delta == 0) {
+      LOGCHAN(chan, DTRXDDL, NOTICE) << "Rx TRXD msg with repeated FN " << currTime;
+      state->ctrs.tx_trxd_fn_repeated++;
+      dispatch_trx_rate_ctr_change(state, chan);
+      return true;
+    } else if (delta < 0) {
+      LOGCHAN(chan, DTRXDDL, NOTICE) << "Rx TRXD msg with previous FN " << currTime
+                                     << " vs last " << state->last_dl_time_rcv[tn];
+       state->ctrs.tx_trxd_fn_outoforder++;
+       dispatch_trx_rate_ctr_change(state, chan);
+       /* Allow adding radio vector below, since it gets sorted in the queue */
+    } else if (chan == 0 && state->mFiller == FILLER_ZERO) {
+        /* delta > 1. Some FN was lost in the middle. We can only easily rely
+         * on consecutive FNs in TRX0 since it must transmit continuously in all
+         * setups. Also, osmo-trx supports optionally filling empty bursts on
+         * its own. In that case bts-trx is not obliged to submit all bursts. */
+      LOGCHAN(chan, DTRXDDL, NOTICE) << "Rx TRXD msg with future FN " << currTime
+                                     << " vs last " << state->last_dl_time_rcv[tn]
+                                     << ", " << delta - 1 << " FN lost";
+      state->ctrs.tx_trxd_fn_skipped += delta - 1;
+      dispatch_trx_rate_ctr_change(state, chan);
+    }
+    if (delta > 0)
+      state->last_dl_time_rcv[tn] = currTime;
+  } else { /* Initial check, simply store state */
+    state->first_dl_fn_rcv[tn] = true;
+    state->last_dl_time_rcv[tn] = currTime;
+  }
+
   BitVector newBurst(burstLen);
   BitVector::iterator itr = newBurst.begin();
   uint8_t *bufferItr = dl->soft_bits;
   while (itr < newBurst.end())
     *itr++ = *bufferItr++;
-
-  GSM::Time currTime = GSM::Time(fn, dl->common.tn);
 
   addRadioVector(chan, newBurst, dl->tx_att, currTime);
 

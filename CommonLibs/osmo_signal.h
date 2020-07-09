@@ -61,4 +61,7 @@ struct device_counters {
 struct trx_counters {
 	size_t chan;
 	unsigned int tx_stale_bursts; /* Amount of Tx bursts dropped to to arriving too late from TRXD */
+	unsigned int tx_trxd_fn_repeated;
+	unsigned int tx_trxd_fn_outoforder;
+	unsigned int tx_trxd_fn_skipped;
 };
