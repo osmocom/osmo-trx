@@ -159,7 +159,7 @@ static int trx_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 	size_t chan;
 	struct rate_ctr *ctr;
 	LOGC(DMAIN, NOTICE) << "Main thread is updating Transceiver counters";
-	dev_rate_ctr_mutex.lock();
+	trx_rate_ctr_mutex.lock();
 	for (chan = 0; chan < chan_len; chan++) {
 		if (trx_ctrs_pending[chan].chan == PENDING_CHAN_NONE)
 			continue;
