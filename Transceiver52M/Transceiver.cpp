@@ -61,7 +61,7 @@ static void dispatch_trx_rate_ctr_change(TransceiverState *state, unsigned int c
 }
 
 TransceiverState::TransceiverState()
-  : mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT), mPower(0.0)
+  : mFiller(FILLER_ZERO), mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT), mPower(0.0)
 {
   for (int i = 0; i < 8; i++) {
     chanType[i] = Transceiver::NONE;
