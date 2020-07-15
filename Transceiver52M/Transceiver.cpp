@@ -1062,7 +1062,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
   }
 
   LOGCHAN(chan, DTRXDDL, DEBUG) << "Rx TRXD message (hdr_ver=" << unsigned(dl->common.version)
-    << "): fn=" << fn << ", tn=" << unsigned(dl->common.tn) << ", burst_len=" << burstLen;
+    << "): fn=" << fn << ", tn=" << unsigned(tn) << ", burst_len=" << burstLen;
 
   TransceiverState *state = &mStates[chan];
   GSM::Time currTime = GSM::Time(fn, tn);
