@@ -82,7 +82,6 @@ class IPCDevice : public RadioDevice {
 	virtual bool flush_recv(size_t num_pkts);
 	void update_stream_stats_rx(size_t chan, bool *overrun);
 	void update_stream_stats_tx(size_t chan, bool *underrun);
-	bool do_clock_src_freq(enum ReferenceType ref, double freq);
 
 public:
 	virtual void ipc_sock_close(ipc_sock_state *state);
