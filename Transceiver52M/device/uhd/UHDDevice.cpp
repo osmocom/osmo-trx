@@ -750,6 +750,10 @@ bool uhd_device::stop()
 	async_event_thrd->join();
 	delete async_event_thrd;
 
+	/* reset internal buffer timestamps */
+	for (size_t i = 0; i < rx_buffers.size(); i++)
+		rx_buffers[i]->reset();
+
 	started = false;
 	return true;
 }
