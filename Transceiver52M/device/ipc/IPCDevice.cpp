@@ -940,6 +940,10 @@ bool IPCDevice::stop()
 	else
 		LOGC(DDEV, NOTICE) << "All chanels stopped, termianting...";
 
+	/* reset internal buffer timestamps */
+	for (size_t i = 0; i < rx_buffers.size(); i++)
+		rx_buffers[i]->reset();
+
 	started = false;
 	return true;
 }

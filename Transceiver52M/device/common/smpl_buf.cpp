@@ -28,15 +28,23 @@
 #include <inttypes.h>
 
 smpl_buf::smpl_buf(size_t len)
-	: buf_len(len), time_start(0), time_end(0),
-	  data_start(0), data_end(0)
+	: buf_len(len)
 {
+	reset();
 	data = new uint32_t[len];
 }
 
 smpl_buf::~smpl_buf()
 {
 	delete[] data;
+}
+
+void smpl_buf::reset()
+{
+	time_start = 0;
+	time_end = 0;
+	data_start = 0;
+	data_end = 0;
 }
 
 ssize_t smpl_buf::avail_smpls(TIMESTAMP timestamp) const

@@ -44,6 +44,10 @@ public:
 	smpl_buf(size_t len);
 	~smpl_buf();
 
+	/** Reset this buffer, keeps the size
+	*/
+	void reset();
+
 	/** Query number of samples available for reading
 	    @param timestamp time of first sample
 	    @return number of available samples or error
