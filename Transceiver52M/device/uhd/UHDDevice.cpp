@@ -1316,6 +1316,7 @@ std::string uhd_device::str_code(uhd::async_metadata_t metadata)
 	return ost.str();
 }
 
+#ifndef IPCMAGIC
 RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
 			       InterfaceType iface, size_t chans, double lo_offset,
 			       const std::vector<std::string>& tx_paths,
@@ -1323,3 +1324,4 @@ RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
 {
 	return new uhd_device(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
 }
+#endif
