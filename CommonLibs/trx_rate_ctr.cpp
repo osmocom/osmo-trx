@@ -135,12 +135,12 @@ static const struct rate_ctr_group_desc trx_chan_ctr_group_desc = {
 static int dev_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 	size_t chan;
 	struct rate_ctr *ctr;
-	LOGC(DMAIN, NOTICE) << "Main thread is updating Device counters";
+	LOGC(DMAIN, INFO) << "Main thread is updating Device counters";
 	dev_rate_ctr_mutex.lock();
 	for (chan = 0; chan < chan_len; chan++) {
 		if (dev_ctrs_pending[chan].chan == PENDING_CHAN_NONE)
 			continue;
-		LOGCHAN(chan, DMAIN, INFO) << "rate_ctr update";
+		LOGCHAN(chan, DMAIN, DEBUG) << "rate_ctr update";
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_DEV_RX_OVERRUNS];
 		rate_ctr_add(ctr, dev_ctrs_pending[chan].rx_overruns - ctr->current);
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_DEV_TX_UNDERRUNS];
@@ -166,12 +166,12 @@ static int dev_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 static int trx_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 	size_t chan;
 	struct rate_ctr *ctr;
-	LOGC(DMAIN, NOTICE) << "Main thread is updating Transceiver counters";
+	LOGC(DMAIN, INFO) << "Main thread is updating Transceiver counters";
 	trx_rate_ctr_mutex.lock();
 	for (chan = 0; chan < chan_len; chan++) {
 		if (trx_ctrs_pending[chan].chan == PENDING_CHAN_NONE)
 			continue;
-		LOGCHAN(chan, DMAIN, INFO) << "rate_ctr update";
+		LOGCHAN(chan, DMAIN, DEBUG) << "rate_ctr update";
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TX_STALE_BURSTS];
 		rate_ctr_add(ctr, trx_ctrs_pending[chan].tx_stale_bursts - ctr->current);
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TX_UNAVAILABLE_BURSTS];
@@ -206,7 +206,7 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 	switch (signal) {
 	case S_DEVICE_COUNTER_CHANGE:
 		dev_ctr = (struct device_counters *)signal_data;
-		LOGCHAN(dev_ctr->chan, DMAIN, NOTICE) << "Received counter change from radioDevice";
+		LOGCHAN(dev_ctr->chan, DMAIN, INFO) << "Received counter change from radioDevice";
 		dev_rate_ctr_mutex.lock();
 		dev_ctrs_pending[dev_ctr->chan] = *dev_ctr;
 		if (osmo_timerfd_schedule(&dev_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
@@ -216,7 +216,7 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 		break;
 	case S_TRX_COUNTER_CHANGE:
 		trx_ctr = (struct trx_counters *)signal_data;
-		LOGCHAN(trx_ctr->chan, DMAIN, NOTICE) << "Received counter change from Transceiver";
+		LOGCHAN(trx_ctr->chan, DMAIN, INFO) << "Received counter change from Transceiver";
 		trx_rate_ctr_mutex.lock();
 		trx_ctrs_pending[trx_ctr->chan] = *trx_ctr;
 		if (osmo_timerfd_schedule(&trx_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
