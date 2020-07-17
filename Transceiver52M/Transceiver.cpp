@@ -445,7 +445,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     mtx->lock();
 
     while ((burst = mTxPriorityQueues[i].getStaleBurst(nowTime))) {
-      LOGCHAN(i, DTRXDDL, NOTICE) << "dumping STALE burst in TRX->SDR interface ("
+      LOGCHAN(i, DTRXDDL, INFO) << "dumping STALE burst in TRX->SDR interface ("
                   << burst->getTime() <<" vs " << nowTime << "), retrans=" << state->mRetrans;
       state->ctrs.tx_stale_bursts++;
       ratectr_changed = true;
@@ -469,7 +469,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
       modFN = nowTime.FN() % state->fillerModulus[TN];
       bursts[i] = state->fillerTable[modFN][TN];
       if (i == 0 && state->mFiller == FILLER_ZERO) {
-        LOGCHAN(i, DTRXDDL, NOTICE) << "No Tx burst available for " << nowTime
+        LOGCHAN(i, DTRXDDL, INFO) << "No Tx burst available for " << nowTime
                                     << ", retrans=" << state->mRetrans;
         state->ctrs.tx_unavailable_bursts++;
         ratectr_changed = true;
@@ -1073,12 +1073,12 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
     if (delta == 1) {
         /* usual expected scenario, continue code flow */
     } else if (delta == 0) {
-      LOGCHAN(chan, DTRXDDL, NOTICE) << "Rx TRXD msg with repeated FN " << currTime;
+      LOGCHAN(chan, DTRXDDL, INFO) << "Rx TRXD msg with repeated FN " << currTime;
       state->ctrs.tx_trxd_fn_repeated++;
       dispatch_trx_rate_ctr_change(state, chan);
       return true;
     } else if (delta < 0) {
-      LOGCHAN(chan, DTRXDDL, NOTICE) << "Rx TRXD msg with previous FN " << currTime
+      LOGCHAN(chan, DTRXDDL, INFO) << "Rx TRXD msg with previous FN " << currTime
                                      << " vs last " << state->last_dl_time_rcv[tn];
        state->ctrs.tx_trxd_fn_outoforder++;
        dispatch_trx_rate_ctr_change(state, chan);
@@ -1088,7 +1088,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
          * on consecutive FNs in TRX0 since it must transmit continuously in all
          * setups. Also, osmo-trx supports optionally filling empty bursts on
          * its own. In that case bts-trx is not obliged to submit all bursts. */
-      LOGCHAN(chan, DTRXDDL, NOTICE) << "Rx TRXD msg with future FN " << currTime
+      LOGCHAN(chan, DTRXDDL, INFO) << "Rx TRXD msg with future FN " << currTime
                                      << " vs last " << state->last_dl_time_rcv[tn]
                                      << ", " << delta - 1 << " FN lost";
       state->ctrs.tx_trxd_fn_skipped += delta - 1;
