@@ -468,7 +468,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     } else {
       modFN = nowTime.FN() % state->fillerModulus[TN];
       bursts[i] = state->fillerTable[modFN][TN];
-      if (state->chanType[TN] != NONE) {
+      if (i == 0 && state->mFiller == FILLER_ZERO) {
         LOGCHAN(i, DTRXDDL, NOTICE) << "No Tx burst available for " << nowTime
                                     << ", retrans=" << state->mRetrans;
         state->ctrs.tx_unavailable_bursts++;
