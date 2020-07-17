@@ -837,6 +837,42 @@ out_close:
 	return -1;
 }
 
+void IPCDevice::manually_poll_sock_fds() {
+	struct timeval wait = {0, 100000};
+	fd_set crfds, cwfds;
+	int max_fd = 0;
+
+	FD_ZERO(&crfds);
+	FD_ZERO(&cwfds);
+	for(int i = 0; i < chans; i++) {
+		struct osmo_fd* curr_fd = &sk_chan_state[i].conn_bfd;
+		max_fd = curr_fd->fd > max_fd ? curr_fd->fd : max_fd;
+
+		if(curr_fd->when & OSMO_FD_READ)
+		FD_SET(curr_fd->fd, &crfds);
+		if(curr_fd->when & OSMO_FD_WRITE)
+		FD_SET(curr_fd->fd, &cwfds);
+	}
+
+	select(max_fd+1, &crfds, &cwfds, 0, &wait);
+
+	for(int i = 0; i < chans; i++) {
+		int flags = 0;
+		struct osmo_fd* ofd = &sk_chan_state[i].conn_bfd;
+
+		if (FD_ISSET(ofd->fd, &crfds)) {
+			flags |= OSMO_FD_READ;
+			FD_CLR(ofd->fd, &crfds);
+		}
+
+		if (FD_ISSET(ofd->fd, &cwfds)) {
+			flags |= OSMO_FD_WRITE;
+			FD_CLR(ofd->fd, &cwfds);
+		}
+		if(flags)
+		ipc_chan_sock_cb(ofd, flags);
+	}
+}
 /* the call stack is rather difficult here, we're already in select:
 >~"#0  IPCDevice::start (this=<optimized out>) at IPCDevice.cpp:789\n"
 >~"#1  in RadioInterface::start (this=0x614000001640) at radioInterface.cpp:187\n"
@@ -859,6 +895,7 @@ bool IPCDevice::start()
 
 	struct msgb *msg;
 	struct ipc_sk_chan_if *ipc_prim;
+	struct timeval timer_now, timeout;
 
 	for(int i = 0; i < chans; i++) {
 		msg = ipc_msgb_alloc(IPC_IF_MSG_START_REQ);
@@ -870,23 +907,26 @@ bool IPCDevice::start()
 		ipc_sock_send(&sk_chan_state[i], msg);
 	}
 
-	int chan_started_count = 0, retrycount = 0;
-	while (chan_started_count != chans && retrycount < 5) {
+	gettimeofday(&timeout, 0);
+	timeout.tv_sec += 2;
+
+	int chan_started_count = 0;
+	while (chan_started_count != chans) {
 		chan_started_count = 0;
 
 		/* just poll here, we're already in select, so there is no other way to drive
 		 * the fds and "wait" for a response or retry */
-		usleep(100000);
-		osmo_select_main(1);
+		manually_poll_sock_fds();
 
 		for(unsigned int i = 0; i < ARRAY_SIZE(trx_is_started); i++)
 			if(trx_is_started[i] == true)
 				chan_started_count++;
-		retrycount++;
+
+		gettimeofday(&timer_now, 0);
+		if(timercmp(&timer_now, &timeout, >))
+			return false;
 	}
 
-	if(retrycount >= 5)
-		return false;
 
 	int max_bufs_to_flush = 0;
 	for(unsigned int i = 0; i < shm_dec->num_chans; i++) {
@@ -903,6 +943,7 @@ bool IPCDevice::stop()
 {
 	struct msgb *msg;
 	struct ipc_sk_chan_if *ipc_prim;
+	struct timeval timer_now, timeout;
 
 	if (!started)
 		return true;
@@ -915,30 +956,33 @@ bool IPCDevice::stop()
 			ipc_prim = (struct ipc_sk_chan_if *)msg->data;
 			ipc_prim->u.start_req.dummy = 0;
 
-
 			ipc_sock_send(&sk_chan_state[i], msg);
 		}
 	}
 
-	int chan_started_count = 0, retrycount = 0;
+	gettimeofday(&timeout, 0);
+	timeout.tv_sec += 2;
+
+	int chan_started_count = 0;
 	do {
 		chan_started_count = 0;
 
 		/* just poll here, we're already in select, so there is no other way to drive
 		 * the fds and "wait" for a response or retry */
-		usleep(100000);
-		osmo_select_main(1);
+		manually_poll_sock_fds();
 
 		for(unsigned int i = 0; i < ARRAY_SIZE(trx_is_started); i++)
 			if(trx_is_started[i] == true)
 				chan_started_count++;
-		retrycount++;
-	} while (chan_started_count > 0 && retrycount < 5);
 
-	if(retrycount > 4)
-		LOGC(DDEV, ERR) << "No response to stop  msg received, terminating anyway...";
-	else
-		LOGC(DDEV, NOTICE) << "All chanels stopped, termianting...";
+		gettimeofday(&timer_now, 0);
+		if(timercmp(&timer_now, &timeout, >)) {
+			LOGC(DDEV, ERR) << "No response to stop  msg received, terminating anyway...";
+			break;
+		}
+	} while (chan_started_count > 0);
+
+	LOGC(DDEV, NOTICE) << "All chanels stopped, terminating...";
 
 	/* reset internal buffer timestamps */
 	for (size_t i = 0; i < rx_buffers.size(); i++)
