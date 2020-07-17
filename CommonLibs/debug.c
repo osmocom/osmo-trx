@@ -81,6 +81,12 @@ static const struct log_info_cat default_categories[] = {
 		.color = NULL,
 		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
+	[DCTR] = {
+		.name = "DCTR",
+		.description = "Rate counter related logging",
+		.color = NULL,
+		.enabled = 1, .loglevel = LOGL_NOTICE,
+	},
 };
 
 const struct log_info log_info = {

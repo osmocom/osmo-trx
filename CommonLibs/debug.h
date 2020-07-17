@@ -16,6 +16,7 @@ enum {
 	DTRXDUL,
 	DDEV,
 	DDEVDRV,
+	DCTR,
 };
 
 pid_t my_gettid(void);

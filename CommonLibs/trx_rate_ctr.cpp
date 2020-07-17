@@ -135,12 +135,12 @@ static const struct rate_ctr_group_desc trx_chan_ctr_group_desc = {
 static int dev_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 	size_t chan;
 	struct rate_ctr *ctr;
-	LOGC(DMAIN, INFO) << "Main thread is updating Device counters";
+	LOGC(DCTR, INFO) << "Main thread is updating Device counters";
 	dev_rate_ctr_mutex.lock();
 	for (chan = 0; chan < chan_len; chan++) {
 		if (dev_ctrs_pending[chan].chan == PENDING_CHAN_NONE)
 			continue;
-		LOGCHAN(chan, DMAIN, DEBUG) << "rate_ctr update";
+		LOGCHAN(chan, DCTR, DEBUG) << "rate_ctr update";
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_DEV_RX_OVERRUNS];
 		rate_ctr_add(ctr, dev_ctrs_pending[chan].rx_overruns - ctr->current);
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_DEV_TX_UNDERRUNS];
@@ -158,7 +158,7 @@ static int dev_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 		dev_ctrs_pending[chan].chan = PENDING_CHAN_NONE;
 	}
 	if (osmo_timerfd_disable(&dev_rate_ctr_timerfd) < 0)
-		LOGC(DMAIN, ERROR) << "Failed to disable timerfd";
+		LOGC(DCTR, ERROR) << "Failed to disable timerfd";
 	dev_rate_ctr_mutex.unlock();
 	return 0;
 }
@@ -166,12 +166,12 @@ static int dev_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 static int trx_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 	size_t chan;
 	struct rate_ctr *ctr;
-	LOGC(DMAIN, INFO) << "Main thread is updating Transceiver counters";
+	LOGC(DCTR, INFO) << "Main thread is updating Transceiver counters";
 	trx_rate_ctr_mutex.lock();
 	for (chan = 0; chan < chan_len; chan++) {
 		if (trx_ctrs_pending[chan].chan == PENDING_CHAN_NONE)
 			continue;
-		LOGCHAN(chan, DMAIN, DEBUG) << "rate_ctr update";
+		LOGCHAN(chan, DCTR, DEBUG) << "rate_ctr update";
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TX_STALE_BURSTS];
 		rate_ctr_add(ctr, trx_ctrs_pending[chan].tx_stale_bursts - ctr->current);
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TX_UNAVAILABLE_BURSTS];
@@ -186,7 +186,7 @@ static int trx_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 		trx_ctrs_pending[chan].chan = PENDING_CHAN_NONE;
 	}
 	if (osmo_timerfd_disable(&trx_rate_ctr_timerfd) < 0)
-		LOGC(DMAIN, ERROR) << "Failed to disable timerfd";
+		LOGC(DCTR, ERROR) << "Failed to disable timerfd";
 	trx_rate_ctr_mutex.unlock();
 	return 0;
 }
@@ -206,21 +206,21 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 	switch (signal) {
 	case S_DEVICE_COUNTER_CHANGE:
 		dev_ctr = (struct device_counters *)signal_data;
-		LOGCHAN(dev_ctr->chan, DMAIN, INFO) << "Received counter change from radioDevice";
+		LOGCHAN(dev_ctr->chan, DCTR, INFO) << "Received counter change from radioDevice";
 		dev_rate_ctr_mutex.lock();
 		dev_ctrs_pending[dev_ctr->chan] = *dev_ctr;
 		if (osmo_timerfd_schedule(&dev_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
-			LOGC(DMAIN, ERROR) << "Failed to schedule timerfd: " << errno << " = "<< strerror(errno);
+			LOGC(DCTR, ERROR) << "Failed to schedule timerfd: " << errno << " = "<< strerror(errno);
 		}
 		dev_rate_ctr_mutex.unlock();
 		break;
 	case S_TRX_COUNTER_CHANGE:
 		trx_ctr = (struct trx_counters *)signal_data;
-		LOGCHAN(trx_ctr->chan, DMAIN, INFO) << "Received counter change from Transceiver";
+		LOGCHAN(trx_ctr->chan, DCTR, INFO) << "Received counter change from Transceiver";
 		trx_rate_ctr_mutex.lock();
 		trx_ctrs_pending[trx_ctr->chan] = *trx_ctr;
 		if (osmo_timerfd_schedule(&trx_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
-			LOGC(DMAIN, ERROR) << "Failed to schedule timerfd: " << errno << " = "<< strerror(errno);
+			LOGC(DCTR, ERROR) << "Failed to schedule timerfd: " << errno << " = "<< strerror(errno);
 		}
 		trx_rate_ctr_mutex.unlock();
 		break;
@@ -247,15 +247,15 @@ static void threshold_timer_cb(void *data)
 	struct ctr_threshold *ctr_thr;
 	struct rate_ctr *rate_ctr;
 	size_t chan;
-	LOGC(DMAIN, DEBUG) << "threshold_timer_cb fired!";
+	LOGC(DCTR, DEBUG) << "threshold_timer_cb fired!";
 
 	llist_for_each_entry(ctr_thr, &threshold_list, list) {
 		for (chan = 0; chan < chan_len; chan++) {
 			rate_ctr = &rate_ctrs[chan]->ctr[ctr_thr->ctr_id];
-			LOGCHAN(chan, DMAIN, INFO) << "checking threshold: " << ctr_threshold_2_vty_str(ctr_thr)
+			LOGCHAN(chan, DCTR, INFO) << "checking threshold: " << ctr_threshold_2_vty_str(ctr_thr)
 						   << " ("<< rate_ctr->intv[ctr_thr->intv].rate << " vs " << ctr_thr->val << ")";
 			if (rate_ctr->intv[ctr_thr->intv].rate >= ctr_thr->val) {
-				LOGCHAN(chan, DMAIN, FATAL) << "threshold reached, stopping! " << ctr_threshold_2_vty_str(ctr_thr)
+				LOGCHAN(chan, DCTR, FATAL) << "threshold reached, stopping! " << ctr_threshold_2_vty_str(ctr_thr)
 							   << " ("<< rate_ctr->intv[ctr_thr->intv].rate << " vs " << ctr_thr->val << ")";
 				osmo_signal_dispatch(SS_MAIN, S_MAIN_STOP_REQUIRED, NULL);
 				return;
@@ -313,7 +313,7 @@ static void threshold_timer_update_intv() {
 
 
 	threshold_timer_sched_secs = OSMO_MAX((int)(min_secs / 2 - 1), 1);
-	LOGC(DMAIN, INFO) << "New ctr-error-threshold check interval: "
+	LOGC(DCTR, INFO) << "New ctr-error-threshold check interval: "
 			  << threshold_timer_sched_secs << " seconds";
 	osmo_timer_schedule(&threshold_timer, threshold_timer_sched_secs, 0);
 }
@@ -333,18 +333,18 @@ void trx_rate_ctr_init(void *ctx, struct trx_ctx* trx_ctx)
 		trx_ctrs_pending[i].chan = PENDING_CHAN_NONE;
 		rate_ctrs[i] = rate_ctr_group_alloc(ctx, &trx_chan_ctr_group_desc, i);
 		if (!rate_ctrs[i]) {
-			LOGCHAN(i, DMAIN, ERROR) << "Failed to allocate rate ctr";
+			LOGCHAN(i, DCTR, ERROR) << "Failed to allocate rate ctr";
 			exit(1);
 		}
 	}
 	dev_rate_ctr_timerfd.fd = -1;
 	if (osmo_timerfd_setup(&dev_rate_ctr_timerfd, dev_rate_ctr_timerfd_cb, NULL) < 0) {
-		LOGC(DMAIN, ERROR) << "Failed to setup timerfd";
+		LOGC(DCTR, ERROR) << "Failed to setup timerfd";
 		exit(1);
 	}
 	trx_rate_ctr_timerfd.fd = -1;
 	if (osmo_timerfd_setup(&trx_rate_ctr_timerfd, trx_rate_ctr_timerfd_cb, NULL) < 0) {
-		LOGC(DMAIN, ERROR) << "Failed to setup timerfd";
+		LOGC(DCTR, ERROR) << "Failed to setup timerfd";
 		exit(1);
 	}
 	osmo_signal_register_handler(SS_DEVICE, device_sig_cb, NULL);
@@ -361,7 +361,7 @@ void trx_rate_ctr_threshold_add(struct ctr_threshold *ctr)
 
 	new_ctr = talloc_zero(trx_rate_ctr_ctx, struct ctr_threshold);
 	*new_ctr = *ctr;
-	LOGC(DMAIN, NOTICE) << "Adding new threshold check: " << ctr_threshold_2_vty_str(new_ctr);
+	LOGC(DCTR, NOTICE) << "Adding new threshold check: " << ctr_threshold_2_vty_str(new_ctr);
 	llist_add(&new_ctr->list, &threshold_list);
 	threshold_timer_update_intv();
 }
@@ -376,7 +376,7 @@ int trx_rate_ctr_threshold_del(struct ctr_threshold *del_ctr)
 		    ctr->val != del_ctr->val)
 			continue;
 
-		LOGC(DMAIN, NOTICE) << "Deleting threshold check: " << ctr_threshold_2_vty_str(del_ctr);
+		LOGC(DCTR, NOTICE) << "Deleting threshold check: " << ctr_threshold_2_vty_str(del_ctr);
 		llist_del(&ctr->list);
 		talloc_free(ctr);
 		threshold_timer_update_intv();
