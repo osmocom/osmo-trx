@@ -69,7 +69,7 @@ bool trxd_send_burst_ind_v0(size_t chan, int fd, const struct trx_ul_burst_ind *
 	int rc;
 
 	/* v0 doesn't support idle frames, they are simply dropped, not sent */
-	if(bi->idle)
+	if (bi->idle)
 		return true;
 
 	/* +2: Historically (OpenBTS times), two extra non-used bytes are sent appended to each burst */
