@@ -285,9 +285,10 @@ int ipc_rx_chan_start_req(struct ipc_sk_chan_if_op_void *req, uint8_t chan_nr)
 	struct ipc_sk_chan_if *ipc_prim;
 	int rc = 0;
 
+	rc = uhdwrap_start(global_dev, chan_nr);
+
 	/* no per-chan start/stop */
 	if(!dl_running || !ul_running) {
-		rc = uhdwrap_start(global_dev, chan_nr);
 
 		/* chan != first chan start will "fail", which is fine, usrp can't start/stop chans independently */
 		if(rc) {
