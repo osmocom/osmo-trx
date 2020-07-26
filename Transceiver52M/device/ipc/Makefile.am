@@ -9,9 +9,9 @@ noinst_HEADERS = IPCDevice.h shm.h ../uhd/UHDDevice.h uhdwrap.h
 
 noinst_LTLIBRARIES = libdevice.la
 
-libdevice_la_SOURCES = ipc-driver-test.c IPCDevice.cpp shm.c ../uhd/UHDDevice.cpp uhdwrap.cpp ipc_shm.c ipc_chan.c ipc_sock.c 
+libdevice_la_SOURCES = IPCDevice.cpp shm.c ipc_shm.c ipc_chan.c ipc_sock.c 
 libdevice_la_LIBADD = $(top_builddir)/Transceiver52M/device/common/libdevice_common.la
-libdevice_la_CXXFLAGS = $(AM_CXXFLAGS) $(UHD_CFLAGS) -DIPCMAGIC
+libdevice_la_CXXFLAGS = $(AM_CXXFLAGS) -DIPCMAGIC
 
 bin_PROGRAMS = ipc-driver-test
 #ipc_driver_test_SHORTNAME = drvt

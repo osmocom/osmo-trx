@@ -109,6 +109,5 @@ bin_PROGRAMS += osmo-trx-ipc
 osmo_trx_ipc_SOURCES = osmo-trx.cpp
 osmo_trx_ipc_LDADD = \
 	$(builddir)/device/ipc/libdevice.la \
-	$(COMMON_LDADD) \
-	$(UHD_LIBS)
-osmo_trx_ipc_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
+	$(COMMON_LDADD)
+osmo_trx_ipc_CPPFLAGS  = $(AM_CPPFLAGS)
