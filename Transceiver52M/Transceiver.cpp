@@ -1165,7 +1165,7 @@ bool Transceiver::driveReceiveFIFO(size_t chan)
     return false; /* other errors: we want to stop the process */
   }
 
-  if (!bi.idle)
+  if (!bi.idle && log_check_level(DTRXDUL, LOGL_DEBUG))
     logRxBurst(chan, &bi);
 
   switch (mVersionTRXD[chan]) {
