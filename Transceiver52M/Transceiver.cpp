@@ -638,6 +638,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   GSM::Time burstTime;
   SoftVector *rxBurst;
   TransceiverState *state = &mStates[chan];
+  bool ctr_changed = false;
 
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
@@ -687,7 +688,9 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   }
 
   if (max_i < 0) {
-    LOGCHAN(chan, DTRXDUL, FATAL) << "Received empty burst";
+    LOGCHAN(chan, DTRXDUL, INFO) << "Received empty burst";
+    state->ctrs.rx_empty_burst++;
+    ctr_changed = true;
     goto ret_idle;
   }
 
@@ -713,10 +716,15 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   /* Detect normal or RACH bursts */
   rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, max_toa, &ebp);
   if (rc <= 0) {
-    if (rc == -SIGERR_CLIP)
-      LOGCHAN(chan, DTRXDUL, NOTICE) << "Clipping detected on received RACH or Normal Burst";
-    else if (rc != SIGERR_NONE)
-      LOGCHAN(chan, DTRXDUL, NOTICE) << "Unhandled RACH or Normal Burst detection error";
+    if (rc == -SIGERR_CLIP) {
+      LOGCHAN(chan, DTRXDUL, INFO) << "Clipping detected on received RACH or Normal Burst";
+      state->ctrs.rx_clipping++;
+      ctr_changed = true;
+    } else if (rc != SIGERR_NONE) {
+      LOGCHAN(chan, DTRXDUL, INFO) << "Unhandled RACH or Normal Burst detection error";
+      state->ctrs.rx_no_burst_detected++;
+      ctr_changed = true;
+    }
     goto ret_idle;
   }
 
@@ -743,6 +751,8 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   return 0;
 
 ret_idle:
+  if (ctr_changed)
+    dispatch_trx_rate_ctr_change(state, chan);
   bi->idle = true;
   delete radio_burst;
   return 0;

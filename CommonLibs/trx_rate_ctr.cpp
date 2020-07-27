@@ -107,6 +107,9 @@ const struct value_string trx_chan_ctr_names[] = {
 	{ TRX_CTR_TRX_TRXD_FN_REPEATED,	"tx_trxd_fn_repeated" },
 	{ TRX_CTR_TRX_TRXD_FN_OUTOFORDER, "tx_trxd_fn_outoforder" },
 	{ TRX_CTR_TRX_TRXD_FN_SKIPPED,	"tx_trxd_fn_skipped" },
+	{ TRX_CTR_TRX_RX_EMPTY_BURST,	"rx_empty_burst" },
+	{ TRX_CTR_TRX_RX_CLIPPING,	"rx_clipping" },
+	{ TRX_CTR_TRX_RX_NO_BURST_DETECTED, "rx_no_burst_detected" },
 	{ 0, NULL }
 };
 
@@ -122,6 +125,9 @@ static const struct rate_ctr_desc trx_chan_ctr_desc[] = {
 	[TRX_CTR_TRX_TRXD_FN_REPEATED]		= { "trx:tx_trxd_fn_repeated",	"Number of Tx burts received from TRXD with repeated FN" },
 	[TRX_CTR_TRX_TRXD_FN_OUTOFORDER]	= { "trx:tx_trxd_fn_outoforder","Number of Tx burts received from TRXD with a past FN" },
 	[TRX_CTR_TRX_TRXD_FN_SKIPPED]		= { "trx:tx_trxd_fn_skipped",	"Number of Tx burts potentially skipped due to FN jumps" },
+	[TRX_CTR_TRX_RX_EMPTY_BURST]		= { "trx:rx_empty_burst",	"Number of Rx bursts empty" },
+	[TRX_CTR_TRX_RX_CLIPPING]		= { "trx:rx_clipping",		"Number of Rx bursts discarded due to clipping" },
+	[TRX_CTR_TRX_RX_NO_BURST_DETECTED]	= { "trx:rx_no_burst_detected",	"Number of Rx burts discarded due to burst detection error" },
 };
 
 static const struct rate_ctr_group_desc trx_chan_ctr_group_desc = {
@@ -182,6 +188,12 @@ static int trx_rate_ctr_timerfd_cb(struct osmo_fd *ofd, unsigned int what) {
 		rate_ctr_add(ctr, trx_ctrs_pending[chan].tx_trxd_fn_outoforder - ctr->current);
 		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_TRXD_FN_SKIPPED];
 		rate_ctr_add(ctr, trx_ctrs_pending[chan].tx_trxd_fn_skipped - ctr->current);
+		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_RX_EMPTY_BURST];
+		rate_ctr_add(ctr, trx_ctrs_pending[chan].rx_empty_burst - ctr->current);
+		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_RX_CLIPPING];
+		rate_ctr_add(ctr, trx_ctrs_pending[chan].rx_clipping - ctr->current);
+		ctr = &rate_ctrs[chan]->ctr[TRX_CTR_TRX_RX_NO_BURST_DETECTED];
+		rate_ctr_add(ctr, trx_ctrs_pending[chan].rx_no_burst_detected - ctr->current);
 		/* Mark as done */
 		trx_ctrs_pending[chan].chan = PENDING_CHAN_NONE;
 	}

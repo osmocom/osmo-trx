@@ -65,4 +65,7 @@ struct trx_counters {
 	unsigned int tx_trxd_fn_repeated;
 	unsigned int tx_trxd_fn_outoforder;
 	unsigned int tx_trxd_fn_skipped;
+	unsigned int rx_empty_burst;
+	unsigned int rx_clipping;
+	unsigned int rx_no_burst_detected;
 };
