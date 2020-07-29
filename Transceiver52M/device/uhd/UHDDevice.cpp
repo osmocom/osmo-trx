@@ -34,7 +34,9 @@
 #endif
 
 extern "C" {
+#include <osmocom/core/utils.h>
 #include <osmocom/gsm/gsm_utils.h>
+#include <osmocom/vty/cpu_sched_vty.h>
 }
 
 #ifdef USE_UHD_3_11
@@ -150,6 +152,7 @@ static const std::map<dev_band_key, dev_band_desc> dev_band_nom_power_param_map 
 void *async_event_loop(uhd_device *dev)
 {
 	set_selfthread_name("UHDAsyncEvent");
+	OSMO_ASSERT(osmo_cpu_sched_vty_apply_localthread() == 0);
 
 	while (1) {
 		dev->recv_async_msg();

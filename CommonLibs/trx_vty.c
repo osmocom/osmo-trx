@@ -291,7 +291,7 @@ DEFUN(cfg_ext_rach, cfg_ext_rach_cmd,
 	return CMD_SUCCESS;
 }
 
-DEFUN(cfg_rt_prio, cfg_rt_prio_cmd,
+DEFUN_DEPRECATED(cfg_rt_prio, cfg_rt_prio_cmd,
 	"rt-prio <1-32>",
 	"Set the SCHED_RR real-time priority\n"
 	"Real time priority\n")
@@ -299,6 +299,8 @@ DEFUN(cfg_rt_prio, cfg_rt_prio_cmd,
 	struct trx_ctx *trx = trx_from_vty(vty);
 
 	trx->cfg.sched_rr = atoi(argv[0]);
+	vty_out (vty, "%% 'rt-prio %u' is deprecated, use 'policy rr %u' under 'sched' node instead%s",
+		 trx->cfg.sched_rr, trx->cfg.sched_rr, VTY_NEWLINE);
 
 	return CMD_SUCCESS;
 }

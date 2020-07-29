@@ -55,6 +55,7 @@ extern "C" {
 #include <osmocom/ctrl/control_if.h>
 #include <osmocom/vty/stats.h>
 #include <osmocom/vty/command.h>
+#include <osmocom/vty/cpu_sched_vty.h>
 
 #include "convolve.h"
 #include "convert.h"
@@ -435,7 +436,9 @@ static int set_sched_rr(unsigned int prio)
 	int rc;
 	memset(&param, 0, sizeof(param));
 	param.sched_priority = prio;
-	LOG(INFO) << "Setting SCHED_RR priority " << param.sched_priority;
+	LOG(INFO) << "Setting SCHED_RR priority " << param.sched_priority
+		  << ". This setting is DEPRECATED, please use 'policy rr " << param.sched_priority
+		  << "' under the 'sched' VTY node instead.";
 	rc = sched_setscheduler(getpid(), SCHED_RR, &param);
 	if (rc != 0) {
 		LOG(ERROR) << "Config: Setting SCHED_RR failed";
@@ -589,6 +592,7 @@ int main(int argc, char *argv[])
 	vty_init(&g_vty_info);
 	logging_vty_add_cmds();
 	ctrl_vty_init(tall_trx_ctx);
+	osmo_cpu_sched_vty_init(tall_trx_ctx);
 	trx_vty_init(g_trx_ctx);
 
 	osmo_talloc_vty_add_cmds();

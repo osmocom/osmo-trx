@@ -37,6 +37,7 @@ extern "C" {
 #include <osmocom/core/utils.h>
 #include <osmocom/core/socket.h>
 #include <osmocom/core/bits.h>
+#include <osmocom/vty/cpu_sched_vty.h>
 }
 
 #ifdef HAVE_CONFIG_H
@@ -1273,6 +1274,7 @@ void *RxUpperLoopAdapter(TrxChanThParams *params)
 
   snprintf(thread_name, 16, "RxUpper%zu", num);
   set_selfthread_name(thread_name);
+  OSMO_ASSERT(osmo_cpu_sched_vty_apply_localthread() == 0);
 
   while (1) {
     if (!trx->driveReceiveFIFO(num)) {
@@ -1288,6 +1290,7 @@ void *RxUpperLoopAdapter(TrxChanThParams *params)
 void *RxLowerLoopAdapter(Transceiver *transceiver)
 {
   set_selfthread_name("RxLower");
+  OSMO_ASSERT(osmo_cpu_sched_vty_apply_localthread() == 0);
 
   while (1) {
     if (!transceiver->driveReceiveRadio()) {
@@ -1303,6 +1306,7 @@ void *RxLowerLoopAdapter(Transceiver *transceiver)
 void *TxLowerLoopAdapter(Transceiver *transceiver)
 {
   set_selfthread_name("TxLower");
+  OSMO_ASSERT(osmo_cpu_sched_vty_apply_localthread() == 0);
 
   while (1) {
     transceiver->driveTxFIFO();
@@ -1321,6 +1325,7 @@ void *TxUpperLoopAdapter(TrxChanThParams *params)
 
   snprintf(thread_name, 16, "TxUpper%zu", num);
   set_selfthread_name(thread_name);
+  OSMO_ASSERT(osmo_cpu_sched_vty_apply_localthread() == 0);
 
   while (1) {
     if (!trx->driveTxPriorityQueue(num)) {

@@ -27,6 +27,9 @@
 #include <Threads.h>
 
 extern "C" {
+#include <osmocom/core/utils.h>
+#include <osmocom/vty/cpu_sched_vty.h>
+
 #include "convert.h"
 }
 
@@ -171,6 +174,7 @@ bool RadioInterface::tuneRx(double freq, size_t chan)
 void *AlignRadioServiceLoopAdapter(RadioInterface *radioInterface)
 {
   set_selfthread_name("AlignRadio");
+  OSMO_ASSERT(osmo_cpu_sched_vty_apply_localthread() == 0);
   while (1) {
     sleep(60);
     radioInterface->alignRadio();
