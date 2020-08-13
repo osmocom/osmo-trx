@@ -1,7 +1,7 @@
 Source: osmo-trx
 Section: net
 Priority: optional
-Maintainer: Ivan Klyuchnikov <ivan.kluchnikov@fairwaves.ru>
+Maintainer: Osmocom team <openbsc@lists.osmocom.org>
 Build-Depends: debhelper (>= 9),
                autotools-dev,
                autoconf-archive,
