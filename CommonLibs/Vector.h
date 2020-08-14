@@ -36,6 +36,11 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#ifndef __OPTIMIZE__
+#define assert_no_opt(x) assert(x)
+#else
+#define assert_no_opt(x)
+#endif
 // We can't use Logger.h in this file...
 extern int gVectorDebug;
 #define BVDEBUG(msg) if (gVectorDebug) {std::cout << msg;}
@@ -81,8 +86,8 @@ template <class T> class Vector {
 	/** Return the size of the Vector. */
 	size_t size() const
 	{
-		assert(mStart>=mData);
-		assert(mEnd>=mStart);
+		assert_no_opt(mStart>=mData);
+		assert_no_opt(mEnd>=mStart);
 		return mEnd - mStart;
 	}
 
@@ -112,7 +117,7 @@ template <class T> class Vector {
 	/** Reduce addressable size of the Vector, keeping content. */
 	void shrink(size_t newSize)
 	{
-		assert(newSize <= mEnd - mStart);
+		assert_no_opt(newSize <= mEnd - mStart);
 		mEnd = mStart + newSize;
 	}
 
@@ -199,7 +204,7 @@ template <class T> class Vector {
 	{
 		T* wStart = mStart + start;
 		T* wEnd = wStart + span;
-		assert(wEnd<=mEnd);
+		assert_no_opt(wEnd<=mEnd);
 		return Vector<T>(NULL,wStart,wEnd);
 	}
 
@@ -208,7 +213,7 @@ template <class T> class Vector {
 	{
 		T* wStart = mStart + start;
 		T* wEnd = wStart + span;
-		assert(wEnd<=mEnd);
+		assert_no_opt(wEnd<=mEnd);
 		return Vector<T>(NULL,wStart,wEnd);
 	}
 
@@ -228,8 +233,8 @@ template <class T> class Vector {
 		unsigned int i;
 		T* dst = other.mStart + start;
 		T* src = mStart;
-		assert(dst+span<=other.mEnd);
-		assert(mStart+span<=mEnd);
+		assert_no_opt(dst+span<=other.mEnd);
+		assert_no_opt(mStart+span<=mEnd);
 		for (i = 0; i < span; i++, src++, dst++)
 			*dst = *src;
 		/*TODO if not non-trivially copiable type class, optimize:
@@ -250,8 +255,8 @@ template <class T> class Vector {
 	void segmentCopyTo(Vector<T>& other, size_t start, size_t span) const
 	{
 		const T* base = mStart + start;
-		assert(base+span<=mEnd);
-		assert(other.mStart+span<=other.mEnd);
+		assert_no_opt(base+span<=mEnd);
+		assert_no_opt(other.mStart+span<=other.mEnd);
 		memcpy(other.mStart,base,span*sizeof(T));
 	}
 
@@ -265,8 +270,8 @@ template <class T> class Vector {
 	{
 		const T* baseFrom = mStart + from;
 		T* baseTo = mStart + to;
-		assert(baseFrom+span<=mEnd);
-		assert(baseTo+span<=mEnd);
+		assert_no_opt(baseFrom+span<=mEnd);
+		assert_no_opt(baseTo+span<=mEnd);
 		memmove(baseTo,baseFrom,span*sizeof(T));
 	}
 
@@ -280,7 +285,7 @@ template <class T> class Vector {
 	{
 		T* dp=mStart+start;
 		T* end=dp+length;
-		assert(end<=mEnd);
+		assert_no_opt(end<=mEnd);
 		while (dp<end) *dp++=val;
 	}
 
@@ -292,13 +297,13 @@ template <class T> class Vector {
 
 	T& operator[](size_t index)
 	{
-		assert(mStart+index<mEnd);
+		assert_no_opt(mStart+index<mEnd);
 		return mStart[index];
 	}
 
 	const T& operator[](size_t index) const
 	{
-		assert(mStart+index<mEnd);
+		assert_no_opt(mStart+index<mEnd);
 		return mStart[index];
 	}
 

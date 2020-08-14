@@ -99,6 +99,7 @@ void Resampler::initFilters(float bw)
 		reverse(&part[0], &part[filt_len]);
 }
 
+#ifndef __OPTIMIZE__
 static bool check_vec_len(int in_len, int out_len, int p, int q)
 {
 	if (in_len % q) {
@@ -129,14 +130,15 @@ static bool check_vec_len(int in_len, int out_len, int p, int q)
 
 	return true;
 }
+#endif
 
 int Resampler::rotate(const float *in, size_t in_len, float *out, size_t out_len)
 {
 	int n, path;
-
+#ifndef __OPTIMIZE__
 	if (!check_vec_len(in_len, out_len, p, q))
 		return -1;
-
+#endif
 	/* Generate output from precomputed input/output paths */
 	for (size_t i = 0; i < out_len; i++) {
 		n = in_index[i];
