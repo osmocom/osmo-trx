@@ -215,6 +215,7 @@ int ipc_rx_open_req(struct ipc_sk_if_open_req *open_req)
 {
 	/* calculate size needed */
 	unsigned int len;
+	unsigned int i;
 
 	global_dev = uhdwrap_open(open_req);
 
@@ -232,7 +233,7 @@ int ipc_rx_open_req(struct ipc_sk_if_open_req *open_req)
 	* additionally go for the producer init for both, so only we are responsible for the init, instead
 	* of splitting it with the client and causing potential races if one side uses it too early */
 	decoded_region = ipc_shm_decode_region(0, (struct ipc_shm_raw_region *)shm);
-	for (unsigned int i = 0; i < open_req->num_chans; i++) {
+	for (i = 0; i < open_req->num_chans; i++) {
 		//		ios_tx_to_device[i] = ipc_shm_init_consumer(decoded_region->channels[i]->dl_stream);
 		ios_tx_to_device[i] = ipc_shm_init_producer(decoded_region->channels[i]->dl_stream);
 		ios_rx_from_device[i] = ipc_shm_init_producer(decoded_region->channels[i]->ul_stream);
