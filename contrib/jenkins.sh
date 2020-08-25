@@ -115,4 +115,10 @@ if [ "$WITH_MANUALS" = "1" ] && [ "$PUBLISH" = "1" ]; then
 fi
 
 $MAKE maintainer-clean
+
+# Verify distro-specific package patches apply:
+for patch in debian/patches/*.patch; do
+        patch --dry-run -p1 < "$patch"
+done
+
 osmo-clean-workspace.sh
