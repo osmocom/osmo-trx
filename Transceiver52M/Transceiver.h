@@ -85,6 +85,9 @@ struct TransceiverState {
   /* Shadowed downlink attenuation */
   int mPower;
 
+  /* RF emission and reception disabled, as per NM Administrative State Locked */
+  bool mMuted;
+
   /* counters */
   struct trx_counters ctrs;
 

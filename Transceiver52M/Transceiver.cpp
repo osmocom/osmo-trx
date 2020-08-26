@@ -62,7 +62,8 @@ static void dispatch_trx_rate_ctr_change(TransceiverState *state, unsigned int c
 }
 
 TransceiverState::TransceiverState()
-  : mFiller(FILLER_ZERO), mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT), mPower(0.0)
+  : mFiller(FILLER_ZERO), mRetrans(false), mNoiseLev(0.0), mNoises(NOISE_CNT),
+    mPower(0.0), mMuted(false)
 {
   for (int i = 0; i < 8; i++) {
     chanType[i] = Transceiver::NONE;
@@ -440,7 +441,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     state = &mStates[i];
     ratectr_changed = false;
 
-    zeros[i] = state->chanType[TN] == NONE;
+    zeros[i] = state->chanType[TN] == NONE || state->mMuted;
 
     Mutex *mtx = mTxPriorityQueues[i].getMutex();
     mtx->lock();
@@ -677,6 +678,10 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
     delete radio_burst;
     return -ENOENT;
   }
+
+  /* If TRX RF is locked/muted by BTS, send idle burst indications */
+  if (state->mMuted)
+    goto ret_idle;
 
   /* Select the diversity channel with highest energy */
   for (size_t i = 0; i < radio_burst->chans(); i++) {
@@ -1006,6 +1011,12 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
       mVersionTRXD[chan] = version_recv;
       sprintf(response, "RSP SETFORMAT %u %u", version_recv, version_recv);
     }
+  } else if (match_cmd(command, "RFMUTE", &params)) {
+    // (Un)mute RF TX and RX
+    unsigned mute;
+    sscanf(params, "%u", &mute);
+    mStates[chan].mMuted = mute ? true : false;
+    sprintf(response, "RSP RFMUTE 0 %u", mute);
   } else if (match_cmd(command, "_SETBURSTTODISKMASK", &params)) {
     // debug command! may change or disappear without notice
     // set a mask which bursts to dump to disk
