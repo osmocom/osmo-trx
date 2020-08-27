@@ -469,9 +469,11 @@ int main(int argc, char **argv)
 	while (!ipc_exit_requested)
 		osmo_select_main(0);
 
-	if (global_dev)
-		for (unsigned int i = 0; i < decoded_region->num_chans; i++)
+	if (global_dev) {
+		unsigned int i;
+		for (i = 0; i < decoded_region->num_chans; i++)
 			uhdwrap_stop(global_dev, i);
+	}
 
 	ipc_sock_close(global_ipc_sock_state);
 	return 0;
