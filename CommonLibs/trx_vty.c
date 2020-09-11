@@ -520,6 +520,12 @@ DEFUN(cfg_chan_rx_path, cfg_chan_rx_path_cmd,
 {
 	struct trx_chan *chan = vty->index;
 
+	if (chan->trx->cfg.multi_arfcn && chan->idx > 0) {
+		vty_out(vty, "%% Setting 'rx-path' for chan %u in multi-ARFCN mode "
+			     "does not make sense, because only chan 0 is used%s",
+			chan->idx, VTY_NEWLINE);
+	}
+
 	osmo_talloc_replace_string(chan->trx, &chan->rx_path, argv[0]);
 
 	return CMD_SUCCESS;
@@ -531,6 +537,12 @@ DEFUN(cfg_chan_tx_path, cfg_chan_tx_path_cmd,
 	"Tx Path name\n")
 {
 	struct trx_chan *chan = vty->index;
+
+	if (chan->trx->cfg.multi_arfcn && chan->idx > 0) {
+		vty_out(vty, "%% Setting 'tx-path' for chan %u in multi-ARFCN mode "
+			     "does not make sense, because only chan 0 is used%s",
+			chan->idx, VTY_NEWLINE);
+	}
 
 	osmo_talloc_replace_string(chan->trx, &chan->tx_path, argv[0]);
 
