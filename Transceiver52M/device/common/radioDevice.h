@@ -186,6 +186,13 @@ class RadioDevice {
 	for (i = 0; i < tx_paths.size(); i++) {
 		if (tx_paths[i] == "")
 			continue;
+		if (iface == MULTI_ARFCN && i > 0) {
+			LOGCHAN(i, DDEV, NOTICE) << "Not setting Tx antenna "
+						 << tx_paths[i]
+						 << " for a logical channel";
+			continue;
+		}
+
 		LOGCHAN(i, DDEV, DEBUG) << "Configuring Tx antenna " << tx_paths[i];
 		if (!setTxAntenna(tx_paths[i], i)) {
 			LOGCHAN(i, DDEV, ALERT) << "Failed configuring Tx antenna " << tx_paths[i];
@@ -196,6 +203,13 @@ class RadioDevice {
 	for (i = 0; i < rx_paths.size(); i++) {
 		if (rx_paths[i] == "")
 			continue;
+		if (iface == MULTI_ARFCN && i > 0) {
+			LOGCHAN(i, DDEV, NOTICE) << "Not setting Rx antenna "
+						 << rx_paths[i]
+						 << " for a logical channel";
+			continue;
+		}
+
 		LOGCHAN(i, DDEV, DEBUG) << "Configuring Rx antenna " << rx_paths[i];
 		if (!setRxAntenna(rx_paths[i], i)) {
 			LOGCHAN(i, DDEV, ALERT) << "Failed configuring Rx antenna " << rx_paths[i];
