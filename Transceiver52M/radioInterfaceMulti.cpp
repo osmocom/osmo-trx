@@ -38,6 +38,7 @@ extern "C" {
 /* Universal resampling parameters */
 #define NUMCHUNKS				24
 
+/* number of narrow-band virtual ARFCNs in this wide-band multi-ARFCN device */
 #define MCHANS					4
 
 RadioInterfaceMulti::RadioInterfaceMulti(RadioDevice *radio, size_t tx_sps,
@@ -79,6 +80,10 @@ void RadioInterfaceMulti::close()
 	RadioInterface::close();
 }
 
+/*! we re-map the physical channels from the filter bank to logical per-TRX channels
+ *  \param[in] pchan physical channel number within the channelizer
+ *  \param[in] chans total number of narrow-band ARFCN channels
+ *  \returns logical (TRX) channel number, or -1 in case there is none */
 static int getLogicalChan(size_t pchan, size_t chans)
 {
 	switch (chans) {
@@ -113,6 +118,9 @@ static int getLogicalChan(size_t pchan, size_t chans)
 	return -1;
 }
 
+/*! do we need to frequency shift our spectrum or not?
+ *  \param chans total number of channels
+ *  \returns 1 if we need to shift; 0 if not; -1 on error */
 static int getFreqShift(size_t chans)
 {
 	switch (chans) {
@@ -154,6 +162,7 @@ bool RadioInterfaceMulti::init(int type)
 	tx_freq_state.resize(mChans);
 	active.resize(MCHANS, false);
 
+	/* 4 == sps */
 	inchunk = RESAMP_INRATE * 4;
 	outchunk = RESAMP_OUTRATE * 4;
 
