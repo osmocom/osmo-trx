@@ -102,9 +102,9 @@ int convolve_real(const float *x, int x_len,
 #ifndef __OPTIMIZE__
 	if (bounds_check(x_len, h_len, y_len, start, len) < 0)
 		return -1;
-
-	memset(y, 0, len * 2 * sizeof(float));
 #endif
+	memset(y, 0, len * 2 * sizeof(float));
+
 	switch (h_len) {
 	case 4:
 		c.conv_real4(x, x_len, h, h_len, y, y_len, start, len);
@@ -142,9 +142,9 @@ int convolve_complex(const float *x, int x_len,
 #ifndef __OPTIMIZE__
 	if (bounds_check(x_len, h_len, y_len, start, len) < 0)
 		return -1;
-
-	memset(y, 0, len * 2 * sizeof(float));
 #endif
+	memset(y, 0, len * 2 * sizeof(float));
+
 	if (!(h_len % 8))
 		c.conv_cmplx_8n(x, x_len, h, h_len, y, y_len, start, len);
 	else if (!(h_len % 4))
