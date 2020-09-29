@@ -415,12 +415,13 @@ static int vty_intv_name_2_id(const char* str) {
 	INTV_STR_VAL(per-hour) \
 	INTV_STR_VAL(per-day)
 
-DEFUN(cfg_ctr_error_threshold, cfg_ctr_error_threshold_cmd,
-	"ctr-error-threshold " THRESHOLD_ARGS " <0-65535> " INTV_ARGS,
-	"Threshold rate for error counter\n"
-	THRESHOLD_STRS
-	"Value to set for threshold\n"
-	INTV_STRS)
+DEFUN_ATTR(cfg_ctr_error_threshold, cfg_ctr_error_threshold_cmd,
+	   "ctr-error-threshold " THRESHOLD_ARGS " <0-65535> " INTV_ARGS,
+	   "Threshold rate for error counter\n"
+	   THRESHOLD_STRS
+	   "Value to set for threshold\n"
+	   INTV_STRS,
+	   CMD_ATTR_IMMEDIATE)
 {
 	int rc;
 	struct ctr_threshold ctr;
@@ -446,12 +447,13 @@ DEFUN(cfg_ctr_error_threshold, cfg_ctr_error_threshold_cmd,
 	return CMD_SUCCESS;
 }
 
-DEFUN(cfg_no_ctr_error_threshold, cfg_no_ctr_error_threshold_cmd,
-	"no ctr-error-threshold " THRESHOLD_ARGS " <0-65535> " INTV_ARGS,
-	NO_STR "Threshold rate for error counter\n"
-	THRESHOLD_STRS
-	"Value to set for threshold\n"
-	INTV_STRS)
+DEFUN_ATTR(cfg_no_ctr_error_threshold, cfg_no_ctr_error_threshold_cmd,
+	   "no ctr-error-threshold " THRESHOLD_ARGS " <0-65535> " INTV_ARGS,
+	   NO_STR "Threshold rate for error counter\n"
+	   THRESHOLD_STRS
+	   "Value to set for threshold\n"
+	   INTV_STRS,
+	   CMD_ATTR_IMMEDIATE)
 {
 	int rc;
 	struct ctr_threshold ctr;
