@@ -247,9 +247,10 @@ static void setup_signal_handlers()
 static void print_help()
 {
 	fprintf(stdout, "Options:\n"
-		"  -h, --help      This text\n"
-		"  -C, --config    Filename The config file to use\n"
-		"  -V, --version   Print the version of OsmoTRX\n"
+		"  -h, --help        This text\n"
+		"  -C, --config      Filename The config file to use\n"
+		"  -V, --version     Print the version of OsmoTRX\n"
+		"      --vty-ref-xml Generate the VTY reference XML output and exit.\n"
 		);
 }
 
@@ -266,10 +267,12 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 	unsigned int i;
 	std::vector<std::string> rx_paths, tx_paths;
 	bool rx_paths_set = false, tx_paths_set = false;
+	static int long_option = 0;
 	static struct option long_options[] = {
 		{"help", 0, 0, 'h'},
 		{"config", 1, 0, 'C'},
 		{"version", 0, 0, 'V'},
+		{"vty-ref-xml", 0, &long_option, 1},
 		{NULL, 0, 0, 0}
 	};
 
@@ -280,6 +283,15 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 			print_help();
 			exit(0);
 			break;
+		case 0:
+			switch (long_option) {
+			case 1:
+				vty_dump_xml_ref(stdout);
+				exit(0);
+			default:
+				fprintf(stderr, "error parsing cmdline options\n");
+				exit(2);
+			}
 		case 'a':
 			print_deprecated(option);
 			osmo_talloc_replace_string(trx, &trx->cfg.dev_args, optarg);
