@@ -107,14 +107,14 @@ autoreconf --install --force
 $MAKE $PARALLEL_MAKE
 $MAKE check \
   || cat-testlogs.sh
-DISTCHECK_CONFIGURE_FLAGS="$CONFIG" $MAKE distcheck \
+DISTCHECK_CONFIGURE_FLAGS="$CONFIG" $MAKE $PARALLEL_MAKE distcheck \
   || cat-testlogs.sh
 
 if [ "$WITH_MANUALS" = "1" ] && [ "$PUBLISH" = "1" ]; then
 	make -C "$base/doc/manuals" publish
 fi
 
-$MAKE maintainer-clean
+$MAKE $PARALLEL_MAKE maintainer-clean
 
 # Verify distro-specific package patches apply:
 for patch in debian/patches/*.patch; do
