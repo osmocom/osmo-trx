@@ -100,27 +100,19 @@ struct TransceiverState {
 class Transceiver {
 public:
   /** Transceiver constructor
-      @param wBasePort base port number of UDP sockets
-      @param TRXAddress IP address of the TRX, as a string
-      @param GSMcoreAddress IP address of the GSM core, as a string
-      @param wSPS number of samples per GSM symbol
+      @param cfg VTY populated config
       @param wTransmitLatency initial setting of transmit latency
       @param radioInterface associated radioInterface object
   */
-  Transceiver(int wBasePort,
-              const char *TRXAddress,
-              const char *GSMcoreAddress,
-              size_t tx_sps, size_t rx_sps, size_t chans,
+  Transceiver(const struct trx_cfg *cfg,
               GSM::Time wTransmitLatency,
-              RadioInterface *wRadioInterface,
-              double wRssiOffset, int stackSize);
+              RadioInterface *wRadioInterface);
 
   /** Destructor */
   ~Transceiver();
 
   /** Start the control loop */
-  bool init(FillerType filler, size_t rtsc, unsigned rach_delay,
-            bool edge, bool ext_rach);
+  bool init(void);
 
   /** attach the radioInterface receive FIFO */
   bool receiveFIFO(VectorFIFO *wFIFO, size_t chan)
@@ -133,7 +125,7 @@ public:
   }
 
   /** accessor for number of channels */
-  size_t numChans() const { return mChans; };
+  size_t numChans() const { return cfg->num_chans; };
 
   /** Codes for channel combinations */
   typedef enum {
@@ -156,7 +148,6 @@ public:
   } ChannelCombination;
 
 private:
-
 struct ctrl_msg {
   char data[101];
   ctrl_msg() {};
@@ -177,10 +168,7 @@ struct ctrl_sock_state {
   }
 };
 
-  int mBasePort;
-  std::string mLocalAddr;
-  std::string mRemoteAddr;
-
+  const struct trx_cfg *cfg;	///< VTY populated config
   std::vector<int> mDataSockets;  ///< socket for writing to/reading from GSM core
   std::vector<ctrl_sock_state> mCtrlSockets;  ///< socket for writing/reading control commands from GSM core
   int mClockSocket;               ///< socket for writing clock updates to GSM core
@@ -201,9 +189,6 @@ struct ctrl_sock_state {
   RadioInterface *mRadioInterface;	  ///< associated radioInterface object
   double txFullScale;                     ///< full scale input to radio
   double rxFullScale;                     ///< full scale output to radio
-
-  double rssiOffset;                      ///< RSSI to dBm conversion offset
-  int stackSize;                      ///< stack size for threads, 0 = OS default
 
   /** modulate and add a burst to the transmit queue */
   void addRadioVector(size_t chan, BitVector &bits,
@@ -233,12 +218,7 @@ struct ctrl_sock_state {
   /** drive handling of control messages from GSM core */
   int ctrl_sock_handle_rx(int chan);
 
-  int mSPSTx;                          ///< number of samples per Tx symbol
-  int mSPSRx;                          ///< number of samples per Rx symbol
   size_t mChans;
-
-  bool mExtRACH;
-  bool mEdge;
   bool mOn;	                           ///< flag to indicate that transceiver is powered on
   bool mForceClockInterface;           ///< flag to indicate whether IND CLOCK shall be sent unconditionally after transceiver is started
   bool mHandover[8][8];                ///< expect handover to the timeslot/subslot

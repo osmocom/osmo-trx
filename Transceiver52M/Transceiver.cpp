@@ -132,20 +132,14 @@ bool TransceiverState::init(FillerType filler, size_t sps, float scale, size_t r
   return false;
 }
 
-Transceiver::Transceiver(int wBasePort,
-                         const char *TRXAddress,
-                         const char *GSMcoreAddress,
-                         size_t tx_sps, size_t rx_sps, size_t chans,
+Transceiver::Transceiver(const struct trx_cfg *cfg,
                          GSM::Time wTransmitLatency,
-                         RadioInterface *wRadioInterface,
-                         double wRssiOffset, int wStackSize)
-  : mBasePort(wBasePort), mLocalAddr(TRXAddress), mRemoteAddr(GSMcoreAddress),
-    mClockSocket(-1), mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
-    rssiOffset(wRssiOffset), stackSize(wStackSize),
-    mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mExtRACH(false), mEdge(false),
-    mOn(false), mForceClockInterface(false),
-    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0), mMaxExpectedDelayNB(0),
-    mWriteBurstToDiskMask(0)
+                         RadioInterface *wRadioInterface)
+  : cfg(cfg), mClockSocket(-1),
+    mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
+    mChans(cfg->num_chans), mOn(false), mForceClockInterface(false),
+    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0),
+    mMaxExpectedDelayNB(0), mWriteBurstToDiskMask(0)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
@@ -199,11 +193,9 @@ int Transceiver::ctrl_sock_cb(struct osmo_fd *bfd, unsigned int flags)
  * are still expected to report clock indications through control channel
  * activity.
  */
-bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
-                       bool edge, bool ext_rach)
+bool Transceiver::init()
 {
   int d_srcport, d_dstport, c_srcport, c_dstport;
-
   if (!mChans) {
     LOG(FATAL) << "No channels assigned";
     return false;
@@ -213,9 +205,6 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
     LOG(FATAL) << "Failed to initialize signal processing library";
     return false;
   }
-
-  mExtRACH = ext_rach;
-  mEdge = edge;
 
   mDataSockets.resize(mChans, -1);
   mCtrlSockets.resize(mChans);
@@ -228,27 +217,28 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
   mVersionTRXD.resize(mChans);
 
   /* Filler table retransmissions - support only on channel 0 */
-  if (filler == FILLER_DUMMY)
+  if (cfg->filler == FILLER_DUMMY)
     mStates[0].mRetrans = true;
 
   /* Setup sockets */
   mClockSocket = osmo_sock_init2(AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP,
-				    mLocalAddr.c_str(), mBasePort,
-				    mRemoteAddr.c_str(), mBasePort + 100,
+				    cfg->bind_addr, cfg->base_port,
+				    cfg->remote_addr, cfg->base_port + 100,
 				    OSMO_SOCK_F_BIND | OSMO_SOCK_F_CONNECT);
   if (mClockSocket < 0)
     return false;
 
   for (size_t i = 0; i < mChans; i++) {
     int rv;
-    c_srcport = mBasePort + 2 * i + 1;
-    c_dstport = mBasePort + 2 * i + 101;
-    d_srcport = mBasePort + 2 * i + 2;
-    d_dstport = mBasePort + 2 * i + 102;
+    FillerType filler = cfg->filler;
+    c_srcport = cfg->base_port + 2 * i + 1;
+    c_dstport = cfg->base_port + 2 * i + 101;
+    d_srcport = cfg->base_port + 2 * i + 2;
+    d_dstport = cfg->base_port + 2 * i + 102;
 
     rv = osmo_sock_init2_ofd(&mCtrlSockets[i].conn_bfd, AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP,
-                                      mLocalAddr.c_str(), c_srcport,
-                                      mRemoteAddr.c_str(), c_dstport,
+                                      cfg->bind_addr, c_srcport,
+                                      cfg->remote_addr, c_dstport,
 				      OSMO_SOCK_F_BIND | OSMO_SOCK_F_CONNECT);
     if (rv < 0)
       return false;
@@ -258,8 +248,8 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
 
 
     mDataSockets[i] = osmo_sock_init2(AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP,
-                                      mLocalAddr.c_str(), d_srcport,
-                                      mRemoteAddr.c_str(), d_dstport,
+                                      cfg->bind_addr, d_srcport,
+                                      cfg->remote_addr, d_dstport,
 				      OSMO_SOCK_F_BIND | OSMO_SOCK_F_CONNECT);
     if (mDataSockets[i] < 0)
       return false;
@@ -267,7 +257,7 @@ bool Transceiver::init(FillerType filler, size_t rtsc, unsigned rach_delay,
     if (i && filler == FILLER_DUMMY)
       filler = FILLER_ZERO;
 
-    mStates[i].init(filler, mSPSTx, txFullScale, rtsc, rach_delay);
+    mStates[i].init(filler, cfg->tx_sps, txFullScale, cfg->rtsc, cfg->rach_delay);
   }
 
   /* Randomize the central clock */
@@ -309,8 +299,8 @@ bool Transceiver::start()
   }
 
   /* Device is running - launch I/O threads */
-  mRxLowerLoopThread = new Thread(stackSize);
-  mTxLowerLoopThread = new Thread(stackSize);
+  mRxLowerLoopThread = new Thread(cfg->stack_size);
+  mTxLowerLoopThread = new Thread(cfg->stack_size);
   mTxLowerLoopThread->start((void * (*)(void*))
                             TxLowerLoopAdapter,(void*) this);
   mRxLowerLoopThread->start((void * (*)(void*))
@@ -321,14 +311,14 @@ bool Transceiver::start()
     TrxChanThParams *params = (TrxChanThParams *)malloc(sizeof(struct TrxChanThParams));
     params->trx = this;
     params->num = i;
-    mRxServiceLoopThreads[i] = new Thread(stackSize);
+    mRxServiceLoopThreads[i] = new Thread(cfg->stack_size);
     mRxServiceLoopThreads[i]->start((void * (*)(void*))
                             RxUpperLoopAdapter, (void*) params);
 
     params = (TrxChanThParams *)malloc(sizeof(struct TrxChanThParams));
     params->trx = this;
     params->num = i;
-    mTxPriorityQueueServiceLoopThreads[i] = new Thread(stackSize);
+    mTxPriorityQueueServiceLoopThreads[i] = new Thread(cfg->stack_size);
     mTxPriorityQueueServiceLoopThreads[i]->start((void * (*)(void*))
                             TxUpperLoopAdapter, (void*) params);
   }
@@ -401,9 +391,9 @@ void Transceiver::addRadioVector(size_t chan, BitVector &bits,
 
   /* Use the number of bits as the EDGE burst indicator */
   if (bits.size() == EDGE_BURST_NBITS)
-    burst = modulateEdgeBurst(bits, mSPSTx);
+    burst = modulateEdgeBurst(bits, cfg->tx_sps);
   else
-    burst = modulateBurst(bits, 8 + (wTime.TN() % 4 == 0), mSPSTx);
+    burst = modulateBurst(bits, 8 + (wTime.TN() % 4 == 0), cfg->tx_sps);
 
   scaleVector(*burst, txFullScale * pow(10, -RSSI / 10));
 
@@ -566,16 +556,16 @@ CorrType Transceiver::expectedCorrType(GSM::Time currTime,
     break;
   case IV:
   case VI:
-    return mExtRACH ? EXT_RACH : RACH;
+    return cfg->ext_rach ? EXT_RACH : RACH;
     break;
   case V: {
     int mod51 = burstFN % 51;
     if ((mod51 <= 36) && (mod51 >= 14))
-      return mExtRACH ? EXT_RACH : RACH;
+      return cfg->ext_rach ? EXT_RACH : RACH;
     else if ((mod51 == 4) || (mod51 == 5))
-      return mExtRACH ? EXT_RACH : RACH;
+      return cfg->ext_rach ? EXT_RACH : RACH;
     else if ((mod51 == 45) || (mod51 == 46))
-      return mExtRACH ? EXT_RACH : RACH;
+      return cfg->ext_rach ? EXT_RACH : RACH;
     else if (mHandover[burstTN][sdcch4_subslot[burstFN % 102]])
       return RACH;
     else
@@ -593,11 +583,11 @@ CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   case XIII: {
     int mod52 = burstFN % 52;
     if ((mod52 == 12) || (mod52 == 38))
-      return mExtRACH ? EXT_RACH : RACH;
+      return cfg->ext_rach ? EXT_RACH : RACH;
     else if ((mod52 == 25) || (mod52 == 51))
       return IDLE;
     else /* Enable 8-PSK burst detection if EDGE is enabled */
-      return mEdge ? EDGE : TSC;
+      return cfg->egprs ? EDGE : TSC;
     break;
   }
   case LOOPBACK:
@@ -685,7 +675,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 
   /* Select the diversity channel with highest energy */
   for (size_t i = 0; i < radio_burst->chans(); i++) {
-    float pow = energyDetect(*radio_burst->getVector(i), 20 * mSPSRx);
+    float pow = energyDetect(*radio_burst->getVector(i), 20 * cfg->rx_sps);
     if (pow > max) {
       max = pow;
       max_i = i;
@@ -710,8 +700,8 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
     state->mNoiseLev = state->mNoises.avg();
   }
 
-  bi->rssi = 20.0 * log10(rxFullScale / avg) + rssiOffset;
-  bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + rssiOffset;
+  bi->rssi = 20.0 * log10(rxFullScale / avg) + cfg->rssi_offset;
+  bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + cfg->rssi_offset;
 
   if (type == IDLE)
     goto ret_idle;
@@ -720,7 +710,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
             mMaxExpectedDelayAB : mMaxExpectedDelayNB;
 
   /* Detect normal or RACH bursts */
-  rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, mSPSRx, type, max_toa, &ebp);
+  rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, cfg->rx_sps, type, max_toa, &ebp);
   if (rc <= 0) {
     if (rc == -SIGERR_CLIP) {
       LOGCHAN(chan, DTRXDUL, INFO) << "Clipping detected on received RACH or Normal Burst";
@@ -738,7 +728,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   bi->toa = ebp.toa;
   bi->tsc = ebp.tsc;
   bi->ci = ebp.ci;
-  rxBurst = demodAnyBurst(*burst, mSPSRx, ebp.amp, ebp.toa, type);
+  rxBurst = demodAnyBurst(*burst, cfg->rx_sps, ebp.amp, ebp.toa, type);
 
   /* EDGE demodulator returns 444 (gSlotLen * 3) bits */
   if (rxBurst->size() == EDGE_BURST_NBITS) {
@@ -1055,8 +1045,8 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
       burstLen = gSlotLen;
       break;
     case sizeof(*dl) + EDGE_BURST_NBITS: /* EDGE burst */
-      if (mSPSTx != 4) {
-        LOGCHAN(chan, DTRXDDL, ERROR) << "EDGE burst received but SPS is set to " << mSPSTx;
+      if (cfg->tx_sps != 4) {
+        LOGCHAN(chan, DTRXDDL, ERROR) << "EDGE burst received but SPS is set to " << cfg->tx_sps;
         return false;
       }
       burstLen = EDGE_BURST_NBITS;
@@ -1165,9 +1155,9 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
 
   LOGCHAN(chan, DTRXDUL, DEBUG) << std::fixed << std::right
     << " time: "   << unsigned(bi->tn) << ":" << bi->fn
-    << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - rssiOffset)
+    << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - cfg->rssi_offset)
                    << "dBFS/" << std::setw(6) << -bi->rssi << "dBm"
-    << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - rssiOffset)
+    << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - cfg->rssi_offset)
                    << "dBFS/" << std::setw(6) << -bi->noise << "dBm"
     << " TOA: "    << std::setw(5) << std::setprecision(2) << bi->toa
     << " C/I: "    << std::setw(5) << std::setprecision(2) << bi->ci << "dB"

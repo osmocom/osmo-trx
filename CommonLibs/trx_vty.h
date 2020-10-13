@@ -8,8 +8,6 @@ extern struct vty_app_info g_vty_info;
 extern const struct value_string clock_ref_names[];
 extern const struct value_string filler_names[];
 
-/* Maximum number of physical RF channels */
-#define TRX_CHAN_MAX 8
 /* Maximum number of carriers in multi-ARFCN mode */
 #define TRX_MCHAN_MAX 3
 
@@ -35,38 +33,8 @@ extern const struct value_string filler_names[];
 #define DEFAULT_TRX_IP		"127.0.0.1"
 #define DEFAULT_CHANS		1
 
-struct trx_ctx;
-
-struct trx_chan {
-	struct trx_ctx *trx; /* backpointer */
-	unsigned int idx; /* channel index */
-	char *rx_path;
-	char *tx_path;
-};
-
 struct trx_ctx {
-	struct {
-		char *bind_addr;
-		char *remote_addr;
-		char *dev_args;
-		unsigned int base_port;
-		unsigned int tx_sps;
-		unsigned int rx_sps;
-		unsigned int rtsc;
-		unsigned int rach_delay;
-		enum ReferenceType clock_ref;
-		enum FillerType filler;
-		bool multi_arfcn;
-		double offset;
-		double rssi_offset;
-		bool swap_channels;
-		bool ext_rach;
-		bool egprs;
-		unsigned int sched_rr;
-		unsigned int stack_size;
-		unsigned int num_chans;
-		struct trx_chan chans[TRX_CHAN_MAX];
-	} cfg;
+	struct trx_cfg cfg;
 };
 
 int trx_vty_init(struct trx_ctx* trx);
