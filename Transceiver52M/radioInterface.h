@@ -109,6 +109,9 @@ public:
   /** set receive gain */
   virtual double setRxGain(double dB, size_t chan = 0);
 
+  /** return base RSSI offset to apply for received samples **/
+  virtual double rssiOffset(size_t chan = 0);
+
   /** drive transmission of GSM bursts */
   void driveTransmitRadio(std::vector<signalVector *> &bursts,
                           std::vector<bool> &zeros);
@@ -190,4 +193,5 @@ public:
   bool tuneTx(double freq, size_t chan);
   bool tuneRx(double freq, size_t chan);
   virtual double setRxGain(double dB, size_t chan);
+  virtual double rssiOffset(size_t chan = 0);
 };

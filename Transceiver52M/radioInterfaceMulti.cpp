@@ -446,6 +446,11 @@ double RadioInterfaceMulti::setRxGain(double db, size_t chan)
 		return mDevice->getRxGain();
 }
 
+double RadioInterfaceMulti::rssiOffset(size_t chan)
+{
+	return mDevice->rssiOffset(0);
+}
+
 int RadioInterfaceMulti::setPowerAttenuation(int atten, size_t chan)
 {
 	return RadioInterface::setPowerAttenuation(atten, 0);

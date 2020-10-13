@@ -56,7 +56,20 @@ enum uhd_dev_type {
 	LIMESDR,
 };
 
-struct dev_band_desc;
+struct dev_band_desc {
+	/* Maximum UHD Tx Gain which can be set/used without distorting the
+	   output signal, and the resulting real output power measured when that
+	   gain is used. Correct measured values only provided for B210 so far. */
+	double nom_uhd_tx_gain;  /* dB */
+	double nom_out_tx_power; /* dBm */
+	/* Factor used to infer base real RSSI offset on the Rx path based on current
+	   configured RxGain. The resulting rssiOffset is added to the per burst
+	   calculated energy in upper layers. These values were empirically
+	   found and may change based on multiple factors, see OS#4468.
+	   rssiOffset = rxGain + rxgain2rssioffset_rel;
+	*/
+	double rxgain2rssioffset_rel; /* dB */
+};
 
 /*
     uhd_device - UHD implementation of the Device interface. Timestamped samples
@@ -100,6 +113,7 @@ public:
 	double getRxGain(size_t chan);
 	double maxRxGain(void) { return rx_gain_max; }
 	double minRxGain(void) { return rx_gain_min; }
+	double rssiOffset(size_t chan);
 
 	double setPowerAttenuation(int atten, size_t chan);
 	double getPowerAttenuation(size_t chan = 0);
@@ -147,6 +161,7 @@ protected:
 	std::vector<double> tx_gains, rx_gains;
 	std::vector<double> tx_freqs, rx_freqs;
 	enum gsm_band band;
+	struct dev_band_desc band_desc;
 	size_t tx_spp, rx_spp;
 
 	bool started;
@@ -176,6 +191,8 @@ protected:
 	uhd::tune_request_t select_freq(double wFreq, size_t chan, bool tx);
 	bool set_freq(double freq, size_t chan, bool tx);
 	void get_dev_band_desc(dev_band_desc& desc);
+	bool set_band(enum gsm_band req_band);
+	void assign_band_desc(enum gsm_band req_band);
 
 	Thread *async_event_thrd;
 	Mutex tune_lock;

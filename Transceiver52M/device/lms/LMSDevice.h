@@ -52,7 +52,22 @@ enum lms_dev_type {
 	LMS_DEV_UNKNOWN,
 };
 
-struct dev_band_desc;
+struct dev_band_desc {
+	/* Maximum LimeSuite Tx Gain which can be set/used without distorting
+	   the output * signal, and the resulting real output power measured
+	   when that gain is used.
+	 */
+	double nom_lms_tx_gain;  /* dB */
+	double nom_out_tx_power; /* dBm */
+	/* Factor used to infer base real RSSI offset on the Rx path based on current
+	   configured RxGain. The resulting rssiOffset is added to the per burst
+	   calculated energy in upper layers. These values were empirically
+	   found and may change based on multiple factors, see OS#4468.
+	   Correct measured values only provided for LimeSDR-USB so far.
+	   rssiOffset = rxGain + rxgain2rssioffset_rel;
+	*/
+	double rxgain2rssioffset_rel; /* dB */
+};
 
 /** A class to handle a LimeSuite supported device */
 class LMSDevice:public RadioDevice {
@@ -73,6 +88,7 @@ private:
 
 	std::vector<double> tx_gains, rx_gains;
 	enum gsm_band band;
+	struct dev_band_desc band_desc;
 
 	enum lms_dev_type m_dev_type;
 
@@ -85,7 +101,8 @@ private:
 	void update_stream_stats_tx(size_t chan, bool *underrun);
 	bool do_clock_src_freq(enum ReferenceType ref, double freq);
 	void get_dev_band_desc(dev_band_desc& desc);
-
+	bool set_band(enum gsm_band req_band);
+	void assign_band_desc(enum gsm_band req_band);
 public:
 
 	/** Object constructor */
@@ -173,6 +190,7 @@ public:
 	/** return minimum Rx Gain **/
 	double minRxGain(void);
 
+	double rssiOffset(size_t chan);
 
 	double setPowerAttenuation(int atten, size_t chan);
 	double getPowerAttenuation(size_t chan = 0);

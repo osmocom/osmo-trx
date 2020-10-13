@@ -125,6 +125,9 @@ class RadioDevice {
   /** return minimum Rx Gain **/
   virtual double minRxGain(void) = 0;
 
+  /** return base RSSI offset to apply for received samples **/
+  virtual double rssiOffset(size_t chan) = 0;
+
   /** returns the Nominal transmit output power of the transceiver in dBm, negative on error **/
   virtual int getNominalTxPower(size_t chan = 0) = 0;
 

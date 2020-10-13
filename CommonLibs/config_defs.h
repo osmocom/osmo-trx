@@ -47,6 +47,7 @@ struct trx_cfg {
 	bool multi_arfcn;
 	double offset;
 	double rssi_offset;
+	bool force_rssi_offset; /* Force value set in VTY? */
 	bool swap_channels;
 	bool ext_rach;
 	bool egprs;

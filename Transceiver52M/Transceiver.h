@@ -260,7 +260,7 @@ protected:
   friend void *RxLowerLoopAdapter(Transceiver *transceiver);
   friend void *TxLowerLoopAdapter(Transceiver *transceiver);
 
-
+  double rssiOffset(size_t chan);
   void reset();
 
   void logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi);

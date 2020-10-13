@@ -354,6 +354,7 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 		case 'R':
 			print_deprecated(option);
 			trx->cfg.rssi_offset = atof(optarg);
+			trx->cfg.force_rssi_offset = true;
 			break;
 		case 'S':
 			print_deprecated(option);
@@ -477,7 +478,7 @@ static void print_config(struct trx_ctx *trx)
 	ost << "   Filler Burst RACH Delay. " << trx->cfg.rach_delay << std::endl;
 	ost << "   Multi-Carrier........... " << trx->cfg.multi_arfcn << std::endl;
 	ost << "   Tuning offset........... " << trx->cfg.offset << std::endl;
-	ost << "   RSSI to dBm offset...... " << trx->cfg.rssi_offset << std::endl;
+	ost << "   RSSI to dBm offset...... " << trx->cfg.rssi_offset << (trx->cfg.force_rssi_offset ? "" : " (relative)") << std::endl;
 	ost << "   Swap channels........... " << trx->cfg.swap_channels << std::endl;
 	ost << "   Tx Antennas.............";
 	for (i = 0; i < trx->cfg.num_chans; i++) {

@@ -85,27 +85,20 @@ static const std::map<enum lms_dev_type, struct dev_desc> dev_param_map {
 };
 
 typedef std::tuple<lms_dev_type, enum gsm_band> dev_band_key;
-/* Maximum LimeSuite Tx Gain which can be set/used without distorting the output
- * signal, and the resulting real output power measured when that gain is used.
- */
-struct dev_band_desc {
-	double nom_lms_tx_gain;  /* dB */
-	double nom_out_tx_power; /* dBm */
-};
 typedef std::map<dev_band_key, dev_band_desc>::const_iterator dev_band_map_it;
 static const std::map<dev_band_key, dev_band_desc> dev_band_nom_power_param_map {
-	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_850),	{ 73.0, 11.2 } },
-	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_900),	{ 73.0, 10.8 } },
-	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_1800),	{ 65.0, -3.5 } }, /* FIXME: OS#4583: 1800Mhz is failing above TxGain=65, which is around -3.5dBm (already < 0 dBm) */
-	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_1900),	{ 73.0, 1.7 } }, /* FIXME: OS#4583: 1900MHz is failing in all TxGain values */
-	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_850),	{ 66.0, 3.1 } }, /* FIXME: OS#4583: Ensure BAND2 is used at startup */
-	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_900),	{ 66.0, 2.8 } }, /* FIXME: OS#4583: Ensure BAND2 is used at startup */
-	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_1800),	{ 66.0, -11.6 } }, /* OS#4583: Any of BAND1 or BAND2 is fine */
-	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_1900),	{ 66.0, -9.2 } }, /* FIXME: OS#4583: Ensure BAND1 is used at startup */
-	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_850),	{ 71.0, 6.8 } },
-	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_900),	{ 71.0, 6.8 } },
-	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_1800),	{ 65.0, -10.5 } }, /* OS#4583: TxGain=71 (-4.4dBm) FAIL rms phase errors ~10° */
-	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_1900),	{ 71.0, -6.3 } }, /* FIXME: OS#4583: all FAIL, BAND1/BAND2 rms phase errors >23° */
+	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_850),	{ 73.0, 11.2,  -6.0  } },
+	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_900),	{ 73.0, 10.8,  -6.0  } },
+	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_1800),	{ 65.0, -3.5,  -17.0 } }, /* FIXME: OS#4583: 1800Mhz is failing above TxGain=65, which is around -3.5dBm (already < 0 dBm) */
+	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_1900),	{ 73.0, 1.7,   -17.0 } }, /* FIXME: OS#4583: 1900MHz is failing in all TxGain values */
+	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_850),	{ 66.0, 3.1,   -6.0  } }, /* FIXME: OS#4583: Ensure BAND2 is used at startup */
+	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_900),	{ 66.0, 2.8,   -6.0  } }, /* FIXME: OS#4583: Ensure BAND2 is used at startup */
+	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_1800),	{ 66.0, -11.6, -17.0 } }, /* OS#4583: Any of BAND1 or BAND2 is fine */
+	{ std::make_tuple(LMS_DEV_SDR_MINI, GSM_BAND_1900),	{ 66.0, -9.2,  -17.0 } }, /* FIXME: OS#4583: Ensure BAND1 is used at startup */
+	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_850),	{ 71.0, 6.8,   -6.0  } },
+	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_900),	{ 71.0, 6.8,   -6.0  } },
+	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_1800),	{ 65.0, -10.5, -17.0 } }, /* OS#4583: TxGain=71 (-4.4dBm) FAIL rms phase errors ~10° */
+	{ std::make_tuple(LMS_DEV_NET_MICRO, GSM_BAND_1900),	{ 71.0, -6.3,  -17.0 } }, /* FIXME: OS#4583: all FAIL, BAND1/BAND2 rms phase errors >23° */
 };
 
 /* So far measurements done for B210 show really close to linear relationship
@@ -231,15 +224,10 @@ int info_list_find(lms_info_str_t* info_list, unsigned int count, const std::str
 	return -1;
 }
 
-void LMSDevice::get_dev_band_desc(dev_band_desc& desc)
+void LMSDevice::assign_band_desc(enum gsm_band req_band)
 {
 	dev_band_map_it it;
-	enum gsm_band req_band = band;
 
-	if (req_band == 0) {
-		LOGC(DDEV, ERROR) << "Nominal Tx Power requested before Tx Frequency was set! Providing band 900 by default... ";
-		req_band = GSM_BAND_900;
-	}
 	it = dev_band_nom_power_param_map.find(dev_band_key(m_dev_type, req_band));
 	if (it == dev_band_nom_power_param_map.end()) {
 		dev_desc desc = dev_param_map.at(m_dev_type);
@@ -249,7 +237,29 @@ void LMSDevice::get_dev_band_desc(dev_band_desc& desc)
 		it = dev_band_nom_power_param_map.find(dev_band_key(LMS_DEV_SDR_USB, req_band));
 	}
 	OSMO_ASSERT(it != dev_band_nom_power_param_map.end())
-	desc = it->second;
+	band_desc = it->second;
+}
+
+bool LMSDevice::set_band(enum gsm_band req_band)
+{
+	if (band != 0 && req_band != band) {
+		LOGC(DDEV, ALERT) << "Requesting band " << gsm_band_name(req_band)
+				  << " different from previous band " << gsm_band_name(band);
+		return false;
+	}
+
+	band = req_band;
+	assign_band_desc(band);
+	return true;
+}
+
+void LMSDevice::get_dev_band_desc(dev_band_desc& desc)
+{
+	if (band == 0) {
+		LOGC(DDEV, ERROR) << "Power parameters requested before Tx Frequency was set! Providing band 900 by default...";
+		assign_band_desc(GSM_BAND_900);
+	}
+	desc = band_desc;
 }
 
 int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
@@ -559,6 +569,21 @@ double LMSDevice::setRxGain(double dB, size_t chan)
 	else
 		rx_gains[chan] = dB;
 	return rx_gains[chan];
+}
+
+double LMSDevice::rssiOffset(size_t chan)
+{
+	double rssiOffset;
+	dev_band_desc desc;
+
+	if (chan >= rx_gains.size()) {
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
+		return 0.0f;
+	}
+
+	get_dev_band_desc(desc);
+	rssiOffset = rx_gains[chan] + desc.rxgain2rssioffset_rel;
+	return rssiOffset;
 }
 
 double LMSDevice::setPowerAttenuation(int atten, size_t chan)

@@ -231,13 +231,15 @@ DEFUN(cfg_offset, cfg_offset_cmd,
 }
 
 DEFUN(cfg_rssi_offset, cfg_rssi_offset_cmd,
-	"rssi-offset FLOAT",
+	"rssi-offset FLOAT [relative]",
 	"Set the RSSI to dBm offset in dB (default=0)\n"
-	"RSSI to dBm offset in dB\n")
+	"RSSI to dBm offset in dB\n"
+	"Add to the default rssi-offset value instead of completely replacing it\n")
 {
 	struct trx_ctx *trx = trx_from_vty(vty);
 
 	trx->cfg.rssi_offset = atof(argv[0]);
+	trx->cfg.force_rssi_offset = (argc == 1);
 
 	return CMD_SUCCESS;
 }
@@ -580,8 +582,9 @@ static int config_write_trx(struct vty *vty)
 	vty_out(vty, " multi-arfcn %s%s", trx->cfg.multi_arfcn ? "enable" : "disable", VTY_NEWLINE);
 	if (trx->cfg.offset != 0)
 		vty_out(vty, " offset %f%s", trx->cfg.offset, VTY_NEWLINE);
-	if (trx->cfg.rssi_offset != 0)
-		vty_out(vty, " rssi-offset %f%s", trx->cfg.rssi_offset, VTY_NEWLINE);
+	if (!(trx->cfg.rssi_offset == 0 && !trx->cfg.force_rssi_offset))
+		vty_out(vty, " rssi-offset %f%s%s", trx->cfg.rssi_offset,
+			trx->cfg.force_rssi_offset ? " relative": "", VTY_NEWLINE);
 	vty_out(vty, " swap-channels %s%s", trx->cfg.swap_channels ? "enable" : "disable", VTY_NEWLINE);
 	vty_out(vty, " egprs %s%s", trx->cfg.egprs ? "enable" : "disable", VTY_NEWLINE);
 	vty_out(vty, " ext-rach %s%s", trx->cfg.ext_rach ? "enable" : "disable", VTY_NEWLINE);
@@ -716,6 +719,7 @@ struct trx_ctx *vty_trx_ctx_alloc(void *talloc_ctx)
 	trx->cfg.tx_sps = DEFAULT_TX_SPS;
 	trx->cfg.rx_sps = DEFAULT_RX_SPS;
 	trx->cfg.filler = FILLER_ZERO;
+	trx->cfg.rssi_offset = 0.0f;
 
 	return trx;
 }

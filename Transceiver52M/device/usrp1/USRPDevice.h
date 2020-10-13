@@ -174,6 +174,8 @@ private:
   /** return minimum Rx Gain **/
   double minRxGain(void);
 
+  double rssiOffset(size_t chan) { return 0.0f;  } /* FIXME: not implemented */
+
   double setPowerAttenuation(int atten, size_t chan);
   double getPowerAttenuation(size_t chan=0);
 

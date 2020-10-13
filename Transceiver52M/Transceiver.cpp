@@ -612,6 +612,13 @@ void writeToFile(radioVector *radio_burst, size_t chan)
   outfile.close();
 }
 
+double Transceiver::rssiOffset(size_t chan)
+{
+  if (cfg->force_rssi_offset)
+        return cfg->rssi_offset;
+  return mRadioInterface->rssiOffset(chan) + cfg->rssi_offset;
+}
+
 /*
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled.
@@ -631,6 +638,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   SoftVector *rxBurst;
   TransceiverState *state = &mStates[chan];
   bool ctr_changed = false;
+  double rssi_offset;
 
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
@@ -700,8 +708,9 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
     state->mNoiseLev = state->mNoises.avg();
   }
 
-  bi->rssi = 20.0 * log10(rxFullScale / avg) + cfg->rssi_offset;
-  bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + cfg->rssi_offset;
+  rssi_offset = rssiOffset(chan);
+  bi->rssi = 20.0 * log10(rxFullScale / avg) + rssi_offset;
+  bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + rssi_offset;
 
   if (type == IDLE)
     goto ret_idle;
@@ -1153,11 +1162,13 @@ void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
     else os << "-";
   }
 
+  double rssi_offset = rssiOffset(chan);
+
   LOGCHAN(chan, DTRXDUL, DEBUG) << std::fixed << std::right
     << " time: "   << unsigned(bi->tn) << ":" << bi->fn
-    << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - cfg->rssi_offset)
+    << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - rssi_offset)
                    << "dBFS/" << std::setw(6) << -bi->rssi << "dBm"
-    << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - cfg->rssi_offset)
+    << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - rssi_offset)
                    << "dBFS/" << std::setw(6) << -bi->noise << "dBm"
     << " TOA: "    << std::setw(5) << std::setprecision(2) << bi->toa
     << " C/I: "    << std::setw(5) << std::setprecision(2) << bi->ci << "dB"

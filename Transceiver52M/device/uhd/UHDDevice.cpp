@@ -130,23 +130,16 @@ static const std::map<dev_key, dev_desc> dev_param_map {
 };
 
 typedef std::tuple<uhd_dev_type, enum gsm_band> dev_band_key;
-/* Maximum UHD Tx Gain which can be set/used without distorting the
-   output signal, and the resulting real output power measured when that
-   gain is used. Correct measured values only provided for B210 so far. */
-struct dev_band_desc {
-	double nom_uhd_tx_gain;  /* dB */
-	double nom_out_tx_power; /* dBm */
-};
 typedef std::map<dev_band_key, dev_band_desc>::const_iterator dev_band_map_it;
 static const std::map<dev_band_key, dev_band_desc> dev_band_nom_power_param_map {
-	{ std::make_tuple(B200, GSM_BAND_850),	{ 89.75, 13.3 } },
-	{ std::make_tuple(B200, GSM_BAND_900),	{ 89.75, 13.3 } },
-	{ std::make_tuple(B200, GSM_BAND_1800),	{ 89.75, 7.5 } },
-	{ std::make_tuple(B200, GSM_BAND_1900),	{ 89.75, 7.7 } },
-	{ std::make_tuple(B210, GSM_BAND_850),	{ 89.75, 13.3 } },
-	{ std::make_tuple(B210, GSM_BAND_900),	{ 89.75, 13.3 } },
-	{ std::make_tuple(B210, GSM_BAND_1800),	{ 89.75, 7.5 } },
-	{ std::make_tuple(B210, GSM_BAND_1900),	{ 89.75, 7.7 } },
+	{ std::make_tuple(B200, GSM_BAND_850),	{ 89.75, 13.3, -7.5  } },
+	{ std::make_tuple(B200, GSM_BAND_900),	{ 89.75, 13.3, -7.5  } },
+	{ std::make_tuple(B200, GSM_BAND_1800),	{ 89.75, 7.5,  -11.0 } },
+	{ std::make_tuple(B200, GSM_BAND_1900),	{ 89.75, 7.7,  -11.0 } },
+	{ std::make_tuple(B210, GSM_BAND_850),	{ 89.75, 13.3, -7.5  } },
+	{ std::make_tuple(B210, GSM_BAND_900),	{ 89.75, 13.3, -7.5  } },
+	{ std::make_tuple(B210, GSM_BAND_1800),	{ 89.75, 7.5,  -11.0 } },
+	{ std::make_tuple(B210, GSM_BAND_1900),	{ 89.75, 7.7,  -11.0 } },
 };
 
 void *async_event_loop(uhd_device *dev)
@@ -247,25 +240,42 @@ uhd_device::~uhd_device()
 		delete rx_buffers[i];
 }
 
-void uhd_device::get_dev_band_desc(dev_band_desc& desc)
+void uhd_device::assign_band_desc(enum gsm_band req_band)
 {
 	dev_band_map_it it;
-	enum gsm_band req_band = band;
 
-	if (req_band == 0) {
-		LOGC(DDEV, ERROR) << "Nominal Tx Power requested before Tx Frequency was set! Providing band 900 by default... ";
-		req_band = GSM_BAND_900;
-	}
 	it = dev_band_nom_power_param_map.find(dev_band_key(dev_type, req_band));
 	if (it == dev_band_nom_power_param_map.end()) {
 		dev_desc desc = dev_param_map.at(dev_key(dev_type, tx_sps, rx_sps));
-		LOGC(DDEV, ERROR) << "No Tx Power measurements exist for device "
+		LOGC(DDEV, ERROR) << "No Power parameters exist for device "
 				    << desc.str << " on band " << gsm_band_name(req_band)
 				    << ", using B210 ones as fallback";
 		it = dev_band_nom_power_param_map.find(dev_band_key(B210, req_band));
 	}
 	OSMO_ASSERT(it != dev_band_nom_power_param_map.end())
-	desc = it->second;
+	band_desc = it->second;
+}
+
+bool uhd_device::set_band(enum gsm_band req_band)
+{
+	if (band != 0 && req_band != band) {
+		LOGC(DDEV, ALERT) << "Requesting band " << gsm_band_name(req_band)
+				  << " different from previous band " << gsm_band_name(band);
+		return false;
+	}
+
+	band = req_band;
+	assign_band_desc(band);
+	return true;
+}
+
+void uhd_device::get_dev_band_desc(dev_band_desc& desc)
+{
+	if (band == 0) {
+		LOGC(DDEV, ERROR) << "Power parameters requested before Tx Frequency was set! Providing band 900 by default...";
+		assign_band_desc(GSM_BAND_900);
+	}
+	desc = band_desc;
 }
 
 void uhd_device::init_gains()
@@ -358,6 +368,21 @@ double uhd_device::getRxGain(size_t chan)
 	}
 
 	return rx_gains[chan];
+}
+
+double uhd_device::rssiOffset(size_t chan)
+{
+	double rssiOffset;
+	dev_band_desc desc;
+
+	if (chan >= rx_gains.size()) {
+		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
+		return 0.0f;
+	}
+
+	get_dev_band_desc(desc);
+	rssiOffset = rx_gains[chan] + desc.rxgain2rssioffset_rel;
+	return rssiOffset;
 }
 
 double uhd_device::setPowerAttenuation(int atten, size_t chan) {
@@ -1052,16 +1077,12 @@ bool uhd_device::setTxFreq(double wFreq, size_t chan)
 		return false;
 	}
 
-	if (band != 0 && req_band != band) {
-		LOGCHAN(chan, DDEV, ALERT) << "Requesting Tx Frequency " << wFreq
-					   << " Hz different from previous band " << gsm_band_name(band);
+	if (!set_band(req_band))
 		return false;
-	}
 
 	if (!set_freq(wFreq, chan, true))
 		return false;
 
-	band = req_band;
 	return true;
 }
 

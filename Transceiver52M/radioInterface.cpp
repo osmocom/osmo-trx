@@ -322,6 +322,11 @@ double RadioInterface::setRxGain(double dB, size_t chan)
   return mDevice->setRxGain(dB, chan);
 }
 
+double RadioInterface::rssiOffset(size_t chan)
+{
+	return mDevice->rssiOffset(chan);
+}
+
 /* Receive a timestamped chunk from the device */
 int RadioInterface::pullBuffer()
 {
