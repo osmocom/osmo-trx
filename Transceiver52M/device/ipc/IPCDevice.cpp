@@ -522,7 +522,7 @@ static int ipc_sock_send(struct ipc_per_trx_sock_state *state, struct msgb *msg)
 		return -EIO;
 	}
 	msgb_enqueue(&state->upqueue, msg);
-	conn_bfd->when |= BSC_FD_WRITE;
+	conn_bfd->when |= OSMO_FD_WRITE;
 
 	return 0;
 }
@@ -659,7 +659,7 @@ int IPCDevice::ipc_sock_write(struct osmo_fd *bfd)
 		msg = llist_entry(master_sk_state.upqueue.next, struct msgb, list);
 		ipc_prim = (struct ipc_sk_if *)msg->data;
 
-		bfd->when &= ~BSC_FD_WRITE;
+		bfd->when &= ~OSMO_FD_WRITE;
 
 		/* bug hunter 8-): maybe someone forgot msgb_put(...) ? */
 		if (!msgb_length(msg)) {
@@ -676,7 +676,7 @@ int IPCDevice::ipc_sock_write(struct osmo_fd *bfd)
 			goto close;
 		if (rc < 0) {
 			if (errno == EAGAIN) {
-				bfd->when |= BSC_FD_WRITE;
+				bfd->when |= OSMO_FD_WRITE;
 				break;
 			}
 			goto close;
@@ -706,7 +706,7 @@ int IPCDevice::ipc_chan_sock_write(struct osmo_fd *bfd)
 		/* peek at the beginning of the queue */
 		msg = llist_entry(sk_chan_state[bfd->priv_nr].upqueue.next, struct msgb, list);
 		ipc_prim = (struct ipc_sk_chan_if *)msg->data;
-		bfd->when &= ~BSC_FD_WRITE;
+		bfd->when &= ~OSMO_FD_WRITE;
 		/* bug hunter 8-): maybe someone forgot msgb_put(...) ? */
 		if (!msgb_length(msg)) {
 			LOGP(DDEV, LOGL_ERROR,
@@ -722,7 +722,7 @@ int IPCDevice::ipc_chan_sock_write(struct osmo_fd *bfd)
 			goto close;
 		if (rc < 0) {
 			if (errno == EAGAIN) {
-				bfd->when |= BSC_FD_WRITE;
+				bfd->when |= OSMO_FD_WRITE;
 				break;
 			}
 			goto close;
@@ -746,12 +746,12 @@ static int ipc_sock_cb(struct osmo_fd *bfd, unsigned int flags)
 	IPCDevice *device = static_cast<IPCDevice *>(bfd->data);
 	int rc = 0;
 
-	if (flags & BSC_FD_READ)
+	if (flags & OSMO_FD_READ)
 		rc = device->ipc_sock_read(bfd);
 	if (rc < 0)
 		return rc;
 
-	if (flags & BSC_FD_WRITE)
+	if (flags & OSMO_FD_WRITE)
 		rc = device->ipc_sock_write(bfd);
 
 	return rc;
@@ -762,12 +762,12 @@ static int ipc_chan_sock_cb(struct osmo_fd *bfd, unsigned int flags)
 	IPCDevice *device = static_cast<IPCDevice *>(bfd->data);
 	int rc = 0;
 
-	if (flags & BSC_FD_READ)
+	if (flags & OSMO_FD_READ)
 		rc = device->ipc_chan_sock_read(bfd);
 	if (rc < 0)
 		return rc;
 
-	if (flags & BSC_FD_WRITE)
+	if (flags & OSMO_FD_WRITE)
 		rc = device->ipc_chan_sock_write(bfd);
 
 	return rc;

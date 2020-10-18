@@ -142,7 +142,7 @@ int ipc_chan_sock_send(struct msgb *msg, uint8_t chan_nr)
 		return -EIO;
 	}
 	msgb_enqueue(&state->upqueue, msg);
-	conn_bfd->when |= BSC_FD_WRITE;
+	conn_bfd->when |= OSMO_FD_WRITE;
 
 	return 0;
 }
@@ -160,7 +160,7 @@ static int ipc_chan_sock_write(struct osmo_fd *bfd)
 		msg = llist_entry(state->upqueue.next, struct msgb, list);
 		ipc_prim = (struct ipc_sk_chan_if *)msg->data;
 
-		bfd->when &= ~BSC_FD_WRITE;
+		bfd->when &= ~OSMO_FD_WRITE;
 
 		/* bug hunter 8-): maybe someone forgot msgb_put(...) ? */
 		if (!msgb_length(msg)) {
@@ -177,7 +177,7 @@ static int ipc_chan_sock_write(struct osmo_fd *bfd)
 			goto close;
 		if (rc < 0) {
 			if (errno == EAGAIN) {
-				bfd->when |= BSC_FD_WRITE;
+				bfd->when |= OSMO_FD_WRITE;
 				break;
 			}
 			goto close;
@@ -200,12 +200,12 @@ static int ipc_chan_sock_cb(struct osmo_fd *bfd, unsigned int flags)
 {
 	int rc = 0;
 
-	if (flags & BSC_FD_READ)
+	if (flags & OSMO_FD_READ)
 		rc = ipc_chan_sock_read(bfd);
 	if (rc < 0)
 		return rc;
 
-	if (flags & BSC_FD_WRITE)
+	if (flags & OSMO_FD_WRITE)
 		rc = ipc_chan_sock_write(bfd);
 
 	return rc;
@@ -231,13 +231,13 @@ int ipc_chan_sock_accept(struct osmo_fd *bfd, unsigned int flags)
 		     "osmo-trx connects but we already have "
 		     "another active connection ?!?\n");
 		/* We already have one IPC connected, this is all we support */
-		state->listen_bfd.when &= ~BSC_FD_READ;
+		state->listen_bfd.when &= ~OSMO_FD_READ;
 		close(rc);
 		return 0;
 	}
 
 	conn_bfd->fd = rc;
-	conn_bfd->when = BSC_FD_READ;
+	conn_bfd->when = OSMO_FD_READ;
 	conn_bfd->cb = ipc_chan_sock_cb;
 	conn_bfd->data = state;
 

@@ -394,7 +394,7 @@ int ipc_sock_init(const char *path, struct ipc_sock_state **global_state_var,
 		return -1;
 	}
 
-	bfd->when = BSC_FD_READ;
+	bfd->when = OSMO_FD_READ;
 	bfd->cb = sock_callback_fn;
 	bfd->data = state;
 	bfd->priv_nr = n;
