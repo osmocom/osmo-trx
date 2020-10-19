@@ -806,7 +806,7 @@ void Transceiver::ctrl_sock_send(ctrl_msg& m, int chan)
   struct osmo_fd *conn_bfd = &s.conn_bfd;
 
   s.txmsgqueue.push_back(m);
-  conn_bfd->when |= OSMO_FD_WRITE;
+  osmo_fd_write_enable(conn_bfd);
 }
 
 int Transceiver::ctrl_sock_write(int chan)
@@ -821,7 +821,7 @@ int Transceiver::ctrl_sock_write(int chan)
   while (s.txmsgqueue.size()) {
     const ctrl_msg m = s.txmsgqueue.front();
 
-    s.conn_bfd.when &= ~OSMO_FD_WRITE;
+    osmo_fd_write_disable(&s.conn_bfd);
 
     /* try to send it over the socket */
     rc = write(s.conn_bfd.fd, m.data, strlen(m.data) + 1);
@@ -829,7 +829,7 @@ int Transceiver::ctrl_sock_write(int chan)
       goto close;
     if (rc < 0) {
       if (errno == EAGAIN) {
-        s.conn_bfd.when |= OSMO_FD_WRITE;
+        osmo_fd_write_enable(&s.conn_bfd);
         break;
       }
       goto close;

@@ -522,7 +522,7 @@ static int ipc_sock_send(struct ipc_per_trx_sock_state *state, struct msgb *msg)
 		return -EIO;
 	}
 	msgb_enqueue(&state->upqueue, msg);
-	conn_bfd->when |= OSMO_FD_WRITE;
+	osmo_fd_write_enable(conn_bfd);
 
 	return 0;
 }
@@ -659,7 +659,7 @@ int IPCDevice::ipc_sock_write(struct osmo_fd *bfd)
 		msg = llist_entry(master_sk_state.upqueue.next, struct msgb, list);
 		ipc_prim = (struct ipc_sk_if *)msg->data;
 
-		bfd->when &= ~OSMO_FD_WRITE;
+		osmo_fd_write_disable(bfd);
 
 		/* bug hunter 8-): maybe someone forgot msgb_put(...) ? */
 		if (!msgb_length(msg)) {
@@ -676,7 +676,7 @@ int IPCDevice::ipc_sock_write(struct osmo_fd *bfd)
 			goto close;
 		if (rc < 0) {
 			if (errno == EAGAIN) {
-				bfd->when |= OSMO_FD_WRITE;
+				osmo_fd_write_enable(bfd);
 				break;
 			}
 			goto close;
@@ -706,7 +706,7 @@ int IPCDevice::ipc_chan_sock_write(struct osmo_fd *bfd)
 		/* peek at the beginning of the queue */
 		msg = llist_entry(sk_chan_state[bfd->priv_nr].upqueue.next, struct msgb, list);
 		ipc_prim = (struct ipc_sk_chan_if *)msg->data;
-		bfd->when &= ~OSMO_FD_WRITE;
+		osmo_fd_write_disable(bfd);
 		/* bug hunter 8-): maybe someone forgot msgb_put(...) ? */
 		if (!msgb_length(msg)) {
 			LOGP(DDEV, LOGL_ERROR,
@@ -722,7 +722,7 @@ int IPCDevice::ipc_chan_sock_write(struct osmo_fd *bfd)
 			goto close;
 		if (rc < 0) {
 			if (errno == EAGAIN) {
-				bfd->when |= OSMO_FD_WRITE;
+				osmo_fd_write_enable(bfd);
 				break;
 			}
 			goto close;

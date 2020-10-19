@@ -1,2 +1,3 @@
 * update libosmocore dependency to > 1.3.x for osmo_sched_vty_init(), osmo_sched_vty_apply_localthread()
 * update osmo-gsm-manuals dependency to > 0.3.0 for vty_cpu_sched.adoc include.
+* update libosmocore dependency to > 1.4.x for osmo_fd_{read,write}_{enable,disable}()

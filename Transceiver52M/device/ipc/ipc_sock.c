@@ -84,7 +84,7 @@ int ipc_sock_send(struct msgb *msg)
 		return -EIO;
 	}
 	msgb_enqueue(&state->upqueue, msg);
-	conn_bfd->when |= OSMO_FD_WRITE;
+	osmo_fd_write_enable(conn_bfd);
 
 	return 0;
 }
@@ -102,7 +102,7 @@ void ipc_sock_close(struct ipc_sock_state *state)
 	osmo_fd_unregister(bfd);
 
 	/* re-enable the generation of ACCEPT for new connections */
-	state->listen_bfd.when |= OSMO_FD_READ;
+	osmo_fd_read_enable(&state->listen_bfd);
 
 	/* flush the queue */
 	while (!llist_empty(&state->upqueue)) {
@@ -172,7 +172,7 @@ static int ipc_sock_write(struct osmo_fd *bfd)
 		msg = llist_entry(state->upqueue.next, struct msgb, list);
 		ipc_prim = (struct ipc_sk_if *)msg->data;
 
-		bfd->when &= ~OSMO_FD_WRITE;
+		osmo_fd_write_disable(bfd);
 
 		/* bug hunter 8-): maybe someone forgot msgb_put(...) ? */
 		if (!msgb_length(msg)) {
@@ -189,7 +189,7 @@ static int ipc_sock_write(struct osmo_fd *bfd)
 			goto close;
 		if (rc < 0) {
 			if (errno == EAGAIN) {
-				bfd->when |= OSMO_FD_WRITE;
+				osmo_fd_write_enable(bfd);
 				break;
 			}
 			goto close;
@@ -244,7 +244,7 @@ int ipc_sock_accept(struct osmo_fd *bfd, unsigned int flags)
 		     "ip clent connects but we already have "
 		     "another active connection ?!?\n");
 		/* We already have one IPC connected, this is all we support */
-		state->listen_bfd.when &= ~OSMO_FD_READ;
+		osmo_fd_read_disable(&state->listen_bfd);
 		close(rc);
 		return 0;
 	}
