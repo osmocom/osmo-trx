@@ -236,13 +236,8 @@ int ipc_chan_sock_accept(struct osmo_fd *bfd, unsigned int flags)
 		return 0;
 	}
 
-	conn_bfd->fd = rc;
-	conn_bfd->when = OSMO_FD_READ;
-	conn_bfd->cb = ipc_chan_sock_cb;
-	conn_bfd->data = state;
-
 	/* copy chan nr, required for proper bfd<->chan # mapping */
-	conn_bfd->priv_nr = bfd->priv_nr;
+	osmo_fd_setup(conn_bfd, rc, OSMO_FD_READ, ipc_chan_sock_cb, state, bfd->priv_nr);
 
 	if (osmo_fd_register(conn_bfd) != 0) {
 		LOGP(DDEV, LOGL_ERROR,

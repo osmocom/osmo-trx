@@ -249,10 +249,7 @@ int ipc_sock_accept(struct osmo_fd *bfd, unsigned int flags)
 		return 0;
 	}
 
-	conn_bfd->fd = rc;
-	conn_bfd->when = OSMO_FD_READ;
-	conn_bfd->cb = ipc_sock_cb;
-	conn_bfd->data = state;
+	osmo_fd_setup(conn_bfd, rc, OSMO_FD_READ, ipc_sock_cb, state, 0);
 
 	if (osmo_fd_register(conn_bfd) != 0) {
 		LOGP(DDEV, LOGL_ERROR,
