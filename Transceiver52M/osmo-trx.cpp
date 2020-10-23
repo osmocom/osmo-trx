@@ -242,11 +242,13 @@ static void setup_signal_handlers()
 
 static void print_help()
 {
-	fprintf(stdout, "Options:\n"
-		"  -h, --help        This text\n"
-		"  -C, --config      Filename The config file to use\n"
-		"  -V, --version     Print the version of OsmoTRX\n"
-		"      --vty-ref-xml Generate the VTY reference XML output and exit.\n"
+	printf( "Some useful options:\n"
+		"  -h, --help			This text\n"
+		"  -C, --config			Filename The config file to use\n"
+		"  -V, --version		Print the version of OsmoTRX\n"
+		"\nVTY reference generation:\n"
+		"      --vty-ref-mode MODE	VTY reference generation mode (e.g. 'expert').\n"
+		"      --vty-ref-xml		Generate the VTY reference XML output and exit.\n"
 		);
 }
 
@@ -255,6 +257,31 @@ static void print_deprecated(char opt)
 	LOG(WARNING) << "Cmd line option '" << opt << "' is deprecated and will be soon removed."
 		<< " Please use VTY cfg option instead."
 		<< " All cmd line options are already being overridden by VTY options if set.";
+}
+
+static void handle_long_options(const char *prog_name, const int long_option)
+{
+	static int vty_ref_mode = VTY_REF_GEN_MODE_DEFAULT;
+
+	switch (long_option) {
+	case 1:
+		vty_ref_mode = get_string_value(vty_ref_gen_mode_names, optarg);
+		if (vty_ref_mode < 0) {
+			fprintf(stderr, "%s: Unknown VTY reference generation "
+				"mode '%s'\n", prog_name, optarg);
+			exit(2);
+		}
+		break;
+	case 2:
+		fprintf(stderr, "Generating the VTY reference in mode '%s' (%s)\n",
+			get_value_string(vty_ref_gen_mode_names, vty_ref_mode),
+			get_value_string(vty_ref_gen_mode_desc, vty_ref_mode));
+		vty_dump_xml_ref_mode(stdout, (enum vty_ref_gen_mode) vty_ref_mode);
+		exit(0);
+	default:
+		fprintf(stderr, "%s: error parsing cmdline options\n", prog_name);
+		exit(2);
+	}
 }
 
 static void handle_options(int argc, char **argv, struct trx_ctx* trx)
@@ -268,7 +295,8 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 		{"help", 0, 0, 'h'},
 		{"config", 1, 0, 'C'},
 		{"version", 0, 0, 'V'},
-		{"vty-ref-xml", 0, &long_option, 1},
+		{"vty-ref-mode", 1, &long_option, 1},
+		{"vty-ref-xml", 0, &long_option, 2},
 		{NULL, 0, 0, 0}
 	};
 
@@ -280,14 +308,8 @@ static void handle_options(int argc, char **argv, struct trx_ctx* trx)
 			exit(0);
 			break;
 		case 0:
-			switch (long_option) {
-			case 1:
-				vty_dump_xml_ref(stdout);
-				exit(0);
-			default:
-				fprintf(stderr, "error parsing cmdline options\n");
-				exit(2);
-			}
+			handle_long_options(argv[0], long_option);
+			break;
 		case 'a':
 			print_deprecated(option);
 			osmo_talloc_replace_string(trx, &trx->cfg.dev_args, optarg);
