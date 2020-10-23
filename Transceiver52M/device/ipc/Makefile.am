@@ -1,8 +1,8 @@
 include $(top_srcdir)/Makefile.common
 
 AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/../common
-AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
-AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
+AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS)
+AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS)
 AM_LDFLAGS = -lpthread -lrt
 
 noinst_HEADERS = IPCDevice.h shm.h ipc_shm.h ipc_chan.h ipc_sock.h
@@ -32,8 +32,7 @@ ipc_driver_test_SOURCES = ipc-driver-test.c uhdwrap.cpp ipc_shm.c ipc_chan.c ipc
 ipc_driver_test_LDADD = \
         shm.lo \
 	$(LIBOSMOCORE_LIBS) \
-	$(LIBOSMOCTRL_LIBS) \
-	$(LIBOSMOVTY_LIBS)
+	$(NULL)
 ipc_driver_test_CXXFLAGS = $(AM_CXXFLAGS) $(UHD_CFLAGS)
 ipc_driver_test_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
 ipc_driver_test_CFLAGS  = $(AM_CFLAGS) $(UHD_CFLAGS)

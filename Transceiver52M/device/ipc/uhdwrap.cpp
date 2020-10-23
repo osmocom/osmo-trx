@@ -31,7 +31,6 @@ extern "C" {
 #include "../uhd/UHDDevice.h"
 #include "uhdwrap.h"
 
-#include "trx_vty.h"
 #include "Logger.h"
 #include "Threads.h"
 #include "Utils.h"

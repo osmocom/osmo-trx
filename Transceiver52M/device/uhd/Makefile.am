@@ -1,7 +1,7 @@
 include $(top_srcdir)/Makefile.common
 
 AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/../common
-AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS) $(UHD_CFLAGS)
+AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOVTY_CFLAGS) $(UHD_CFLAGS)
 
 noinst_HEADERS = UHDDevice.h
 

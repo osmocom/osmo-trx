@@ -1,7 +1,7 @@
 include $(top_srcdir)/Makefile.common
 
 AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES)
-AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
+AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS)
 
 
 noinst_HEADERS = radioDevice.h smpl_buf.h
