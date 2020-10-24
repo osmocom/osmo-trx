@@ -136,6 +136,7 @@ Transceiver::Transceiver(const struct trx_cfg *cfg,
                          GSM::Time wTransmitLatency,
                          RadioInterface *wRadioInterface)
   : cfg(cfg), mClockSocket(-1),
+    mRxLowerLoopThread(nullptr), mTxLowerLoopThread(nullptr),
     mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     mChans(cfg->num_chans), mOn(false), mForceClockInterface(false),
     mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0),
