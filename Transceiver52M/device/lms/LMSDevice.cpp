@@ -236,7 +236,7 @@ void LMSDevice::assign_band_desc(enum gsm_band req_band)
 				    << ", using LimeSDR-USB ones as fallback";
 		it = dev_band_nom_power_param_map.find(dev_band_key(LMS_DEV_SDR_USB, req_band));
 	}
-	OSMO_ASSERT(it != dev_band_nom_power_param_map.end())
+	OSMO_ASSERT(it != dev_band_nom_power_param_map.end());
 	band_desc = it->second;
 }
 
