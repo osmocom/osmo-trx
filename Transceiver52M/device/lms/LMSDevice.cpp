@@ -40,8 +40,6 @@ extern "C" {
 #include "config.h"
 #endif
 
-using namespace std;
-
 #define MAX_ANTENNA_LIST_SIZE 10
 #define GSM_CARRIER_BW 270000.0 /* 270kHz */
 #define LMS_MIN_BW_SUPPORTED 2.5e6 /* 2.5mHz, minimum supported by LMS */
@@ -203,7 +201,7 @@ static void print_range(const char* name, lms_range_t *range)
 int info_list_find(lms_info_str_t* info_list, unsigned int count, const std::string &args)
 {
 	unsigned int i, j;
-	std::vector<string> filters;
+	std::vector<std::string> filters;
 
 	filters = comma_delimited_to_vector(args.c_str());
 
