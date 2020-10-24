@@ -23,7 +23,6 @@
 
 #include <map>
 
-#include "trx_vty.h"
 #include "Logger.h"
 #include "Threads.h"
 #include "LMSDevice.h"
@@ -32,6 +31,7 @@
 #include <lime/LimeSuite.h>
 
 extern "C" {
+#include "trx_vty.h"
 #include "osmo_signal.h"
 #include <osmocom/core/utils.h>
 }
