@@ -144,8 +144,8 @@ Transceiver::Transceiver(const struct trx_cfg *cfg,
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
 
-  for (int i = 0; i < 8; i++) {
-    for (int j = 0; j < 8; j++)
+  for (size_t i = 0; i < ARRAY_SIZE(mHandover); i++) {
+    for (size_t j = 0; j < ARRAY_SIZE(mHandover[i]); j++)
       mHandover[i][j] = false;
   }
 }
