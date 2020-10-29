@@ -478,6 +478,38 @@ static int set_sched_rr(unsigned int prio)
 	return 0;
 }
 
+static void print_simd_info(void)
+{
+#ifdef HAVE_SSE3
+	LOGP(DMAIN, LOGL_INFO, "SSE3 support compiled in");
+#ifdef HAVE___BUILTIN_CPU_SUPPORTS
+	if (__builtin_cpu_supports("sse3"))
+		LOGPC(DMAIN, LOGL_INFO, " and supported by CPU\n");
+	else
+		LOGPC(DMAIN, LOGL_INFO, ", but not supported by CPU\n");
+#else
+	LOGPC(DMAIN, LOGL_INFO, ", but runtime SIMD detection disabled\n");
+#endif
+#endif
+
+#ifdef HAVE_SSE4_1
+	LOGP(DMAIN, LOGL_INFO, "SSE4.1 support compiled in");
+#ifdef HAVE___BUILTIN_CPU_SUPPORTS
+	if (__builtin_cpu_supports("sse4.1"))
+		LOGPC(DMAIN, LOGL_INFO, " and supported by CPU\n");
+	else
+		LOGPC(DMAIN, LOGL_INFO, ", but not supported by CPU\n");
+#else
+	LOGPC(DMAIN, LOGL_INFO, ", but runtime SIMD detection disabled\n");
+#endif
+#endif
+
+#ifndef HAVE_ATOMIC_OPS
+#pragma message ("Built without atomic operation support. Using Mutex, it may affect performance!")
+	LOG(NOTICE) << "Built without atomic operation support. Using Mutex, it may affect performance!";
+#endif
+}
+
 static void print_config(struct trx_ctx *trx)
 {
 	unsigned int i;
@@ -585,35 +617,6 @@ int main(int argc, char *argv[])
 
 	g_trx_ctx = vty_trx_ctx_alloc(tall_trx_ctx);
 
-#ifdef HAVE_SSE3
-	printf("Info: SSE3 support compiled in");
-#ifdef HAVE___BUILTIN_CPU_SUPPORTS
-	if (__builtin_cpu_supports("sse3"))
-		printf(" and supported by CPU\n");
-	else
-		printf(", but not supported by CPU\n");
-#else
-	printf(", but runtime SIMD detection disabled\n");
-#endif
-#endif
-
-#ifdef HAVE_SSE4_1
-	printf("Info: SSE4.1 support compiled in");
-#ifdef HAVE___BUILTIN_CPU_SUPPORTS
-	if (__builtin_cpu_supports("sse4.1"))
-		printf(" and supported by CPU\n");
-	else
-		printf(", but not supported by CPU\n");
-#else
-	printf(", but runtime SIMD detection disabled\n");
-#endif
-#endif
-
-#ifndef HAVE_ATOMIC_OPS
-#pragma message ("Built without atomic operation support. Using Mutex, it may affect performance!")
-	printf("Built without atomic operation support. Using Mutex, it may affect performance!\n");
-#endif
-
 	convolve_init();
 	convert_init();
 
@@ -660,6 +663,7 @@ int main(int argc, char *argv[])
 			" but expect your config to break in the future.";
 	}
 
+	print_simd_info();
 	print_config(g_trx_ctx);
 
 	if (trx_validate_config(g_trx_ctx) < 0) {
