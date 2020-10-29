@@ -162,7 +162,9 @@ DEFUN(cfg_dev_args, cfg_dev_args_cmd,
 DEFUN(cfg_tx_sps, cfg_tx_sps_cmd,
 	"tx-sps (1|4)",
 	"Set the Tx Samples-per-Symbol\n"
-	"Tx Samples-per-Symbol\n")
+	"Tx Samples-per-Symbol\n"
+	"1 Sample-per-Symbol\n"
+	"4 Samples-per-Symbol\n")
 {
 	struct trx_ctx *trx = trx_from_vty(vty);
 
@@ -174,7 +176,9 @@ DEFUN(cfg_tx_sps, cfg_tx_sps_cmd,
 DEFUN(cfg_rx_sps, cfg_rx_sps_cmd,
 	"rx-sps (1|4)",
 	"Set the Rx Samples-per-Symbol\n"
-	"Rx Samples-per-Symbol\n")
+	"Rx Samples-per-Symbol\n"
+	"1 Sample-per-Symbol\n"
+	"4 Samples-per-Symbol\n")
 {
 	struct trx_ctx *trx = trx_from_vty(vty);
 
