@@ -246,7 +246,9 @@ DEFUN(cfg_rssi_offset, cfg_rssi_offset_cmd,
 
 DEFUN(cfg_swap_channels, cfg_swap_channels_cmd,
 	"swap-channels (disable|enable)",
-	"Swap channels (default=disable)\n")
+	"Swap primary and secondary channels of the PHY (if any)\n"
+	"Do not swap primary and secondary channels (default)\n"
+	"Swap primary and secondary channels\n")
 {
 	struct trx_ctx *trx = trx_from_vty(vty);
 
