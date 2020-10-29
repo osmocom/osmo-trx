@@ -67,6 +67,15 @@ static const struct value_string filler_types[] = {
 	{ 0,			NULL }
 };
 
+static const struct value_string filler_docs[] = {
+	{ FILLER_ZERO,		"Send an empty burst (default)" },
+	{ FILLER_DUMMY,		"Send a Dummy Burst on C0 (TRX0) and empty burst on other channels" },
+	{ FILLER_NORM_RAND,	"Send a GMSK modulated Normal Burst with random bits (spectrum mask testing)" },
+	{ FILLER_EDGE_RAND,	"Send an 8-PSK modulated Normal Burst with random bits (spectrum mask testing)" },
+	{ FILLER_ACCESS_RAND,	"Send an Access Burst with random bits (Rx/Tx alignment testing)" },
+	{ 0,			NULL }
+};
+
 
 struct trx_ctx *trx_from_vty(struct vty *v)
 {
@@ -328,19 +337,11 @@ DEFUN(cfg_stack_size, cfg_stack_size_cmd,
 	return CMD_SUCCESS;
 }
 
-DEFUN(cfg_filler, cfg_filler_type_cmd,
-	"filler type (zero|dummy|random-nb-gmsk|random-nb-8psk|random-ab)",
+#define CFG_FILLER_DOC_STR \
 	"Filler burst settings\n"
-	"Filler burst type (default=zero)\n"
-	"Send an empty burst when there is nothing to send (default)\n"
-	"Send a dummy burst when there is nothing to send on C0 (TRX0) and empty burst on other channels.\n"
-	"Send a GMSK modulated Normal Burst with random bits when there is nothing to send."
-	" Use for spectrum mask testing. Configure 'filler tsc' to set training sequence.\n"
-	"Send an 8-PSK modulated Normal Burst with random bits when there is nothing to send."
-	" Use for spectrum mask testing. Configure 'filler tsc' to set training sequence.\n"
-	"Send an Access Burst with random bits when there is nothing to send. Use for Rx/Tx alignment."
-	" Configure 'filler access-burst-delay' to introduce artificial delay.\n"
-)
+
+DEFUN(cfg_filler, cfg_filler_type_cmd,
+      "AUTO-GENERATED", "AUTO-GENERATED")
 {
 	struct trx_ctx *trx = trx_from_vty(vty);
 	// trx->cfg.filler is unsigned, so we need an interim int var to detect errors
@@ -357,7 +358,7 @@ DEFUN(cfg_filler, cfg_filler_type_cmd,
 
 DEFUN(cfg_test_rtsc, cfg_filler_tsc_cmd,
 	"filler tsc <0-7>",
-	"Filler burst settings\n"
+	CFG_FILLER_DOC_STR
 	"Set the TSC for GMSK/8-PSK Normal Burst random fillers. Used only with 'random-nb-gmsk' and"
 	" 'random-nb-8psk' filler types. (default=0)\n"
 	"TSC\n")
@@ -371,7 +372,7 @@ DEFUN(cfg_test_rtsc, cfg_filler_tsc_cmd,
 
 DEFUN(cfg_test_rach_delay, cfg_filler_rach_delay_cmd,
 	"filler access-burst-delay <0-68>",
-	"Filler burst settings\n"
+	CFG_FILLER_DOC_STR
 	"Set the delay for Access Burst random fillers. Used only with 'random-ab' filler type. (default=0)\n"
 	"RACH delay in symbols\n")
 {
@@ -734,6 +735,12 @@ struct trx_ctx *vty_trx_ctx_alloc(void *talloc_ctx)
 
 int trx_vty_init(struct trx_ctx* trx)
 {
+	cfg_filler_type_cmd.string = vty_cmd_string_from_valstr(trx, filler_types,
+		"filler type (", "|", ")", 0);
+	cfg_filler_type_cmd.doc = vty_cmd_string_from_valstr(trx, filler_docs,
+		CFG_FILLER_DOC_STR "What to do when there is nothing to send "
+		"(filler type, default=zero)\n", "\n", "", 0);
+
 	g_trx_ctx = trx;
 	install_element_ve(&show_trx_cmd);
 
