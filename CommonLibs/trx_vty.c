@@ -112,7 +112,7 @@ DEFUN(cfg_trx, cfg_trx_cmd,
 }
 
 DEFUN(cfg_bind_ip, cfg_bind_ip_cmd,
-	"bind-ip A.B.C.D",
+	"bind-ip " VTY_IPV4_CMD,
 	"Set the IP address for the local bind\n"
 	"IPv4 Address\n")
 {
@@ -124,7 +124,7 @@ DEFUN(cfg_bind_ip, cfg_bind_ip_cmd,
 }
 
 DEFUN(cfg_remote_ip, cfg_remote_ip_cmd,
-	"remote-ip A.B.C.D",
+	"remote-ip " VTY_IPV4_CMD,
 	"Set the IP address for the remote BTS\n"
 	"IPv4 Address\n")
 {
