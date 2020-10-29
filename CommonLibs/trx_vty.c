@@ -203,7 +203,8 @@ DEFUN(cfg_clock_ref, cfg_clock_ref_cmd,
 
 DEFUN(cfg_multi_arfcn, cfg_multi_arfcn_cmd,
 	"multi-arfcn (disable|enable)",
-	"Enable multi-ARFCN transceiver (default=disable)\n")
+	"Multi-ARFCN transceiver mode (default=disable)\n"
+	"Enable multi-ARFCN mode\n" "Disable multi-ARFCN mode\n")
 {
 	struct trx_ctx *trx = trx_from_vty(vty);
 
