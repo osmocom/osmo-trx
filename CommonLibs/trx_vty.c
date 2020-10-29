@@ -298,7 +298,9 @@ DEFUN(cfg_egprs, cfg_egprs_cmd,
 
 DEFUN(cfg_ext_rach, cfg_ext_rach_cmd,
 	"ext-rach (disable|enable)",
-	"Enable extended (11-bit) RACH (default=disable)\n")
+	"11-bit Access Burst correlation support (default=disable)\n"
+	"Disable 11-bit Access Burst (TS1 & TS2) correlation\n"
+	"Enable 11-bit Access Burst (TS1 & TS2) correlation\n")
 {
 	struct trx_ctx *trx = trx_from_vty(vty);
 
