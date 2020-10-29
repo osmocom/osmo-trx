@@ -265,7 +265,9 @@ DEFUN(cfg_swap_channels, cfg_swap_channels_cmd,
 
 DEFUN(cfg_egprs, cfg_egprs_cmd,
 	"egprs (disable|enable)",
-	"Enable EDGE receiver (default=disable)\n")
+	"EGPRS (8-PSK demodulation) support (default=disable)\n"
+	"Disable EGPRS (8-PSK demodulation) support\n"
+	"Enable EGPRS (8-PSK demodulation) support\n")
 {
 	struct trx_ctx *trx = trx_from_vty(vty);
 
