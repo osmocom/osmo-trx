@@ -28,13 +28,14 @@ AM_CXXFLAGS = -Wall -pthread
 
 # Order must be preserved
 SUBDIRS = \
-	doc \
 	CommonLibs \
 	GSM \
 	Transceiver52M \
 	contrib \
 	tests \
-	utils
+	utils \
+	doc \
+	$(NULL)
 
 EXTRA_DIST = \
 	LEGAL \
