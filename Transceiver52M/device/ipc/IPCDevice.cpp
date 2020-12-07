@@ -793,7 +793,7 @@ int IPCDevice::open(const std::string &args, int ref, bool swap_channels)
 	INIT_LLIST_HEAD(&master_sk_state.upqueue);
 	rc = osmo_sock_unix_init_ofd(&master_sk_state.conn_bfd, SOCK_SEQPACKET, 0, v.c_str(), OSMO_SOCK_F_CONNECT);
 	if (rc < 0) {
-		LOGC(DDEV, ERROR) << "Failed to connect to the BTS (" << v << "). "
+		LOGC(DDEV, ERROR) << "Failed to connect to the IPC device (" << v << "). "
 				  << "Retrying...\n";
 		osmo_timer_setup(&master_sk_state.timer, ipc_sock_timeout, NULL);
 		osmo_timer_schedule(&master_sk_state.timer, 5, 0);
