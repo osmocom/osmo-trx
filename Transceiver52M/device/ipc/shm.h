@@ -79,8 +79,6 @@ struct ipc_shm_region *ipc_shm_decode_region(void *tall_ctx, struct ipc_shm_raw_
 //////////////////
 // Master socket
 //////////////////
-
-#define IPC_SOCK_PATH_PREFIX "/tmp/ipc_sock"
 #define IPC_SOCK_API_VERSION 1
 
 /* msg_type */
