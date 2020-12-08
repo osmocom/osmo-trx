@@ -68,8 +68,8 @@ static const struct value_string filler_types[] = {
 };
 
 static const struct value_string filler_docs[] = {
-	{ FILLER_ZERO,		"Send an empty burst (default)" },
 	{ FILLER_DUMMY,		"Send a Dummy Burst on C0 (TRX0) and empty burst on other channels" },
+	{ FILLER_ZERO,		"Send an empty burst (default)" },
 	{ FILLER_NORM_RAND,	"Send a GMSK modulated Normal Burst with random bits (spectrum mask testing)" },
 	{ FILLER_EDGE_RAND,	"Send an 8-PSK modulated Normal Burst with random bits (spectrum mask testing)" },
 	{ FILLER_ACCESS_RAND,	"Send an Access Burst with random bits (Rx/Tx alignment testing)" },
