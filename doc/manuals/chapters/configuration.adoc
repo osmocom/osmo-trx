@@ -1,4 +1,4 @@
-== Configuring OsmTRX
+== Configuring OsmoTRX
 
 OsmoTRX will read the configuration at startup time and configure the
 transceiver accordingly after validating the configuration.
