@@ -149,6 +149,16 @@ connect mobile phones to the mobile network.
 between different telecommunication associations for developing new
 generations of mobile phone networks. (post-2G/GSM)
 
+%package ipc-test
+Summary:        SDR transceiver that implements Layer 1 of a GSM BTS (IPC) driver test utility
+Group:          Productivity/Telephony/Servers
+
+%description ipc-test
+OsmoTRX is a software-defined radio transceiver that implements the Layer 1
+physical layer of a BTS comprising the following 3GPP specifications:
+
+This package include the test tools for osmo-trx-ipc
+
 %prep
 %setup -q
 
@@ -234,9 +244,11 @@ make %{?_smp_mflags} check || (find . -name testsuite.log -exec cat {} +)
 
 %files ipc
 %{_bindir}/osmo-trx-ipc
-%{_bindir}/ipc-driver-test
 %dir %{_sysconfdir}/osmocom
 %config(noreplace) %{_sysconfdir}/osmocom/osmo-trx-ipc.cfg
 %{_unitdir}/osmo-trx-ipc.service
+
+%files ipc-test
+%{_bindir}/ipc-driver-test
 
 %changelog
