@@ -89,7 +89,6 @@ CONFIG="--enable-sanitize --enable-werror --with-uhd --with-usrp1 --with-lms --w
 
 # Additional configure options and depends
 if [ "$WITH_MANUALS" = "1" ]; then
-	osmo-build-dep.sh osmo-gsm-manuals
 	CONFIG="$CONFIG --enable-manuals"
 fi
 
