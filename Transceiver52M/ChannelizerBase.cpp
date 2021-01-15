@@ -244,6 +244,7 @@ ChannelizerBase::~ChannelizerBase()
 		free(subFilters[i]);
 		delete[] hist[i];
 	}
+	free(subFilters);
 
 	fft_free(fftInput);
 	fft_free(fftOutput);
