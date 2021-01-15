@@ -70,6 +70,10 @@ void RadioInterfaceMulti::close()
 	channelizer = NULL;
 	synthesis = NULL;
 
+
+	for (std::vector<signalVector*>::iterator it = history.begin(); it != history.end(); ++it)
+		delete *it;
+
 	mReceiveFIFO.resize(0);
 	powerScaling.resize(0);
 	history.resize(0);
