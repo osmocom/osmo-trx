@@ -396,7 +396,7 @@ void Transceiver::addRadioVector(size_t chan, BitVector &bits,
   else
     burst = modulateBurst(bits, 8 + (wTime.TN() % 4 == 0), cfg->tx_sps);
 
-  scaleVector(*burst, txFullScale * pow(10, (double) -RSSI / 10));
+  scaleVector(*burst, txFullScale * pow(10, (double) -RSSI / 20));
 
   radio_burst = new radioVector(wTime, burst);
 
