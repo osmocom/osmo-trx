@@ -34,6 +34,8 @@ AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
+CFLAGS="$CFLAGS -std=gnu11"
+
 dnl Linux kernel KBuild style compile messages
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
