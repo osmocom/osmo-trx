@@ -1792,15 +1792,15 @@ static SoftVector *signalToSoftVector(signalVector *dec)
  * stages.
  */
 static signalVector *demodCommon(const signalVector &burst, int sps,
-                                 complex chan, float toa)
+                                 const struct estim_burst_params *ebp)
 {
   signalVector *delay, *dec;
 
   if ((sps != 1) && (sps != 4))
     return NULL;
 
-  delay = delayVector(&burst, NULL, -toa * (float) sps);
-  scaleVector(*delay, (complex) 1.0 / chan);
+  delay = delayVector(&burst, NULL, -ebp->toa * (float) sps);
+  scaleVector(*delay, (complex) 1.0 / ebp->amp);
 
   if (sps == 1)
     return delay;
@@ -1816,13 +1816,13 @@ static signalVector *demodCommon(const signalVector &burst, int sps,
  * 4 SPS (if activated) to minimize distortion through the fractional
  * delay filters. Symbol rotation and after always operates at 1 SPS.
  */
-static SoftVector *demodGmskBurst(const signalVector &rxBurst,
-                                  int sps, complex channel, float TOA)
+static SoftVector *demodGmskBurst(const signalVector &rxBurst, int sps,
+				  const struct estim_burst_params *ebp)
 {
   SoftVector *bits;
   signalVector *dec;
 
-  dec = demodCommon(rxBurst, sps, channel, TOA);
+  dec = demodCommon(rxBurst, sps, ebp);
   if (!dec)
     return NULL;
 
@@ -1835,6 +1835,27 @@ static SoftVector *demodGmskBurst(const signalVector &rxBurst,
   return bits;
 }
 
+static float computeEdgeCI(const signalVector *rot)
+{
+  float err_pwr = 0.0f;
+  float step = 2.0f * M_PI_F / 8.0f;
+
+  for (size_t i = 8; i < rot->size() - 8; i++) {
+    /* Compute the ideal symbol */
+    complex sym = (*rot)[i];
+    float phase = step * roundf(sym.arg() / step);
+    complex ideal = complex(cos(phase), sin(phase));
+
+    /* Compute the error vector */
+    complex err = ideal - sym;
+
+    /* Accumulate power */
+    err_pwr += err.norm2();
+  }
+
+  return 3.0103f * log2f(1.0f * (rot->size() - 16) / err_pwr);
+}
+
 /*
  * Demodulate an 8-PSK burst. Prior to symbol rotation, operate at
  * 4 SPS (if activated) to minimize distortion through the fractional
@@ -1845,19 +1866,20 @@ static SoftVector *demodGmskBurst(const signalVector &rxBurst,
  * through the fractional delay filters at 1 SPS renders signal
  * nearly unrecoverable.
  */
-static SoftVector *demodEdgeBurst(const signalVector &burst,
-                                  int sps, complex chan, float toa)
+static SoftVector *demodEdgeBurst(const signalVector &burst, int sps,
+                                  struct estim_burst_params *ebp)
 {
   SoftVector *bits;
   signalVector *dec, *rot, *eq;
 
-  dec = demodCommon(burst, sps, chan, toa);
+  dec = demodCommon(burst, sps, ebp);
   if (!dec)
     return NULL;
 
   /* Equalize and derotate */
   eq = convolve(dec, GSMPulse4->c0_inv, NULL, NO_DELAY);
   rot = derotateEdgeBurst(*eq, 1);
+  ebp->ci = computeEdgeCI(rot);
 
   /* Soft slice and normalize */
   bits = softSliceEdgeBurst(*rot);
@@ -1869,13 +1891,13 @@ static SoftVector *demodEdgeBurst(const signalVector &burst,
   return bits;
 }
 
-SoftVector *demodAnyBurst(const signalVector &burst, int sps, complex amp,
-                          float toa, CorrType type)
+SoftVector *demodAnyBurst(const signalVector &burst, CorrType type,
+                          int sps, struct estim_burst_params *ebp)
 {
   if (type == EDGE)
-    return demodEdgeBurst(burst, sps, amp, toa);
+    return demodEdgeBurst(burst, sps, ebp);
   else
-    return demodGmskBurst(burst, sps, amp, toa);
+    return demodGmskBurst(burst, sps, ebp);
 }
 
 bool sigProcLibSetup()

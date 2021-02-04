@@ -134,7 +134,7 @@ int detectAnyBurst(const signalVector &burst,
                    struct estim_burst_params *ebp);
 
 /** Demodulate burst basde on type and output soft bits */
-SoftVector *demodAnyBurst(const signalVector &burst, int sps,
-                          complex amp, float toa, CorrType type);
+SoftVector *demodAnyBurst(const signalVector &burst, CorrType type,
+                          int sps, struct estim_burst_params *ebp);
 
 #endif /* SIGPROCLIB_H */

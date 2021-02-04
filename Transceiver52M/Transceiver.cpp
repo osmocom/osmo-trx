@@ -734,11 +734,10 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
     goto ret_idle;
   }
 
-  type = (CorrType) rc;
+  rxBurst = demodAnyBurst(*burst, (CorrType) rc, cfg->rx_sps, &ebp);
   bi->toa = ebp.toa;
   bi->tsc = ebp.tsc;
   bi->ci = ebp.ci;
-  rxBurst = demodAnyBurst(*burst, cfg->rx_sps, ebp.amp, ebp.toa, type);
 
   /* EDGE demodulator returns 444 (gSlotLen * 3) bits */
   if (rxBurst->size() == EDGE_BURST_NBITS) {
