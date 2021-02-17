@@ -82,15 +82,6 @@ AC_TYPE_SIZE_T
 AC_HEADER_TIME
 AC_C_BIGENDIAN
 
-# Check if gettid is available (despite not being documented in glibc doc, it requires __USE_GNU on some systems)
-# C compiler is used since __USE_GNU seems to be always defined for g++.
-save_CPPFLAGS=$CPPFLAGS
-AC_LANG_PUSH(C)
-CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
-AC_CHECK_FUNCS([gettid])
-AC_LANG_POP(C)
-CPPFLAGS=$save_CPPFLAGS
-
 PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 1.3.0)
 PKG_CHECK_MODULES(LIBOSMOVTY, libosmovty >= 1.3.0)
 PKG_CHECK_MODULES(LIBOSMOCTRL, libosmoctrl >= 1.3.0)

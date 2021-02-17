@@ -32,6 +32,8 @@
 #include "Timeval.h"
 #include "Logger.h"
 
+#include <osmocom/core/thread.h>
+
 using namespace std;
 
 #ifndef HAVE_ATOMIC_OPS
@@ -108,7 +110,7 @@ void Signal::wait(Mutex& wMutex, unsigned timeout) const
 void set_selfthread_name(const char *name)
 {
 	pthread_t selfid = pthread_self();
-	pid_t tid = my_gettid();
+	pid_t tid = osmo_gettid();
 	if (pthread_setname_np(selfid, name) == 0) {
 		LOG(INFO) << "Thread "<< selfid << " (task " << tid << ") set name: " << name;
 	} else {
