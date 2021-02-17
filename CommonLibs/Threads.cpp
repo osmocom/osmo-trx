@@ -32,12 +32,6 @@
 #include "Timeval.h"
 #include "Logger.h"
 
-#ifndef gettid
-#include <sys/syscall.h>
-#define gettid() syscall(SYS_gettid)
-#endif
-
-
 using namespace std;
 
 #ifndef HAVE_ATOMIC_OPS
@@ -114,7 +108,7 @@ void Signal::wait(Mutex& wMutex, unsigned timeout) const
 void set_selfthread_name(const char *name)
 {
 	pthread_t selfid = pthread_self();
-	pid_t tid = gettid();
+	pid_t tid = my_gettid();
 	if (pthread_setname_np(selfid, name) == 0) {
 		LOG(INFO) << "Thread "<< selfid << " (task " << tid << ") set name: " << name;
 	} else {
