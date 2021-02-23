@@ -34,10 +34,10 @@ BuildRequires:  pkgconfig(LimeSuite)
 BuildRequires:  pkgconfig(usrp) >= 3.3
 %endif
 BuildRequires:  pkgconfig(fftw3f)
-BuildRequires:  pkgconfig(libosmocoding) >= 1.3.0
-BuildRequires:  pkgconfig(libosmocore) >= 0.12.0
-BuildRequires:  pkgconfig(libosmoctrl) >= 0.12.0
-BuildRequires:  pkgconfig(libosmovty) >= 0.12.0
+BuildRequires:  pkgconfig(libosmocoding) >= 1.5.0
+BuildRequires:  pkgconfig(libosmocore) >= 1.5.0
+BuildRequires:  pkgconfig(libosmoctrl) >= 1.5.0
+BuildRequires:  pkgconfig(libosmovty) >= 1.5.0
 BuildRequires:  pkgconfig(libusb-1.0)
 BuildRequires:  pkgconfig(uhd)
 %{?systemd_requires}

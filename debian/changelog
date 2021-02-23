@@ -1,3 +1,157 @@
+osmo-trx (1.3.0) unstable; urgency=medium
+
+  [ Pau Espin Pedrol ]
+  * Make logging category DLMS generic and reusable for other backends
+  * uhd: Use DEVDRV log category and support UHD >=3.11 logging framework
+  * uhd: Improve some logging lines printing UHD pretty-print output
+  * doc: clarify number of channels on B210 with multi-arfcn enabled
+  * radioInterfaceMulti: Fail to tune on freq not following multi-arfcn restrictions
+  * doc: Update vty reference xml file
+  * lms: Move initialization of field started to constructor
+  * lms: Drop unused define
+  * smpl_buf: Fix str_code() param and print unknown error val
+  * lms: Improve smpl_buf error logging
+  * lms: Change radioDevice constructor arg name to avoid masking instance attr
+  * lms: Make reference to std::vector unambiguous
+  * lms: Move rx_buffers allocation to constructor
+  * lms: Store device type specific parameters in one place
+  * lms: Make ts_offset and smpl rate coefs device-specific
+  * lms: Initial multi-arfcn support
+  * contrib/jenkins.sh: Reorder sanity checks
+  * debug.h: Avoid printing pthread_t type
+  * debug.h: Fix print format of chan in CLOGCHAN
+  * cosmetic: fix several typos found by codespell
+  * radioDevice: Drop unused RSSI param from readSamples API
+  * radioDevice: Drop unused isControl param from WriteSamples API
+  * Use OSMO_FD_READ instead of deprecated BSC_FD_READ
+  * Transceiver: Fix extra space in RSP NOISELEV error
+  * Transceiver: Implement TRXC cmd NOMTXPOWER
+  * UHDDevice: Implement getNominalTxPower() based on TxFrequency
+  * radioInterface: Operate on real Tx power attenuation rather than on device specific gains
+  * UHDDevice: Compute TxGain on UHD API based on expected Tx output power
+  * proto_trxd: Fix UndefinedBehaviorSanitizer from ubsan
+  * Transceiver: Allow sending negative nominal tx power in RSP NOMTXPOWER
+  * LMSDevice: Compute TxGain on LimeSuite API based on expected Tx output power
+  * Drop old TxGain APIs from parent radioDevice abstract class
+  * {UHD,LMS}Dervice: Log expected resulting TxPower when setting device specific TxGain
+  * cosmetic: trx_rate_ctr: Fix whitespace
+  * trx_rate_ctr: Fix immediate rescheduling on per-sec thresholds
+  * Rename device specific rate counter multi-thread helpers
+  * Introduce rate counter tx_stale_bursts
+  * TransceiverState: Initialize ctrs field in constructor
+  * doc/manuals: Update thread documentation after dropping CTRL sock threads
+  * trx_rate_ctr: Fix locking wrong mutex
+  * Introduce rate counters to detect issues in received Dl bursts from TRXD
+  * Transceiver: Fix race condition obtaining Dl burst from Upper layer
+  * Add rate counter for missing Txbursts when scheduled towards the radioInterface
+  * Transceiver: Provide initial value for TransceiverState::mFiller in constructor
+  * Transceiver: Use already obtained value from Rx msg structure
+  * Transceiver: Restrict conditions where FN gaps are detected
+  * trx_rate_ctr: Lower some log levels
+  * Introduce CTR log category
+  * Transceiver: Lower some log levels which have an associated counter
+  * Transceiver: Check log level before generating burst str representation
+  * Transceiver: Add several rate_ctr for rx error conditions
+  * Use new libosmovty cpu sched config features
+  * debian: Update debian8 osmo-trx specific patch
+  * jenkins.sh: Verify distro-specific patches apply
+  * ipc: fix var declaration in for loop
+  * Add support for TRXC MUTE command
+  * arch: x86: Fix convolve optimizations breaking signal
+  * contrib/jenkins: Enable parallel make in make distcheck
+  * Transceiver: Pass config struct instead of large list of params
+  * Calculate RSSI offset based on RxGain configuration
+  * main: generate coredump and exit upon SIGABRT received
+  * ipc: Fix wrong reference to BTS in log line
+  * ipc-driver-test: Allow setting dir prefix for UD socket
+  * radioInterfaceMulti: Fix memory leak upon close()
+  * ChannelizerBase: Fix memory leak
+  * Threads.cpp: Use already existing gettid wrapper function
+  * Replace my_gettid with libosmocore osmo_gettid API
+  * tests: Explicitly drop category from log
+  * tests: Replace deprecated API log_set_print_filename
+
+  [ Philipp Maier ]
+  * debug: use LOGL_NOTICE for log category DDEV
+  * doc: do not set the base-port of the trx
+  * doc: apply an rssi-offset of 28 by default.
+  * doc: switch log levels to notice
+  * Transceiver: Log when sending of CLK indications begins
+  * vty: add attributes to VTY commands indicating when they apply
+  * osmo-trx: add commandline option --vty-ref-xml
+
+  [ Eric ]
+  * configure.ac: fix libtool issue  with clang and sanitizer
+  * transceiver: check the right vector
+  * transceiver: get rid of the ctrl threads
+  * add kernel style .clang-format with 120 chars per line limit
+  * devices: reset internal smart sample buffers upon stop
+  * transceiver: optimize code if optimizations are enabled
+  * transceiver: initialize reorder flag so we don't miscount
+
+  [ Harald Welte ]
+  * PRBS tool sending PRBS sequence to TRX
+  * prbs-tool: Add error simulation capabilities
+  * utils: Ensure content of this directory is included in 'make dist'
+  * prbs-tool: Don't require C99
+  * RPM spec file: Require uhd-firmware for osmo-trx-uhd
+  * osmo-trx.spec.in: Use %config(noreplace) to retain current config file
+  * Fix build on Debian8
+  * [cosmetic] radioInterfaceMulti: More comments
+  * [cosmetic] radioIntefaceMulti: Fix whitespace / indent
+  * ipc: Use OSMO_FD_* instead of deprecated BSC_FD_*
+  * Use osmo_fd_setup() wherever applicable
+  * Use osmo_fd_*_{disable,enable}
+  * README update
+  * manual: Fix typo OsmTRX -> OsmoTRX
+
+  [ Oliver Smith ]
+  * contrib: import RPM spec
+  * contrib: integrate RPM spec
+  * Makefile.am: EXTRA_DIST: debian, contrib/*.spec.in
+  * contrib/jenkins: don't build osmo-gsm-manuals
+  * configure.ac: set -std=gnu11
+
+  [ Vadim Yanitskiy ]
+  * UHDDevice: catch LookupError/IndexError in set{Rx,Tx}Antenna()
+  * debian/control: change maintainer to the Osmocom team / mailing list
+  * proto_trxd: cosmetic: 'if' is not a function, add space
+  * vty: add multi-ARFCN specific warning for chan N > 0
+  * radioDevice: fix set_antennas(): consider MULTI_ARFCN mode
+  * device/lms: fix: 'trx_vty.h' header requires C linkage
+  * device/lms: fix missing semicolon in LMSDevice::assign_band_desc()
+  * device/lms: get rid of 'using namespace std'
+  * device/common/Makefile.am: remove $(LMS_CFLAGS) from AM_CXXFLAGS
+  * main: add --vty-ref-mode, use vty_dump_xml_ref_mode()
+  * device: drop unreasonable LIBOSMO{CTRL,VTY}_{CFLAGS,LIBS}
+  * Transceiver: use size_t and ARRAY_SIZE() in constructor
+  * Transceiver: explicitly init m{Rx,Tx}LowerLoopThread
+  * vty: fix documentation for 'swap-channels (disable|enable)'
+  * vty: fix documentation for 'egprs (disable|enable)'
+  * vty: fix documentation for 'rx-sps (1|4)' and 'tx-sps (1|4)'
+  * vty: cosmetic: use VTY_IPV4_CMD in 'bind-ip' / 'remote-ip'
+  * vty: fix documentation for 'multi-arfcn (disable|enable)'
+  * vty: remove groundless statement about filler type 'dummy'
+  * vty: auto-generate cmd and doc strings for cfg_filler_type_cmd
+  * vty: fix documentation for 'ext-rach (disable|enable)'
+  * main: use logging API to print SIMD info instead of printf()
+  * doc/manuals: generate XML VTY reference at build-time
+  * vty: fix swapped documentation for 'filler type' command
+  * Transceiver: fix integer division in addRadioVector()
+  * Transceiver: use proper factor for amplitude scaling
+  * Add a (hidden) VTY parameter for Rx/Tx freq. shifting
+
+  [ Eric Wild ]
+  * osmo-trx-ipc
+
+  [ Alexander Couzens ]
+  * osmo-trx.spec: move ipc-driver-test into package ipc-test
+
+  [ Sylvain Munaut ]
+  * sigProcLib: fix C/I computation for 8-PSK modulated bursts
+
+ -- Pau Espin Pedrol <pespin@espeweb.net>  Tue, 23 Feb 2021 14:27:15 +0100
+
 osmo-trx (1.2.0) unstable; urgency=medium
 
   [ Pau Espin Pedrol ]
