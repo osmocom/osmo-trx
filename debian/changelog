@@ -1,3 +1,9 @@
+osmo-trx (1.3.1) unstable; urgency=medium
+
+  * mark uhddev_ipc.cpp as BUILT_SOURCES
+
+ -- Harald Welte <laforge@osmocom.org>  Sun, 28 Feb 2021 11:32:11 +0100
+
 osmo-trx (1.3.0) unstable; urgency=medium
 
   [ Pau Espin Pedrol ]
