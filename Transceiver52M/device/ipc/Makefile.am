@@ -17,14 +17,15 @@ libdevice_la_SOURCES = IPCDevice.cpp shm.c ipc_shm.c ipc_chan.c ipc_sock.c
 libdevice_la_LIBADD = $(top_builddir)/Transceiver52M/device/common/libdevice_common.la
 libdevice_la_CXXFLAGS = $(AM_CXXFLAGS) -DIPCMAGIC
 
-if DEVICE_UHD
-
 #work around distclean issue on older autotools vers:
 #a direct build of ../uhd/UHDDevice.cpp tries to clean
 #../uhd/.dep/UHDDevice.Plo twice and fails
 uhddev_ipc.cpp:
 	echo "#include \"../uhd/UHDDevice.cpp\"" >$@
 CLEANFILES= uhddev_ipc.cpp
+BUILT_SOURCES = uhddev_ipc.cpp
+
+if DEVICE_UHD
 
 bin_PROGRAMS = ipc-driver-test
 #ipc_driver_test_SHORTNAME = drvt
