@@ -50,19 +50,19 @@ extern "C" {
 #endif
 
 #define LOG(level) \
-	Log(DMAIN, LOGL_##level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "] "
+	Log(DMAIN, LOGL_##level, __BASE_FILE__, __LINE__).get()
 
 #define LOGC(category, level) \
-	Log(category, LOGL_##level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "] "
+	Log(category, LOGL_##level, __BASE_FILE__, __LINE__).get()
 
 #define LOGLV(category, level) \
-	Log(category, level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "] "
+	Log(category, level, __BASE_FILE__, __LINE__).get()
 
 #define LOGSRC(category, level, file, line) \
-	Log(category, level, file, line).get() <<  "[tid=" << pthread_self() << "] "
+	Log(category, level, file, line).get()
 
 #define LOGCHAN(chan, category, level) \
-	Log(category, LOGL_##level, __BASE_FILE__, __LINE__).get() <<  "[tid=" << pthread_self() << "][chan=" << chan << "] "
+	Log(category, LOGL_##level, __BASE_FILE__, __LINE__).get() <<  "[chan=" << chan << "] "
 
 /**
 	A C++ stream-based thread-safe logger.
