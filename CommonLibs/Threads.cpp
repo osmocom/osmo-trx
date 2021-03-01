@@ -32,7 +32,9 @@
 #include "Timeval.h"
 #include "Logger.h"
 
+extern "C" {
 #include <osmocom/core/thread.h>
+}
 
 using namespace std;
 
