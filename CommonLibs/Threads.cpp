@@ -49,7 +49,7 @@ void lockCout()
 {
 	gStreamLock.lock();
 	Timeval entryTime;
-	cout << entryTime << " " << pthread_self() << ": ";
+	cout << entryTime << " " << osmo_gettid() << ": ";
 }
 
 
@@ -64,7 +64,7 @@ void lockCerr()
 {
 	gStreamLock.lock();
 	Timeval entryTime;
-	cerr << entryTime << " " << pthread_self() << ": ";
+	cerr << entryTime << " " << osmo_gettid() << ": ";
 }
 
 void unlockCerr()
