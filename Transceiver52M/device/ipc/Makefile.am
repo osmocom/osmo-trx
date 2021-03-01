@@ -32,11 +32,12 @@ bin_PROGRAMS = ipc-driver-test
 ipc_driver_test_SOURCES = ipc-driver-test.c uhdwrap.cpp ipc_shm.c ipc_chan.c ipc_sock.c uhddev_ipc.cpp
 ipc_driver_test_LDADD = \
         shm.lo \
+	$(top_builddir)/Transceiver52M/device/common/libdevice_common.la \
+	$(COMMON_LA)
 	$(LIBOSMOCORE_LIBS) \
 	$(NULL)
 ipc_driver_test_CXXFLAGS = $(AM_CXXFLAGS) $(UHD_CFLAGS)
 ipc_driver_test_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
 ipc_driver_test_CFLAGS  = $(AM_CFLAGS) $(UHD_CFLAGS)
 ipc_driver_test_LDFLAGS  = $(AM_LDFLAGS) $(UHD_LIBS)
-ipc_driver_test_LDADD += $(top_builddir)/Transceiver52M/device/common/libdevice_common.la $(top_builddir)/CommonLibs/libcommon.la
 endif
