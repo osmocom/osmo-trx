@@ -67,7 +67,6 @@ doc/manuals/generated/
 doc/manuals/vty/osmotrx-*-vty-reference.xml
 doc/manuals/vty/osmotrx-*-vty-reference.xml.inc.gen
 doc/manuals/vty/osmotrx-*-vty-reference.xml.inc.merged
-doc/manuals/osmomsc-usermanual.xml
 doc/manuals/common
 doc/manuals/build
 
