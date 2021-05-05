@@ -271,6 +271,20 @@ DEFUN(cfg_rssi_offset, cfg_rssi_offset_cmd,
 	return CMD_SUCCESS;
 }
 
+
+DEFUN_ATTR(cfg_ul_fn_offset, cfg_ul_fn_offset_cmd,
+	"ul-fn-offset <-10-10>",
+	"Adjusts the uplink frame FN by the specified amount\n"
+	"Frame Number offset\n",
+	CMD_ATTR_HIDDEN)
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.ul_fn_offset = atoi(argv[0]);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_swap_channels, cfg_swap_channels_cmd,
 	"swap-channels (disable|enable)",
 	"Swap primary and secondary channels of the PHY (if any)\n"
@@ -624,6 +638,8 @@ static int config_write_trx(struct vty *vty)
 		vty_out(vty, " filler access-burst-delay %u%s", trx->cfg.rach_delay, VTY_NEWLINE);
 	if (trx->cfg.stack_size != 0)
 		vty_out(vty, " stack-size %u%s", trx->cfg.stack_size, VTY_NEWLINE);
+	if (trx->cfg.ul_fn_offset != 0)
+		vty_out(vty, " ul-fn-offset %u%s", trx->cfg.ul_fn_offset, VTY_NEWLINE);
 	trx_rate_ctr_threshold_write_config(vty, " ");
 
 	for (i = 0; i < trx->cfg.num_chans; i++) {
@@ -787,6 +803,7 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_stack_size_cmd);
 
 	install_element(TRX_NODE, &cfg_chan_cmd);
+	install_element(TRX_NODE, &cfg_ul_fn_offset_cmd);
 	install_node(&chan_node, dummy_config_write);
 	install_element(CHAN_NODE, &cfg_chan_rx_path_cmd);
 	install_element(CHAN_NODE, &cfg_chan_tx_path_cmd);

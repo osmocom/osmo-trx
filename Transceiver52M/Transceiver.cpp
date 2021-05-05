@@ -649,7 +649,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   }
 
   /* Set time and determine correlation type */
-  burstTime = radio_burst->getTime();
+  burstTime = radio_burst->getTime() + cfg->ul_fn_offset;
   CorrType type = expectedCorrType(burstTime, chan);
 
   /* Initialize struct bi */

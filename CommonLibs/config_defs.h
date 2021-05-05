@@ -48,6 +48,7 @@ struct trx_cfg {
 	double offset;
 	double freq_offset_khz;
 	double rssi_offset;
+	int ul_fn_offset;
 	bool force_rssi_offset; /* Force value set in VTY? */
 	bool swap_channels;
 	bool ext_rach;
