@@ -1003,7 +1003,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     LOGCHAN(chan, DTRXCTRL, INFO) << "BTS requests TRXD version switch: " << version_recv;
     if (version_recv > TRX_DATA_FORMAT_VER) {
       LOGCHAN(chan, DTRXCTRL, INFO) << "rejecting TRXD version " << version_recv
-                                    << "in favor of " <<  TRX_DATA_FORMAT_VER;
+                                    << " in favor of " <<  TRX_DATA_FORMAT_VER;
       sprintf(response, "RSP SETFORMAT %u %u", TRX_DATA_FORMAT_VER, version_recv);
     } else {
       LOGCHAN(chan, DTRXCTRL, NOTICE) << "switching to TRXD version " << version_recv;
