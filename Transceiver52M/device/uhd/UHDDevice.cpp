@@ -548,6 +548,7 @@ void uhd_device::set_channels(bool swap)
 int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 {
 	const char *refstr;
+	int clock_lock_attempts = 15;
 
 	/* Register msg handler. Different APIs depending on UHD version */
 #ifdef USE_UHD_3_11
@@ -619,6 +620,19 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	}
 
 	usrp_dev->set_clock_source(refstr);
+
+	std::vector<std::string> sensor_names = usrp_dev->get_mboard_sensor_names();
+	if (std::find(sensor_names.begin(), sensor_names.end(), "ref_locked") != sensor_names.end()) {
+		LOGC(DDEV, INFO) << "Waiting for clock reference lock (max " << clock_lock_attempts << "s)..." << std::flush;
+		while (!usrp_dev->get_mboard_sensor("ref_locked", 0).to_bool() && clock_lock_attempts--)
+			sleep(1);
+
+		if (!clock_lock_attempts) {
+			LOGC(DDEV, ALERT) << "Locking to external 10Mhz failed!";
+			return -1;
+		}
+	}
+	LOGC(DDEV, INFO) << "Selected clock source is " << usrp_dev->get_clock_source(0);
 
 	try {
 		set_rates();
