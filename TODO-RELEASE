@@ -1,0 +1,1 @@
+libosmocore > 1.5.1  require APIs osmo_stat_item_group_get_item, rate_ctr_group_get_ctr
