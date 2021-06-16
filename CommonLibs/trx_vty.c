@@ -639,7 +639,7 @@ static int config_write_trx(struct vty *vty)
 	if (trx->cfg.stack_size != 0)
 		vty_out(vty, " stack-size %u%s", trx->cfg.stack_size, VTY_NEWLINE);
 	if (trx->cfg.ul_fn_offset != 0)
-		vty_out(vty, " ul-fn-offset %u%s", trx->cfg.ul_fn_offset, VTY_NEWLINE);
+		vty_out(vty, " ul-fn-offset %d%s", trx->cfg.ul_fn_offset, VTY_NEWLINE);
 	trx_rate_ctr_threshold_write_config(vty, " ");
 
 	for (i = 0; i < trx->cfg.num_chans; i++) {
