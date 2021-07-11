@@ -1019,12 +1019,14 @@ bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 		return false;
 	}
 
+	if (!set_band(req_band))
+		return false;
+
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_TX, chan, wFreq) < 0) {
 		LOGCHAN(chan, DDEV, ERROR) << "Error setting Tx Freq to " << wFreq << " Hz";
 		return false;
 	}
 
-	band = req_band;
 	return true;
 }
 
