@@ -1466,10 +1466,8 @@ static float computeCI(const signalVector *burst, const CorrelationSequence *syn
 {
   const int N = sync->sequence->size();
   float S, C;
-  int ps;
-
   /* Integer position where the sequence starts */
-  ps = start + 1 - N + (int)roundf(toa);
+  const int ps = start + 1 - N + (int)roundf(toa);
 
   /* Estimate Signal power */
   S = 0.0f;
