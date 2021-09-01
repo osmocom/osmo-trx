@@ -1461,7 +1461,7 @@ static signalVector *downsampleBurst(const signalVector &burst)
  * It is computed from the training sequence of each received burst,
  * by comparing the "ideal" training sequence with the actual one.
  */
-static float computeCI(const signalVector *burst, CorrelationSequence *sync,
+static float computeCI(const signalVector *burst, const CorrelationSequence *sync,
                        float toa, int start, complex xcorr)
 {
   float S, C;
@@ -1492,7 +1492,7 @@ static float computeCI(const signalVector *burst, CorrelationSequence *sync,
  * and we run full interpolating peak detection.
  */
 static int detectBurst(const signalVector &burst,
-                       signalVector &corr, CorrelationSequence *sync,
+                       signalVector &corr, const CorrelationSequence *sync,
                        float thresh, int sps, int start, int len,
                        struct estim_burst_params *ebp)
 {
