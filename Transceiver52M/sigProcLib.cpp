@@ -1589,7 +1589,7 @@ static int detectGeneralBurst(const signalVector &rxBurst, float thresh, int sps
   // and only report clipping if we can't demod.
   float maxAmpl = maxAmplitude(rxBurst);
   if (maxAmpl > CLIP_THRESH) {
-    LOG(DEBUG) << "max burst amplitude: " << maxAmpl << " is above the clipping threshold: " << CLIP_THRESH << std::endl;
+    LOG(INFO) << "max burst amplitude: " << maxAmpl << " is above the clipping threshold: " << CLIP_THRESH << std::endl;
     clipping = true;
   }
 
