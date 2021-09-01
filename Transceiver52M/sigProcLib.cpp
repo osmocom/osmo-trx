@@ -34,6 +34,7 @@
 #include "Resampler.h"
 
 extern "C" {
+#include <osmocom/core/panic.h>
 #include "convolve.h"
 #include "scale.h"
 #include "mult.h"
@@ -1500,12 +1501,18 @@ static int detectBurst(const signalVector &burst,
   complex xcorr;
   int rc = 1;
 
-  if (sps == 4) {
-    dec = downsampleBurst(burst);
-    corr_in = dec;
-    sps = 1;
-  } else {
+  switch (sps) {
+  case 1:
     corr_in = &burst;
+    break;
+  case 4:
+    dec = downsampleBurst(burst);
+     /* Running at the downsampled rate at this point: */
+     corr_in = dec;
+     sps = 1;
+     break;
+  default:
+     osmo_panic("%s:%d SPS %d not supported! Only 1 or 4 supported", __FILE__, __LINE__, sps);
   }
 
   /* Correlate */
@@ -1514,9 +1521,6 @@ static int detectBurst(const signalVector &burst,
     rc = -1;
     goto del_ret;
   }
-
-  /* Running at the downsampled rate at this point */
-  sps = 1;
 
   /* Peak detection - place restrictions at correlation edges */
   ebp->amp = fastPeakDetect(corr, &ebp->toa);
