@@ -1462,7 +1462,7 @@ static signalVector *downsampleBurst(const signalVector &burst)
  * by comparing the "ideal" training sequence with the actual one.
  */
 static float computeCI(const signalVector *burst, const CorrelationSequence *sync,
-                       float toa, int start, complex xcorr)
+                       float toa, int start, const complex &xcorr)
 {
   float S, C;
   int ps;
