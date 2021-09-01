@@ -1464,20 +1464,21 @@ static signalVector *downsampleBurst(const signalVector &burst)
 static float computeCI(const signalVector *burst, const CorrelationSequence *sync,
                        float toa, int start, const complex &xcorr)
 {
+  const int N = sync->sequence->size();
   float S, C;
   int ps;
 
   /* Integer position where the sequence starts */
-  ps = start + 1 - sync->sequence->size() + (int)roundf(toa);
+  ps = start + 1 - N + (int)roundf(toa);
 
   /* Estimate Signal power */
   S = 0.0f;
-  for (int i=0, j=ps; i<(int)sync->sequence->size(); i++,j++)
+  for (int i=0, j=ps; i<(int)N; i++,j++)
     S += (*burst)[j].norm2();
-  S /= sync->sequence->size();
+  S /= N;
 
   /* Esimate Carrier power */
-  C = xcorr.norm2() / ((sync->sequence->size() - 1) * sync->gain.abs());
+  C = xcorr.norm2() / ((N - 1) * sync->gain.abs());
 
   /* Interference = Signal - Carrier, so C/I = C / (S - C) */
   return 3.0103f * log2f(C / (S - C));
