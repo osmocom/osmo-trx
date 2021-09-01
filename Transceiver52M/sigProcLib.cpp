@@ -1865,7 +1865,7 @@ static float computeEdgeCI(const signalVector *rot)
  * delay filters. Symbol rotation and after always operates at 1 SPS.
  *
  * Allow 1 SPS demodulation here, but note that other parts of the
- * transceiver restrict EDGE operatoin to 4 SPS - 8-PSK distortion
+ * transceiver restrict EDGE operation to 4 SPS - 8-PSK distortion
  * through the fractional delay filters at 1 SPS renders signal
  * nearly unrecoverable.
  */
