@@ -1478,7 +1478,13 @@ static float computeCI(const signalVector *burst, const CorrelationSequence *syn
   /* Esimate Carrier power */
   C = xcorr.norm2() / ((N - 1) * sync->gain.abs());
 
-  /* Interference = Signal - Carrier, so C/I = C / (S - C) */
+  /* Interference = Signal - Carrier, so C/I = C / (S - C).
+   * Calculated in dB:
+   * C/I_dB = 10 * log10(C/I)
+   * C/I_dB = 10 * (1/log2(10)) * log2(C/I)
+   * C/I_dB = 10 * 0.30103 * log2(C/I)
+   * C/I_dB = 3.0103 * log2(C/I)
+   */
   return 3.0103f * log2f(C / (S - C));
 }
 
