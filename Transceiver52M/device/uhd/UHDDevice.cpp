@@ -264,8 +264,10 @@ bool uhd_device::set_band(enum gsm_band req_band)
 		return false;
 	}
 
-	band = req_band;
-	assign_band_desc(band);
+	if (band == 0) {
+		band = req_band;
+		assign_band_desc(band);
+	}
 	return true;
 }
 
