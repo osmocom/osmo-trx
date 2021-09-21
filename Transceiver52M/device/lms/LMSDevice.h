@@ -87,6 +87,7 @@ private:
 	TIMESTAMP ts_initial, ts_offset;
 
 	std::vector<double> tx_gains, rx_gains;
+	bool band_ass_curr_sess; /* true if  "band" was set after last POWEROFF */
 	enum gsm_band band;
 	struct dev_band_desc band_desc;
 

@@ -225,7 +225,7 @@ uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
 		       const std::vector<std::string>& tx_paths,
 		       const std::vector<std::string>& rx_paths)
 	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
-	  rx_gain_min(0.0), rx_gain_max(0.0),
+	  rx_gain_min(0.0), rx_gain_max(0.0), band_ass_curr_sess(false),
 	  band((enum gsm_band)0), tx_spp(0), rx_spp(0),
 	  started(false), aligned(false), drop_cnt(0),
 	  prev_ts(0,0), ts_initial(0), ts_offset(0), async_event_thrd(NULL)
@@ -258,16 +258,17 @@ void uhd_device::assign_band_desc(enum gsm_band req_band)
 
 bool uhd_device::set_band(enum gsm_band req_band)
 {
-	if (band != 0 && req_band != band) {
+	if (band_ass_curr_sess && req_band != band) {
 		LOGC(DDEV, ALERT) << "Requesting band " << gsm_band_name(req_band)
 				  << " different from previous band " << gsm_band_name(band);
 		return false;
 	}
 
-	if (band == 0) {
+	if (req_band != band) {
 		band = req_band;
 		assign_band_desc(band);
 	}
+	band_ass_curr_sess = true;
 	return true;
 }
 
@@ -794,6 +795,8 @@ bool uhd_device::stop()
 	/* reset internal buffer timestamps */
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		rx_buffers[i]->reset();
+
+	band_ass_curr_sess = false;
 
 	started = false;
 	return true;

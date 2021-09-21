@@ -134,8 +134,9 @@ static enum lms_dev_type parse_dev_type(lms_device_t *m_lms_dev)
 LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
 		     const std::vector<std::string>& tx_paths,
 		     const std::vector<std::string>& rx_paths):
-	RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
-	m_lms_dev(NULL), started(false), band((enum gsm_band)0), m_dev_type(LMS_DEV_UNKNOWN)
+		     RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
+		     m_lms_dev(NULL), started(false), band_ass_curr_sess(false), band((enum gsm_band)0),
+		     m_dev_type(LMS_DEV_UNKNOWN)
 {
 	LOGC(DDEV, INFO) << "creating LMS device...";
 
@@ -240,16 +241,17 @@ void LMSDevice::assign_band_desc(enum gsm_band req_band)
 
 bool LMSDevice::set_band(enum gsm_band req_band)
 {
-	if (band != 0 && req_band != band) {
+	if (band_ass_curr_sess && req_band != band) {
 		LOGC(DDEV, ALERT) << "Requesting band " << gsm_band_name(req_band)
 				  << " different from previous band " << gsm_band_name(band);
 		return false;
 	}
 
-	if (band == 0) {
+	if (req_band != band) {
 		band = req_band;
 		assign_band_desc(band);
 	}
+	band_ass_curr_sess = true;
 	return true;
 }
 
@@ -465,6 +467,8 @@ bool LMSDevice::stop()
 		LMS_DestroyStream(m_lms_dev, &m_lms_stream_tx[i]);
 		LMS_DestroyStream(m_lms_dev, &m_lms_stream_rx[i]);
 	}
+
+	band_ass_curr_sess = false;
 
 	started = false;
 	return true;

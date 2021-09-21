@@ -160,6 +160,7 @@ protected:
 
 	std::vector<double> tx_gains, rx_gains;
 	std::vector<double> tx_freqs, rx_freqs;
+	bool band_ass_curr_sess; /* true if  "band" was set after last POWEROFF */
 	enum gsm_band band;
 	struct dev_band_desc band_desc;
 	size_t tx_spp, rx_spp;
