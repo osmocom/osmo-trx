@@ -1102,11 +1102,28 @@ bool uhd_device::setTxFreq(double wFreq, size_t chan)
 
 bool uhd_device::setRxFreq(double wFreq, size_t chan)
 {
+	uint16_t req_arfcn;
+	enum gsm_band req_band;
+
 	if (chan >= rx_freqs.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 	ScopedLock lock(tune_lock);
+
+	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100, 1);
+	if (req_arfcn == 0xffff) {
+		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Rx Frequency " << wFreq / 1000 << " kHz";
+		return false;
+	}
+	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
+		LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Rx Frequency " << wFreq
+					   << " Hz (ARFCN " << req_arfcn << " )";
+		return false;
+	}
+
+	if (!set_band(req_band))
+		return false;
 
 	return set_freq(wFreq, chan, false);
 }

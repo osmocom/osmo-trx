@@ -1026,7 +1026,24 @@ bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 
 bool LMSDevice::setRxFreq(double wFreq, size_t chan)
 {
+	uint16_t req_arfcn;
+	enum gsm_band req_band;
+
 	LOGCHAN(chan, DDEV, NOTICE) << "Setting Rx Freq to " << wFreq << " Hz";
+
+	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100, 1);
+	if (req_arfcn == 0xffff) {
+		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Rx Frequency " << wFreq / 1000 << " kHz";
+		return false;
+	}
+	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
+		LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Rx Frequency " << wFreq
+					   << " Hz (ARFCN " << req_arfcn << " )";
+		return false;
+	}
+
+	if (!set_band(req_band))
+		return false;
 
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_RX, chan, wFreq) < 0) {
 		LOGCHAN(chan, DDEV, ERROR) << "Error setting Rx Freq to " << wFreq << " Hz";
