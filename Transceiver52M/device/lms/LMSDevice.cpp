@@ -1013,12 +1013,6 @@ bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 		return false;
 	}
 
-	if (band != 0 && req_band != band) {
-		LOGCHAN(chan, DDEV, ALERT) << "Requesting Tx Frequency " << wFreq
-					   << " Hz different from previous band " << gsm_band_name(band);
-		return false;
-	}
-
 	if (!set_band(req_band))
 		return false;
 
