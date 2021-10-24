@@ -277,11 +277,12 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 
 	LMS_RegisterLogHandler(&lms_log_callback);
 
-	if ((n = LMS_GetDeviceList(NULL)) < 0)
+	if ((rc = LMS_GetDeviceList(NULL)) < 0)
 		LOGC(DDEV, ERROR) << "LMS_GetDeviceList(NULL) failed";
-	LOGC(DDEV, INFO) << "Devices found: " << n;
-	if (n < 1)
+	LOGC(DDEV, INFO) << "Devices found: " << rc;
+	if (rc < 1)
 	    return -1;
+	n = rc;
 
 	info_list = new lms_info_str_t[n];
 
