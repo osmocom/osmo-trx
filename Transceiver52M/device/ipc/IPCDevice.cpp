@@ -839,6 +839,7 @@ void IPCDevice::manually_poll_sock_fds()
 {
 	struct timeval wait = { 0, 100000 };
 	fd_set crfds, cwfds;
+	char err_buf[256];
 	int max_fd = 0;
 
 	FD_ZERO(&crfds);
@@ -853,7 +854,11 @@ void IPCDevice::manually_poll_sock_fds()
 			FD_SET(curr_fd->fd, &cwfds);
 	}
 
-	select(max_fd + 1, &crfds, &cwfds, 0, &wait);
+	if (select(max_fd + 1, &crfds, &cwfds, 0, &wait) < 0) {
+		LOGP(DDEV, LOGL_ERROR, "select() failed: %s\n",
+		     strerror_r(errno, err_buf, sizeof(err_buf)));
+		return;
+	}
 
 	for (unsigned int i = 0; i < chans; i++) {
 		int flags = 0;
