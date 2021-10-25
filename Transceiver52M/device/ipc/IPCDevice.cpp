@@ -100,12 +100,14 @@ IPCDevice::~IPCDevice()
 int IPCDevice::ipc_shm_connect(const char *shm_name)
 {
 	int fd;
+	char err_buf[256];
 	size_t shm_len;
 	int rc;
 
 	LOGP(DDEV, LOGL_NOTICE, "Opening shm path %s\n", shm_name);
 	if ((fd = shm_open(shm_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)) < 0) {
-		LOGP(DDEV, LOGL_ERROR, "shm_open %d: %s\n", errno, strerror(errno));
+		LOGP(DDEV, LOGL_ERROR, "shm_open %d: %s\n", errno,
+		     strerror_r(errno, err_buf, sizeof(err_buf)));
 		rc = -errno;
 		goto err_shm_open;
 	}
@@ -113,7 +115,8 @@ int IPCDevice::ipc_shm_connect(const char *shm_name)
 	// Get size of the allocated memory
 	struct stat shm_stat;
 	if (fstat(fd, &shm_stat) < 0) {
-		LOGP(DDEV, LOGL_ERROR, "fstat %d: %s\n", errno, strerror(errno));
+		LOGP(DDEV, LOGL_ERROR, "fstat %d: %s\n", errno,
+		     strerror_r(errno, err_buf, sizeof(err_buf)));
 		rc = -errno;
 		goto err_mmap;
 	}
@@ -122,7 +125,8 @@ int IPCDevice::ipc_shm_connect(const char *shm_name)
 
 	LOGP(DDEV, LOGL_NOTICE, "mmaping shared memory fd %d (size=%zu)\n", fd, shm_len);
 	if ((shm = mmap(NULL, shm_len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) {
-		LOGP(DDEV, LOGL_ERROR, "mmap %d: %s\n", errno, strerror(errno));
+		LOGP(DDEV, LOGL_ERROR, "mmap %d: %s\n", errno,
+		     strerror_r(errno, err_buf, sizeof(err_buf)));
 		rc = -errno;
 		goto err_mmap;
 	}
