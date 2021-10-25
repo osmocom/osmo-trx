@@ -214,6 +214,7 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 	struct timespec next_sched = {.tv_sec = 0, .tv_nsec = 20*1000*1000};
 	/* no automatic re-trigger */
 	struct timespec intv_sched = {.tv_sec = 0, .tv_nsec = 0};
+	char err_buf[256];
 
 	switch (signal) {
 	case S_DEVICE_COUNTER_CHANGE:
@@ -222,7 +223,8 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 		dev_rate_ctr_mutex.lock();
 		dev_ctrs_pending[dev_ctr->chan] = *dev_ctr;
 		if (osmo_timerfd_schedule(&dev_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
-			LOGC(DCTR, ERROR) << "Failed to schedule timerfd: " << errno << " = "<< strerror(errno);
+			LOGC(DCTR, ERROR) << "Failed to schedule timerfd: " << errno
+					  << " = "<< strerror_r(errno, err_buf, sizeof(err_buf));
 		}
 		dev_rate_ctr_mutex.unlock();
 		break;
@@ -232,7 +234,8 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 		trx_rate_ctr_mutex.lock();
 		trx_ctrs_pending[trx_ctr->chan] = *trx_ctr;
 		if (osmo_timerfd_schedule(&trx_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
-			LOGC(DCTR, ERROR) << "Failed to schedule timerfd: " << errno << " = "<< strerror(errno);
+			LOGC(DCTR, ERROR) << "Failed to schedule timerfd: " << errno
+					  << " = "<< strerror_r(errno, err_buf, sizeof(err_buf));
 		}
 		trx_rate_ctr_mutex.unlock();
 		break;
