@@ -1,3 +1,43 @@
+osmo-trx (1.4.0) unstable; urgency=medium
+
+  [ Pau Espin Pedrol ]
+  * Threads.cpp: Fix missing extern C around libosmocore include
+  * Drop logging pthread ID
+  * Threads: Avoid printing pthread_self()
+  * ipc: Makefile.am: Clean LDADD variable
+  * Use new stat item/ctr getter APIs
+  * detectBurst(): Clear downsampling code path
+  * detectBurst(): constify parameter
+  * computeCI(): Constify param and pass it as reference
+  * computeCI(): Rename verbose repeated getter to constant
+  * computeCI(): Constify read-only variable
+  * detectGeneralBurst(): Increase log level about clipping to INFO
+  * cosmetic: Fix typo in comment
+  * computeCI: Document hardcoded multiplier
+  * lms: Drop duplicated check
+  * lms,uhd: Validate band of RxFreq too
+  * lms,uhd: Skip re-assigning same band
+  * lms,uhd: Allow changing band between poweroff & poweron
+
+  [ Vadim Yanitskiy ]
+  * gitignore: remove non-existing 'doc/manuals/osmomsc-usermanual.xml'
+  * ctrl_sock_handle_rx(): fix missing space in LOGCHAN() statement
+  * trx_rate_ctr: use thread safe strerror() in device_sig_cb()
+  * IPCDevice: use thread safe strerror_r() instead of strerror()
+  * IPCDevice: check value returned from select()
+  * LMSDevice: LMS_GetDeviceList() may return a negative number
+
+  [ Eric ]
+  * add hidden fn adjustment command
+  * uhd: ensure configured clock source is actually used
+  * vty: printing fn offset should be signed
+  * lms: init band
+
+  [ Oliver Smith ]
+  * d/patches/build-for-debian8.patch: remove
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Tue, 16 Nov 2021 16:27:26 +0100
+
 osmo-trx (1.3.1) unstable; urgency=medium
 
   * mark uhddev_ipc.cpp as BUILT_SOURCES
