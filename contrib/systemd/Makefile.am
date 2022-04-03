@@ -23,5 +23,9 @@ if DEVICE_IPC
 SYSTEMD_SERVICES += osmo-trx-ipc.service
 endif
 
+if DEVICE_XTRX
+SYSTEMD_SERVICES += osmo-trx-xtrx.service
+endif
+
 systemdsystemunit_DATA = $(SYSTEMD_SERVICES)
 endif # HAVE_SYSTEMD

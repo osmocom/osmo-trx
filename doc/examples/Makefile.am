@@ -18,6 +18,10 @@ if DEVICE_IPC
 OSMOCONF_FILES += osmo-trx-ipc/osmo-trx-ipc.cfg
 endif
 
+if DEVICE_XTRX
+OSMOCONF_FILES += osmo-trx-xtrx/osmo-trx-xtrx.cfg
+endif
+
 osmoconf_DATA = $(OSMOCONF_FILES)
 EXTRA_DIST = $(OSMOCONF_FILES)
 

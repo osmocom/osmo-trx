@@ -114,3 +114,12 @@ osmo_trx_ipc_LDADD = \
 osmo_trx_ipc_CPPFLAGS  = $(AM_CPPFLAGS)
 endif
 
+if DEVICE_XTRX
+bin_PROGRAMS += osmo-trx-xtrx
+osmo_trx_xtrx_SOURCES = osmo-trx.cpp
+osmo_trx_xtrx_LDADD = \
+	$(builddir)/device/xtrx/libdevice.la \
+	$(COMMON_LDADD) \
+	$(XTRX_LIBS)
+osmo_trx_xtrx_CPPFLAGS  = $(AM_CPPFLAGS) $(XTRX_CFLAGS)
+endif
