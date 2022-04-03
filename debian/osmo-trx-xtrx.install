@@ -1,0 +1,4 @@
+etc/osmocom/osmo-trx-xtrx.cfg
+lib/systemd/system/osmo-trx-xtrx.service
+/usr/bin/osmo-trx-xtrx
+/usr/share/doc/osmo-trx/examples/osmo-trx-xtrx/osmo-trx-xtrx.cfg /usr/share/doc/osmo-trx/examples/osmo-trx-xtrx/
