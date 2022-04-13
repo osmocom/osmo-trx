@@ -11,7 +11,7 @@ EXTRA_DIST = BitVectorTest.ok \
              LogTest.ok \
              LogTest.err
 
-noinst_PROGRAMS = \
+check_PROGRAMS = \
 	BitVectorTest \
 	PRBSTest \
 	InterthreadTest \

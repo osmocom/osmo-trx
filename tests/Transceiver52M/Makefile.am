@@ -4,7 +4,7 @@ AM_CFLAGS = -Wall -I$(top_srcdir)/Transceiver52M -I$(top_srcdir)/Transceiver52M/
 
 EXTRA_DIST = convolve_test.ok convolve_test_golden.h
 
-noinst_PROGRAMS = \
+check_PROGRAMS = \
 	convolve_test
 
 convolve_test_SOURCES = convolve_test.c
@@ -18,7 +18,7 @@ convolve_test_CFLAGS += $(SIMD_FLAGS)
 endif
 
 if DEVICE_LMS
-noinst_PROGRAMS += LMSDeviceTest
+check_PROGRAMS += LMSDeviceTest
 LMSDeviceTest_SOURCES = LMSDeviceTest.cpp
 LMSDeviceTest_LDFLAGS = $(LIBOSMOCORE_LIBS) $(LMS_LIBS)
 LMSDeviceTest_LDADD = \
