@@ -30,6 +30,8 @@ AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_C
 noinst_LTLIBRARIES = libtransceiver_common.la
 
 COMMON_SOURCES = \
+	fbsb.cpp \
+	l1if.cpp \
 	radioInterface.cpp \
 	radioVector.cpp \
 	radioClock.cpp \
@@ -37,10 +39,12 @@ COMMON_SOURCES = \
 	sigProcLib.cpp \
 	signalVector.cpp \
 	Transceiver.cpp \
+	Transceiver2.cpp \
 	ChannelizerBase.cpp \
 	Channelizer.cpp \
 	Synthesis.cpp \
-	proto_trxd.c
+	proto_trxd.c \
+	sch.c
 
 libtransceiver_common_la_SOURCES = \
 	$(COMMON_SOURCES) \
@@ -57,6 +61,7 @@ noinst_HEADERS = \
 	sigProcLib.h \
 	signalVector.h \
 	Transceiver.h \
+	Transceiver2.h \
 	Resampler.h \
 	ChannelizerBase.h \
 	Channelizer.h \
@@ -68,6 +73,7 @@ COMMON_LDADD = \
 	$(ARCH_LA) \
 	$(GSM_LA) \
 	$(COMMON_LA) \
+	$(TRXCON_LA) \
 	$(FFTWF_LIBS) \
 	$(LIBOSMOCORE_LIBS) \
 	$(LIBOSMOCTRL_LIBS) \
@@ -81,7 +87,8 @@ osmo_trx_uhd_SOURCES = osmo-trx.cpp
 osmo_trx_uhd_LDADD = \
 	$(builddir)/device/uhd/libdevice.la \
 	$(COMMON_LDADD) \
-	$(UHD_LIBS)
+	$(UHD_LIBS) \
+	$(TRXCON_LA)
 osmo_trx_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
 endif
 

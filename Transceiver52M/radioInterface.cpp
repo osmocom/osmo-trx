@@ -41,7 +41,8 @@ RadioInterface::RadioInterface(RadioDevice *wDevice, size_t tx_sps,
                                int wReceiveOffset, GSM::Time wStartTime)
   : mDevice(wDevice), mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans),
     underrun(false), overrun(false), writeTimestamp(0), readTimestamp(0),
-    receiveOffset(wReceiveOffset), mOn(false)
+    receiveOffset(wReceiveOffset), shiftOffset(0), shiftUpdate(false),
+    mOn(false)
 {
   mClock.set(wStartTime);
 }
@@ -165,9 +166,19 @@ bool RadioInterface::tuneTx(double freq, size_t chan)
   return mDevice->setTxFreq(freq, chan);
 }
 
+void RadioInterface::adjustClock(GSM::Time &offset)
+{
+  mClock.adjust(offset);
+}
+
 bool RadioInterface::tuneRx(double freq, size_t chan)
 {
   return mDevice->setRxFreq(freq, chan);
+}
+
+bool RadioInterface::tuneRxOffset(double offset, size_t chan)
+{
+  return mDevice->setRxOffset(offset, chan);
 }
 
 /** synchronization thread loop */
@@ -256,7 +267,10 @@ int RadioInterface::driveReceiveRadio()
     return  -1;
 
   GSM::Time rcvClock = mClock.get();
-  rcvClock.decTN(receiveOffset);
+  if (receiveOffset < 0)
+    rcvClock.incTN(-receiveOffset);
+  else
+    rcvClock.decTN(receiveOffset);
   unsigned tN = rcvClock.TN();
   int recvSz = recvBuffer[0]->getAvailSamples();
   const int symbolsPerSlot = gSlotLen + 8;
@@ -309,6 +323,12 @@ bool RadioInterface::isUnderrun()
   return retVal;
 }
 
+void RadioInterface::applyOffset(int offset)
+{
+  shiftOffset += offset;
+  shiftUpdate = true;
+}
+
 VectorFIFO* RadioInterface::receiveFIFO(size_t chan)
 {
   if (chan >= mReceiveFIFO.size())
@@ -341,7 +361,7 @@ int RadioInterface::pullBuffer()
   numRecv = mDevice->readSamples(convertRecvBuffer,
                                 segmentLen,
                                 &overrun,
-                                readTimestamp,
+                                readTimestamp + mSPSRx * shiftOffset,
                                 &local_underrun);
 
   if ((size_t) numRecv != segmentLen) {
@@ -376,11 +396,16 @@ bool RadioInterface::pushBuffer()
                         segmentLen * 2);
   }
 
+  if (shiftUpdate) {
+    mDevice->updateAlignment(0);
+    shiftUpdate = false;
+  }
+
   /* Send the all samples in the send buffer */
   numSent = mDevice->writeSamples(convertSendBuffer,
                                  segmentLen,
                                  &local_underrun,
-                                 writeTimestamp);
+                                 writeTimestamp + mSPSTx * shiftOffset);
   osmo_trx_sync_or_and_fetch(&underrun, local_underrun);
   writeTimestamp += numSent;
 

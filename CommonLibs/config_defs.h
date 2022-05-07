@@ -45,6 +45,7 @@ struct trx_cfg {
 	enum ReferenceType clock_ref;
 	enum FillerType filler;
 	bool multi_arfcn;
+	bool ms;
 	double offset;
 	double freq_offset_khz;
 	double rssi_offset;

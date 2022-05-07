@@ -174,7 +174,7 @@ int RadioInterfaceResamp::pullBuffer()
 	num_recv = mDevice->readSamples(convertRecvBuffer,
 				       resamp_outchunk,
 				       &overrun,
-				       readTimestamp,
+				       readTimestamp + shiftOffset,
 				       &local_underrun);
 	if (num_recv != (int) resamp_outchunk) {
 		LOG(ALERT) << "Receive error " << num_recv;

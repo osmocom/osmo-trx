@@ -80,6 +80,12 @@ struct dev_band_desc {
 */
 class uhd_device : public RadioDevice {
 public:
+
+	struct tune_result {
+		uhd::tune_result_t uhd;
+		double freq;
+	};
+
 	uhd_device(size_t tx_sps, size_t rx_sps, InterfaceType type,
 		   size_t chan_num, double offset,
 		   const std::vector<std::string>& tx_paths,
@@ -102,6 +108,7 @@ public:
 
 	bool setTxFreq(double wFreq, size_t chan);
 	bool setRxFreq(double wFreq, size_t chan);
+	bool setRxOffset(double wOffset, size_t chan);
 
 	TIMESTAMP initialWriteTimestamp();
 	TIMESTAMP initialReadTimestamp();
@@ -159,7 +166,7 @@ protected:
 	double rx_gain_min, rx_gain_max;
 
 	std::vector<double> tx_gains, rx_gains;
-	std::vector<double> tx_freqs, rx_freqs;
+	std::vector<tune_result> tx_freqs, rx_freqs;
 	bool band_ass_curr_sess; /* true if  "band" was set after last POWEROFF */
 	enum gsm_band band;
 	struct dev_band_desc band_desc;

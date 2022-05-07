@@ -85,6 +85,9 @@ float noiseVector::avg() const
 {
 	float val = 0.0;
 
+	if (!size())
+		return 0.0f;
+
 	for (size_t i = 0; i < size(); i++)
 		val += (*this)[i];
 
@@ -93,8 +96,10 @@ float noiseVector::avg() const
 
 bool noiseVector::insert(float val)
 {
-	if (!size())
-		return false;
+	if (size() < max) {
+		push_back(val);
+		return true;
+	}
 
 	if (itr >= this->size())
 		itr = 0;
@@ -102,6 +107,16 @@ bool noiseVector::insert(float val)
 	(*this)[itr++] = val;
 
 	return true;
+}
+
+bool noiseVector::full() const
+{
+	return size() >= max;
+}
+
+void noiseVector::reset()
+{
+	resize(0);
 }
 
 GSM::Time VectorQueue::nextTime() const

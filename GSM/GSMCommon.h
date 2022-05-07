@@ -57,6 +57,10 @@ extern const BitVector gDummyBurst;
 extern const BitVector gRACHSynchSequenceTS0;
 extern const BitVector gRACHSynchSequenceTS1;
 extern const BitVector gRACHSynchSequenceTS2;
+
+/** Synchronization burst sync sequence */
+extern const BitVector gSCHSynchSequence;
+
 /** Random access burst synch. sequence, GSM 05.02 5.2.7 */
 extern const BitVector gRACHBurst;
 

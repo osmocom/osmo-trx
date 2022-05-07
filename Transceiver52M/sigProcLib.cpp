@@ -98,6 +98,7 @@ struct CorrelationSequence {
 
   signalVector *sequence;
   void         *buffer;
+  void         *history;
   float        toa;
   complex      gain;
 };
@@ -129,6 +130,7 @@ struct PulseSequence {
 static CorrelationSequence *gMidambles[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 static CorrelationSequence *gEdgeMidambles[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 static CorrelationSequence *gRACHSequences[] = {NULL,NULL,NULL};
+static CorrelationSequence *gSCHSequence = NULL;
 static PulseSequence *GSMPulse1 = NULL;
 static PulseSequence *GSMPulse4 = NULL;
 
@@ -150,6 +152,9 @@ void sigProcLibDestroy()
     delete gRACHSequences[i];
     gRACHSequences[i] = NULL;
   }
+
+  delete gSCHSequence;
+  gSCHSequence = NULL;
 
   delete GMSKRotation1;
   delete GMSKReverseRotation1;
@@ -315,6 +320,8 @@ static signalVector *convolve(const signalVector *x, const signalVector *h,
     append = true;
     break;
   case CUSTOM:
+
+  // FIXME: x->getstart?
     if (start < h->size() - 1) {
       head = h->size() - start;
       append = true;
@@ -1384,6 +1391,70 @@ release:
   return status;
 }
 
+bool generateSCHSequence(int sps)
+{
+  bool status = true;
+  float toa;
+  complex *data = NULL;
+  signalVector *autocorr = NULL;
+  signalVector *seq0 = NULL, *seq1 = NULL, *_seq1 = NULL;
+
+  delete gSCHSequence;
+
+  seq0 = modulateBurst(gSCHSynchSequence, 0, sps, false);
+  if (!seq0)
+    return false;
+
+  seq1 = modulateBurst(gSCHSynchSequence, 0, sps, true);
+  if (!seq1) {
+    status = false;
+    goto release;
+  }
+
+  conjugateVector(*seq1);
+
+  /* For SSE alignment, reallocate the midamble sequence on 16-byte boundary */
+  data = (complex *) convolve_h_alloc(seq1->size());
+  _seq1 = new signalVector(data, 0, seq1->size());
+  _seq1->setAligned(true);
+  memcpy(_seq1->begin(), seq1->begin(), seq1->size() * sizeof(complex));
+
+  autocorr = convolve(seq0, _seq1, autocorr, NO_DELAY);
+  if (!autocorr) {
+    status = false;
+    goto release;
+  }
+
+  gSCHSequence = new CorrelationSequence;
+  gSCHSequence->sequence = _seq1;
+  gSCHSequence->buffer = data;
+  gSCHSequence->gain = peakDetect(*autocorr, &toa, NULL);
+  gSCHSequence->history = new complex[_seq1->size()];
+
+  /* For 1 sps only
+   *     (Half of correlation length - 1) + midpoint of pulse shaping filer
+   *     20.5 = (64 / 2 - 1) + 1.5
+   */
+  if (sps == 1)
+    gSCHSequence->toa = toa - 32.5;
+  else
+    gSCHSequence->toa = 0.0;
+
+release:
+  delete autocorr;
+  delete seq0;
+  delete seq1;
+
+  if (!status) {
+    delete _seq1;
+    free(data);
+    gSCHSequence = NULL;
+  }
+
+  return status;
+}
+
+
 /*
  * Peak-to-average computation +/- range from peak in symbols
  */
@@ -1468,6 +1539,9 @@ static float computeCI(const signalVector *burst, const CorrelationSequence *syn
   float S, C;
   /* Integer position where the sequence starts */
   const int ps = start + 1 - N + (int)roundf(toa);
+
+  if(ps < 0) // might be -22 for toa 40 with N=64, if off by a lot during sch ms sync
+    return 0;
 
   /* Estimate Signal power */
   S = 0.0f;
@@ -1652,6 +1726,66 @@ static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
   return rc;
 }
 
+int detectSCHBurst(signalVector &burst,
+		    float thresh,
+		    int sps,
+        sch_detect_type state, struct estim_burst_params *ebp)
+{
+  int rc, start, target, head, tail, len;
+  float _toa;
+  complex _amp;
+  signalVector *corr, *_burst;
+  CorrelationSequence *sync;
+
+  if ((sps != 1) && (sps != 4))
+    return -1;
+
+  target = 3 + 39 + 64;
+
+  switch (state) {
+  case sch_detect_type::SCH_DETECT_NARROW:
+    head = 4;
+    tail = 4;
+    break;
+  case sch_detect_type::SCH_DETECT_FULL:
+  default:
+    head = target - 1;
+    tail = 39 + 3 + 9;
+    break;
+  }
+
+  start = (target - head) * 1 - 1;
+  len = (head + tail) * 1;
+  sync = gSCHSequence;
+  corr = new signalVector(len);
+
+  _burst = new signalVector(burst, sync->sequence->size(), 5);
+
+  memcpy(_burst->begin() - sync->sequence->size(), sync->history,
+         sync->sequence->size() * sizeof(complex));
+
+  memcpy(sync->history, &burst.begin()[burst.size() - sync->sequence->size()],
+         sync->sequence->size() * sizeof(complex));
+
+  rc = detectBurst(*_burst, *corr, sync,
+                   thresh, sps, start, len, ebp);
+  delete corr;
+
+  if (rc < 0) {
+    return -1;
+  } else if (!rc) {
+      ebp->amp = 0.0f;
+      ebp->toa = 0.0f;
+    return 0;
+  }
+
+  /* Subtract forward search bits from delay */
+    ebp->toa = ebp->toa - head;
+
+  return rc;
+}
+
+
 /*
  * Normal burst detection
  *
@@ -1670,7 +1804,7 @@ static int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float th
     return -SIGERR_UNSUPPORTED;
 
   target = 3 + 58 + 16 + 5;
-  head = 6;
+  head = 10;
   tail = 6 + max_toa;
   sync = gMidambles[tsc];
 
@@ -1920,6 +2054,8 @@ bool sigProcLibSetup()
   generateRACHSequence(&gRACHSequences[0], gRACHSynchSequenceTS0, 1);
   generateRACHSequence(&gRACHSequences[1], gRACHSynchSequenceTS1, 1);
   generateRACHSequence(&gRACHSequences[2], gRACHSynchSequenceTS2, 1);
+
+  generateSCHSequence(1);
 
   for (int tsc = 0; tsc < 8; tsc++) {
     generateMidamble(1, tsc);

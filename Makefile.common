@@ -28,6 +28,7 @@ STD_DEFINES_AND_INCLUDES = \
 
 COMMON_LA = $(top_builddir)/CommonLibs/libcommon.la
 GSM_LA = $(top_builddir)/GSM/libGSM.la
+TRXCON_LA = $(top_builddir)/trxcon/libtrxcon.la
 
 if ARCH_ARM
 ARCH_LA = $(top_builddir)/Transceiver52M/arch/arm/libarch.la

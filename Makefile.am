@@ -28,6 +28,7 @@ AM_CXXFLAGS = -Wall -pthread
 
 # Order must be preserved
 SUBDIRS = \
+	trxcon \
 	CommonLibs \
 	GSM \
 	Transceiver52M \

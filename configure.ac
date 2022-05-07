@@ -312,6 +312,7 @@ AC_MSG_RESULT([LDFLAGS="$LDFLAGS"])
 dnl Output files
 AC_CONFIG_FILES([\
     Makefile \
+    trxcon/Makefile \
     CommonLibs/Makefile \
     GSM/Makefile \
     Transceiver52M/Makefile \

@@ -56,7 +56,8 @@ protected:
   RadioClock mClock;                          ///< the basestation clock!
 
   int receiveOffset;                          ///< offset b/w transmit and receive GSM timestamps, in timeslots
-
+  int shiftOffset;
+  bool shiftUpdate;
   bool mOn;				      ///< indicates radio is on
 
 private:
@@ -93,6 +94,7 @@ public:
 
   /** check for underrun, resets underrun value */
   bool isUnderrun();
+  void applyOffset(int offset);
 
   /** return the receive FIFO */
   VectorFIFO* receiveFIFO(size_t chan = 0);
@@ -100,11 +102,17 @@ public:
   /** return the basestation clock */
   RadioClock* getClock(void) { return &mClock;};
 
+  /** apply an offset to the main clock */
+  void adjustClock(GSM::Time &offset);
+
   /** set transmit frequency */
   virtual bool tuneTx(double freq, size_t chan = 0);
 
   /** set receive frequency */
   virtual bool tuneRx(double freq, size_t chan = 0);
+
+  /** set frequency correction */
+  virtual bool tuneRxOffset(double offset, size_t chan = 0);
 
   /** set receive gain */
   virtual double setRxGain(double dB, size_t chan = 0);

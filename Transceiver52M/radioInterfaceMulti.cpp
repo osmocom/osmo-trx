@@ -258,7 +258,7 @@ int RadioInterfaceMulti::pullBuffer()
 	num = mDevice->readSamples(convertRecvBuffer,
 				  outerRecvBuffer->size(),
 				  &overrun,
-				  readTimestamp,
+				  readTimestamp + shiftOffset,
 				  &local_underrun);
 	if (num != channelizer->inputLen()) {
 		LOG(ALERT) << "Receive error " << num << ", " << channelizer->inputLen();
