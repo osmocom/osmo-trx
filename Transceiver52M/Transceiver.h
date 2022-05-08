@@ -80,7 +80,7 @@ struct TransceiverState {
 
   /* Received noise energy levels */
   float mNoiseLev;
-  noiseVector mNoises;
+  avgVector mNoises;
 
   /* Shadowed downlink attenuation */
   int mPower;

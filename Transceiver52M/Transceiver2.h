@@ -69,7 +69,7 @@ struct TransceiverState {
   bool mRetrans;
 
   /* Received noise energy levels */
-  noiseVector mFreqOffsets;
+  avgVector mFreqOffsets;
 
   /* Store pointers to previous frame */
   radioVector *prevFrame[8];
