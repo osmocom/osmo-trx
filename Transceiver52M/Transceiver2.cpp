@@ -21,6 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "BitVector.h"
 #include "osmocom/core/bits.h"
 #include <stdio.h>
 #include <Logger.h>
@@ -87,7 +88,7 @@ void TransceiverState::init(size_t slot, signalVector *burst, bool fill)
     fillerTable[i][slot] = filler;
   }
 }
-
+extern void initvita();
 Transceiver2::Transceiver2(int wBasePort,
 			 const char *TRXAddress,
 			 size_t wSPS, size_t wChans,
@@ -113,6 +114,8 @@ Transceiver2::Transceiver2(int wBasePort,
 
   for (int i = 0; i < 8; i++)
     mRxSlotMask[i] = 0;
+
+  initvita();
 }
 
 Transceiver2::~Transceiver2()
@@ -480,6 +483,7 @@ bool Transceiver2::correctFCCH(TransceiverState *state, signalVector *burst)
   return true;
 }
 
+extern int process_vita_burst(std::complex<float>* input, int tsc, unsigned char* output_binary);
 /*
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled. 
@@ -494,7 +498,7 @@ SoftVector *Transceiver2::pullRadioVector(GSM::Time &wTime, int &RSSI,
   signalVector *burst;
   SoftVector *bits = NULL;
   TransceiverState *state = &mStates[chan];
-
+  bool printme = 0;
   GSM::Time sch_time, burst_time, diff_time;
 
   /* Blocking FIFO read */
@@ -634,13 +638,40 @@ SoftVector *Transceiver2::pullRadioVector(GSM::Time &wTime, int &RSSI,
     }
   }
 
+
   if (rc < 0)
     goto release;
 
+  if(type == TSC){
+    unsigned char outbin[148];
 
-  /* Ignore noise threshold on MS mode for now */
-  //if ((type == SCH) || (avg - state->mNoiseLev > 0.0))
-  bits = demodAnyBurst(*burst, type, rx_sps, &ebp);
+    auto start = reinterpret_cast<float*>(burst->begin());
+    for(int i=0; i < 625*2; i++)
+      start[i] *= 1./32767.;
+
+    int ret = process_vita_burst(reinterpret_cast<std::complex<float>*>(burst->begin()), mTSC, outbin);
+    bits = new SoftVector();
+    bits->resize(148);
+    for(int i=0; i < 148; i++)
+      (*bits)[i] = outbin[i] < 1 ? -1 : 1;
+
+    // printme = ret >= 0 ? true : false;
+
+    // if(printme) {
+    //   std::cerr << std::endl << "vita:" << std::endl;
+    //   for(auto i : outbin)
+    //     std::cerr << (int) i;
+    //   std::cerr << std::endl << "org:" << std::endl;
+    // }
+  } else {
+    /* Ignore noise threshold on MS mode for now */
+    //if ((type == SCH) || (avg - state->mNoiseLev > 0.0))
+    bits = demodAnyBurst(*burst, type, rx_sps, &ebp);
+    
+    // if(printme)
+    //   for(int i=0; i < 148; i++)
+    //     std::cerr << (int) (bits->operator[](i) > 0 ? 1 : 0);
+  }
 
   /* MS: Decode SCH and adjust GSM clock */
   if ((type != TSC) &&

@@ -224,6 +224,8 @@ class IPCDevice : public RadioDevice {
 	/** return whether user drives synchronization of Tx/Rx of USRP */
 	virtual GSM::Time minLatency() override;
 
+	bool setRxOffset(double wOffset, size_t chan = 0) override {return true;}
+
 	/** Return internal status values */
 	virtual inline double getTxFreq(size_t chan = 0) override
 	{

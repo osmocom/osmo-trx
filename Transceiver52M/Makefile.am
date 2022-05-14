@@ -44,7 +44,9 @@ COMMON_SOURCES = \
 	Channelizer.cpp \
 	Synthesis.cpp \
 	proto_trxd.c \
-	sch.c
+	sch.c \
+	grgsm_vitac/grgsm_vitac.cpp \
+	grgsm_vitac/viterbi_detector.cc
 
 libtransceiver_common_la_SOURCES = \
 	$(COMMON_SOURCES) \
@@ -66,7 +68,9 @@ noinst_HEADERS = \
 	ChannelizerBase.h \
 	Channelizer.h \
 	Synthesis.h \
-	proto_trxd.h
+	proto_trxd.h \
+	grgsm_vitac/viterbi_detector.h \
+	grgsm_vitac/constants.h
 
 COMMON_LDADD = \
 	libtransceiver_common.la \
