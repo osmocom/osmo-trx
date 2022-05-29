@@ -94,11 +94,10 @@ Transceiver2::Transceiver2(int wBasePort,
 			 size_t wSPS, size_t wChans,
 			 GSM::Time wTransmitLatency,
 			 RadioInterface *wRadioInterface)
-  : rx_sps(4), tx_sps(4), mAddr(TRXAddress),
-    mTransmitLatency(wTransmitLatency),
-    mRadioInterface(wRadioInterface), mChans(wChans),
-    mOn(false), mTxFreq(0.0), mRxFreq(0.0), mPower(-10), mMaxExpectedDelay(0),
-    mBSIC(-1)
+  : mChans(wChans), rx_sps(4), tx_sps(4), mAddr(TRXAddress), mTransmitLatency(wTransmitLatency),
+   mTxPriorityQueues(mChans), mReceiveFIFO(mChans), mRxServiceLoopThreads(mChans),
+   mControlServiceLoopThreads(mChans), mTxPriorityQueueServiceLoopThreads(mChans), mRadioInterface(wRadioInterface),
+   mOn(false), mTxFreq(0.0), mRxFreq(0.0), mPower(-10), mMaxExpectedDelay(0), mBSIC(-1), mStates(mChans)
 {
   GSM::Time startTime(random() % gHyperframe,0);
 
@@ -142,13 +141,7 @@ bool Transceiver2::init(bool filler)
     return false;
   }
 
-  mControlServiceLoopThreads.resize(mChans);
-  mTxPriorityQueueServiceLoopThreads.resize(mChans);
-  mRxServiceLoopThreads.resize(mChans);
 
-  mTxPriorityQueues.resize(mChans);
-  mReceiveFIFO.resize(mChans);
-  mStates.resize(mChans);
 
   /* Filler table retransmissions - support only on channel 0 */
   if (filler)

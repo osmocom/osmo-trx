@@ -81,7 +81,7 @@ struct TransceiverState {
 /** The Transceiver class, responsible for physical layer of basestation */
 class Transceiver2 {
 private:
-
+  size_t mChans;
   int rx_sps, tx_sps;
   std::string mAddr;
   GSM::Time mTransmitLatency;     ///< latency between basestation clock and transmit deadline clock
@@ -133,7 +133,7 @@ private:
   bool decodeSCH(SoftVector *burst, GSM::Time *time);
   bool correctFCCH(TransceiverState *state, signalVector *burst);
 
-  size_t mChans;
+
 
   bool mOn;			       ///< flag to indicate that transceiver is powered on
   double mTxFreq;                      ///< the transmit frequency

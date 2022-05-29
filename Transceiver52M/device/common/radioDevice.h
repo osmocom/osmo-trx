@@ -172,14 +172,13 @@ class RadioDevice {
               const std::vector<std::string>& tx_paths,
               const std::vector<std::string>& rx_paths):
 		tx_sps(tx_sps), rx_sps(rx_sps), iface(type), chans(chan_num), lo_offset(offset),
-		tx_paths(tx_paths), rx_paths(rx_paths)
+		tx_paths(tx_paths), rx_paths(rx_paths), m_ctr(chans)
 	{
 		if (iface == MULTI_ARFCN) {
 			LOGC(DDEV, INFO) << "Multi-ARFCN: "<< chan_num << " logical chans -> 1 physical chans";
 			chans = 1;
 		}
 
-		m_ctr.resize(chans);
 		for (size_t i = 0; i < chans; i++) {
 			memset(&m_ctr[i], 0, sizeof(m_ctr[i]));
 			m_ctr[i].chan = i;

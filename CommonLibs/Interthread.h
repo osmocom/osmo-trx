@@ -517,7 +517,7 @@ public:
 		@param timeout The blocking timeout in ms.
 		@return Pointer at key or NULL on timeout.
 	*/
-	D* read(const K &key, unsigned timeout) const
+	D* read(const K &key, unsigned timeout)
 	{
 		if (timeout==0) return readNoBlock(key);
 		ScopedLock lock(mLock);
@@ -537,7 +537,7 @@ public:
 		@param key The key to read from.
 		@return Pointer at key.
 	*/
-	D* read(const K &key) const
+	D* read(const K &key)
 	{
 		ScopedLock lock(mLock);
 		typename Map::const_iterator iter = mMap.find(key);

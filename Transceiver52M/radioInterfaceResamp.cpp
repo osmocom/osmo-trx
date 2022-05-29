@@ -100,13 +100,6 @@ bool RadioInterfaceResamp::init(int type)
 
 	close();
 
-	sendBuffer.resize(1);
-	recvBuffer.resize(1);
-	convertSendBuffer.resize(1);
-	convertRecvBuffer.resize(1);
-	mReceiveFIFO.resize(1);
-	powerScaling.resize(1);
-
 	switch (type) {
 	case RadioDevice::RESAMP_64M:
 		resamp_inrate = RESAMP_64M_INRATE;
