@@ -17,3 +17,7 @@ endif
 if DEVICE_LMS
 SUBDIRS += lms
 endif
+
+if DEVICE_BLADE
+SUBDIRS += bladerf
+endif
