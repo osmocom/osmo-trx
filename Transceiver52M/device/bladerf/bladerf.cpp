@@ -249,7 +249,7 @@ void blade_device::set_rates()
 {
 	//dev_desc desc = dev_param_map.at(dev_key(dev_type, tx_sps, rx_sps));
 
-	struct bladerf_rational_rate rate = {0, static_cast<uint64_t>((1625e3 * 4)), 6}, actual;
+	struct bladerf_rational_rate rate = {0, static_cast<uint64_t>((1625e3 * 4))*64, 6*64}, actual;
 	auto status = bladerf_set_rational_sample_rate(dev, BLADERF_CHANNEL_RX(0), &rate, &actual);
 	CHKRET()
 	status = bladerf_set_rational_sample_rate(dev, BLADERF_CHANNEL_TX(0), &rate, &actual);
@@ -423,6 +423,7 @@ int blade_device::open(const std::string &args, int ref, bool swap_channels)
 
 	LOGC(DDEV, INFO) << "Selected clock source is " << ((ref == REF_INTERNAL) ? "internal" : "external 10Mhz");
 
+	bladerf_set_tuning_mode(dev, BLADERF_TUNING_MODE_FPGA);
 	set_rates();
 
 /*
@@ -547,7 +548,7 @@ int blade_device::readSamples(std::vector<short *> &bufs, int len, bool *overrun
 	if (rc < 0) {
 		LOGC(DDEV, ERROR) << rx_buffers[0]->str_code(rc);
 		LOGC(DDEV, ERROR) << rx_buffers[0]->str_status(timestamp);
-		return 0;
+		return len;
 	}
 
 	
@@ -684,30 +685,35 @@ bool blade_device::setTxFreq(double wFreq, size_t chan)
 	return true;
 }
 
+bool blade_device::setRxOffset(double wOffset, size_t chan)
+{
+	return true;
+}
+
 bool blade_device::setRxFreq(double wFreq, size_t chan)
 {
-	uint16_t req_arfcn;
-	enum gsm_band req_band;
+	// uint16_t req_arfcn;
+	// enum gsm_band req_band;
 
-	if (chan >= rx_freqs.size()) {
-		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
-		return false;
-	}
-	ScopedLock lock(tune_lock);
+	// if (chan >= rx_freqs.size()) {
+	// 	LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
+	// 	return false;
+	// }
+	// ScopedLock lock(tune_lock);
 
-	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100, 1);
-	if (req_arfcn == 0xffff) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Rx Frequency " << wFreq / 1000 << " kHz";
-		return false;
-	}
-	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Rx Frequency " << wFreq
-					   << " Hz (ARFCN " << req_arfcn << " )";
-		return false;
-	}
+	// req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100, 1);
+	// if (req_arfcn == 0xffff) {
+	// 	LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Rx Frequency " << wFreq / 1000 << " kHz";
+	// 	return false;
+	// }
+	// if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
+	// 	LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Rx Frequency " << wFreq
+	// 				   << " Hz (ARFCN " << req_arfcn << " )";
+	// 	return false;
+	// }
 
-	if (!set_band(req_band))
-		return false;
+	// if (!set_band(req_band))
+	// 	return false;
 
 	return set_freq(wFreq, chan, false);
 }

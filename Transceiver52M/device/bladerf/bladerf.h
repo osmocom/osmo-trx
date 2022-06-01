@@ -97,6 +97,7 @@ public:
 
 	int getNominalTxPower(size_t chan = 0);
 
+	bool setRxOffset(double wOffset, size_t chan);
 	double getTxFreq(size_t chan);
 	double getRxFreq(size_t chan);
 	double getRxFreq();
