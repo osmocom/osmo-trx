@@ -7,6 +7,8 @@
 #include <osmocom/core/conv.h>
 #include <osmocom/core/utils.h>
 #include <osmocom/core/crcgen.h>
+#include <osmocom/coding/gsm0503_coding.h>
+#include <osmocom/coding/gsm0503_parity.h>
 
 #include "sch.h"
 
@@ -50,13 +52,6 @@ static const struct osmo_conv_code gsm_conv_sch = {
 	.len = GSM_SCH_UNCODED_LEN,
 	.next_output = sch_next_output,
 	.next_state  = sch_next_state,
-};
-
-const struct osmo_crc16gen_code gsm0503_sch_crc10 = {
-	.bits = 10,
-	.poly = 0x175,
-	.init = 0x000,
-	.remainder = 0x3ff,
 };
 
 #define GSM_MAX_BURST_LEN	157 * 4
@@ -157,7 +152,7 @@ int gsm_sch_parse(const uint8_t *info, struct sch_info *desc)
 }
 
 /* From osmo-bts */
-int gsm_sch_decode(uint8_t *info, sbit_t *data)
+__attribute__((xray_always_instrument)) __attribute__((noinline)) int gsm_sch_decode(uint8_t *info, sbit_t *data)
 {
 	int rc;
 	ubit_t uncoded[GSM_SCH_UNCODED_LEN];

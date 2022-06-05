@@ -28,7 +28,7 @@
 #define TS_PER_FRAME      8
 #define FRAME_BITS        (TS_PER_FRAME * TS_BITS + 2) // 156.25 * 8
 #define FCCH_POS          TAIL_BITS
-#define SYNC_POS          39
+#define SYNC_POS          (TAIL_BITS + 39)
 #define TRAIN_POS         ( TAIL_BITS + (DATA_BITS+STEALING_BIT) + 5) //first 5 bits of a training sequence
 													   //aren't used for channel impulse response estimation
 #define TRAIN_BEGINNING   5

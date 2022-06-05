@@ -84,7 +84,7 @@ void push_c(TRX_C* i) {
 	uint64_t one = 1;
 	int rc;
 	trxif.c_from_trx.push(i);
-	std::clog << trxif.c_from_trx.sz() << std::endl;
+	// std::clog << trxif.c_from_trx.sz() << std::endl;
 	rc = ::write(trxif.g_event_ofd_C.fd, &one, sizeof(one));
 	return;
 };

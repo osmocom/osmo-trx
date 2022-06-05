@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <Logger.h>
 #include "Transceiver2.h"
+#include <grgsm_vitac/grgsm_vitac.h>
 
 extern "C" {
 #include "sch.h"
@@ -635,35 +636,108 @@ SoftVector *Transceiver2::pullRadioVector(GSM::Time &wTime, int &RSSI,
   if (rc < 0)
     goto release;
 
-  if(type == TSC){
-    unsigned char outbin[148];
+#if 0
+  if(type == SCH){
+    unsigned char outbin[148] = {0};
+
+    bits = demodAnyBurst(*burst, type, rx_sps, &ebp);
+
 
     auto start = reinterpret_cast<float*>(burst->begin());
     for(int i=0; i < 625*2; i++)
-      start[i] *= 1./32767.;
+      start[i] *= 1./2047.;
 
-    int ret = process_vita_burst(reinterpret_cast<std::complex<float>*>(burst->begin()), mTSC, outbin);
-    bits = new SoftVector();
-    bits->resize(148);
-    for(int i=0; i < 148; i++)
-      (*bits)[i] = outbin[i] < 1 ? -1 : 1;
+    auto ss = reinterpret_cast<std::complex<float>*>(burst->begin());
 
-    // printme = ret >= 0 ? true : false;
+ //   int ret = process_vita_sc_burst(ss, mTSC, outbin, 0);
 
-    // if(printme) {
-    //   std::cerr << std::endl << "vita:" << std::endl;
-    //   for(auto i : outbin)
-    //     std::cerr << (int) i;
-    //   std::cerr << std::endl << "org:" << std::endl;
-    // }
-  } else {
-    /* Ignore noise threshold on MS mode for now */
-    //if ((type == SCH) || (avg - state->mNoiseLev > 0.0))
-    bits = demodAnyBurst(*burst, type, rx_sps, &ebp);
+    {
+      std::vector<gr_complex> channel_imp_resp(CHAN_IMP_RESP_LENGTH* d_OSR);
+          /* Get channel impulse response */
+      auto d_c0_burst_start = get_sch_chan_imp_resp(ss, &channel_imp_resp[0], 0, (SYNC_POS + SYNC_SEARCH_RANGE) * d_OSR + SYNC_POS * d_OSR );
+
+      if(d_c0_burst_start < 0) {
+        std::cerr << " fck! offset <0! " << ebp.toa << std::endl;
+        d_c0_burst_start = 0;
+      } else {
+        std::cerr << " ## offset " << d_c0_burst_start << " vs " << ebp.toa << std::endl;
+      }
+      /* Perform MLSE detection */
+      detect_burst(ss, &channel_imp_resp[0],
+      d_c0_burst_start, outbin);
+    }
+
+    // auto bits2 = new SoftVector();
+    // bits2->resize(156);
+    // for(int i=0; i < 148; i++)
+    //   (*bits2)[i] = outbin[i] < 1 ? -1 : 1;
+
     
-    // if(printme)
-    //   for(int i=0; i < 148; i++)
-    //     std::cerr << (int) (bits->operator[](i) > 0 ? 1 : 0);
+
+    printme =  true;
+
+    if(printme) {
+      std::cerr << std::endl << "vita:" << std::endl;
+      for(auto i : outbin)
+        std::cerr << (int) i;
+      std::cerr << std::endl << "org:" << std::endl;
+      for(int i=0; i < 148; i++)
+        std::cerr << (int) (bits->operator[](i) > 0 ? 1 : 0);
+    }
+
+  } else
+#endif
+  if (type == TSC) {
+	  unsigned char outbin[148];
+
+	  // bits = demodAnyBurst(*burst, type, rx_sps, &ebp);
+
+	  {
+		  auto start = reinterpret_cast<float *>(burst->begin());
+		  for (int i = 0; i < 625 * 2; i++)
+			  start[i] *= 1. / 2047.;
+
+		  auto ss = reinterpret_cast<std::complex<float> *>(burst->begin());
+		  // int ret = process_vita_burst(reinterpret_cast<std::complex<float>*>(burst->begin()), mTSC, outbin);
+
+		  float ncmax, dcmax;
+		  std::vector<gr_complex> channel_imp_resp(CHAN_IMP_RESP_LENGTH * d_OSR),
+			  channel_imp_resp2(CHAN_IMP_RESP_LENGTH * d_OSR);
+		  auto normal_burst_start = get_norm_chan_imp_resp(ss, &channel_imp_resp[0], &ncmax, mTSC);
+		  auto dummy_burst_start = get_norm_chan_imp_resp(ss, &channel_imp_resp2[0], &dcmax, TS_DUMMY);
+		  auto is_nb = ncmax > dcmax;
+
+		  std::cerr << " ## " << is_nb << " o nb " << normal_burst_start << " db " << dummy_burst_start
+			    << " vs " << ebp.toa << std::endl;
+
+		  if (is_nb)
+			  detect_burst(ss, &channel_imp_resp[0], normal_burst_start, outbin);
+		  else
+			  detect_burst(ss, &channel_imp_resp2[0], dummy_burst_start, outbin);
+		  ;
+	  }
+
+	  bits = new SoftVector();
+	  bits->resize(148);
+	  for (int i = 0; i < 148; i++)
+		  (*bits)[i] = outbin[i] < 1 ? -1 : 1;
+
+	  // printme = ret >= 0 ? true : false;
+
+	  // if(printme) {
+	  //   std::cerr << std::endl << "vita:" << std::endl;
+	  //   for(auto i : outbin)
+	  //     std::cerr << (int) i;
+	  //   std::cerr << std::endl << "org:" << std::endl;
+	  // }
+  } else {
+	  /* Ignore noise threshold on MS mode for now */
+	  //if ((type == SCH) || (avg - state->mNoiseLev > 0.0))
+	  bits = demodAnyBurst(*burst, type, rx_sps, &ebp);
+
+	  // if(printme)
+	  //   for(int i=0; i < 148; i++)
+	  //     std::cerr << (int) (bits->operator[](i) > 0 ? 1 : 0);
   }
 
   /* MS: Decode SCH and adjust GSM clock */

@@ -94,6 +94,8 @@ signalVector *generateDummyBurst(int sps, int tn);
 void scaleVector(signalVector &x,
                  complex scale);
 
+signalVector *delayVector(const signalVector *in, signalVector *out, float delay);
+
 /**
         Rough energy estimator.
         @param rxBurst A GSM burst.
@@ -137,6 +139,7 @@ int detectAnyBurst(const signalVector &burst,
 enum class sch_detect_type {
 	SCH_DETECT_FULL,
 	SCH_DETECT_NARROW,
+	SCH_DETECT_BUFFER,
 };
 
 int detectSCHBurst(signalVector &rxBurst,

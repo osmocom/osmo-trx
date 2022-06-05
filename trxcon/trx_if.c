@@ -47,7 +47,9 @@
 #include "logging.h"
 #include "scheduler.h"
 
+#ifdef IPCIF
 #include "../Transceiver52M/l1if.h"
+#endif
 
 static struct value_string trx_evt_names[] = {
 	{ 0, NULL } /* no events? */
@@ -146,13 +148,19 @@ static void trx_ctrl_send(struct trx_instance *trx)
 		return;
 	tcm = llist_entry(trx->trx_ctrl_list.next, struct trx_ctrl_msg, list);
 
+#ifdef IPCIF
 	char* cmd = malloc(TRXC_BUF_SIZE);
 	memcpy(cmd, tcm->cmd, TRXC_BUF_SIZE);
 
 	/* Send command */
 	LOGP(DTRX, LOGL_DEBUG, "Sending control '%s'\n", tcm->cmd);
 	trxif_to_trx_c(cmd);
-//	send(trx->trx_ofd_ctrl.fd, tcm->cmd, strlen(tcm->cmd) + 1, 0);
+
+#else
+	/* Send command */
+	LOGP(DTRX, LOGL_DEBUG, "Sending control '%s'\n", tcm->cmd);
+	send(trx->trx_ofd_ctrl.fd, tcm->cmd, strlen(tcm->cmd) + 1, 0);
+#endif
 
 	/* Trigger state machine */
 	if (trx->fsm->state != TRX_STATE_RSP_WAIT) {
@@ -476,7 +484,9 @@ static int trx_ctrl_read_cb(struct osmo_fd *ofd, unsigned int what)
 	struct trx_ctrl_msg *tcm;
 	int resp, rsp_len;
 	char buf[TRXC_BUF_SIZE], *p;
+	ssize_t read_len;
 
+#ifdef IPCIF
 	char* response = trxif_from_trx_c();
 	if (!response) {
 		LOGP(DTRX, LOGL_ERROR, "read() failed with rc=%zd\n", response);
@@ -484,6 +494,14 @@ static int trx_ctrl_read_cb(struct osmo_fd *ofd, unsigned int what)
 	}
 	memcpy(buf, response, TRXC_BUF_SIZE);
 	free(response);
+#else
+	read_len = read(ofd->fd, buf, sizeof(buf) - 1);
+	if (read_len <= 0) {
+		LOGP(DTRX, LOGL_ERROR, "read() failed with rc=%zd\n", read_len);
+		return read_len;
+	}
+	buf[read_len] = '\0';
+#endif
 
 	if (!!strncmp(buf, "RSP ", 4)) {
 		LOGP(DTRX, LOGL_NOTICE, "Unknown message on CTRL port: %s\n", buf);
@@ -592,7 +610,7 @@ static int trx_data_rx_cb(struct osmo_fd *ofd, unsigned int what)
 	uint32_t fn;
 	ssize_t read_len;
 
-
+#ifdef IPCIF
 	struct trxd_from_trx* rcvd = trxif_from_trx_d();
 	if (!rcvd) {
 		LOGP(DTRX, LOGL_ERROR, "read() failed with rc=%zd\n", rcvd);
@@ -609,6 +627,29 @@ static int trx_data_rx_cb(struct osmo_fd *ofd, unsigned int what)
 	memcpy(bits, rcvd->symbols, 148);
 
 	free(rcvd);
+#else
+	read_len = read(ofd->fd, buf, sizeof(buf));
+	if (read_len <= 0) {
+		LOGP(DTRXD, LOGL_ERROR, "read() failed with rc=%zd\n", read_len);
+		return read_len;
+	}
+
+	if (read_len != 158) {
+		LOGP(DTRXD, LOGL_ERROR,
+		     "Got data message with invalid "
+		     "length '%zd'\n",
+		     read_len);
+		return -EINVAL;
+	}
+#endif
+	tn = buf[0];
+	fn = osmo_load32be(buf + 1);
+	rssi = -(int8_t)buf[5];
+	toa256 = ((int16_t)(buf[6] << 8) | buf[7]);
+
+	/* Copy and convert bits {254..0} to sbits {-127..127} */
+	//osmo_ubit2sbit(bits, buf + 8, 148);
+	memcpy(bits, buf + 8, 148);
 
 	if (tn >= 8) {
 		LOGP(DTRXD, LOGL_ERROR, "Illegal TS %d\n", tn);
@@ -643,12 +684,44 @@ static int trx_data_rx_cb(struct osmo_fd *ofd, unsigned int what)
 int trx_if_tx_burst(struct trx_instance *trx, uint8_t tn, uint32_t fn,
 	uint8_t pwr, const ubit_t *bits)
 {
+#ifdef IPCIF
 	struct trxd_to_trx* t = malloc(sizeof(struct trxd_to_trx));
 	t->ts = tn;
 	t->fn = fn;
 	t->txlev = pwr;
 	memcpy(t->symbols, bits, 148);
 	trxif_to_trx_d(t);
+#else
+	uint8_t buf[TRXD_BUF_SIZE];
+
+	/**
+	 * We must be sure that we have clock,
+	 * and we have sent all control data
+	 *
+	 * TODO: introduce proper state machines for both
+	 *       transceiver and its TRXC interface.
+	 */
+#if 0
+	if (trx->fsm->state != TRX_STATE_ACTIVE) {
+		LOGP(DTRXD, LOGL_ERROR, "Ignoring TX data, "
+			"transceiver isn't ready\n");
+		return -EAGAIN;
+	}
+#endif
+
+	LOGP(DTRXD, LOGL_DEBUG, "TX burst tn=%u fn=%u pwr=%u\n", tn, fn, pwr);
+
+	buf[0] = tn;
+	osmo_store32be(fn, buf + 1);
+	buf[5] = pwr;
+
+	/* Copy ubits {0,1} */
+	memcpy(buf + 6, bits, 148);
+
+	/* Send data to transceiver */
+	send(trx->trx_ofd_data.fd, buf, 154, 0);
+
+#endif
 	return 0;
 }
 
@@ -683,6 +756,7 @@ struct trx_instance *trx_if_open(void *tall_ctx,
 	/* Initialize CTRL queue */
 	INIT_LLIST_HEAD(&trx->trx_ctrl_list);
 
+#ifdef IPCIF
 	rc = eventfd(0, 0);
 	osmo_fd_setup(get_c_fd(), rc, OSMO_FD_READ, trx_ctrl_read_cb, trx, 0);
 	osmo_fd_register(get_c_fd());
@@ -690,8 +764,25 @@ struct trx_instance *trx_if_open(void *tall_ctx,
 	rc = eventfd(0, 0);
 	osmo_fd_setup(get_d_fd(), rc, OSMO_FD_READ, trx_data_rx_cb, trx, 0);
 	osmo_fd_register(get_d_fd());
+#else
+	/* Open sockets */
+	rc = trx_udp_open(trx, &trx->trx_ofd_ctrl, local_host, base_port + 101, remote_host, base_port + 1,
+			  trx_ctrl_read_cb);
+	if (rc < 0)
+		goto udp_error;
 
+	rc = trx_udp_open(trx, &trx->trx_ofd_data, local_host, base_port + 102, remote_host, base_port + 2,
+			  trx_data_rx_cb);
+	if (rc < 0)
+		goto udp_error;
+#endif
 	return trx;
+
+udp_error:
+	LOGP(DTRX, LOGL_ERROR, "Couldn't establish UDP connection\n");
+	osmo_fsm_inst_free(trx->fsm);
+	talloc_free(trx);
+	return NULL;
 }
 
 /* Flush pending control messages */
@@ -723,8 +814,13 @@ void trx_if_close(struct trx_instance *trx)
 	trx_if_flush_ctrl(trx);
 
 	/* Close sockets */
+#ifdef IPCIF
 	close(get_c_fd()->fd);
 	close(get_d_fd()->fd);
+#else
+	trx_udp_close(&trx->trx_ofd_ctrl);
+	trx_udp_close(&trx->trx_ofd_data);
+#endif
 
 	/* Free memory */
 	osmo_fsm_inst_free(trx->fsm);

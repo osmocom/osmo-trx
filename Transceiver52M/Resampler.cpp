@@ -32,7 +32,7 @@ extern "C" {
 #define M_PI			3.14159265358979323846264338327f
 #endif
 
-#define MAX_OUTPUT_LEN		4096
+#define MAX_OUTPUT_LEN 4096 * 4
 
 using namespace std;
 

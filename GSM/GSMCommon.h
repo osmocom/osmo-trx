@@ -52,6 +52,7 @@ extern const BitVector gEdgeTrainingSequence[];
 
 /** C0T0 filler burst, GSM 05.02, 5.2.6 */
 extern const BitVector gDummyBurst;
+extern const BitVector gDummyBurstTSC;
 
 /** Random access burst synch. sequence */
 extern const BitVector gRACHSynchSequenceTS0;

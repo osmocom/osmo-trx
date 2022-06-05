@@ -24,8 +24,8 @@ include $(top_srcdir)/Makefile.common
 SUBDIRS = arch device
 
 AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/arch/common -I${srcdir}/device/common
-AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
-AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
+AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS) -mcpu=cortex-a72 -mfloat-abi=hard -mfpu=neon-fp-armv8
+AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS) -mcpu=cortex-a72 -mfloat-abi=hard -mfpu=neon-fp-armv8
 
 noinst_LTLIBRARIES = libtransceiver_common.la
 
@@ -38,8 +38,6 @@ COMMON_SOURCES = \
 	radioBuffer.cpp \
 	sigProcLib.cpp \
 	signalVector.cpp \
-	Transceiver.cpp \
-	Transceiver2.cpp \
 	ChannelizerBase.cpp \
 	Channelizer.cpp \
 	Synthesis.cpp \
@@ -86,52 +84,47 @@ COMMON_LDADD = \
 bin_PROGRAMS =
 
 if DEVICE_UHD
-bin_PROGRAMS += osmo-trx-uhd
-osmo_trx_uhd_SOURCES = osmo-trx.cpp
-osmo_trx_uhd_LDADD = \
-	$(builddir)/device/uhd/libdevice.la \
+bin_PROGRAMS += osmo-trx-ms-uhd
+osmo_trx_ms_uhd_SOURCES = ms/syncthing.cpp ms/ms_rx_lower.cpp ms/ms_rx_upper.cpp ms/ms_commandhandler.cpp
+osmo_trx_ms_uhd_LDADD = \
+	$(builddir)/device/bladerf/libdevice.la \
 	$(COMMON_LDADD) \
 	$(UHD_LIBS) \
 	$(TRXCON_LA)
-osmo_trx_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
-endif
+osmo_trx_ms_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DBUILDUHD
 
-if DEVICE_USRP1
-bin_PROGRAMS += osmo-trx-usrp1
-osmo_trx_usrp1_SOURCES = osmo-trx.cpp
-osmo_trx_usrp1_LDADD = \
-	$(builddir)/device/usrp1/libdevice.la \
-	$(COMMON_LDADD) \
-	$(USRP_LIBS)
-osmo_trx_usrp1_CPPFLAGS  = $(AM_CPPFLAGS) $(USRP_CFLAGS)
-endif
+bin_PROGRAMS += osmo-trx-syncthing-uhd
+osmo_trx_syncthing_uhd_SOURCES = $(osmo_trx_ms_uhd_SOURCES) ms/ms_rx_burst.cpp
+osmo_trx_syncthing_uhd_LDADD =  $(osmo_trx_ms_uhd_LDADD)
+osmo_trx_syncthing_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DSYNCTHINGONLY -DBUILDUHD
+#osmo_trx_syncthing_LDFLAGS  = -fsanitize=address,undefined -shared-libsan
 
-if DEVICE_LMS
-bin_PROGRAMS += osmo-trx-lms
-osmo_trx_lms_SOURCES = osmo-trx.cpp
-osmo_trx_lms_LDADD = \
-	$(builddir)/device/lms/libdevice.la \
-	$(COMMON_LDADD) \
-	$(LMS_LIBS)
-osmo_trx_lms_CPPFLAGS  = $(AM_CPPFLAGS) $(LMS_CFLAGS)
-endif
-
-if DEVICE_IPC
-bin_PROGRAMS += osmo-trx-ipc
-osmo_trx_ipc_SOURCES = osmo-trx.cpp
-osmo_trx_ipc_LDADD = \
-	$(builddir)/device/ipc/libdevice.la \
-	$(COMMON_LDADD)
-osmo_trx_ipc_CPPFLAGS  = $(AM_CPPFLAGS)
 endif
 
 if DEVICE_BLADE
-bin_PROGRAMS += osmo-trx-blade
-osmo_trx_blade_SOURCES = osmo-trx.cpp
-osmo_trx_blade_LDADD = \
+bin_PROGRAMS += osmo-trx-ms-blade
+osmo_trx_ms_blade_SOURCES = ms/syncthing.cpp ms/ms_rx_lower.cpp ms/ms_rx_upper.cpp ms/ms_commandhandler.cpp
+osmo_trx_ms_blade_LDADD = \
 	$(builddir)/device/bladerf/libdevice.la \
 	$(COMMON_LDADD) \
-	$(BLADE_LIBS)
-osmo_trx_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS)
+	$(BLADE_LIBS) \
+	$(TRXCON_LA)
+osmo_trx_ms_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS) -DBUILDBLADE
+
+bin_PROGRAMS += osmo-trx-syncthing-blade
+osmo_trx_syncthing_blade_SOURCES = $(osmo_trx_ms_blade_SOURCES) ms/ms_rx_burst.cpp
+osmo_trx_syncthing_blade_LDADD =  $(osmo_trx_ms_blade_LDADD)
+osmo_trx_syncthing_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS) -DSYNCTHINGONLY -DBUILDBLADE -mcpu=cortex-a72 -mfloat-abi=hard -mfpu=neon-fp-armv8
+#osmo_trx_syncthing_LDFLAGS  = -fsanitize=address,undefined -shared-libsan
 endif
 
+
+noinst_HEADERS += \
+	ms/syncthing.h \
+	ms/bladerf_specific.h \
+	ms/uhd_specific.h \
+	ms/ms_rx_upper.h \
+	ms/ms_state.h \
+	itrq.h
+# -fsanitize=address,undefined -shared-libsan -O0
+#

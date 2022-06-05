@@ -29,20 +29,20 @@ extern "C" {
 /* 148 bytes output symbol values, 0 & 1                                    */
 /* ------------------------------------------------------------------------ */
 
-struct trxd_to_trx {
-   uint8_t ts;
-   uint32_t fn;
-   uint8_t txlev;
-   uint8_t symbols[148];
+struct __attribute__((packed)) trxd_to_trx {
+	uint8_t ts;
+	uint32_t fn;
+	uint8_t txlev;
+	uint8_t symbols[148];
 };
 
-struct trxd_from_trx {
-   uint8_t ts;
-   uint32_t fn;
-   uint8_t rssi;
-   uint16_t toa;
-   uint8_t symbols[148];
-   uint8_t pad[2];
+struct __attribute__((packed)) trxd_from_trx {
+	uint8_t ts;
+	uint32_t fn;
+	uint8_t rssi;
+	uint16_t toa;
+	uint8_t symbols[148];
+	uint8_t pad[2];
 };
 
 #define TRXC_BUF_SIZE	1024
