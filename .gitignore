@@ -75,3 +75,6 @@ contrib/osmo-trx.spec
 !contrib/osmo-trx.spec.in
 
 utils/osmo-prbs-tool
+/.qtc_clangd/*
+/.cache/*
+/.vscode/*
