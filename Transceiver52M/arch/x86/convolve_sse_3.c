@@ -27,6 +27,7 @@
 #include <pmmintrin.h>
 
 /* 4-tap SSE complex-real convolution */
+__attribute__((xray_never_instrument))
 void sse_conv_real4(const float *x, int x_len,
 		    const float *h, int h_len,
 		    float *y, int y_len,
@@ -68,6 +69,7 @@ void sse_conv_real4(const float *x, int x_len,
 }
 
 /* 8-tap SSE complex-real convolution */
+__attribute__((xray_never_instrument))
 void sse_conv_real8(const float *x, int x_len,
 		    const float *h, int h_len,
 		    float *y, int y_len,
@@ -119,6 +121,7 @@ void sse_conv_real8(const float *x, int x_len,
 }
 
 /* 12-tap SSE complex-real convolution */
+__attribute__((xray_never_instrument))
 void sse_conv_real12(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
@@ -185,6 +188,7 @@ void sse_conv_real12(const float *x, int x_len,
 }
 
 /* 16-tap SSE complex-real convolution */
+__attribute__((xray_never_instrument))
 void sse_conv_real16(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
@@ -264,6 +268,7 @@ void sse_conv_real16(const float *x, int x_len,
 }
 
 /* 20-tap SSE complex-real convolution */
+__attribute__((xray_never_instrument))
 void sse_conv_real20(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
@@ -354,6 +359,7 @@ void sse_conv_real20(const float *x, int x_len,
 }
 
 /* 4*N-tap SSE complex-real convolution */
+__attribute__((xray_never_instrument))
 void sse_conv_real4n(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
@@ -401,6 +407,7 @@ void sse_conv_real4n(const float *x, int x_len,
 }
 
 /* 4*N-tap SSE complex-complex convolution */
+__attribute__((xray_never_instrument))
 void sse_conv_cmplx_4n(const float *x, int x_len,
 		       const float *h, int h_len,
 		       float *y, int y_len,
@@ -459,6 +466,7 @@ void sse_conv_cmplx_4n(const float *x, int x_len,
 }
 
 /* 8*N-tap SSE complex-complex convolution */
+__attribute__((xray_never_instrument))
 void sse_conv_cmplx_8n(const float *x, int x_len,
 		       const float *h, int h_len,
 		       float *y, int y_len,

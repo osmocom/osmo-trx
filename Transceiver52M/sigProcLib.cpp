@@ -1095,6 +1095,7 @@ signalVector *delayVector(const signalVector *in, signalVector *out, float delay
   return out;
 }
 
+__attribute__((xray_never_instrument))
 static complex interpolatePoint(const signalVector &inSig, float ix)
 {
   int start = (int) (floor(ix) - 10);

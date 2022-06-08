@@ -17,6 +17,7 @@
 
 #include "convert.h"
 
+__attribute__((xray_never_instrument))
 void base_convert_float_short(short *out, const float *in,
 			      float scale, int len)
 {
@@ -24,6 +25,7 @@ void base_convert_float_short(short *out, const float *in,
 		out[i] = in[i] * scale;
 }
 
+__attribute__((xray_never_instrument))
 void base_convert_short_float(float *out, const short *in, int len)
 {
 	for (int i = 0; i < len; i++)

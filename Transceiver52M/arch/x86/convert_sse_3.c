@@ -26,6 +26,7 @@
 #include <emmintrin.h>
 
 /* 8*N single precision floats scaled and converted to 16-bit signed integer */
+__attribute__((xray_never_instrument))
 void _sse_convert_scale_ps_si16_8n(short *restrict out,
 				   const float *restrict in,
 				   float scale, int len)
@@ -54,6 +55,7 @@ void _sse_convert_scale_ps_si16_8n(short *restrict out,
 }
 
 /* 8*N single precision floats scaled and converted with remainder */
+__attribute__((xray_never_instrument))
 void _sse_convert_scale_ps_si16(short *restrict out,
 				const float *restrict in, float scale, int len)
 {
@@ -66,6 +68,7 @@ void _sse_convert_scale_ps_si16(short *restrict out,
 }
 
 /* 16*N single precision floats scaled and converted to 16-bit signed integer */
+__attribute__((xray_never_instrument))
 void _sse_convert_scale_ps_si16_16n(short *restrict out,
 				    const float *restrict in,
 				    float scale, int len)

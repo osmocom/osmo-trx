@@ -60,6 +60,7 @@ void convert_init(void)
 #endif
 }
 
+__attribute__((xray_never_instrument))
 void convert_float_short(short *out, const float *in, float scale, int len)
 {
 	if (!(len % 16))
@@ -70,6 +71,7 @@ void convert_float_short(short *out, const float *in, float scale, int len)
 		c.convert_scale_ps_si16(out, in, scale, len);
 }
 
+__attribute__((xray_never_instrument))
 void convert_short_float(float *out, const short *in, int len)
 {
 	if (!(len % 16))

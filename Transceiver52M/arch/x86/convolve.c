@@ -91,6 +91,7 @@ void convolve_init(void)
 }
 
 /* API: Aligned complex-real */
+__attribute__((xray_never_instrument))
 int convolve_real(const float *x, int x_len,
 		  const float *h, int h_len,
 		  float *y, int y_len, int start, int len)
@@ -130,6 +131,7 @@ int convolve_real(const float *x, int x_len,
 }
 
 /* API: Aligned complex-complex */
+__attribute__((xray_never_instrument))
 int convolve_complex(const float *x, int x_len,
 		     const float *h, int h_len,
 		     float *y, int y_len,
