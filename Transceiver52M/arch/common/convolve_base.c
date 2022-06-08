@@ -24,6 +24,7 @@
 #endif
 
 /* Base multiply and accumulate complex-real */
+__attribute__((xray_never_instrument))
 static void mac_real(const float *x, const float *h, float *y)
 {
 	y[0] += x[0] * h[0];
@@ -31,6 +32,7 @@ static void mac_real(const float *x, const float *h, float *y)
 }
 
 /* Base multiply and accumulate complex-complex */
+__attribute__((xray_never_instrument))
 static void mac_cmplx(const float *x, const float *h, float *y)
 {
 	y[0] += x[0] * h[0] - x[1] * h[1];
@@ -38,6 +40,7 @@ static void mac_cmplx(const float *x, const float *h, float *y)
 }
 
 /* Base vector complex-complex multiply and accumulate */
+__attribute__((xray_never_instrument))
 static void mac_real_vec_n(const float *x, const float *h, float *y,
 			   int len)
 {
@@ -46,6 +49,7 @@ static void mac_real_vec_n(const float *x, const float *h, float *y,
 }
 
 /* Base vector complex-complex multiply and accumulate */
+__attribute__((xray_never_instrument))
 static void mac_cmplx_vec_n(const float *x, const float *h, float *y,
 			    int len)
 {
@@ -54,6 +58,7 @@ static void mac_cmplx_vec_n(const float *x, const float *h, float *y,
 }
 
 /* Base complex-real convolution */
+__attribute__((xray_never_instrument))
 int _base_convolve_real(const float *x, int x_len,
 			const float *h, int h_len,
 			float *y, int y_len,
@@ -69,6 +74,7 @@ int _base_convolve_real(const float *x, int x_len,
 }
 
 /* Base complex-complex convolution */
+__attribute__((xray_never_instrument))
 int _base_convolve_complex(const float *x, int x_len,
 			   const float *h, int h_len,
 			   float *y, int y_len,
@@ -85,6 +91,7 @@ int _base_convolve_complex(const float *x, int x_len,
 }
 
 /* Buffer validity checks */
+__attribute__((xray_never_instrument))
 int bounds_check(int x_len, int h_len, int y_len,
 		 int start, int len)
 {
@@ -105,6 +112,7 @@ int bounds_check(int x_len, int h_len, int y_len,
 }
 
 /* API: Non-aligned (no SSE) complex-real */
+__attribute__((xray_never_instrument))
 int base_convolve_real(const float *x, int x_len,
 		       const float *h, int h_len,
 		       float *y, int y_len,
@@ -122,6 +130,7 @@ int base_convolve_real(const float *x, int x_len,
 }
 
 /* API: Non-aligned (no SSE) complex-complex */
+__attribute__((xray_never_instrument))
 int base_convolve_complex(const float *x, int x_len,
 			  const float *h, int h_len,
 			  float *y, int y_len,
@@ -139,6 +148,7 @@ int base_convolve_complex(const float *x, int x_len,
 }
 
 /* Aligned filter tap allocation */
+__attribute__((xray_never_instrument))
 void *convolve_h_alloc(size_t len)
 {
 #ifdef HAVE_SSE3

@@ -25,6 +25,7 @@
 #include <smmintrin.h>
 
 /* 16*N 16-bit signed integer converted to single precision floats */
+__attribute__((xray_never_instrument))
 void _sse_convert_si16_ps_16n(float *restrict out,
 			      const short *restrict in, int len)
 {
@@ -59,6 +60,7 @@ void _sse_convert_si16_ps_16n(float *restrict out,
 }
 
 /* 16*N 16-bit signed integer conversion with remainder */
+__attribute__((xray_never_instrument))
 void _sse_convert_si16_ps(float *restrict out,
 			  const short *restrict in, int len)
 {
