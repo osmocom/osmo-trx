@@ -27,9 +27,9 @@ GIT Repository
 
 You can clone from the official osmo-trx.git repository using
 
-        git clone git://git.osmocom.org/osmo-trx.git
+        git clone https://gitea.osmocom.org/cellular-infrastructure/osmo-trx`
 
-There is a cgit interface at <https://git.osmocom.org/osmo-trx/>
+There is a web interface at <https://gitea.osmocom.org/cellular-infrastructure/osmo-trx>
 
 Documentation
 -------------

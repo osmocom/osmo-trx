@@ -17,8 +17,8 @@ Build-Depends: debhelper (>= 9),
                libosmocore-dev (>= 1.6.0),
                osmo-gsm-manuals-dev
 Standards-Version: 3.9.6
-Vcs-Browser: http://cgit.osmocom.org/osmo-trx
-Vcs-Git: git://git.osmocom.org/osmo-trx
+Vcs-Browser: https://gitea.osmocom.org/cellular-infrastructure/osmo-trx
+Vcs-Git: https://gitea.osmocom.org/cellular-infrastructure/osmo-trx
 Homepage: https://projects.osmocom.org/projects/osmotrx
 
 Package: osmo-trx
