@@ -1,3 +1,16 @@
+osmo-trx (1.4.1) unstable; urgency=medium
+
+  [ Oliver Smith ]
+  * treewide: remove FSF address
+
+  [ Vadim Yanitskiy ]
+  * tests: use 'check_PROGRAMS' instead of 'noinst_PROGRAMS'
+
+  [ Harald Welte ]
+  * update git URLs (git -> https; gitea)
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Wed, 29 Jun 2022 09:32:56 +0200
+
 osmo-trx (1.4.0) unstable; urgency=medium
 
   [ Pau Espin Pedrol ]
