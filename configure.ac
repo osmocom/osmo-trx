@@ -185,6 +185,14 @@ AS_IF([test "x$with_uhd" = "xyes"],[
             [PKG_CHECK_MODULES(UHD, uhd >= 003.005)]
         )]
     )
+    # OS#5608: libuhd < 4.2.0 includes boost/thread/thread.hpp in its logging
+    # code and therefore requires linking against boost_thread. It's missing in
+    # uhd.pc, so work around it here.
+    # https://github.com/EttusResearch/uhd/commit/04a83b6e76beef970854da69ba882d717669b49c
+    PKG_CHECK_MODULES(UHD, uhd < 004.002,
+        [LIBS="$LIBS -lboost_thread"],
+        []
+    )
 ])
 
 AS_IF([test "x$with_singledb" = "xyes"], [
