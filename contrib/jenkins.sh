@@ -106,8 +106,11 @@ autoreconf --install --force
 $MAKE $PARALLEL_MAKE
 $MAKE check \
   || cat-testlogs.sh
-DISTCHECK_CONFIGURE_FLAGS="$CONFIG" $MAKE $PARALLEL_MAKE distcheck \
-  || cat-testlogs.sh
+
+if arch | grep -v -q arm; then
+	DISTCHECK_CONFIGURE_FLAGS="$CONFIG" $MAKE $PARALLEL_MAKE distcheck \
+	  || cat-testlogs.sh
+fi
 
 if [ "$WITH_MANUALS" = "1" ] && [ "$PUBLISH" = "1" ]; then
 	make -C "$base/doc/manuals" publish
