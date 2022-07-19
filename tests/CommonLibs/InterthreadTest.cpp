@@ -29,9 +29,9 @@
 #include "Threads.h"
 #include "Interthread.h"
 #include <iostream>
+#include <mutex>
 
-using namespace std;
-
+std::mutex dbg_cout;
 
 InterthreadQueue<int> gQ;
 InterthreadMap<int,int> gMap;
@@ -40,6 +40,8 @@ int q_last_read_val = -1;
 int q_last_write_val;
 int m_last_read_val;
 int m_last_write_val;
+
+#define CERR(text) { dbg_cout.lock() ; std::cerr << text; dbg_cout.unlock(); }
 
 void* qWriter(void*)
 {

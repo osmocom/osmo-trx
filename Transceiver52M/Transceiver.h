@@ -148,6 +148,7 @@ public:
   } ChannelCombination;
 
 private:
+  size_t mChans;
 struct ctrl_msg {
   char data[101];
   ctrl_msg() {};
@@ -218,7 +219,7 @@ struct ctrl_sock_state {
   /** drive handling of control messages from GSM core */
   int ctrl_sock_handle_rx(int chan);
 
-  size_t mChans;
+
   bool mOn;	                           ///< flag to indicate that transceiver is powered on
   bool mForceClockInterface;           ///< flag to indicate whether IND CLOCK shall be sent unconditionally after transceiver is started
   bool mHandover[8][8];                ///< expect handover to the timeslot/subslot

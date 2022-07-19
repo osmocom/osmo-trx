@@ -135,12 +135,13 @@ bool TransceiverState::init(FillerType filler, size_t sps, float scale, size_t r
 Transceiver::Transceiver(const struct trx_cfg *cfg,
                          GSM::Time wTransmitLatency,
                          RadioInterface *wRadioInterface)
-  : cfg(cfg), mClockSocket(-1),
-    mRxLowerLoopThread(nullptr), mTxLowerLoopThread(nullptr),
-    mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
-    mChans(cfg->num_chans), mOn(false), mForceClockInterface(false),
-    mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0),
-    mMaxExpectedDelayNB(0), mWriteBurstToDiskMask(0)
+  : mChans(cfg->num_chans), cfg(cfg),
+    mCtrlSockets(mChans), mClockSocket(-1),
+    mTxPriorityQueues(mChans), mReceiveFIFO(mChans),
+    mRxServiceLoopThreads(mChans), mRxLowerLoopThread(nullptr), mTxLowerLoopThread(nullptr),
+    mTxPriorityQueueServiceLoopThreads(mChans), mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
+    mOn(false),mForceClockInterface(false), mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0),
+    mMaxExpectedDelayNB(0), mWriteBurstToDiskMask(0), mVersionTRXD(mChans), mStates(mChans)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
@@ -208,14 +209,7 @@ bool Transceiver::init()
   }
 
   mDataSockets.resize(mChans, -1);
-  mCtrlSockets.resize(mChans);
-  mTxPriorityQueueServiceLoopThreads.resize(mChans);
-  mRxServiceLoopThreads.resize(mChans);
 
-  mTxPriorityQueues.resize(mChans);
-  mReceiveFIFO.resize(mChans);
-  mStates.resize(mChans);
-  mVersionTRXD.resize(mChans);
 
   /* Filler table retransmissions - support only on channel 0 */
   if (cfg->filler == FILLER_DUMMY)
