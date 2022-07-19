@@ -76,14 +76,17 @@ bool radioVector::setVector(signalVector *vector, size_t chan)
 	return true;
 }
 
-noiseVector::noiseVector(size_t size)
+avgVector::avgVector(size_t size)
 	: std::vector<float>(size), itr(0)
 {
 }
 
-float noiseVector::avg() const
+float avgVector::avg() const
 {
 	float val = 0.0;
+
+	if (!size())
+		return 0.0f;
 
 	for (size_t i = 0; i < size(); i++)
 		val += (*this)[i];
@@ -91,7 +94,7 @@ float noiseVector::avg() const
 	return val / (float) size();
 }
 
-bool noiseVector::insert(float val)
+bool avgVector::insert(float val)
 {
 	if (!size())
 		return false;

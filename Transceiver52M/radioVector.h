@@ -48,9 +48,9 @@ private:
 	GSM::Time mTime;
 };
 
-class noiseVector : std::vector<float> {
+class avgVector : std::vector<float> {
 public:
-	noiseVector(size_t size = 0);
+	avgVector(size_t size = 0);
 	bool insert(float val);
 	float avg() const;
 
