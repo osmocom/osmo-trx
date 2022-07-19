@@ -21,6 +21,7 @@
  *
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -29,6 +30,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <time.h>
+#include <pthread.h>
 
 #include <arpa/inet.h>
 
@@ -276,6 +278,21 @@ extern volatile bool gshutdown;
 int main(int argc, char **argv)
 {
 	int rc = 0;
+
+	cpu_set_t cpuset;
+
+	CPU_ZERO(&cpuset);
+	CPU_SET(3, &cpuset);
+	pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
+
+	int prio = sched_get_priority_max(SCHED_RR) - 5;
+	struct sched_param param;
+	param.sched_priority = prio;
+	int rv = sched_setscheduler(0, SCHED_RR, &param);
+	if (rv < 0) {
+		LOGP(DAPP, LOGL_ERROR, "Failed to set sched!\n");
+		exit(0);
+	}
 
 	printf("%s", COPYRIGHT);
 	init_defaults();

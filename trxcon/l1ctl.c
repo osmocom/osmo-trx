@@ -353,14 +353,14 @@ static int l1ctl_rx_fbsb_req(struct l1ctl_link *l1l, struct msgb *msg)
 	l1l->fbsb_conf_sent = false;
 
 	/* Only if current ARFCN differs */
-//	if (l1l->trx->band_arfcn != band_arfcn) {
+	if (l1l->trx->band_arfcn != band_arfcn) {
 		/* Update current ARFCN */
 		l1l->trx->band_arfcn = band_arfcn;
 
 		/* Tune transceiver to required ARFCN */
 		trx_if_cmd_rxtune(l1l->trx, band_arfcn);
 		trx_if_cmd_txtune(l1l->trx, band_arfcn);
-//	}
+	}
 
 	/* Transceiver might have been powered on before, e.g.
 	 * in case of sending L1CTL_FBSB_REQ due to signal loss. */
@@ -373,8 +373,7 @@ static int l1ctl_rx_fbsb_req(struct l1ctl_link *l1l, struct msgb *msg)
 	l1l->fbsb_timer.data = l1l;
 	l1l->fbsb_timer.cb = fbsb_timer_cb;
 	LOGP(DL1C, LOGL_INFO, "Starting FBSB timer %u ms\n", timeout * GSM_TDMA_FN_DURATION_uS / 1000);
-	osmo_timer_schedule(&l1l->fbsb_timer, 35,
-		timeout * GSM_TDMA_FN_DURATION_uS);
+	osmo_timer_schedule(&l1l->fbsb_timer, 2, timeout * GSM_TDMA_FN_DURATION_uS);
 
 exit:
 	msgb_free(msg);
