@@ -22,8 +22,10 @@ enum trx_fsm_states {
 };
 
 struct trx_instance {
-//	struct osmo_fd trx_ofd_ctrl;
-//	struct osmo_fd trx_ofd_data;
+#ifndef IPCIF
+	struct osmo_fd trx_ofd_ctrl;
+	struct osmo_fd trx_ofd_data;
+#endif
 
 	struct osmo_timer_list trx_ctrl_timer;
 	struct llist_head trx_ctrl_list;
