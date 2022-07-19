@@ -96,10 +96,8 @@ float avgVector::avg() const
 
 bool avgVector::insert(float val)
 {
-	if (size() < max) {
-		push_back(val);
-		return true;
-	}
+	if (!size())
+		return false;
 
 	if (itr >= this->size())
 		itr = 0;
@@ -107,16 +105,6 @@ bool avgVector::insert(float val)
 	(*this)[itr++] = val;
 
 	return true;
-}
-
-bool avgVector::full() const
-{
-	return size() >= max;
-}
-
-void avgVector::reset()
-{
-	resize(0);
 }
 
 GSM::Time VectorQueue::nextTime() const

@@ -6,6 +6,12 @@ Transceiver52M/osmo-trx-uhd
 Transceiver52M/osmo-trx-usrp1
 Transceiver52M/osmo-trx-lms
 Transceiver52M/osmo-trx-ipc
+Transceiver52M/osmo-trx-blade
+Transceiver52M/osmo-trx-syncthing-blade
+Transceiver52M/osmo-trx-syncthing-uhd
+Transceiver52M/osmo-trx-ms-blade
+Transceiver52M/osmo-trx-ms-uhd
+
 
 .clang-format
 
