@@ -44,8 +44,9 @@ extern "C" {
 RadioInterfaceMulti::RadioInterfaceMulti(RadioDevice *radio, size_t tx_sps,
 					 size_t rx_sps, size_t chans)
 	: RadioInterface(radio, tx_sps, rx_sps, chans),
-	  outerSendBuffer(NULL), outerRecvBuffer(NULL),
-	  dnsampler(NULL), upsampler(NULL), channelizer(NULL), synthesis(NULL)
+	  outerSendBuffer(NULL), outerRecvBuffer(NULL), history(mChans), active(MCHANS, false),
+	  rx_freq_state(mChans), tx_freq_state(mChans), dnsampler(NULL), upsampler(NULL), channelizer(NULL),
+	  synthesis(NULL)
 {
 }
 
@@ -74,12 +75,12 @@ void RadioInterfaceMulti::close()
 	for (std::vector<signalVector*>::iterator it = history.begin(); it != history.end(); ++it)
 		delete *it;
 
-	mReceiveFIFO.resize(0);
-	powerScaling.resize(0);
-	history.resize(0);
-	active.resize(0);
-	rx_freq_state.resize(0);
-	tx_freq_state.resize(0);
+	mReceiveFIFO.clear();
+	powerScaling.clear();
+	history.clear();
+	active.clear();
+	rx_freq_state.clear();
+	tx_freq_state.clear();
 
 	RadioInterface::close();
 }
@@ -154,17 +155,8 @@ bool RadioInterfaceMulti::init(int type)
 
 	close();
 
-	sendBuffer.resize(mChans);
-	recvBuffer.resize(mChans);
 	convertSendBuffer.resize(1);
 	convertRecvBuffer.resize(1);
-
-	mReceiveFIFO.resize(mChans);
-	powerScaling.resize(mChans);
-	history.resize(mChans);
-	rx_freq_state.resize(mChans);
-	tx_freq_state.resize(mChans);
-	active.resize(MCHANS, false);
 
 	/* 4 == sps */
 	inchunk = RESAMP_INRATE * 4;

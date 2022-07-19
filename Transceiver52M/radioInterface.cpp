@@ -39,9 +39,10 @@ extern "C" {
 RadioInterface::RadioInterface(RadioDevice *wDevice, size_t tx_sps,
                                size_t rx_sps, size_t chans,
                                int wReceiveOffset, GSM::Time wStartTime)
-  : mDevice(wDevice), mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans),
-    underrun(false), overrun(false), writeTimestamp(0), readTimestamp(0),
-    receiveOffset(wReceiveOffset), mOn(false)
+  : mSPSTx(tx_sps), mSPSRx(rx_sps), mChans(chans), mReceiveFIFO(mChans), mDevice(wDevice),
+    sendBuffer(mChans), recvBuffer(mChans), convertRecvBuffer(mChans),
+    convertSendBuffer(mChans), powerScaling(mChans), underrun(false), overrun(false),
+    writeTimestamp(0), readTimestamp(0), receiveOffset(wReceiveOffset), mOn(false)
 {
   mClock.set(wStartTime);
 }
@@ -57,15 +58,6 @@ bool RadioInterface::init(int type)
     LOG(ALERT) << "Invalid configuration";
     return false;
   }
-
-  close();
-
-  sendBuffer.resize(mChans);
-  recvBuffer.resize(mChans);
-  convertSendBuffer.resize(mChans);
-  convertRecvBuffer.resize(mChans);
-  mReceiveFIFO.resize(mChans);
-  powerScaling.resize(mChans);
 
   for (size_t i = 0; i < mChans; i++) {
     sendBuffer[i] = new RadioBuffer(NUMCHUNKS, CHUNK * mSPSTx, 0, true);

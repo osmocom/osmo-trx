@@ -58,17 +58,11 @@ static int ipc_chan_sock_cb(struct osmo_fd *bfd, unsigned int flags);
 
 IPCDevice::IPCDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
 		     const std::vector<std::string> &tx_paths, const std::vector<std::string> &rx_paths)
-	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths), tx_attenuation(),
-	  tmp_state(IPC_IF_MSG_GREETING_REQ), shm(NULL), shm_dec(0), started(false)
+	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths), sk_chan_state(chans, ipc_per_trx_sock_state()),
+	  tx_attenuation(), tmp_state(IPC_IF_MSG_GREETING_REQ), shm(NULL), shm_dec(0),
+	  rx_buffers(chans), started(false), tx_gains(chans), rx_gains(chans)
 {
 	LOGC(DDEV, INFO) << "creating IPC device...";
-
-	rx_gains.resize(chans);
-	tx_gains.resize(chans);
-
-	rx_buffers.resize(chans);
-
-	sk_chan_state.resize(chans, ipc_per_trx_sock_state());
 
 	/* Set up per-channel Rx timestamp based Ring buffers */
 	for (size_t i = 0; i < rx_buffers.size(); i++)

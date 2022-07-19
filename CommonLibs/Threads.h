@@ -28,143 +28,96 @@
 #ifndef THREADS_H
 #define THREADS_H
 
-#include "config.h"
-
+#include <chrono>
+#include <mutex>
+#include <condition_variable>
 #include <pthread.h>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 #include <unistd.h>
 
+#include "config.h"
+#include "Timeval.h"
+
 class Mutex;
-
-
-/**@name Multithreaded access for standard streams. */
-//@{
-
-/**@name Functions for gStreamLock. */
-//@{
-extern Mutex gStreamLock;	///< global lock for cout and cerr
-void lockCerr();		///< call prior to writing cerr
-void unlockCerr();		///< call after writing cerr
-void lockCout();		///< call prior to writing cout
-void unlockCout();		///< call after writing cout
-//@}
-
-/**@name Macros for standard messages. */
-//@{
-#define COUT(text) { lockCout(); std::cout << text; unlockCout(); }
-#define CERR(text) { lockCerr(); std::cerr << __FILE__ << ":" << __LINE__ << ": " << text; unlockCerr(); }
-#ifdef NDEBUG
-#define DCOUT(text) {}
-#define OBJDCOUT(text) {}
-#else
-#define DCOUT(text) { COUT(__FILE__ << ":" << __LINE__ << " " << text); }
-#define OBJDCOUT(text) { DCOUT(this << " " << text); }
-#endif
-//@}
-//@}
-
-
 
 /**@defgroup C++ wrappers for pthread mechanisms. */
 //@{
 
-/** A class for recursive mutexes based on pthread_mutex. */
+/** A class for recursive mutexes. */
 class Mutex {
+	std::recursive_mutex m;
 
-	private:
+    public:
 
-	pthread_mutex_t mMutex;
-	pthread_mutexattr_t mAttribs;
+	void lock() {
+		m.lock();
+	}
 
-	public:
+	bool trylock() {
+		return m.try_lock();
+	}
 
-	Mutex();
-
-	~Mutex();
-
-	void lock() { pthread_mutex_lock(&mMutex); }
-
-	bool trylock() { return pthread_mutex_trylock(&mMutex)==0; }
-
-	void unlock() { pthread_mutex_unlock(&mMutex); }
+	void unlock() {
+		m.unlock();
+	}
 
 	friend class Signal;
-
 };
-
 
 class ScopedLock {
+	Mutex &mMutex;
 
-	private:
-	Mutex& mMutex;
-
-	public:
-	ScopedLock(Mutex& wMutex) :mMutex(wMutex) { mMutex.lock(); }
-	~ScopedLock() { mMutex.unlock(); }
-
+    public:
+	ScopedLock(Mutex &wMutex) : mMutex(wMutex) {
+		mMutex.lock();
+	}
+	~ScopedLock() {
+		mMutex.unlock();
+	}
 };
 
-
-
-
-/** A C++ interthread signal based on pthread condition variables. */
+/** A C++ interthread signal. */
 class Signal {
+	/* any, because for some reason our mutex is recursive... */
+	std::condition_variable_any mSignal;
 
-	private:
+    public:
 
-	mutable pthread_cond_t mSignal;
+	void wait(Mutex &wMutex, unsigned timeout) {
+		mSignal.wait_for(wMutex.m, std::chrono::milliseconds(timeout));
+	}
 
-	public:
+	void wait(Mutex &wMutex) {
+		mSignal.wait(wMutex.m);
+	}
 
-	Signal() { int s = pthread_cond_init(&mSignal,NULL); assert(!s); }
+	void signal() {
+		mSignal.notify_one();
+	}
 
-	~Signal() { pthread_cond_destroy(&mSignal); }
-
-	/**
-		Block for the signal up to the cancellation timeout.
-		Under Linux, spurious returns are possible.
-	*/
-	void wait(Mutex& wMutex, unsigned timeout) const;
-
-	/**
-		Block for the signal.
-		Under Linux, spurious returns are possible.
-	*/
-	void wait(Mutex& wMutex) const
-		{ pthread_cond_wait(&mSignal,&wMutex.mMutex); }
-
-	void signal() { pthread_cond_signal(&mSignal); }
-
-	void broadcast() { pthread_cond_broadcast(&mSignal); }
-
+	void broadcast() {
+		mSignal.notify_all();
+	}
 };
-
-
-
-#define START_THREAD(thread,function,argument) \
-	thread.start((void *(*)(void*))function, (void*)argument);
 
 void set_selfthread_name(const char *name);
 void thread_enable_cancel(bool cancel);
 
 /** A C++ wrapper for pthread threads.  */
 class Thread {
-
-	private:
-
+    private:
 	pthread_t mThread;
 	pthread_attr_t mAttrib;
 	// FIXME -- Can this be reduced now?
 	size_t mStackSize;
 
-
-	public:
-
+    public:
 	/** Create a thread in a non-running state. */
-	Thread(size_t wStackSize = 0):mThread((pthread_t)0) {
-		pthread_attr_init(&mAttrib);	// (pat) moved this here.
-		mStackSize=wStackSize;
+	Thread(size_t wStackSize = 0) : mThread((pthread_t)0)
+	{
+		pthread_attr_init(&mAttrib); // (pat) moved this here.
+		mStackSize = wStackSize;
 	}
 
 	/**
@@ -172,14 +125,17 @@ class Thread {
 		It should be stopped and joined.
 	*/
 	// (pat) If the Thread is destroyed without being started, then mAttrib is undefined.  Oops.
-	~Thread() { pthread_attr_destroy(&mAttrib); }
-
+	~Thread()
+	{
+		pthread_attr_destroy(&mAttrib);
+	}
 
 	/** Start the thread on a task. */
-	void start(void *(*task)(void*), void *arg);
+	void start(void *(*task)(void *), void *arg);
 
 	/** Join a thread that will stop on its own. */
-	void join() {
+	void join()
+	{
 		if (mThread) {
 			int s = pthread_join(mThread, NULL);
 			assert(!s);
@@ -187,7 +143,10 @@ class Thread {
 	}
 
 	/** Send cancellation to thread */
-	void cancel() { pthread_cancel(mThread); }
+	void cancel()
+	{
+		pthread_cancel(mThread);
+	}
 };
 
 #ifdef HAVE_ATOMIC_OPS

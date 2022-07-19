@@ -28,7 +28,7 @@
 
 RadioBuffer::RadioBuffer(size_t numSegments, size_t segmentLen,
 			 size_t hLen, bool outDirection)
-	: writeIndex(0), readIndex(0), availSamples(0)
+	: writeIndex(0), readIndex(0), availSamples(0), segments(numSegments)
 {
 	if (!outDirection)
 		hLen = 0;
@@ -36,7 +36,6 @@ RadioBuffer::RadioBuffer(size_t numSegments, size_t segmentLen,
 	buffer = new float[2 * (hLen + numSegments * segmentLen)];
 	bufferLen = numSegments * segmentLen;
 
-	segments.resize(numSegments);
 
 	for (size_t i = 0; i < numSegments; i++)
 		segments[i] = &buffer[2 * (hLen + i * segmentLen)];

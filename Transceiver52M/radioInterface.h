@@ -31,16 +31,15 @@ static const unsigned gSlotLen = 148;      ///< number of symbols per slot, not 
 class RadioInterface {
 
 protected:
+  size_t mSPSTx;
+  size_t mSPSRx;
+  size_t mChans;
 
   Thread mAlignRadioServiceLoopThread;	      ///< thread that synchronizes transmit and receive sections
 
   std::vector<VectorFIFO>  mReceiveFIFO;      ///< FIFO that holds receive  bursts
 
   RadioDevice *mDevice;			      ///< the USRP object
-
-  size_t mSPSTx;
-  size_t mSPSRx;
-  size_t mChans;
 
   std::vector<RadioBuffer *> sendBuffer;
   std::vector<RadioBuffer *> recvBuffer;
