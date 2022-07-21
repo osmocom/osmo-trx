@@ -312,8 +312,7 @@ static void threshold_timer_update_intv() {
 		return;
 
 	if (llist_empty(&threshold_list)) {
-		if (osmo_timer_pending(&threshold_timer))
-			osmo_timer_del(&threshold_timer);
+		osmo_timer_del(&threshold_timer);
 		return;
 	}
 
