@@ -220,6 +220,9 @@ int main(int argc, char *argv[])
 		if (tx_flag)
 			std::thread(tx_test, trx, &trx->ts_hitter_q, &trx->mTSC).detach();
 		trx->start();
+
+		usleep(1000*100);
+		trx->signal_start();
 		do {
 			sleep(1);
 		} while (1);
@@ -253,6 +256,7 @@ bh_fn_t ms_trx::rx_bh()
 	return [this](dev_buf_t *rcd) -> int {
 		if (this->search_for_sch(rcd) == SCH_STATE::FOUND)
 			this->grab_bursts(rcd);
+
 		return 0;
 	};
 }

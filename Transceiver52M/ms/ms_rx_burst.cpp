@@ -173,6 +173,7 @@ __attribute__((xray_always_instrument)) __attribute__((noinline)) void rcv_burst
 	unsigned int fnbm = 0;
 	signalVector burst(ONE_TS_BURST_LEN, 100, 100);
 
+#if 0
 	cpu_set_t cpuset;
 
 	CPU_ZERO(&cpuset);
@@ -192,7 +193,7 @@ __attribute__((xray_always_instrument)) __attribute__((noinline)) void rcv_burst
 		std::cerr << "scheduler: errreur! " << std::strerror(errno);
 		exit(0);
 	}
-
+#endif
 	while (1) {
 		one_burst e;
 		while (!q->spsc_pop(&e)) {

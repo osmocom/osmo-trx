@@ -21,6 +21,7 @@
  *
  */
 
+#include <cassert>
 #include <complex>
 #include <cstring>
 #include <functional>
@@ -145,6 +146,7 @@ template <typename T> struct ipc_hw {
 	{
 		void *ret;
 		static int to_skip = 0;
+		static uint64_t last_ts;
 
 		blade_sample_type pbuf[508 * 2];
 
@@ -185,7 +187,9 @@ template <typename T> struct ipc_hw {
 		if (to_skip < 120) // prevents weird overflows on startup
 			to_skip++;
 		else {
+			assert(last_ts != rcd.get_first_ts());
 			burst_handler(&rcd);
+			last_ts = rcd.get_first_ts();
 		}
 
 		return ret;

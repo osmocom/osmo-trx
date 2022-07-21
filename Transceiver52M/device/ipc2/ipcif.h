@@ -114,7 +114,9 @@ class trxmsif {
 			dl.ts.store(write_ts);
 			dl.len_written.store(howmany);
 		}
-		shm::mtx_log::print_guard() << std::endl << "####w+ " << write_ts << " " << howmany << std::endl << std::endl;
+		shm::mtx_log::print_guard() << std::endl
+					    << "####w+ " << write_ts << " " << howmany << std::endl
+					    << std::endl;
 	}
 
 	void signal_read_start()
@@ -155,13 +157,13 @@ class trxmsif {
 
 		// data left from prev read
 		if (left_to_read >= howmany) {
-			memcpy(outbuf, buf, samp2byte(howmany));
+			memcpy(outbuf, &buf[dl_readoffset], samp2byte(howmany));
 			dl_readoffset += howmany;
 
 			shm::mtx_log::print_guard() << "\tr++ " << *read_ts << " " << howmany << std::endl;
 			return;
 		} else {
-			memcpy(outbuf, buf, samp2byte(left_to_read));
+			memcpy(outbuf, &buf[dl_readoffset], samp2byte(left_to_read));
 			dl_readoffset = 0;
 			auto still_left_to_read = howmany - left_to_read;
 			{
@@ -170,11 +172,12 @@ class trxmsif {
 				dl.r.wait_and_reset(1);
 				assert(*read_ts != dl.ts.load());
 				len_avail = dl.len_written.load();
-				dl_readoffset += still_left_to_read;
 				assert(len_avail >= still_left_to_read);
-				memcpy(outbuf + left_to_read, buf, samp2byte(still_left_to_read));
-				shm::mtx_log::print_guard() << "\tr+++2 " << *read_ts << " " << howmany << " "
-						   << still_left_to_read << " new @" << dl.ts.load() << std::endl;
+				memcpy(&outbuf[left_to_read], buf, samp2byte(still_left_to_read));
+				dl_readoffset += still_left_to_read;
+				shm::mtx_log::print_guard()
+					<< "\tr+++2 " << *read_ts << " " << howmany << " " << still_left_to_read
+					<< " new @" << dl.ts.load() << std::endl;
 			}
 		}
 	}

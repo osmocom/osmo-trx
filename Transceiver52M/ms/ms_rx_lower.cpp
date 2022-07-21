@@ -44,13 +44,13 @@ extern "C" {
 #define DBGLG(...) std::cerr
 #endif
 
-#if !defined(SYNCTHINGONLY) || !defined(NODAMNLOG)
+#if !defined(SYNCTHINGONLY) //|| !defined(NODAMNLOG)
 #define DBGLG2(...) ms_trx::dummy_log()
 #else
 #define DBGLG2(...) std::cerr
 #endif
 
-#define PRINT_Q_OVERFLOW
+// #define PRINT_Q_OVERFLOW
 __attribute__((xray_always_instrument)) __attribute__((noinline)) bool ms_trx::decode_sch(float *bits,
 											  bool update_global_clock)
 {
@@ -145,6 +145,8 @@ bool ms_trx::handle_sch_or_nb(bool get_first_sch)
 #ifdef PRINT_Q_OVERFLOW
 	if (!pushok)
 		std::cout << "F" << std::endl;
+	else
+	 std::cout << "+" << std::endl;;
 #endif
 	if (do_auto_gain)
 		maybe_update_gain(brst);
@@ -180,7 +182,10 @@ bool ms_trx::handle_sch(bool is_first_sch_acq)
 
 	auto start = is_first_sch_acq ? get_sch_buffer_chan_imp_resp(ss, &channel_imp_resp[0], buf_len, &max_corr) :
 					get_sch_chan_imp_resp(ss, channel_imp_resp);
-	detect_burst(&ss[start], &channel_imp_resp[0], 0, outbin);
+	if(start <0)
+		std::cerr << "wtf start" << start << (is_first_sch_acq ? "FIRST" : "") << std::endl;
+	auto clamped_start = start < 0 ? 0 : start;
+	detect_burst(&ss[0], &channel_imp_resp[0], clamped_start, outbin);
 
 	SoftVector bitss(148);
 	for (int i = 0; i < 148; i++) {

@@ -871,7 +871,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
   LOGCHAN(chan, DTRXCTRL, INFO) << "command is '" << command << "'";
 
   if (match_cmd(command, "POWEROFF", NULL)) {
-    stop();
+    // stop();
     sprintf(response,"RSP POWEROFF 0");
   } else if (match_cmd(command, "POWERON", NULL)) {
     if (!start()) {

@@ -27,7 +27,6 @@
 #endif
 #include <complex>
 
-
 #include <algorithm>
 #include <string.h>
 #include <iostream>
@@ -43,8 +42,8 @@ gr_complex d_sch_training_seq[N_SYNC_BITS]; ///<encoded training sequence of a S
 gr_complex d_norm_training_seq[TRAIN_SEQ_NUM][N_TRAIN_BITS]; ///<encoded training sequences of a normal and dummy burst
 const int d_chan_imp_length = CHAN_IMP_RESP_LENGTH;
 
-void initvita() {
-
+void initvita()
+{
 	/**
 	 * Prepare SCH sequence bits
 	 *
@@ -52,8 +51,7 @@ void initvita() {
 	 * Burst and two guard periods
 	 * (one guard period is an arbitrary overlap)
 	 */
-	gmsk_mapper(SYNC_BITS, N_SYNC_BITS,
-		d_sch_training_seq, gr_complex(0.0, -1.0));
+	gmsk_mapper(SYNC_BITS, N_SYNC_BITS, d_sch_training_seq, gr_complex(0.0, -1.0));
 	for (auto &i : d_sch_training_seq)
 		i = conj(i);
 
@@ -63,21 +61,15 @@ void initvita() {
 		 * If first bit of the sequence is 0
 		 * => first symbol is 1, else -1
 		 */
-		gr_complex startpoint = train_seq[i][0] == 0 ?
-			gr_complex(1.0, 0.0) : gr_complex(-1.0, 0.0);
-		gmsk_mapper(train_seq[i], N_TRAIN_BITS,
-			d_norm_training_seq[i], startpoint);
+		gr_complex startpoint = train_seq[i][0] == 0 ? gr_complex(1.0, 0.0) : gr_complex(-1.0, 0.0);
+		gmsk_mapper(train_seq[i], N_TRAIN_BITS, d_norm_training_seq[i], startpoint);
 		for (auto &i : d_norm_training_seq[i])
 			i = conj(i);
 	}
-
 }
 
 MULTI_VER_TARGET_ATTR
-void
-detect_burst(const gr_complex* input,
-	gr_complex* chan_imp_resp, int burst_start,
-	unsigned char* output_binary)
+void detect_burst(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, unsigned char *output_binary)
 {
 	std::vector<gr_complex> rhh_temp(CHAN_IMP_RESP_LENGTH * d_OSR);
 	unsigned int stop_states[2] = { 4, 12 };
@@ -90,31 +82,27 @@ detect_burst(const gr_complex* input,
 	for (int ii = 0; ii < d_chan_imp_length; ii++)
 		rhh[ii] = conj(rhh_temp[ii * d_OSR]);
 
-	mafi(&input[burst_start], BURST_SIZE, chan_imp_resp,
-		d_chan_imp_length * d_OSR, filtered_burst);
+	mafi(&input[burst_start], BURST_SIZE, chan_imp_resp, d_chan_imp_length * d_OSR, filtered_burst);
 
-	viterbi_detector(filtered_burst, BURST_SIZE, rhh,
-		start_state, stop_states, 2, output);
+	viterbi_detector(filtered_burst, BURST_SIZE, rhh, start_state, stop_states, 2, output);
 
 	for (int i = 0; i < BURST_SIZE; i++)
 		output_binary[i] = output[i] > 0;
 }
 
-int process_vita_burst(gr_complex* input, int tsc, unsigned char* output_binary) {
+int process_vita_burst(gr_complex *input, int tsc, unsigned char *output_binary)
+{
 	gr_complex channel_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
 	int normal_burst_start, dummy_burst_start;
 	float dummy_corr_max, normal_corr_max;
 
-	dummy_burst_start = get_norm_chan_imp_resp(input,
-		&channel_imp_resp[0], &dummy_corr_max, TS_DUMMY);
-	normal_burst_start = get_norm_chan_imp_resp(input,
-		&channel_imp_resp[0], &normal_corr_max, tsc);
+	dummy_burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], &dummy_corr_max, TS_DUMMY);
+	normal_burst_start = get_norm_chan_imp_resp(input, &channel_imp_resp[0], &normal_corr_max, tsc);
 
 	if (normal_corr_max > dummy_corr_max) {
 		/* Perform MLSE detection */
-		detect_burst(input, &channel_imp_resp[0],
-			normal_burst_start, output_binary);
-		
+		detect_burst(input, &channel_imp_resp[0], normal_burst_start, output_binary);
+
 		return 0;
 
 	} else {
@@ -124,22 +112,20 @@ int process_vita_burst(gr_complex* input, int tsc, unsigned char* output_binary)
 	}
 }
 
-int process_vita_sc_burst(gr_complex* input, int tsc, unsigned char* output_binary, int* offset) {
+int process_vita_sc_burst(gr_complex *input, int tsc, unsigned char *output_binary, int *offset)
+{
 	gr_complex channel_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
 
 	/* Get channel impulse response */
 	int d_c0_burst_start = get_sch_chan_imp_resp(input, &channel_imp_resp[0]);
 	//	*offset = d_c0_burst_start;
 	/* Perform MLSE detection */
-	detect_burst(input, &channel_imp_resp[0],
-	d_c0_burst_start, output_binary);
+	detect_burst(input, &channel_imp_resp[0], d_c0_burst_start, output_binary);
 
 	return 0;
 }
 
-void
-gmsk_mapper(const unsigned char* input,
-	int nitems, gr_complex* gmsk_output, gr_complex start_point)
+void gmsk_mapper(const unsigned char *input, int nitems, gr_complex *gmsk_output, gr_complex start_point)
 {
 	gr_complex j = gr_complex(0.0, 1.0);
 	gmsk_output[0] = start_point;
@@ -156,16 +142,13 @@ gmsk_mapper(const unsigned char* input,
 		encoded_symbol = current_symbol * previous_symbol;
 
 		/* And do GMSK mapping */
-		gmsk_output[i] = j * gr_complex(encoded_symbol, 0.0)
-			* gmsk_output[i - 1];
+		gmsk_output[i] = j * gr_complex(encoded_symbol, 0.0) * gmsk_output[i - 1];
 
 		previous_symbol = current_symbol;
 	}
 }
 
-gr_complex
-correlate_sequence(const gr_complex* sequence,
-	int length, const gr_complex* input)
+gr_complex correlate_sequence(const gr_complex *sequence, int length, const gr_complex *input)
 {
 	gr_complex result(0.0, 0.0);
 
@@ -176,9 +159,7 @@ correlate_sequence(const gr_complex* sequence,
 }
 
 /* Computes autocorrelation for positive arguments */
-inline void
-autocorrelation(const gr_complex* input,
-	gr_complex* out, int nitems)
+inline void autocorrelation(const gr_complex *input, gr_complex *out, int nitems)
 {
 	for (int k = nitems - 1; k >= 0; k--) {
 		out[k] = gr_complex(0, 0);
@@ -187,9 +168,7 @@ autocorrelation(const gr_complex* input,
 	}
 }
 
-inline void
-mafi(const gr_complex* input, int nitems,
-	gr_complex* filter, int filter_length, gr_complex* output)
+inline void mafi(const gr_complex *input, int nitems, gr_complex *filter, int filter_length, gr_complex *output)
 {
 	for (int n = 0; n < nitems; n++) {
 		int a = n * d_OSR;
@@ -221,10 +200,12 @@ int get_chan_imp_resp(const gr_complex *input, gr_complex *chan_imp_resp, int se
 
 	/* Compute window energies */
 	auto window_energy_start_offset = strongest_corr_nr - 6 * d_OSR;
-	window_energy_start_offset = window_energy_start_offset < 0 ? 0 : window_energy_start_offset; //can end up out of range..
+	window_energy_start_offset =
+		window_energy_start_offset < 0 ? 0 : window_energy_start_offset; //can end up out of range..
 	auto window_energy_end_offset = strongest_corr_nr + 6 * d_OSR + d_chan_imp_length * d_OSR;
 	auto iter = power_buffer.begin() + window_energy_start_offset;
 	auto iter_end = power_buffer.begin() + window_energy_end_offset;
+	iter_end = iter_end < power_buffer.end() ? iter_end : power_buffer.end(); //can end up out of range..
 	while (iter != iter_end) {
 		std::vector<float>::iterator iter_ii = iter;
 		bool loop_end = false;
@@ -321,12 +302,12 @@ int get_sch_chan_imp_resp(const gr_complex *input, gr_complex *chan_imp_resp)
 
 int get_sch_buffer_chan_imp_resp(const gr_complex *input, gr_complex *chan_imp_resp, unsigned int len, float *corr_max)
 {
-	const auto tseqlen = N_SYNC_BITS - (2 * TRAIN_BEGINNING);
 	const int search_center = SYNC_POS + TRAIN_BEGINNING;
 	const int search_start_pos = 0;
 	// FIXME: proper end offset
-	const int search_stop_pos = len - (N_SYNC_BITS*8);
-	auto tseq = &d_sch_training_seq[TRAIN_BEGINNING];
+	const int search_stop_pos = len - (N_SYNC_BITS * 8);
+	const auto tseq = &d_sch_training_seq[TRAIN_BEGINNING];
+	const auto tseqlen = N_SYNC_BITS - (2 * TRAIN_BEGINNING);
 
 	return get_chan_imp_resp(input, chan_imp_resp, search_center, search_start_pos, search_stop_pos, tseq, tseqlen,
 				 corr_max);
