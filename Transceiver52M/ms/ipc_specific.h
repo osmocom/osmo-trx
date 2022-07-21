@@ -30,6 +30,7 @@
 #include <Timeval.h>
 #include <vector>
 
+// #define MTX_LOG_ENABLED
 #include <ipcif.h>
 
 // typedef unsigned long long TIMESTAMP;
@@ -137,7 +138,7 @@ template <typename T> struct ipc_hw {
 		// 		osmo_select_main(0);
 		// }).detach();
 
-		return m.connect() ? 0: -1;
+		return m.connect() ? 0 : -1;
 	}
 
 	void *rx_cb(bh_fn_t burst_handler)
@@ -255,5 +256,9 @@ template <typename T> struct ipc_hw {
 		// 	std::cerr << name << " sched: errreur! " << std::strerror(errno);
 		// 	return exit(0);
 		// }
+	}
+	void signal_start()
+	{
+		m.signal_read_start();
 	}
 };

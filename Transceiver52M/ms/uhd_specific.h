@@ -271,4 +271,7 @@ template <typename T> struct uhd_hw {
 			return exit(0);
 		}
 	}
+	void signal_start()
+	{
+	}
 };

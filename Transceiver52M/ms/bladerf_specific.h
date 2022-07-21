@@ -479,4 +479,7 @@ template <typename T> struct blade_hw {
 			return exit(0);
 		}
 	}
+	void signal_start()
+	{
+	}
 };

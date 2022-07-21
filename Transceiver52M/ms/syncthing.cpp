@@ -40,7 +40,9 @@ extern "C" {
 #include "convolve.h"
 #include "convert.h"
 }
-
+#if defined (MTX_LOG_ENABLED)
+std::mutex shm::mtx_log::print_guard::thread_print_lock;
+#endif
 dummylog ms_trx::dummy_log;
 
 const int offset_start = -15;

@@ -205,6 +205,7 @@ TIMESTAMP IPCDevice2::initialReadTimestamp(void)
 
 static timespec readtime, writetime;
 static void wait_for_sample_time(timespec* last, unsigned int len) {
+	#if 0
 	timespec ts, diff;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	timespecsub(&ts, last, &diff);
@@ -213,6 +214,9 @@ static void wait_for_sample_time(timespec* last, unsigned int len) {
 	if(elapsed_us < max_wait_us)
 		usleep(max_wait_us-elapsed_us);
 	*last = ts;
+	#else
+	usleep(ONE_SAMPLE_DURATION_US * 625);
+	#endif
 }
 
 // NOTE: Assumes sequential reads
@@ -281,7 +285,7 @@ int IPCDevice2::writeSamples(std::vector<short *> &bufs, int len, bool *underrun
 	m.write_dl(len, timestamp, reinterpret_cast<sample_t *>(bufs[0]));
 	wait_for_sample_time(&writetime, len);
 
-	return 0;
+	return len;
 }
 
 bool IPCDevice2::updateAlignment(TIMESTAMP timestamp)
