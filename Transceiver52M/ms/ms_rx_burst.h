@@ -22,4 +22,4 @@
 
 #include "syncthing.h"
 
-void rcv_bursts_test(rx_queue_t *q, unsigned int *tsc);
+void rcv_bursts_test(rx_queue_t *q, unsigned int *tsc, int scale);

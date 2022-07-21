@@ -123,7 +123,7 @@ SoftVector *upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingO
 
 	auto ss = reinterpret_cast<std::complex<float> *>(burst->begin());
 
-	convert_and_scale<float, int16_t>(burst->begin(), e.burst, ONE_TS_BURST_LEN * 2, 1.f / 2047.f);
+	convert_and_scale<float, int16_t>(burst->begin(), e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(rxFullScale));
 
 	/* Set time and determine correlation type */
 	burst_time = e.gsmts;

@@ -81,7 +81,7 @@ static void check_rcv_fn(GSM::Time t, bool first, unsigned int &lastfn, unsigned
 }
 
 __attribute__((xray_always_instrument)) __attribute__((noinline)) static void
-handle_it(one_burst &e, signalVector &burst, unsigned int tsc)
+handle_it(one_burst &e, signalVector &burst, unsigned int tsc, int scale)
 {
 	memset(burst.begin(), 0, burst.size() * sizeof(std::complex<float>));
 	auto is_sch = gsm_sch_check_fn(e.gsmts.FN()) && e.gsmts.TN() == 0;
@@ -115,7 +115,7 @@ handle_it(one_burst &e, signalVector &burst, unsigned int tsc)
 #endif
 		{
 			convert_and_scale<float, float>(burst.begin(), burst.begin(), ONE_TS_BURST_LEN * 2,
-							1.f / 32767.f);
+							1.f / float(scale));
 
 			std::complex<float> channel_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
 			auto ss = reinterpret_cast<std::complex<float> *>(burst.begin());
@@ -138,7 +138,7 @@ handle_it(one_burst &e, signalVector &burst, unsigned int tsc)
 		return;
 	}
 #if 1
-	convert_and_scale<float, int16_t>(burst.begin(), e.burst, ONE_TS_BURST_LEN * 2, 1.f / 2047.f);
+	convert_and_scale<float, int16_t>(burst.begin(), e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(scale));
 	// std::cerr << "@" << tsc << " " << e.gsmts.FN() << ":" << e.gsmts.TN() << " " << ebp.toa << " "
 	// 	  << std::endl;
 
@@ -166,7 +166,7 @@ handle_it(one_burst &e, signalVector &burst, unsigned int tsc)
 #endif
 }
 
-__attribute__((xray_always_instrument)) __attribute__((noinline)) void rcv_bursts_test(rx_queue_t *q, unsigned int *tsc)
+__attribute__((xray_always_instrument)) __attribute__((noinline)) void rcv_bursts_test(rx_queue_t *q, unsigned int *tsc, int scale)
 {
 	static bool first = true;
 	unsigned int lastfn = 0;
@@ -201,7 +201,7 @@ __attribute__((xray_always_instrument)) __attribute__((noinline)) void rcv_burst
 
 		check_rcv_fn(e.gsmts, first, lastfn, fnbm);
 
-		handle_it(e, burst, *tsc);
+		handle_it(e, burst, *tsc, scale);
 
 		// rv = detectSCHBurst(*burst, 4, 4, sch_detect_type::SCH_DETECT_FULL, &ebp);
 		// if (rv > 0)

@@ -121,7 +121,7 @@ void tx_test(ms_trx *t, ts_hitter_q_t *q, unsigned int *tsc)
 		t->submit_burst_ts(buf2, burst->size() + pad, send_ts - pad);
 
 		// signalVector test(burst->size() + pad);
-		// convert_and_scale<float, int16_t>(test.begin(), buf2, burst->size() * 2 + pad, 1.f / 2047.f);
+		// convert_and_scale<float, int16_t>(test.begin(), buf2, burst->size() * 2 + pad, 1.f / float(scale));
 		// estim_burst_params ebp;
 		// auto det = detectAnyBurst(test, 0, 4, 4, CorrType::RACH, 40, &ebp);
 		// if (det > 0)
@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
 	if (status == 0) {
 		// FIXME: hacks! needs exit flag for detached threads!
 
-		std::thread(rcv_bursts_test, &trx->rxqueue, &trx->mTSC).detach();
+		std::thread(rcv_bursts_test, &trx->rxqueue, &trx->mTSC, trx->rxFullScale).detach();
 		if (tx_flag)
 			std::thread(tx_test, trx, &trx->ts_hitter_q, &trx->mTSC).detach();
 		trx->start();
