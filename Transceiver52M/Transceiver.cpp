@@ -427,6 +427,8 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     ratectr_changed = false;
 
     zeros[i] = state->chanType[TN] == NONE || state->mMuted;
+    if(zeros[i])
+      LOGCHAN(i, DTRXDDL, FATAL) << "Z" << nowTime;
 
     Mutex *mtx = mTxPriorityQueues[i].getMutex();
     mtx->lock();
@@ -455,6 +457,7 @@ void Transceiver::pushRadioVector(GSM::Time &nowTime)
     } else {
       modFN = nowTime.FN() % state->fillerModulus[TN];
       bursts[i] = state->fillerTable[modFN][TN];
+      LOGCHAN(i, DTRXDDL, FATAL) << "F" << nowTime << ", retrans=" << state->mRetrans;
       if (i == 0 && state->mFiller == FILLER_ZERO) {
         LOGCHAN(i, DTRXDDL, INFO) << "No Tx burst available for " << nowTime
                                     << ", retrans=" << state->mRetrans;
@@ -1137,7 +1140,7 @@ bool Transceiver::driveReceiveRadio()
   if (rc < 0)
     return false;
 
-  if (mForceClockInterface || mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(216,0)) {
+  if (mForceClockInterface || mTransmitDeadlineClock > mLastClockUpdateTime + GSM::Time(3,0)) {
     if (mForceClockInterface)
       LOGC(DTRXCLK, NOTICE) << "Sending CLOCK indications";
     mForceClockInterface = false;

@@ -74,8 +74,6 @@ template <typename T> struct ipc_hw {
 	// uhd::tx_streamer::sptr tx_stream;
 	blade_sample_type *one_pkt_buf;
 	std::vector<blade_sample_type *> pkt_ptrs;
-	size_t rx_spp;
-	double rxticks;
 	const unsigned int rxFullScale, txFullScale;
 	const int rxtxdelay;
 	float rxgain, txgain;
@@ -85,7 +83,7 @@ template <typename T> struct ipc_hw {
 	{
 		delete[] one_pkt_buf;
 	}
-	ipc_hw() : rxFullScale(32767), txFullScale(32767), rxtxdelay(-67)
+	ipc_hw() : rxFullScale(32767), txFullScale(32767), rxtxdelay(0)
 	{
 	}
 
@@ -154,34 +152,6 @@ template <typename T> struct ipc_hw {
 
 		int len = 508 * 2;
 		m.read_dl(508 * 2, &t, pbuf);
-		// auto len = ipc_shm_read(ios_tx_to_device[0], (uint16_t *)&pbuf, 508 * 2, &t, 1);
-		// if(len < 0) {
-		// 	std::cerr << "fuck, rx fail!" << std::endl;
-		// 	exit(0);
-		// }
-
-		// uhd::rx_metadata_t md;
-		// auto num_rx_samps = rx_stream->recv(pkt_ptrs.front(), rx_spp, md, 3.0, true);
-
-		// if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_TIMEOUT) {
-		// 	std::cerr << boost::format("Timeout while streaming") << std::endl;
-		// 	exit(0);
-		// }
-		// if (md.error_code == uhd::rx_metadata_t::ERROR_CODE_OVERFLOW) {
-		// 	std::cerr << boost::format("Got an overflow indication. Please consider the following:\n"
-		// 				   "  Your write medium must sustain a rate of %fMB/s.\n"
-		// 				   "  Dropped samples will not be written to the file.\n"
-		// 				   "  Please modify this example for your purposes.\n"
-		// 				   "  This message will not appear again.\n") %
-		// 			     1.f;
-		// 	exit(0);
-		// 	;
-		// }
-		// if (md.error_code != uhd::rx_metadata_t::ERROR_CODE_NONE) {
-		// 	std::cerr << str(boost::format("Receiver error: %s") % md.strerror());
-		// 	exit(0);
-		// }
-
 		dev_buf_t rcd = { t, static_cast<uint32_t>(len), pbuf };
 
 		if (to_skip < 120) // prevents weird overflows on startup
@@ -199,11 +169,6 @@ template <typename T> struct ipc_hw {
 	{
 		auto fn = [this, burst_handler] {
 			pthread_setname_np(pthread_self(), "rxrun");
-			// wait_for_shm_open();
-			// uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
-			// stream_cmd.stream_now = true;
-			// stream_cmd.time_spec = uhd::time_spec_t();
-			// rx_stream->issue_stream_cmd(stream_cmd);
 
 			while (1) {
 				rx_cb(burst_handler);

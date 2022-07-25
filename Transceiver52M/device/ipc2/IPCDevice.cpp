@@ -205,7 +205,7 @@ TIMESTAMP IPCDevice2::initialReadTimestamp(void)
 
 static timespec readtime, writetime;
 static void wait_for_sample_time(timespec* last, unsigned int len) {
-	#if 0
+	#if 1
 	timespec ts, diff;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	timespecsub(&ts, last, &diff);
