@@ -4,6 +4,8 @@ Description=Osmocom SDR BTS L1 Transceiver (UHD Backend)
 [Service]
 Type=simple
 Restart=always
+StateDirectory=osmocom
+WorkingDirectory=%S/osmocom
 ExecStart=/usr/bin/osmo-trx-uhd -C /etc/osmocom/osmo-trx-uhd.cfg
 RestartSec=2
 

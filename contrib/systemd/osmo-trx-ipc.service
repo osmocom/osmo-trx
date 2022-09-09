@@ -4,6 +4,8 @@ Description=Osmocom SDR BTS L1 Transceiver (IPC Backend)
 [Service]
 Type=simple
 Restart=always
+StateDirectory=osmocom
+WorkingDirectory=%S/osmocom
 ExecStart=/usr/bin/osmo-trx-ipc -C /etc/osmocom/osmo-trx-ipc.cfg
 RestartSec=2
 
