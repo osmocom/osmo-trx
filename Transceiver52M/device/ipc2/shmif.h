@@ -235,6 +235,10 @@ class sema {
 	{
 		value = 0;
 	}
+	bool check_unsafe(int v)
+	{
+		return value == v;
+	}
 	sema(const sema &) = delete;
 	sema &operator=(const sema &) = delete;
 };

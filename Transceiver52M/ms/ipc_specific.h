@@ -162,6 +162,8 @@ template <typename T> struct ipc_hw {
 			last_ts = rcd.get_first_ts();
 		}
 
+		m.drive_tx();
+
 		return ret;
 	}
 
