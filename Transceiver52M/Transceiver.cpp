@@ -584,7 +584,7 @@ CorrType Transceiver::expectedCorrType(GSM::Time currTime,
   case XIII: {
     int mod52 = burstFN % 52;
     if ((mod52 == 12) || (mod52 == 38))
-      return cfg->ext_rach ? EXT_RACH : RACH;
+      return RACH; /* RACH is always 8-bit on PTCCH/U */
     else if ((mod52 == 25) || (mod52 == 51))
       return IDLE;
     else /* Enable 8-PSK burst detection if EDGE is enabled */
