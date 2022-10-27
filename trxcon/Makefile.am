@@ -1,58 +1,21 @@
-#AUTOMAKE_OPTIONS = foreign dist-bzip2 1.6
+AUTOMAKE_OPTIONS = foreign dist-bzip2 1.6
 
-include $(top_srcdir)/Makefile.common
+SUBDIRS = \
+	include \
+	src \
+	$(NULL)
 
-AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
-AM_CXXFLAGS = -Wall -O3 -g -ldl -lpthread
+ACLOCAL_AMFLAGS = -I m4
+
+BUILT_SOURCES = \
+	$(top_srcdir)/.version \
+	$(NULL)
+EXTRA_DIST = \
+	.version \
+	$(NULL)
 
 # versioning magic
-BUILT_SOURCES = $(top_srcdir)/.version
 $(top_srcdir)/.version:
 	echo $(VERSION) > $@-t && mv $@-t $@
 dist-hook:
 	echo $(VERSION) > $(distdir)/.tarball-version
-
-AM_CPPFLAGS = \
-	$(all_includes) \
-	-I$(top_srcdir)/include \
-	$(NULL)
-
-AM_CFLAGS = \
-	-Wall \
-	$(LIBOSMOCORE_CFLAGS) \
-	$(LIBOSMOCODING_CFLAGS) \
-	$(LIBOSMOGSM_CFLAGS) \
-	$(NULL)
-
-noinst_LTLIBRARIES = libtrxcon.la 
-
-libtrxcon_la_SOURCES = \
-	l1ctl_link.c \
-	l1ctl.c \
-	trx_if.c \
-	logging.c \
-	trxcon.c \
-	$(NULL)
-
-# Scheduler
-libtrxcon_la_SOURCES += \
-	sched_lchan_common.c \
-	sched_lchan_pdtch.c \
-	sched_lchan_desc.c \
-	sched_lchan_xcch.c \
-	sched_lchan_tchf.c \
-	sched_lchan_tchh.c \
-	sched_lchan_rach.c \
-	sched_lchan_sch.c \
-	sched_mframe.c \
-	sched_clck.c \
-	sched_prim.c \
-	sched_trx.c \
-	$(NULL)
-
-libtrxcon_la_LIBADD = \
-	$(LIBOSMOCORE_LIBS) \
-	$(LIBOSMOCODING_LIBS) \
-	$(LIBOSMOGSM_LIBS) \
-	$(NULL)
-
