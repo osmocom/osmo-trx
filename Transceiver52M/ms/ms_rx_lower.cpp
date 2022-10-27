@@ -155,8 +155,14 @@ bool ms_trx::handle_sch_or_nb()
 		memcpy(brst.sch_bits, sch_demod_bits, sizeof(sch_demod_bits));
 	}
 	// auto pushok = rxqueue.spsc_push(&brst);
-	while (!rxqueue.spsc_push(&brst))
-		;
+#ifndef SYNCTHINGONLY
+	if (upper_is_ready) { // this is blocking, so only submit if there is a reader - only if upper exists!
+#endif
+		while (!rxqueue.spsc_push(&brst))
+			;
+#ifndef SYNCTHINGONLY
+	}
+#endif
 
 	// #ifdef PRINT_Q_OVERFLOW
 	// 	if (!pushok)

@@ -195,6 +195,8 @@ struct ms_trx : public BASET {
 	time_keeper timekeeper;
 
 	void start();
+	std::atomic<bool> upper_is_ready;
+	void set_upper_ready(bool is_ready);
 
 	bool handle_sch_or_nb();
 	bool handle_sch(bool first = false);

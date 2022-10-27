@@ -30,6 +30,7 @@
 #include "ms_rx_upper.h"
 
 extern "C" {
+#include <osmocom/core/select.h>
 #include "sch.h"
 #include "convolve.h"
 #include "convert.h"
@@ -45,15 +46,6 @@ void __lsan_do_recoverable_leak_check();
 
 void upper_trx::start_threads()
 {
-	thr_rx = std::thread([this] {
-		set_name_aff_sched("upper_rx", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5);
-		while (1) {
-			driveReceiveFIFO();
-			pthread_testcancel();
-		}
-	});
-	msleep(1);
-
 	thr_control = std::thread([this] {
 		set_name_aff_sched("upper_ctrl", 1, SCHED_RR, sched_get_priority_max(SCHED_RR));
 		while (1) {
@@ -70,6 +62,17 @@ void upper_trx::start_threads()
 			pthread_testcancel();
 		}
 	});
+
+	// atomic ensures data is not written to q until loop reads
+	start_ms();
+
+	set_name_aff_sched("upper_rx", 1, SCHED_FIFO, sched_get_priority_max(SCHED_RR) - 5);
+	while (1) {
+		// set_upper_ready(true);
+		driveReceiveFIFO();
+		pthread_testcancel();
+		osmo_select_main(1);
+	}
 
 	// std::thread([this] {
 	// 	set_name_aff_sched("leakcheck", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 10);
@@ -239,15 +242,11 @@ void upper_trx::driveReceiveFIFO()
 	int RSSI;
 	int TOA; // in 1/256 of a symbol
 	GSM::Time burstTime;
-	SoftVector *rxBurst = pullRadioVector(burstTime, RSSI, TOA);
 
 	if (!mOn)
 		return;
 
-	// _only_ return useless fcch trash to tickle trxcons tx path
-	// auto is_fcch = [&burstTime]{ return burstTime.TN() == 0 && gsm_fcch_check_fn(burstTime.FN());};
-	// if(!rxBurst && !is_fcch())
-	// 	return;
+	SoftVector *rxBurst = pullRadioVector(burstTime, RSSI, TOA);
 
 	trxd_from_trx response;
 	response.ts = burstTime.TN();
