@@ -335,7 +335,7 @@ static int l1ctl_rx_fbsb_req(struct l1ctl_client *l1c, struct msgb *msg)
 
 	struct trxcon_param_fbsb_search_req req = {
 		.pchan_config = l1ctl_ccch_mode2pchan_config(fbsb->ccch_mode),
-		.timeout_ms = ntohs(fbsb->timeout) * GSM_TDMA_FN_DURATION_uS / 1000,
+		.timeout_ms = 2000,
 		.band_arfcn = ntohs(fbsb->band_arfcn),
 	};
 

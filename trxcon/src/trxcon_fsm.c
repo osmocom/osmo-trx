@@ -134,17 +134,19 @@ static void trxcon_st_reset_action(struct osmo_fsm_inst *fi,
 		l1sched_configure_ts(trxcon->sched, 0, req->pchan_config);
 
 		/* Only if current ARFCN differs */
-		if (trxcon->l1p.band_arfcn != req->band_arfcn) {
+		// if (trxcon->l1p.band_arfcn != req->band_arfcn) {
 			/* Update current ARFCN */
 			trxcon->l1p.band_arfcn = req->band_arfcn;
 
 			/* Tune transceiver to required ARFCN */
 			trx_if_cmd_rxtune(trxcon->phyif, req->band_arfcn);
 			trx_if_cmd_txtune(trxcon->phyif, req->band_arfcn);
-		}
+		// }
 
 		/* Transceiver might have been powered on before, e.g.
 		 * in case of sending L1CTL_FBSB_REQ due to signal loss. */
+		trx_if_cmd_sync(trxcon->phyif);
+
 		if (!trx->powered_up)
 			trx_if_cmd_poweron(trxcon->phyif);
 		break;

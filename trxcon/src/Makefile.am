@@ -1,3 +1,5 @@
+include $(top_srcdir)/Makefile.common
+
 AM_CPPFLAGS = \
 	$(all_includes) \
 	-I$(top_srcdir)/include \
@@ -10,6 +12,9 @@ AM_CFLAGS = \
 	$(LIBOSMOGSM_CFLAGS) \
 	$(NULL)
 
+
+AM_CPPFLAGS = $(STD_DEFINES_AND_INCLUDES)
+AM_CXXFLAGS = -Wall -O3 -g -ldl -lpthread
 
 noinst_LTLIBRARIES = libl1sched.la
 
@@ -35,9 +40,9 @@ libl1sched_la_LIBADD = \
 	$(NULL)
 
 
-bin_PROGRAMS = trxcon
+noinst_LTLIBRARIES = libtrxcon.la 
 
-trxcon_SOURCES = \
+libtrxcon_SOURCES = \
 	l1ctl_server.c \
 	l1ctl.c \
 	trx_if.c \
@@ -46,7 +51,7 @@ trxcon_SOURCES = \
 	trxcon.c \
 	$(NULL)
 
-trxcon_LDADD = \
+libtrxcon_LDADD = \
 	libl1sched.la \
 	$(LIBOSMOCORE_LIBS) \
 	$(LIBOSMOGSM_LIBS) \

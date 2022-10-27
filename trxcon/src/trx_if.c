@@ -338,6 +338,11 @@ int trx_if_cmd_txtune(struct trx_instance *trx, uint16_t band_arfcn)
 	return trx_ctrl_cmd(trx, 1, "TXTUNE", "%u", freq10 * 100);
 }
 
+int trx_if_cmd_sync(struct trx_instance *trx)
+{
+	return trx_ctrl_cmd(trx, 1, "SYNC", 0);
+}
+
 /*
  * Power measurement
  *
@@ -620,13 +625,7 @@ static int trx_data_rx_cb(struct osmo_fd *ofd, unsigned int what)
 	rssi = -(int8_t) buf[5];
 	toa256 = ((int16_t) (buf[6] << 8) | buf[7]);
 
-	/* Copy and convert bits {254..0} to sbits {-127..127} */
-	for (unsigned int i = 0; i < 148; i++) {
-		if (buf[8 + i] == 255)
-			bits[i] = -127;
-		else
-			bits[i] = 127 - buf[8 + i];
-	}
+	memcpy(bits, buf + 8, 148);
 
 	if (tn >= 8) {
 		LOGPFSMSL(trx->fi, DTRXD, LOGL_ERROR, "Illegal TS %d\n", tn);

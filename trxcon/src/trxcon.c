@@ -18,6 +18,7 @@
  *
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -27,6 +28,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
+#include <pthread.h>
 
 #include <arpa/inet.h>
 
@@ -452,11 +454,30 @@ static void signal_handler(int signum)
 	}
 }
 
+extern void init_external_transceiver(int argc, char **argv);
+extern void stop_trx();
+extern volatile bool gshutdown;
+
 int main(int argc, char **argv)
 {
 	struct l1ctl_server_cfg server_cfg;
 	struct l1ctl_server *server = NULL;
 	int rc = 0;
+
+	cpu_set_t cpuset;
+
+	CPU_ZERO(&cpuset);
+	CPU_SET(3, &cpuset);
+	pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
+
+	int prio = sched_get_priority_max(SCHED_RR) - 5;
+	struct sched_param param;
+	param.sched_priority = prio;
+	int rv = sched_setscheduler(0, SCHED_RR, &param);
+	if (rv < 0) {
+		LOGP(DAPP, LOGL_ERROR, "Failed to set sched!\n");
+		exit(0);
+	}
 
 	printf("%s", COPYRIGHT);
 	handle_options(argc, argv);
@@ -469,12 +490,12 @@ int main(int argc, char **argv)
 	msgb_talloc_ctx_init(tall_trxcon_ctx, 0);
 
 	/* Setup signal handlers */
-	signal(SIGINT, &signal_handler);
-	signal(SIGTERM, &signal_handler);
-	signal(SIGABRT, &signal_handler);
-	signal(SIGUSR1, &signal_handler);
-	signal(SIGUSR2, &signal_handler);
-	osmo_init_ignore_signals();
+	// signal(SIGINT, &signal_handler);
+	// signal(SIGTERM, &signal_handler);
+	// signal(SIGABRT, &signal_handler);
+	// signal(SIGUSR1, &signal_handler);
+	// signal(SIGUSR2, &signal_handler);
+	// osmo_init_ignore_signals();
 
 	/* Init logging system */
 	trx_log_init(tall_trxcon_ctx, app_data.debug_mask);
@@ -530,8 +551,7 @@ int main(int argc, char **argv)
 	/* Initialize pseudo-random generator */
 	srand(time(NULL));
 
-	while (!app_data.quit)
-		osmo_select_main(0);
+	init_external_transceiver(argc, argv);
 
 exit:
 	if (server != NULL)

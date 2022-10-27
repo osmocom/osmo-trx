@@ -73,3 +73,4 @@ int trx_if_cmd_measure(struct trx_instance *trx,
 
 int trx_if_tx_burst(struct trx_instance *trx,
 		    const struct l1sched_burst_req *br);
+int trx_if_cmd_sync(struct trx_instance *trx);
