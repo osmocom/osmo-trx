@@ -91,6 +91,8 @@ void upper_trx::commandhandler(char *buffer, char *response)
 	} else if (strcmp(command, "POWEROFF") == 0) {
 		set_ta(0);
 		// turn off transmitter/demod
+		// set_upper_ready(false);
+
 		sprintf(response, "RSP POWEROFF 0");
 	} else if (strcmp(command, "POWERON") == 0) {
 		// turn on transmitter/demod
@@ -101,7 +103,8 @@ void upper_trx::commandhandler(char *buffer, char *response)
 			if (!mOn) {
 				// Prepare for thread start
 				mPower = -20;
-				start_ms();
+				// start_ms();
+				set_upper_ready(true);
 
 				writeClockInterface();
 				mOn = true;

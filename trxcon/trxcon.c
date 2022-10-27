@@ -374,8 +374,8 @@ int main(int argc, char **argv)
 
 	init_external_transceiver(argc, argv);
 
-	while (!app_data.quit)
-		osmo_select_main(0);
+	// while (!app_data.quit)
+	// 	osmo_select_main(0);
 
 	gshutdown = true;
 	stop_trx();

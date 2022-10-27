@@ -276,6 +276,11 @@ void ms_trx::start()
 	tx_task = std::thread(fn2);
 }
 
+void ms_trx::set_upper_ready(bool is_ready)
+{
+	upper_is_ready = is_ready;
+}
+
 void ms_trx::stop_threads()
 {
 	std::cerr << "killing threads...\r\n" << std::endl;
