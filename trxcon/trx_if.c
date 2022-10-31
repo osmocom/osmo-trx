@@ -602,32 +602,9 @@ rsp_error:
 static int trx_data_rx_cb(struct osmo_fd *ofd, unsigned int what)
 {
 	struct trx_instance *trx = ofd->data;
-	struct trx_meas_set meas;
 	uint8_t buf[TRXD_BUF_SIZE];
-	sbit_t bits[148];
-	int8_t rssi, tn;
-	int16_t toa256;
-	uint32_t fn;
 	ssize_t read_len;
 
-#ifdef IPCIF
-	struct trxd_from_trx* rcvd = trxif_from_trx_d();
-	if (!rcvd) {
-		LOGP(DTRX, LOGL_ERROR, "read() failed with rc=%zd\n", rcvd);
-		return rcvd;
-	}
-
-	tn = rcvd->ts;
-	fn = rcvd->fn;
-	rssi = -(int8_t) rcvd->rssi;
-	toa256 = (int16_t) rcvd->toa;
-
-	/* Copy and convert bits {254..0} to sbits {-127..127} */
-	//osmo_ubit2sbit(bits, rcvd->symbols, 148);
-	memcpy(bits, rcvd->symbols, 148);
-
-	free(rcvd);
-#else
 	read_len = read(ofd->fd, buf, sizeof(buf));
 	if (read_len <= 0) {
 		LOGP(DTRXD, LOGL_ERROR, "read() failed with rc=%zd\n", read_len);
@@ -641,7 +618,18 @@ static int trx_data_rx_cb(struct osmo_fd *ofd, unsigned int what)
 		     read_len);
 		return -EINVAL;
 	}
-#endif
+
+	return trx_data_rx_handler(trx, buf);
+}
+
+int trx_data_rx_handler(struct trx_instance *trx, uint8_t *buf)
+{
+	struct trx_meas_set meas;
+	sbit_t bits[148];
+	int8_t rssi, tn;
+	int16_t toa256;
+	uint32_t fn;
+
 	tn = buf[0];
 	fn = osmo_load32be(buf + 1);
 	rssi = -(int8_t)buf[5];
@@ -681,6 +669,8 @@ static int trx_data_rx_cb(struct osmo_fd *ofd, unsigned int what)
 	return 0;
 }
 
+extern void tx_external_transceiver(uint8_t *burst) __attribute__((weak));
+
 int trx_if_tx_burst(struct trx_instance *trx, uint8_t tn, uint32_t fn,
 	uint8_t pwr, const ubit_t *bits)
 {
@@ -719,7 +709,10 @@ int trx_if_tx_burst(struct trx_instance *trx, uint8_t tn, uint32_t fn,
 	memcpy(buf + 6, bits, 148);
 
 	/* Send data to transceiver */
-	send(trx->trx_ofd_data.fd, buf, 154, 0);
+	if (tx_external_transceiver)
+		tx_external_transceiver(buf);
+	else
+		send(trx->trx_ofd_data.fd, buf, 154, 0);
 
 #endif
 	return 0;

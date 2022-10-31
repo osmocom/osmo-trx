@@ -20,10 +20,8 @@
  */
 
 #include <radioInterface.h>
-#include "l1if.h"
 #include "ms_rx_upper.h"
 #include "syncthing.h"
-#include "ms_state.h"
 
 void upper_trx::driveControl()
 {
@@ -199,8 +197,6 @@ void upper_trx::commandhandler(char *buffer, char *response)
 			sprintf(response, "RSP SETSLOT 1 %d %d", timeslot, corrCode);
 			return;
 		}
-		mStates.chanType[timeslot] = (ChannelCombination)corrCode;
-		mStates.setModulus(timeslot);
 		sprintf(response, "RSP SETSLOT 0 %d %d", timeslot, corrCode);
 	} else if (!strcmp(command, "SETRXMASK")) {
 		int slot;
@@ -214,7 +210,6 @@ void upper_trx::commandhandler(char *buffer, char *response)
 		}
 	} else if (!strcmp(command, "SYNC")) {
 		// msleep(10);
-		mStates.mode = trx_mode::TRX_MODE_MS_TRACK;
 		sprintf(response, "RSP SYNC 0");
 		mMaxExpectedDelay = 48;
 		// setRxGain(30);

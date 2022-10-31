@@ -21,12 +21,10 @@
 
 #include "sigProcLib.h"
 #include "syncthing.h"
-#include "l1if.h"
 #include <signalVector.h>
 #include <radioVector.h>
 #include <radioInterface.h>
 #include "grgsm_vitac/grgsm_vitac.h"
-#include "ms_state.h"
 #include "ms_rx_upper.h"
 
 extern "C" {
@@ -38,6 +36,15 @@ extern "C" {
 
 void __lsan_do_recoverable_leak_check();
 }
+
+namespace trxcon
+{
+extern "C" {
+#include <trxcon/trx_if.h>
+}
+trx_instance *trxcon_instance; // local handle
+static tx_queue_t txq;
+} // namespace trxcon
 
 #ifdef LOG
 #undef LOG
@@ -89,35 +96,6 @@ void upper_trx::start_ms()
 	ms_trx::start();
 }
 
-/* Detect SCH synchronization sequence within a burst */
-bool upper_trx::detectSCH(ms_TransceiverState *state, signalVector &burst, struct estim_burst_params *ebp)
-{
-	int shift;
-	sch_detect_type full;
-	float mag, threshold = 4.0;
-
-	full = (state->mode == trx_mode::TRX_MODE_MS_TRACK) ? sch_detect_type::SCH_DETECT_NARROW :
-							      sch_detect_type::SCH_DETECT_FULL;
-
-	if (!detectSCHBurst(burst, threshold, rx_sps, full, ebp))
-		return false;
-
-	std::clog << "SCH : Timing offset     " << ebp->toa << " symbols" << std::endl;
-
-	mag = fabsf(ebp->toa);
-	if (mag < 1.0f)
-		return true;
-
-	shift = (int)(mag / 2.0f);
-	if (!shift)
-		shift++;
-
-	shift = ebp->toa > 0 ? shift : -shift;
-	std::clog << "SCH : shift ->     " << shift << " symbols" << std::endl;
-	// mRadioInterface->applyOffset(shift);
-	return false;
-}
-
 SoftVector *upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset) __attribute__((optnone))
 {
 	float pow, avg = 1.0;
@@ -161,50 +139,20 @@ SoftVector *upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingO
 		return &bits;
 	}
 
-	CorrType type = TSC;
-
-	// tickle UL by returning null bursts if demod is skipped due to unused TS
-	switch (mStates.mode) {
-	case trx_mode::TRX_MODE_MS_TRACK:
-		if (mStates.chanType[burst_time.TN()] == ChannelCombination::NONE_INACTIVE) {
-			type = OFF;
-			goto release;
-		} else if (is_sch)
-			type = SCH;
-		else if (!is_fcch) // all ts0, but not fcch or sch..
-			type = TSC;
-		break;
-
-	case trx_mode::TRX_MODE_OFF:
-	default:
-		goto release;
-	}
+	auto ts = trxcon::trxcon_instance->ts_list[burst_time.TN()];
+	if (ts == NULL || ts->mf_layout == NULL)
+		return 0;
 
 	convert_and_scale<float, int16_t>(ss, e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(rxFullScale));
 
 	pow = energyDetect(sv, 20 * rx_sps);
 	if (pow < -1) {
 		LOG(ALERT) << "Received empty burst";
-		goto release;
+		return NULL;
 	}
 
 	avg = sqrt(pow);
-
-	if (type == SCH) {
-		std::complex<float> chan_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
-		int d_c0_burst_start = get_sch_chan_imp_resp(ss, &chan_imp_resp[0]);
-		detect_burst(ss, &chan_imp_resp[0], d_c0_burst_start, outbin);
-
-		for (int i = 0; i < 148; i++)
-			(bits)[i] = (!outbin[i]) < 1 ? -1 : 1;
-
-		// auto rv = decode_sch(bits->begin(), false);
-		// dbgout << "U SCH@"
-		//        << " " << e.gsmts.FN() << ":" << e.gsmts.TN() << " " << d_c0_burst_start
-		//        << " DECODE:" << (rv ? "yes" : "---") << std::endl;
-
-		// std::cerr << dbgout.str();
-	} else {
+	{
 		float ncmax, dcmax;
 		std::complex<float> chan_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
 		std::complex<float> chan_imp_resp2[CHAN_IMP_RESP_LENGTH * d_OSR];
@@ -227,14 +175,10 @@ SoftVector *upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingO
 		for (int i = 0; i < 148; i++)
 			(bits)[i] = (outbin[i]) < 1 ? -1 : 1;
 	}
-
 	RSSI = (int)floor(20.0 * log10(rxFullScale / avg));
 	timingOffset = (int)round(0);
 
 	return &bits;
-
-release:
-	return NULL;
 }
 
 void upper_trx::driveReceiveFIFO()
@@ -248,12 +192,13 @@ void upper_trx::driveReceiveFIFO()
 
 	SoftVector *rxBurst = pullRadioVector(burstTime, RSSI, TOA);
 
-	trxd_from_trx response;
-	response.ts = burstTime.TN();
-	response.fn = htonl(burstTime.FN());
-	response.rssi = RSSI;
-	response.toa = htons(TOA);
 	if (rxBurst) {
+		trxd_from_trx response;
+		response.ts = burstTime.TN();
+		response.fn = htonl(burstTime.FN());
+		response.rssi = RSSI;
+		response.toa = htons(TOA);
+
 		SoftVector::const_iterator burstItr = rxBurst->begin();
 		if (burstTime.TN() == 0 && gsm_sch_check_fn(burstTime.FN())) {
 			clamp_array(rxBurst->begin(), 148, 1.5f);
@@ -267,45 +212,19 @@ void upper_trx::driveReceiveFIFO()
 			for (int i = 0; i < 148; i++)
 				((int8_t *)response.symbols)[i] = *burstItr++ > 0.0f ? -127 : 127;
 		}
+		trxcon::trx_data_rx_handler(trxcon::trxcon_instance, (uint8_t *)&response);
 	}
-
-#ifdef IPCIF
-	push_d(response);
-#else
-	int rv = sendto(mDataSockets, &response, sizeof(trxd_from_trx), 0, (struct sockaddr *)&datadest,
-			sizeof(struct sockaddr_in));
-	if (rv < 0) {
-		std::cerr << "fuck, send?" << std::endl;
-		exit(0);
-	}
-
-#endif
 }
 
 void upper_trx::driveTx()
 {
-#ifdef IPCIF
-	auto burst = pop_d();
-	if (!burst) {
-		// std::cerr << "wtf no tx burst?" << std::endl;
-		// exit(0);
-		continue;
+	trxd_to_trx e;
+	while (!trxcon::txq.spsc_pop(&e)) {
+		trxcon::txq.spsc_prep_pop();
 	}
-#else
-	trxd_to_trx buffer;
 
-	socklen_t addr_len = sizeof(datasrc);
-	int rdln = recvfrom(mDataSockets, (void *)&buffer, sizeof(trxd_to_trx), 0, &datasrc, &addr_len);
-	if (rdln < 0 && errno == EAGAIN) {
-		std::cerr << "fuck, rcv?" << std::endl;
-		exit(0);
-	}
-	if(rdln < sizeof(buffer)) // nope ind has len 6 or something like that
-		return;
+	trxd_to_trx *burst = &e;
 
-
-	trxd_to_trx *burst = &buffer;
-#endif
 	auto proper_fn = ntohl(burst->fn);
 	// std::cerr << "got burst!" << proper_fn << ":" << burst->ts
 	// 	  << " current: " << timekeeper.gsmtime().FN()
@@ -341,29 +260,7 @@ void upper_trx::driveTx()
 
 	submit_burst(burst_buf, txburst->size(), currTime);
 	delete txburst;
-
-#ifdef IPCIF
-	free(burst);
-#endif
 }
-
-// __attribute__((xray_always_instrument)) static void *rx_stream_callback(struct bladerf *dev,
-// 									struct bladerf_stream *stream,
-// 									struct bladerf_metadata *meta, void *samples,
-// 									size_t num_samples, void *user_data)
-// {
-// 	struct ms_trx *trx = (struct ms_trx *)user_data;
-// 	return trx->rx_cb(dev, stream, meta, samples, num_samples, user_data);
-// }
-
-// __attribute__((xray_always_instrument)) static void *tx_stream_callback(struct bladerf *dev,
-// 									struct bladerf_stream *stream,
-// 									struct bladerf_metadata *meta, void *samples,
-// 									size_t num_samples, void *user_data)
-// {
-// 	struct ms_trx *trx = (struct ms_trx *)user_data;
-// 	return BLADERF_STREAM_NO_DATA;
-// }
 
 int trxc_main(int argc, char *argv[])
 {
@@ -384,14 +281,21 @@ int trxc_main(int argc, char *argv[])
 	return status;
 }
 
-extern "C" volatile bool gshutdown = false;
-extern "C" void init_external_transceiver(int argc, char **argv)
+extern "C" {
+void init_external_transceiver(struct trx_instance *trx, int argc, char **argv)
 {
+	trxcon::trxcon_instance = (trxcon::trx_instance *)trx;
 	std::cout << "init?" << std::endl;
 	trxc_main(argc, argv);
 }
 
-extern "C" void stop_trx()
+void close_external_transceiver(int argc, char **argv)
 {
 	std::cout << "Shutting down transceiver..." << std::endl;
+}
+
+void tx_external_transceiver(uint8_t *burst)
+{
+	trxcon::txq.spsc_push((trxd_to_trx *)burst);
+}
 }

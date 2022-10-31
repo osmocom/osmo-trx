@@ -84,3 +84,4 @@ int trx_if_cmd_measure(struct trx_instance *trx,
 
 int trx_if_tx_burst(struct trx_instance *trx, uint8_t tn, uint32_t fn,
 	uint8_t pwr, const ubit_t *bits);
+int trx_data_rx_handler(struct trx_instance *trx, uint8_t *buf);

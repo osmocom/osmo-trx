@@ -191,7 +191,6 @@ noinst_HEADERS += \
 	ms/bladerf_specific.h \
 	ms/uhd_specific.h \
 	ms/ms_rx_upper.h \
-	ms/ms_state.h \
 	itrq.h
 # -fsanitize=address,undefined -shared-libsan -O0
 #

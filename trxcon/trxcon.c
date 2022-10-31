@@ -271,9 +271,8 @@ static void signal_handler(int signum)
 	}
 }
 
-extern void init_external_transceiver(int argc, char **argv);
-extern void stop_trx();
-extern volatile bool gshutdown;
+extern void init_external_transceiver(struct trx_instance *trx, int argc, char **argv) __attribute__((weak));
+extern void close_external_transceiver(int argc, char **argv) __attribute__((weak));
 
 int main(int argc, char **argv)
 {
@@ -372,14 +371,14 @@ int main(int argc, char **argv)
 	/* Initialize pseudo-random generator */
 	srand(time(NULL));
 
-	init_external_transceiver(argc, argv);
+	if (init_external_transceiver)
+		init_external_transceiver(app_data.trx, argc, argv);
+	else
+		while (!app_data.quit)
+			osmo_select_main(0);
 
-	// while (!app_data.quit)
-	// 	osmo_select_main(0);
-
-	gshutdown = true;
-	stop_trx();
-
+	if (close_external_transceiver)
+		close_external_transceiver(argc, argv);
 
 exit:
 	/* Close active connections */

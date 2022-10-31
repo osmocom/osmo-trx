@@ -28,12 +28,11 @@
 #include "GSMCommon.h"
 #include "radioClock.h"
 #include "syncthing.h"
-#include "ms_state.h"
+#include "l1if.h"
 
+using tx_queue_t = spsc_cond<8 * 1, trxd_to_trx, true, false>;
 class upper_trx : public ms_trx {
 	int rx_sps, tx_sps;
-
-	ms_TransceiverState mStates;
 
 	bool mOn; ///< flag to indicate that transceiver is powered on
 	double mTxFreq; ///< the transmit frequency
@@ -42,9 +41,6 @@ class upper_trx : public ms_trx {
 	unsigned mMaxExpectedDelay; ///< maximum TOA offset in GSM symbols
 	unsigned long long mRxSlotMask[8]; ///< MS - enabled multiframe slot mask
 
-	int mDataSockets;
-	sockaddr_in datadest;
-	sockaddr datasrc;
 	int mCtrlSockets;
 	sockaddr_in ctrldest;
 	sockaddr ctrlsrc;
@@ -98,8 +94,6 @@ class upper_trx : public ms_trx {
 
 	SoftVector *pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset);
 
-	bool detectSCH(ms_TransceiverState *state, signalVector &burst, struct estim_burst_params *ebp);
-
 	std::thread thr_control, thr_rx, thr_tx;
 
     public:
@@ -110,12 +104,8 @@ class upper_trx : public ms_trx {
 	{
 		auto c_srcport = 6700 + 2 * 0 + 1;
 		auto c_dstport = 6700 + 2 * 0 + 101;
-		auto d_srcport = 6700 + 2 * 0 + 2;
-		auto d_dstport = 6700 + 2 * 0 + 102;
 
 		openudp(&mCtrlSockets, c_srcport, "127.0.0.1");
-		openudp(&mDataSockets, d_srcport, "127.0.0.1");
 		resolveAddress(&ctrldest, "127.0.0.1", c_dstport);
-		resolveAddress(&datadest, "127.0.0.1", d_dstport);
 	};
 };
