@@ -3,7 +3,7 @@ include $(top_srcdir)/Makefile.common
 SUBDIRS = common
 
 if DEVICE_IPC
-SUBDIRS += ipc
+SUBDIRS += ipc ipc2
 endif
 
 if DEVICE_USRP1
