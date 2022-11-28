@@ -73,6 +73,36 @@ COMMON_LDADD = \
 	$(LIBOSMOCTRL_LIBS) \
 	$(LIBOSMOVTY_LIBS)
 
+if ENABLE_MS_TRX
+AM_CPPFLAGS += -I$(top_srcdir)/osmocom-bb/src/host/trxcon/include/
+AM_CPPFLAGS += -I${srcdir}
+
+TRXCON_LDADD = \
+	$(top_builddir)/osmocom-bb/src/host/trxcon/src/.libs/libtrxcon.a \
+	$(top_builddir)/osmocom-bb/src/host/trxcon/src/.libs/libl1sched.a \
+	$(LIBOSMOCODING_LIBS)
+
+MS_SOURCES = \
+	ms/sch.c \
+	ms/ms.cpp \
+	ms/ms_rx_lower.cpp \
+	grgsm_vitac/grgsm_vitac.cpp \
+	grgsm_vitac/viterbi_detector.cc
+
+noinst_HEADERS += \
+   	ms/ms.h \
+	ms/bladerf_specific.h \
+	ms/uhd_specific.h \
+	ms/ms_rx_burst.h \
+	ms/ms_upper.h \
+	ms/itrq.h \
+	ms/sch.h \
+	grgsm_vitac/viterbi_detector.h \
+	grgsm_vitac/constants.h \
+	grgsm_vitac/grgsm_vitac.h
+
+endif
+
 bin_PROGRAMS =
 
 if DEVICE_UHD
@@ -83,6 +113,26 @@ osmo_trx_uhd_LDADD = \
 	$(COMMON_LDADD) \
 	$(UHD_LIBS)
 osmo_trx_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
+
+if ENABLE_MS_TRX
+bin_PROGRAMS += osmo-trx-ms-uhd
+osmo_trx_ms_uhd_SOURCES = $(MS_SOURCES) ms/ms_upper.cpp ms/l1ctl_server.c ms/logging.c ms/l1ctl_server_cb.cpp
+osmo_trx_ms_uhd_LDADD = \
+	$(builddir)/device/uhd/libdevice.la \
+	$(COMMON_LDADD) \
+	$(UHD_LIBS) \
+	$(TRXCON_LDADD)
+osmo_trx_ms_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DBUILDUHD
+
+bin_PROGRAMS += osmo-trx-syncthing-uhd
+osmo_trx_syncthing_uhd_SOURCES = $(MS_SOURCES) ms/ms_rx_burst_test.cpp
+osmo_trx_syncthing_uhd_LDADD = \
+	$(builddir)/device/uhd/libdevice.la \
+	$(COMMON_LDADD) \
+	$(UHD_LIBS) \
+	$(TRXCON_LDADD)
+osmo_trx_syncthing_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DSYNCTHINGONLY -DBUILDUHD
+endif
 endif
 
 if DEVICE_USRP1
@@ -114,6 +164,25 @@ osmo_trx_blade_LDADD = \
 	$(BLADE_LIBS)
 osmo_trx_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(LMS_CFLAGS)
 
+if ENABLE_MS_TRX
+bin_PROGRAMS += osmo-trx-ms-blade
+osmo_trx_ms_blade_SOURCES = $(MS_SOURCES) ms/ms_upper.cpp ms/l1ctl_server.c ms/logging.c ms/l1ctl_server_cb.cpp
+osmo_trx_ms_blade_LDADD = \
+	$(builddir)/device/bladerf/libdevice.la \
+	$(COMMON_LDADD) \
+	$(BLADE_LIBS) \
+	$(TRXCON_LDADD)
+osmo_trx_ms_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS) -DBUILDBLADE
+
+bin_PROGRAMS += osmo-trx-syncthing-blade
+osmo_trx_syncthing_blade_SOURCES = $(MS_SOURCES) ms/ms_rx_burst_test.cpp
+osmo_trx_syncthing_blade_LDADD =  \
+	$(builddir)/device/bladerf/libdevice.la \
+	$(COMMON_LDADD) \
+	$(BLADE_LIBS) \
+	$(TRXCON_LDADD)
+osmo_trx_syncthing_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS) -DSYNCTHINGONLY -DBUILDBLADE -I../device/ipc
+endif
 endif
 
 if DEVICE_IPC
@@ -124,4 +193,3 @@ osmo_trx_ipc_LDADD = \
 	$(COMMON_LDADD)
 osmo_trx_ipc_CPPFLAGS  = $(AM_CPPFLAGS)
 endif
-

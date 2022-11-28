@@ -143,6 +143,11 @@ AC_ARG_WITH(bladerf, [
         [enable bladeRF])
 ])
 
+AC_ARG_WITH(mstrx, [
+    AS_HELP_STRING([--with-mstrx],
+        [enable MS TRX])
+])
+
 AC_ARG_WITH(singledb, [
     AS_HELP_STRING([--with-singledb],
         [enable single daughterboard use on USRP1])
@@ -203,6 +208,8 @@ AS_IF([test "x$with_uhd" = "xyes"],[
 AS_IF([test "x$with_bladerf" = "xyes"], [
     PKG_CHECK_MODULES(BLADE, libbladeRF >= 2.0)
 ])
+
+AM_CONDITIONAL([ENABLE_MS_TRX], [test "x$with_mstrx" = "xyes"])
 
 AS_IF([test "x$with_singledb" = "xyes"], [
     AC_DEFINE(SINGLEDB, 1, Define to 1 for single daughterboard)
@@ -327,6 +334,12 @@ AC_MSG_RESULT([CFLAGS="$CFLAGS"])
 AC_MSG_RESULT([CXXFLAGS="$CXXFLAGS"])
 AC_MSG_RESULT([LDFLAGS="$LDFLAGS"])
 
+if test ENABLE_MS_TRX; then
+    AC_MSG_NOTICE(["Enabling ms-trx..."])
+    AC_CONFIG_SUBDIRS([osmocom-bb/src/host/trxcon])
+fi
+
+
 dnl Output files
 AC_CONFIG_FILES([\
     Makefile \
@@ -352,8 +365,7 @@ AC_CONFIG_FILES([\
     doc/examples/Makefile \
     contrib/Makefile \
     contrib/systemd/Makefile \
+    doc/manuals/Makefile \
+    contrib/osmo-trx.spec \
 ])
-
-AC_OUTPUT(
-	doc/manuals/Makefile
-	contrib/osmo-trx.spec)
+AC_OUTPUT

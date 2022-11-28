@@ -26,8 +26,14 @@ AM_CXXFLAGS = -Wall -pthread
 #AM_CXXFLAGS = -Wall -O2 -NDEBUG -pthread
 #AM_CFLAGS = -Wall -O2 -NDEBUG -pthread
 
+SUBDIRS =
+
+if ENABLE_MS_TRX
+SUBDIRS += osmocom-bb/src/host/trxcon
+endif
+
 # Order must be preserved
-SUBDIRS = \
+SUBDIRS += \
 	CommonLibs \
 	GSM \
 	Transceiver52M \

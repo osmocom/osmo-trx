@@ -35,11 +35,19 @@
 #endif
 #endif
 
-/* ... but apaprently clang disagrees... */
+/* ... but apparently clang disagrees... */
 #if defined(__clang__)
 #define MULTI_VER_TARGET_ATTR_CLANGONLY MULTI_VER_TARGET_ATTR
 #else
 #define MULTI_VER_TARGET_ATTR_CLANGONLY
+#endif
+
+#if defined(__has_attribute)
+#if __has_attribute(no_sanitize)
+#define NO_UBSAN __attribute__((no_sanitize("undefined")))
+#endif
+#else
+#define NO_UBSAN
 #endif
 
 #define SYNC_SEARCH_RANGE 30

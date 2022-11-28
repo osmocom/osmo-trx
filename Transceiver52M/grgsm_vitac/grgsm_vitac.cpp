@@ -74,7 +74,7 @@ void initvita() {
 
 }
 
-MULTI_VER_TARGET_ATTR
+MULTI_VER_TARGET_ATTR NO_UBSAN
 void detect_burst(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary)
 {
 	std::vector<gr_complex> rhh_temp(CHAN_IMP_RESP_LENGTH * d_OSR);

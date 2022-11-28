@@ -85,7 +85,7 @@ export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="$inst/lib"
 export PATH="$inst/bin:$PATH"
 
-CONFIG="--enable-sanitize --enable-werror --with-uhd --with-usrp1 --with-lms --with-ipc $INSTR"
+CONFIG="--enable-sanitize --enable-werror --with-uhd --with-usrp1 --with-lms --with-ipc --with-mstrx $INSTR"
 
 # Additional configure options and depends
 if [ "$WITH_MANUALS" = "1" ]; then
