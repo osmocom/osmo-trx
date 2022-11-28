@@ -105,6 +105,17 @@ osmo_trx_lms_LDADD = \
 osmo_trx_lms_CPPFLAGS  = $(AM_CPPFLAGS) $(LMS_CFLAGS)
 endif
 
+if DEVICE_BLADE
+bin_PROGRAMS += osmo-trx-blade
+osmo_trx_blade_SOURCES = osmo-trx.cpp
+osmo_trx_blade_LDADD = \
+	$(builddir)/device/bladerf/libdevice.la \
+	$(COMMON_LDADD) \
+	$(BLADE_LIBS)
+osmo_trx_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(LMS_CFLAGS)
+
+endif
+
 if DEVICE_IPC
 bin_PROGRAMS += osmo-trx-ipc
 osmo_trx_ipc_SOURCES = osmo-trx.cpp
