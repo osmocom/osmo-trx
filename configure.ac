@@ -327,6 +327,14 @@ AC_MSG_RESULT([CFLAGS="$CFLAGS"])
 AC_MSG_RESULT([CXXFLAGS="$CXXFLAGS"])
 AC_MSG_RESULT([LDFLAGS="$LDFLAGS"])
 
+AM_CONDITIONAL(ENABLE_MS_TRX, [test -d osmocom-bb])
+
+if ENABLE_MS_TRX; then
+	AC_MSG_NOTICE(["Enabling ms-trx..."])
+    AC_CONFIG_SUBDIRS([osmocom-bb/src/host/trxcon])
+fi
+
+
 dnl Output files
 AC_CONFIG_FILES([\
     Makefile \
@@ -353,8 +361,7 @@ AC_CONFIG_FILES([\
     doc/examples/Makefile \
     contrib/Makefile \
     contrib/systemd/Makefile \
+    doc/manuals/Makefile \
+    contrib/osmo-trx.spec \
 ])
-
-AC_OUTPUT(
-	doc/manuals/Makefile
-	contrib/osmo-trx.spec)
+AC_OUTPUT

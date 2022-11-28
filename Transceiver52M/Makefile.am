@@ -23,9 +23,9 @@ include $(top_srcdir)/Makefile.common
 
 SUBDIRS = arch device
 
-AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/arch/common -I${srcdir}/device/common
-AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
-AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
+AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/arch/common -I${srcdir}/device/common -I$(top_srcdir)/osmocom-bb/src/host/trxcon/include/
+AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS) -I$(top_srcdir)/osmocom-bb/src/host/trxcon/include/
+AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS) -I$(top_srcdir)/osmocom-bb/src/host/trxcon/include/
 
 noinst_LTLIBRARIES = libtransceiver_common.la
 
@@ -40,7 +40,9 @@ COMMON_SOURCES = \
 	ChannelizerBase.cpp \
 	Channelizer.cpp \
 	Synthesis.cpp \
-	proto_trxd.c
+	proto_trxd.c \
+	grgsm_vitac/grgsm_vitac.cpp \
+	grgsm_vitac/viterbi_detector.cc
 
 libtransceiver_common_la_SOURCES = \
 	$(COMMON_SOURCES) \
@@ -61,7 +63,9 @@ noinst_HEADERS = \
 	ChannelizerBase.h \
 	Channelizer.h \
 	Synthesis.h \
-	proto_trxd.h
+	proto_trxd.h \
+	grgsm_vitac/viterbi_detector.h \
+	grgsm_vitac/constants.h
 
 COMMON_LDADD = \
 	libtransceiver_common.la \
@@ -70,8 +74,25 @@ COMMON_LDADD = \
 	$(COMMON_LA) \
 	$(FFTWF_LIBS) \
 	$(LIBOSMOCORE_LIBS) \
+	$(LIBOSMOCODING_LIBS) \
 	$(LIBOSMOCTRL_LIBS) \
 	$(LIBOSMOVTY_LIBS)
+
+TRXCON_LDADD = \
+	$(top_builddir)/osmocom-bb/src/host/trxcon/src/.libs/libl1sched.a \
+	$(top_builddir)/osmocom-bb/src/host/trxcon/src/.libs/libtrxcon.a
+
+MS_SOURCES = \
+	ms/sch.c \
+	ms/ms.cpp \
+	ms/ms_rx_lower.cpp
+
+noinst_HEADERS += \
+	ms/ms.h \
+	ms/bladerf_specific.h \
+	ms/uhd_specific.h \
+	ms/ms_upper.h \
+	ms/itrq.h
 
 bin_PROGRAMS =
 
@@ -83,6 +104,26 @@ osmo_trx_uhd_LDADD = \
 	$(COMMON_LDADD) \
 	$(UHD_LIBS)
 osmo_trx_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
+
+if ENABLE_MS_TRX
+bin_PROGRAMS += osmo-trx-ms-uhd
+osmo_trx_ms_uhd_SOURCES = $(MS_SOURCES) ms/ms_upper.cpp ms/l1ctl_server.c ms/logging.cpp ms/l1ctl_server_cb.cpp
+osmo_trx_ms_uhd_LDADD = \
+	$(builddir)/device/uhd/libdevice.la \
+	$(COMMON_LDADD) \
+	$(UHD_LIBS) \
+	$(TRXCON_LDADD)
+osmo_trx_ms_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DBUILDUHD
+
+bin_PROGRAMS += osmo-trx-syncthing-uhd
+osmo_trx_syncthing_uhd_SOURCES = $(MS_SOURCES) ms/ms_rx_burst_test.cpp
+osmo_trx_syncthing_uhd_LDADD = \
+	$(builddir)/device/uhd/libdevice.la \
+	$(COMMON_LDADD) \
+	$(UHD_LIBS) \
+	$(TRXCON_LDADD)
+osmo_trx_syncthing_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DSYNCTHINGONLY -DBUILDUHD
+endif
 endif
 
 if DEVICE_USRP1
@@ -114,6 +155,25 @@ osmo_trx_blade_LDADD = \
 	$(BLADE_LIBS)
 osmo_trx_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(LMS_CFLAGS)
 
+if ENABLE_MS_TRX
+bin_PROGRAMS += osmo-trx-ms-blade
+osmo_trx_ms_blade_SOURCES = $(MS_SOURCES) ms/ms_upper.cpp ms/l1ctl_server.c ms/logging.cpp ms/l1ctl_server_cb.cpp
+osmo_trx_ms_blade_LDADD = \
+	$(builddir)/device/bladerf/libdevice.la \
+	$(COMMON_LDADD) \
+	$(BLADE_LIBS) \
+	$(TRXCON_LDADD)
+osmo_trx_ms_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS) -DBUILDBLADE
+
+bin_PROGRAMS += osmo-trx-syncthing-blade
+osmo_trx_syncthing_blade_SOURCES = $(MS_SOURCES) ms/ms_rx_burst_test.cpp
+osmo_trx_syncthing_blade_LDADD =  \
+	$(builddir)/device/bladerf/libdevice.la \
+	$(COMMON_LDADD) \
+	$(BLADE_LIBS) \
+	$(TRXCON_LDADD)
+osmo_trx_syncthing_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS) -DSYNCTHINGONLY -DBUILDBLADE -I../device/ipc
+endif
 endif
 
 if DEVICE_IPC
@@ -123,5 +183,24 @@ osmo_trx_ipc_LDADD = \
 	$(builddir)/device/ipc/libdevice.la \
 	$(COMMON_LDADD)
 osmo_trx_ipc_CPPFLAGS  = $(AM_CPPFLAGS)
-endif
 
+# bin_PROGRAMS += osmo-trx-ipc2
+# osmo_trx_ipc2_SOURCES = osmo-trx.cpp
+# osmo_trx_ipc2_LDADD = \
+# 	$(builddir)/device/ipc2/libdevice.la \
+# 	$(COMMON_LDADD)
+# osmo_trx_ipc2_CPPFLAGS  = $(AM_CPPFLAGS)
+# if ENABLE_MS_TRX
+# bin_PROGRAMS += osmo-trx-ms-ipc
+# osmo_trx_ms_ipc_SOURCES = $(MS_SOURCES) ms/ms_upper.cpp
+# osmo_trx_ms_ipc_LDADD = \
+# 	$(COMMON_LDADD) \
+# 	$(TRXCON_LDADD)
+# osmo_trx_ms_ipc_CPPFLAGS  = $(AM_CPPFLAGS) -DBUILDIPC  -I./device/ipc2 -I../device/ipc2
+
+# bin_PROGRAMS += osmo-trx-syncthing-ipc
+# osmo_trx_syncthing_ipc_SOURCES = $(MS_SOURCES) ms/ms_rx_burst_test.cpp
+# osmo_trx_syncthing_ipc_LDADD =  $(COMMON_LDADD)
+# osmo_trx_syncthing_ipc_CPPFLAGS  = $(AM_CPPFLAGS) -DSYNCTHINGONLY -DBUILDIPC  -I./device/ipc2 -I../device/ipc2
+# endif
+endif
