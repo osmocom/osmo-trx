@@ -138,6 +138,11 @@ AC_ARG_WITH(ipc, [
         [enable IPC])
 ])
 
+AC_ARG_WITH(bladerf, [
+    AS_HELP_STRING([--with-bladerf],
+        [enable bladeRF])
+])
+
 AC_ARG_WITH(singledb, [
     AS_HELP_STRING([--with-singledb],
         [enable single daughterboard use on USRP1])
@@ -195,6 +200,10 @@ AS_IF([test "x$with_uhd" = "xyes"],[
     )
 ])
 
+AS_IF([test "x$with_bladerf" = "xyes"], [
+    PKG_CHECK_MODULES(BLADE, libbladeRF >= 2.0)
+])
+
 AS_IF([test "x$with_singledb" = "xyes"], [
     AC_DEFINE(SINGLEDB, 1, Define to 1 for single daughterboard)
 ])
@@ -248,6 +257,7 @@ AM_CONDITIONAL(DEVICE_UHD, [test "x$with_uhd" = "xyes"])
 AM_CONDITIONAL(DEVICE_USRP1, [test "x$with_usrp1" = "xyes"])
 AM_CONDITIONAL(DEVICE_LMS, [test "x$with_lms" = "xyes"])
 AM_CONDITIONAL(DEVICE_IPC, [test "x$with_ipc" = "xyes"])
+AM_CONDITIONAL(DEVICE_BLADE, [test "x$with_bladerf" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
 
@@ -333,6 +343,7 @@ AC_CONFIG_FILES([\
     Transceiver52M/device/usrp1/Makefile \
     Transceiver52M/device/lms/Makefile \
     Transceiver52M/device/ipc/Makefile \
+    Transceiver52M/device/bladerf/Makefile \
     tests/Makefile \
     tests/CommonLibs/Makefile \
     tests/Transceiver52M/Makefile \
