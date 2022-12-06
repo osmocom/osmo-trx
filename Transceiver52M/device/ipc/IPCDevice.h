@@ -199,7 +199,7 @@ class IPCDevice : public RadioDevice {
 	virtual double minRxGain(void) override;
 
 	/* FIXME: return rx_gains[chan] ? receive factor from IPC Driver? */
-	double rssiOffset(size_t chan) { return 0.0f; };
+	double rssiOffset(size_t chan) override { return 0.0f; };
 
 	double setPowerAttenuation(int atten, size_t chan) override;
 	double getPowerAttenuation(size_t chan = 0) override;
