@@ -1,4 +1,4 @@
 [submodule "osmocom-bb"]
 	path = osmocom-bb
 	url = https://gitea.osmocom.org/phone-side/osmocom-bb.git
-	branch = a4aac5c3554559c2c994609f90b92a9daf6e8a89
+	branch = a6d2e1a12b0204f1b1690c42371980dd6895f076
