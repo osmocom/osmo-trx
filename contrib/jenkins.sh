@@ -101,6 +101,7 @@ echo
 set -x
 
 cd "$base"
+git submodule status
 autoreconf --install --force
 ./configure $CONFIG
 $MAKE $PARALLEL_MAKE
