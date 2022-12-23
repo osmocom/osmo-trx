@@ -334,7 +334,7 @@ AC_MSG_RESULT([CFLAGS="$CFLAGS"])
 AC_MSG_RESULT([CXXFLAGS="$CXXFLAGS"])
 AC_MSG_RESULT([LDFLAGS="$LDFLAGS"])
 
-if test ENABLE_MS_TRX; then
+if test "x$with_mstrx" = "xyes"; then
     AC_MSG_NOTICE(["Enabling ms-trx..."])
     AC_CONFIG_SUBDIRS([osmocom-bb/src/host/trxcon])
 fi
