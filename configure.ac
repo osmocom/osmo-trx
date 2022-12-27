@@ -212,7 +212,12 @@ AS_IF([test "x$with_bladerf" = "xyes"], [
 AC_MSG_CHECKING([whether to enable building MS TRX])
 AS_IF([test "x$with_mstrx" = "xyes"], [
     AC_CONFIG_SUBDIRS([osmocom-bb/src/host/trxcon])
-    AC_SUBST(LIBTRXCON_DIR, "osmocom-bb/src/host/trxcon")
+    LIBTRXCON_DIR="osmocom-bb/src/host/trxcon"
+    if ! test -d "$srcdir/$LIBTRXCON_DIR"; then
+        AC_MSG_RESULT([no])
+        AC_MSG_ERROR([$LIBTRXCON_DIR does not exist])
+    fi
+    AC_SUBST(LIBTRXCON_DIR)
     AC_MSG_RESULT([yes])
 ], [
     # Despite LIBTRXCON_DIR is added to SUBDIRS conditionally,
