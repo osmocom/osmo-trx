@@ -337,6 +337,13 @@ AC_MSG_RESULT([LDFLAGS="$LDFLAGS"])
 if test "x$with_mstrx" = "xyes"; then
     AC_MSG_NOTICE(["Enabling ms-trx..."])
     AC_CONFIG_SUBDIRS([osmocom-bb/src/host/trxcon])
+    AC_SUBST(LIBTRXCON_DIR, "osmocom-bb/src/host/trxcon")
+else
+    # Despite LIBTRXCON_DIR is added to SUBDIRS conditionally,
+    # autoconf/automake still requires the directory to be present
+    # and thus the submodule to be fetched (even if MS TRX is not needed).
+    # Work this around by pointing it to an empty dir.
+    AC_SUBST(LIBTRXCON_DIR, "osmocom-bb")
 fi
 
 

@@ -29,7 +29,7 @@ AM_CXXFLAGS = -Wall -pthread
 SUBDIRS =
 
 if ENABLE_MS_TRX
-SUBDIRS += osmocom-bb/src/host/trxcon
+SUBDIRS += $(LIBTRXCON_DIR)
 endif
 
 # Order must be preserved
