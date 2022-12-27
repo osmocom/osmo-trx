@@ -209,7 +209,17 @@ AS_IF([test "x$with_bladerf" = "xyes"], [
     PKG_CHECK_MODULES(BLADE, libbladeRF >= 2.0)
 ])
 
-AM_CONDITIONAL([ENABLE_MS_TRX], [test "x$with_mstrx" = "xyes"])
+AS_IF([test "x$with_mstrx" = "xyes"], [
+    AC_MSG_NOTICE(["Enabling ms-trx..."])
+    AC_CONFIG_SUBDIRS([osmocom-bb/src/host/trxcon])
+    AC_SUBST(LIBTRXCON_DIR, "osmocom-bb/src/host/trxcon")
+], [
+    # Despite LIBTRXCON_DIR is added to SUBDIRS conditionally,
+    # autoconf/automake still requires the directory to be present
+    # and thus the submodule to be fetched (even if MS TRX is not needed).
+    # Work this around by pointing it to an empty dir.
+    AC_SUBST(LIBTRXCON_DIR, "osmocom-bb")
+])
 
 AS_IF([test "x$with_singledb" = "xyes"], [
     AC_DEFINE(SINGLEDB, 1, Define to 1 for single daughterboard)
@@ -267,6 +277,7 @@ AM_CONDITIONAL(DEVICE_IPC, [test "x$with_ipc" = "xyes"])
 AM_CONDITIONAL(DEVICE_BLADE, [test "x$with_bladerf" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
+AM_CONDITIONAL(ENABLE_MS_TRX, [test "x$with_mstrx" = "xyes"])
 
 PKG_CHECK_MODULES(LIBUSB, libusb-1.0)
 PKG_CHECK_MODULES(FFTWF, fftw3f)
@@ -333,18 +344,6 @@ AC_MSG_RESULT([CPPFLAGS="$CPPFLAGS"])
 AC_MSG_RESULT([CFLAGS="$CFLAGS"])
 AC_MSG_RESULT([CXXFLAGS="$CXXFLAGS"])
 AC_MSG_RESULT([LDFLAGS="$LDFLAGS"])
-
-if test "x$with_mstrx" = "xyes"; then
-    AC_MSG_NOTICE(["Enabling ms-trx..."])
-    AC_CONFIG_SUBDIRS([osmocom-bb/src/host/trxcon])
-    AC_SUBST(LIBTRXCON_DIR, "osmocom-bb/src/host/trxcon")
-else
-    # Despite LIBTRXCON_DIR is added to SUBDIRS conditionally,
-    # autoconf/automake still requires the directory to be present
-    # and thus the submodule to be fetched (even if MS TRX is not needed).
-    # Work this around by pointing it to an empty dir.
-    AC_SUBST(LIBTRXCON_DIR, "osmocom-bb")
-fi
 
 
 dnl Output files
