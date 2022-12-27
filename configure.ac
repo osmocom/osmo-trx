@@ -209,16 +209,18 @@ AS_IF([test "x$with_bladerf" = "xyes"], [
     PKG_CHECK_MODULES(BLADE, libbladeRF >= 2.0)
 ])
 
+AC_MSG_CHECKING([whether to enable building MS TRX])
 AS_IF([test "x$with_mstrx" = "xyes"], [
-    AC_MSG_NOTICE(["Enabling ms-trx..."])
     AC_CONFIG_SUBDIRS([osmocom-bb/src/host/trxcon])
     AC_SUBST(LIBTRXCON_DIR, "osmocom-bb/src/host/trxcon")
+    AC_MSG_RESULT([yes])
 ], [
     # Despite LIBTRXCON_DIR is added to SUBDIRS conditionally,
     # autoconf/automake still requires the directory to be present
     # and thus the submodule to be fetched (even if MS TRX is not needed).
     # Work this around by pointing it to an empty dir.
     AC_SUBST(LIBTRXCON_DIR, "osmocom-bb")
+    AC_MSG_RESULT([no])
 ])
 
 AS_IF([test "x$with_singledb" = "xyes"], [
