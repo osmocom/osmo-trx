@@ -449,8 +449,8 @@ void sighandler(int sigset)
 
 		// we know the flag is atomic and it prevents the trxcon cb handlers from writing
 		// to the queues, so submit some trash to unblock the threads & exit
-		trxcon::trxcon_phyif_cmd cmd;
-		trxcon::internal_q_tx_buf b;
+		trxcon::trxcon_phyif_cmd cmd = {};
+		trxcon::internal_q_tx_buf b = {};
 		trxcon::txq.spsc_push(&b);
 		trxcon::cmdq_to_phy.spsc_push(&cmd);
 
