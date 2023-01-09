@@ -38,6 +38,7 @@
 #define STEALING_BIT      1
 #define N_TRAIN_BITS      26
 #define N_SYNC_BITS       64
+#define N_ACCESS_BITS     41
 #define USEFUL_BITS       142  //(2*(DATA_BITS+STEALING_BIT) + N_TRAIN_BITS )
 #define FCCH_BITS         USEFUL_BITS
 #define BURST_SIZE        (USEFUL_BITS+2*TAIL_BITS)
@@ -71,6 +72,12 @@ static const unsigned char SYNC_BITS[] = {
   0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
   0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1,
   0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1
+};
+
+static const unsigned char ACCESS_BITS [] = {
+ 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+ 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0,
+ 0, 1, 1, 1, 1, 0, 0, 0
 };
 
 const unsigned FCCH_FRAMES[] = { 0, 10, 20, 30, 40 };

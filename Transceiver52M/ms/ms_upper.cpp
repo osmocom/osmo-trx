@@ -196,7 +196,7 @@ bool upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset)
 		// fprintf(stderr, "%s %d\n", (is_nb ? "N":"D"), burst_time.FN());
 		// if (is_nb)
 #endif
-		detect_burst(ss, &chan_imp_resp[0], normal_burst_start, demodded_softbits);
+		detect_burst_nb(ss, &chan_imp_resp[0], normal_burst_start, demodded_softbits);
 #ifdef DBGXX
 		// else
 		// 	detect_burst(ss, &chan_imp_resp2[0], dummy_burst_start, outbin);

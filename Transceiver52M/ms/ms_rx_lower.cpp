@@ -170,7 +170,7 @@ bool ms_trx::handle_sch(bool is_first_sch_acq)
 		start = start < 39 ? start : 39;
 		start = start > -39 ? start : -39;
 	}
-	detect_burst(&ss[start], &channel_imp_resp[0], 0, sch_demod_bits);
+	detect_burst_nb(&ss[start], &channel_imp_resp[0], 0, sch_demod_bits);
 
 	auto sch_decode_success = decode_sch(sch_demod_bits, is_first_sch_acq);
 
