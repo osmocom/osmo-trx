@@ -98,8 +98,6 @@ bool RadioInterfaceResamp::init(int type)
 {
 	float cutoff = 1.0f;
 
-	close();
-
 	switch (type) {
 	case RadioDevice::RESAMP_64M:
 		resamp_inrate = RESAMP_64M_INRATE;

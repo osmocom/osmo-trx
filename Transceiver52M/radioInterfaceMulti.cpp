@@ -153,8 +153,6 @@ bool RadioInterfaceMulti::init(int type)
 		return false;
 	}
 
-	close();
-
 	convertSendBuffer.resize(1);
 	convertRecvBuffer.resize(1);
 
