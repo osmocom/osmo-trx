@@ -133,6 +133,7 @@ template <typename T> struct uhd_hw {
 	int init_device(bh_fn_t rxh, bh_fn_t txh)
 	{
 		auto const lock_delay_ms = 500;
+		auto clock_lock_attempts = 15; // x lock_delay_ms
 		auto const mcr = 26e6;
 		auto const rate = (1625e3 / 6) * 4;
 		auto const ref = "external";
@@ -157,8 +158,18 @@ template <typename T> struct uhd_hw {
 		dev->set_tx_bandwidth(bw, channel);
 
 		while (!(dev->get_rx_sensor("lo_locked", channel).to_bool() &&
-			 dev->get_mboard_sensor("ref_locked").to_bool()))
+			 dev->get_mboard_sensor("ref_locked").to_bool()) &&
+		       clock_lock_attempts > 0) {
+			std::cerr << "clock source lock attempts remaining: " << clock_lock_attempts << ".."
+				  << std::endl;
 			std::this_thread::sleep_for(std::chrono::milliseconds(lock_delay_ms));
+			clock_lock_attempts--;
+		}
+
+		if (clock_lock_attempts <= 0) {
+			std::cerr << "Error locking clock, gpsdo missing? quitting.." << std::endl;
+			return -1;
+		}
 
 		uhd::stream_args_t stream_args("sc16", "sc16");
 		rx_stream = dev->get_rx_stream(stream_args);

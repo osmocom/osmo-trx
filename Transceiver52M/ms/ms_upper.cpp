@@ -482,6 +482,10 @@ int main(int argc, char *argv[])
 	trx->do_auto_gain = true;
 
 	status = trx->init_dev_and_streams();
+	if (status < 0) {
+		std::cerr << "Error initializing hardware, quitting.." << std::endl;
+		return -1;
+	}
 	trx->set_name_aff_sched("main", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5);
 
 	if (!trxcon::trxc_l1ctl_init(tall_trxcon_ctx)) {
