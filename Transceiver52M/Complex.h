@@ -29,7 +29,7 @@ unlike the built-in complex<> templates, these inline most operations for speed
 template<class Real> class Complex {
 
 public:
-
+  typedef Real value_type;
   Real r, i;
 
   /**@name constructors */

@@ -180,13 +180,11 @@ bool ms_trx::handle_sch(bool is_first_sch_acq)
 	memset((void *)&sch_acq_buffer[0], 0, sizeof(sch_acq_buffer));
 	if (is_first_sch_acq) {
 		float max_corr = 0;
-		convert_and_scale<float, int16_t>(which_out_buffer, which_in_buffer, buf_len * 2,
-						  1.f / float(rxFullScale));
+		convert_and_scale(which_out_buffer, which_in_buffer, buf_len * 2, 1.f / float(rxFullScale));
 		start = get_sch_buffer_chan_imp_resp(ss, &channel_imp_resp[0], buf_len, &max_corr);
 		detect_burst(&ss[start], &channel_imp_resp[0], 0, sch_demod_bits);
 	} else {
-		convert_and_scale<float, int16_t>(which_out_buffer, which_in_buffer, buf_len * 2,
-						  1.f / float(rxFullScale));
+		convert_and_scale(which_out_buffer, which_in_buffer, buf_len * 2, 1.f / float(rxFullScale));
 		start = get_sch_chan_imp_resp(ss, &channel_imp_resp[0]);
 		start = start < 39 ? start : 39;
 		start = start > -39 ? start : -39;

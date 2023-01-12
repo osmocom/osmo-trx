@@ -90,7 +90,7 @@ static void handle_it(one_burst &e, signalVector &burst, unsigned int tsc, int s
 
 	if (is_sch) {
 		char outbin[148];
-		convert_and_scale_default<float, int16_t>(burst.begin(), e.burst, ONE_TS_BURST_LEN * 2);
+		convert_and_scale(burst.begin(), e.burst, ONE_TS_BURST_LEN * 2, SAMPLE_SCALE_FACTOR);
 		std::stringstream dbgout;
 #if 0
 		{
@@ -109,8 +109,7 @@ static void handle_it(one_burst &e, signalVector &burst, unsigned int tsc, int s
 		}
 #endif
 		{
-			convert_and_scale<float, float>(burst.begin(), burst.begin(), ONE_TS_BURST_LEN * 2,
-							1.f / float(scale));
+			convert_and_scale(burst.begin(), burst.begin(), ONE_TS_BURST_LEN * 2, 1.f / float(scale));
 
 			std::complex<float> channel_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
 			auto ss = reinterpret_cast<std::complex<float> *>(burst.begin());
@@ -133,7 +132,7 @@ static void handle_it(one_burst &e, signalVector &burst, unsigned int tsc, int s
 		return;
 	}
 #if 1
-	convert_and_scale<float, int16_t>(burst.begin(), e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(scale));
+	convert_and_scale(burst.begin(), e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(scale));
 	// std::cerr << "@" << tsc << " " << e.gsmts.FN() << ":" << e.gsmts.TN() << " " << ebp.toa << " "
 	// 	  << std::endl;
 

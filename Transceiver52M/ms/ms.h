@@ -38,6 +38,7 @@
 #error wat? no device..
 #endif
 
+#include "Complex.h"
 #include "GSMCommon.h"
 #include "itrq.h"
 
@@ -45,7 +46,8 @@ const unsigned int ONE_TS_BURST_LEN = (3 + 58 + 26 + 58 + 3 + 8.25) * 4 /*sps*/;
 const unsigned int NUM_RXQ_FRAMES = 1; // rx thread <-> upper rx queue
 const unsigned int SCH_LEN_SPS = (ONE_TS_BURST_LEN * 8 /*ts*/ * 12 /*frames*/);
 
-template <typename T> void clamp_array(T *start2, unsigned int len, T max)
+template <typename T>
+void clamp_array(T *start2, unsigned int len, T max)
 {
 	for (int i = 0; i < len; i++) {
 		const T t1 = start2[i] < -max ? -max : start2[i];
@@ -53,15 +55,54 @@ template <typename T> void clamp_array(T *start2, unsigned int len, T max)
 		start2[i] = t2;
 	}
 }
-template <typename DST_T, typename SRC_T, typename ST>
-void convert_and_scale(void *dst, void *src, unsigned int src_len, ST scale)
+
+namespace cvt_internal
+{
+
+template <typename SRC_T, typename ST>
+void convert_and_scale_i(float *dst, const SRC_T *src, unsigned int src_len, ST scale)
 {
 	for (unsigned int i = 0; i < src_len; i++)
-		reinterpret_cast<DST_T *>(dst)[i] = static_cast<DST_T>((reinterpret_cast<SRC_T *>(src)[i])) * scale;
+		dst[i] = static_cast<float>(src[i]) * scale;
 }
-template <typename DST_T, typename SRC_T> void convert_and_scale_default(void *dst, void *src, unsigned int src_len)
+
+template <typename DST_T, typename ST>
+void convert_and_scale_i(DST_T *dst, const float *src, unsigned int src_len, ST scale)
 {
-	return convert_and_scale<DST_T, SRC_T>(dst, src, src_len, SAMPLE_SCALE_FACTOR);
+	for (unsigned int i = 0; i < src_len; i++)
+		dst[i] = static_cast<DST_T>(src[i] * scale);
+}
+
+template <typename ST>
+void convert_and_scale_i(float *dst, const float *src, unsigned int src_len, ST scale)
+{
+	for (unsigned int i = 0; i < src_len; i++)
+		dst[i] = src[i] * scale;
+}
+
+template <typename T>
+struct is_complex : std::false_type {
+	using baset = T;
+};
+
+template <typename T>
+struct is_complex<std::complex<T>> : std::true_type {
+	using baset = typename std::complex<T>::value_type;
+};
+
+template <typename T>
+struct is_complex<Complex<T>> : std::true_type {
+	using baset = typename Complex<T>::value_type;
+};
+
+} // namespace cvt_internal
+
+template <typename DST_T, typename SRC_T, typename ST>
+void convert_and_scale(DST_T *dst, const SRC_T *src, unsigned int src_len, ST scale)
+{
+	using vd = typename cvt_internal::is_complex<DST_T>::baset;
+	using vs = typename cvt_internal::is_complex<SRC_T>::baset;
+	return cvt_internal::convert_and_scale_i((vd *)dst, (vs *)src, src_len, scale);
 }
 
 struct one_burst {

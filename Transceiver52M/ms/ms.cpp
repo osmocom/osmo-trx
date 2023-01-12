@@ -62,7 +62,7 @@ void tx_test(ms_trx *t, ts_hitter_q_t *q, unsigned int *tsc)
 
 	// float -> int16
 	blade_sample_type burst_buf[burst->size()];
-	convert_and_scale<int16_t, float>(burst_buf, burst->begin(), burst->size() * 2, 1);
+	convert_and_scale(burst_buf, burst->begin(), burst->size() * 2, 1);
 
 	while (1) {
 		GSM::Time target;
@@ -126,7 +126,7 @@ void tx_test(ms_trx *t, ts_hitter_q_t *q, unsigned int *tsc)
 		t->submit_burst_ts(buf2, burst->size() + pad, send_ts - pad);
 #ifdef DBGXX
 		signalVector test(burst->size() + pad);
-		convert_and_scale<float, int16_t>(test.begin(), buf2, burst->size() * 2 + pad, 1.f / float(scale));
+		convert_and_scale(test.begin(), buf2, burst->size() * 2 + pad, 1.f / float(scale));
 		estim_burst_params ebp;
 		auto det = detectAnyBurst(test, 0, 4, 4, CorrType::RACH, 40, &ebp);
 		if (det > 0)

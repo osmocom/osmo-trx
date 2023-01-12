@@ -191,7 +191,7 @@ bool upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset)
 		return true;
 	}
 
-	convert_and_scale<float, int16_t>(ss, e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(rxFullScale));
+	convert_and_scale(ss, e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(rxFullScale));
 
 	pow = energyDetect(sv, 20 * 4 /*sps*/);
 	if (pow < -1) {
@@ -292,10 +292,10 @@ void upper_trx::driveTx()
 
 	// float -> int16
 	blade_sample_type burst_buf[txburst->size()];
-	convert_and_scale<int16_t, float>(burst_buf, txburst->begin(), txburst->size() * 2, 1);
+	convert_and_scale(burst_buf, txburst->begin(), txburst->size() * 2, 1);
 #ifdef TXDEBUG
 	auto check = signalVector(txburst->size(), 40);
-	convert_and_scale<float, int16_t, 1>(check.begin(), burst_buf, txburst->size() * 2);
+	convert_and_scale(check.begin(), burst_buf, txburst->size() * 2, 1);
 	estim_burst_params ebp;
 	auto d = detectAnyBurst(check, 2, 4, 4, CorrType::RACH, 40, &ebp);
 	if (d)
@@ -462,7 +462,6 @@ int main(int argc, char *argv[])
 {
 	auto tall_trxcon_ctx = talloc_init("trxcon context");
 	signal(SIGPIPE, sighandler);
-	fesetround(FE_TOWARDZERO);
 
 	trxcon::msgb_talloc_ctx_init(tall_trxcon_ctx, 0);
 	trxc_log_init(tall_trxcon_ctx);
