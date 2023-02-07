@@ -1,3 +1,46 @@
+osmo-trx (1.5.0) unstable; urgency=medium
+
+  [ Oliver Smith ]
+  * configure.ac: add -lboost_thread for uhd < 4.2.0
+  * gitignore: add uhddev_ipc.cpp
+  * contrib/jenkins: don't run "make distcheck" on arm
+
+  [ Vadim Yanitskiy ]
+  * threshold_timer_update_intv(): call osmo_timer_del() unconditionally
+  * Transceiver::expectedCorrType(): RACH is always 8-bit on PTCCH/U
+  * contrib/jenkins.sh: dump submodule status before building
+  * configure.ac: fix: properly check whether to enable ms-trx
+  * configure.ac: allow building without cloning submodules
+  * configure.ac: cosmetic: rearrange MS TRX related logic
+  * configure.ac: make use of AC_MSG_CHECKING and AC_MSG_RESULT
+
+  [ Max ]
+  * Set working directory in systemd service file
+  * Add realtime scheduling and set priority in service file
+  * ctrl: take both address and port from vty config
+
+  [ Eric ]
+  * ignore vscode dirs
+  * rename noisevector class -> avgvector
+  * osmocom-bb for ms-trx side trxcon integration
+  * add checkpatch config
+  * bladerf xa4 support
+  * update osmocom-bb submodule to fix make distcheck
+  * vita demod by piotr krysik, modified
+  * properly update osmocom-bb submodule, for real this time..
+  * ms-trx support
+  * clean up mutex, scopedlock, and signal classes
+  * ipc: add missing override
+  * clang-format: proper c++ standard
+  * ipc: remove old autotools workaround
+  * ms: init trash used to escape the usb callbacks
+  * radio interface: fix init
+
+  [ Eric Wild ]
+  * mstrx: do not wait forever if clock locking fails
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Tue, 07 Feb 2023 17:08:17 +0100
+
 osmo-trx (1.4.1) unstable; urgency=medium
 
   [ Oliver Smith ]

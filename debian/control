@@ -14,7 +14,7 @@ Build-Depends: debhelper (>= 9),
                libtalloc-dev,
                libusrp-dev,
                liblimesuite-dev,
-               libosmocore-dev (>= 1.6.0),
+               libosmocore-dev (>= 1.8.0),
                osmo-gsm-manuals-dev
 Standards-Version: 3.9.6
 Vcs-Browser: https://gitea.osmocom.org/cellular-infrastructure/osmo-trx
