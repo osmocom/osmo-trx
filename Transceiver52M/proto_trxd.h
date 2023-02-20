@@ -48,9 +48,8 @@ struct trxd_hdr_common {
 		reserved:1,
 		version:4;
 #elif OSMO_IS_BIG_ENDIAN
-	uint8_t version:4,
-		reserved:1,
-		tn:3;
+/* auto-generated from the little endian part above (libosmocore/contrib/struct_endianness.py) */
+	uint8_t version:4, reserved:1, tn:3;
 #endif
 	uint32_t fn; /* big endian */
 } __attribute__ ((packed));
@@ -86,9 +85,8 @@ struct trxd_hdr_v1_specific {
 		modulation:4,
 		idle:1;
 #elif OSMO_IS_BIG_ENDIAN
-	uint8_t idle:1,
-		modulation:4,
-		tsc:3;
+/* auto-generated from the little endian part above (libosmocore/contrib/struct_endianness.py) */
+	uint8_t idle:1, modulation:4, tsc:3;
 #endif
 	int16_t ci;  /* big endian, in centiBels */
 } __attribute__ ((packed));
