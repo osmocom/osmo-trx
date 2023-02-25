@@ -651,7 +651,7 @@ int main(int argc, char *argv[])
 		exit(2);
 	}
 
-	rc = telnet_init_dynif(tall_trx_ctx, NULL, vty_get_bind_addr(), OSMO_VTY_PORT_TRX);
+	rc = telnet_init_default(tall_trx_ctx, NULL, OSMO_VTY_PORT_TRX);
 	if (rc < 0)
 		exit(1);
 
