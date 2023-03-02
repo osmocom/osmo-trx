@@ -82,7 +82,7 @@ template <typename T> struct uhd_hw {
 	{
 		delete[] one_pkt_buf;
 	}
-	uhd_hw() : rxFullScale(32767), txFullScale(32767), rxtxdelay(-67)
+	uhd_hw() : rxFullScale(32767), txFullScale(32767 * 0.3), rxtxdelay(-67)
 	{
 	}
 

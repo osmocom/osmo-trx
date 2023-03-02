@@ -58,7 +58,7 @@ void tx_test(ms_trx *t, ts_hitter_q_t *q, unsigned int *tsc)
 	pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch_params);
 
 	auto burst = genRandAccessBurst(0, 4, 0);
-	scaleVector(*burst, t->txFullScale * 0.7);
+	scaleVector(*burst, t->txFullScale);
 
 	// float -> int16
 	blade_sample_type burst_buf[burst->size()];
