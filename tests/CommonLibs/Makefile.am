@@ -12,6 +12,8 @@ AM_CXXFLAGS = \
 	$(LIBOSMOVTY_CFLAGS) \
 	$(NULL)
 
+AM_LDFLAGS = -no-install
+
 LDADD = \
 	$(COMMON_LA) \
 	$(LIBOSMOCORE_LIBS) \

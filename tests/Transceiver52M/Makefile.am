@@ -7,6 +7,7 @@ AM_CPPFLAGS = \
 	$(NULL)
 
 AM_CFLAGS = -Wall -g
+AM_LDFLAGS = -no-install
 
 EXTRA_DIST = convolve_test.ok convolve_test_golden.h
 
