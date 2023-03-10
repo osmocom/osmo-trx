@@ -1,6 +1,12 @@
 include $(top_srcdir)/Makefile.common
 
-AM_CFLAGS = -Wall -I$(top_srcdir)/Transceiver52M -I$(top_srcdir)/Transceiver52M/arch/common $(STD_DEFINES_AND_INCLUDES) -g
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/Transceiver52M \
+	-I$(top_srcdir)/Transceiver52M/arch/common \
+	$(STD_DEFINES_AND_INCLUDES) \
+	$(NULL)
+
+AM_CFLAGS = -Wall -g
 
 EXTRA_DIST = convolve_test.ok convolve_test_golden.h
 

@@ -1,6 +1,17 @@
 include $(top_srcdir)/Makefile.common
 
-AM_CPPFLAGS = -Wall -I$(top_srcdir)/CommonLibs $(STD_DEFINES_AND_INCLUDES) $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS) -g
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/CommonLibs \
+	$(STD_DEFINES_AND_INCLUDES) \
+	$(NULL)
+
+AM_CXXFLAGS = \
+	-Wall -g \
+	$(LIBOSMOCORE_CFLAGS) \
+	$(LIBOSMOCTRL_CFLAGS) \
+	$(LIBOSMOVTY_CFLAGS) \
+	$(NULL)
+
 AM_LDFLAGS = $(LIBOSMOCORE_LIBS) $(LIBOSMOCTRL_LIBS) $(LIBOSMOVTY_LIBS)
 
 EXTRA_DIST = BitVectorTest.ok \
