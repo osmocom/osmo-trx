@@ -33,5 +33,5 @@ LMSDeviceTest_LDADD = \
 	$(COMMON_LA) \
 	$(LMS_LIBS) \
 	$(NULL)
-LMSDeviceTest_CPPFLAGS = $(AM_CPPFLAGS) $(LMS_CFLAGS)
+LMSDeviceTest_CXXFLAGS = $(AM_CFLAGS) $(LMS_CFLAGS)
 endif
