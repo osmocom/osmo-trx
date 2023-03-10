@@ -26,10 +26,11 @@ endif
 if DEVICE_LMS
 check_PROGRAMS += LMSDeviceTest
 LMSDeviceTest_SOURCES = LMSDeviceTest.cpp
-LMSDeviceTest_LDFLAGS = $(LIBOSMOCORE_LIBS) $(LMS_LIBS)
 LMSDeviceTest_LDADD = \
 	$(top_builddir)/Transceiver52M/device/lms/libdevice.la \
+	$(LIBOSMOCORE_LIBS) \
 	$(COMMON_LA) \
-	$(LMS_LIBS)
+	$(LMS_LIBS) \
+	$(NULL)
 LMSDeviceTest_CPPFLAGS = $(AM_CPPFLAGS) $(LMS_CFLAGS)
 endif

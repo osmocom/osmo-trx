@@ -12,7 +12,12 @@ AM_CXXFLAGS = \
 	$(LIBOSMOVTY_CFLAGS) \
 	$(NULL)
 
-AM_LDFLAGS = $(LIBOSMOCORE_LIBS) $(LIBOSMOCTRL_LIBS) $(LIBOSMOVTY_LIBS)
+LDADD = \
+	$(COMMON_LA) \
+	$(LIBOSMOCORE_LIBS) \
+	$(LIBOSMOCTRL_LIBS) \
+	$(LIBOSMOVTY_LIBS) \
+	$(NULL)
 
 EXTRA_DIST = BitVectorTest.ok \
              PRBSTest.ok \
@@ -31,21 +36,16 @@ check_PROGRAMS = \
 	LogTest
 
 BitVectorTest_SOURCES = BitVectorTest.cpp
-BitVectorTest_LDADD = $(COMMON_LA)
 
 PRBSTest_SOURCES = PRBSTest.cpp
 
 InterthreadTest_SOURCES = InterthreadTest.cpp
-InterthreadTest_LDADD = $(COMMON_LA)
-InterthreadTest_LDFLAGS = -lpthread $(AM_LDFLAGS)
+InterthreadTest_LDADD = $(LDADD) -lpthread
 
 TimevalTest_SOURCES = TimevalTest.cpp
-TimevalTest_LDADD = $(COMMON_LA)
 
 VectorTest_SOURCES = VectorTest.cpp
-VectorTest_LDADD = $(COMMON_LA)
 
 LogTest_SOURCES = LogTest.cpp
-LogTest_LDADD = $(COMMON_LA)
 
 MOSTLYCLEANFILES += testSource testDestination
