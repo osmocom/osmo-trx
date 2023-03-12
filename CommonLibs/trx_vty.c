@@ -466,7 +466,6 @@ DEFUN_ATTR(cfg_ctr_error_threshold, cfg_ctr_error_threshold_cmd,
 	int rc;
 	struct ctr_threshold ctr;
 
-	struct trx_ctx *trx = trx_from_vty(vty);
 	rc = vty_ctr_name_2_id(argv[0]);
 	if (rc < 0) {
 		vty_out(vty, "No valid ctr_name found for ctr-error-threshold %s%s",
@@ -498,7 +497,6 @@ DEFUN_ATTR(cfg_no_ctr_error_threshold, cfg_no_ctr_error_threshold_cmd,
 	int rc;
 	struct ctr_threshold ctr;
 
-	struct trx_ctx *trx = trx_from_vty(vty);
 	rc = vty_ctr_name_2_id(argv[0]);
 	if (rc < 0) {
 		vty_out(vty, "No valid ctr_name found for ctr-error-threshold %s%s",
