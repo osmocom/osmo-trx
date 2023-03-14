@@ -537,9 +537,9 @@ void IPCDevice::ipc_sock_close(struct ipc_per_trx_sock_state *state)
 
 	LOGP(DDEV, LOGL_NOTICE, "IPC socket has LOST connection\n");
 
+	osmo_fd_unregister(bfd);
 	close(bfd->fd);
 	bfd->fd = -1;
-	osmo_fd_unregister(bfd);
 
 	/* flush the queue */
 	while (!llist_empty(&state->upqueue)) {

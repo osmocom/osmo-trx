@@ -162,9 +162,9 @@ struct ctrl_sock_state {
   }
   ~ctrl_sock_state() {
       if(conn_bfd.fd >= 0) {
+          osmo_fd_unregister(&conn_bfd);
           close(conn_bfd.fd);
           conn_bfd.fd = -1;
-          osmo_fd_unregister(&conn_bfd);
       }
   }
 };

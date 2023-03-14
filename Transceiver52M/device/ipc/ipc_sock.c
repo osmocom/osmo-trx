@@ -97,9 +97,9 @@ void ipc_sock_close(struct ipc_sock_state *state)
 
 	ipc_exit_requested = 1;
 
+	osmo_fd_unregister(bfd);
 	close(bfd->fd);
 	bfd->fd = -1;
-	osmo_fd_unregister(bfd);
 
 	/* re-enable the generation of ACCEPT for new connections */
 	osmo_fd_read_enable(&state->listen_bfd);
