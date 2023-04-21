@@ -72,6 +72,13 @@ struct trxcon_inst *g_trxcon;
 struct internal_q_tx_buf {
 	trxcon_phyif_burst_req r;
 	uint8_t buf[148];
+	internal_q_tx_buf() = default;
+	internal_q_tx_buf(const internal_q_tx_buf &) = delete;
+	internal_q_tx_buf &operator=(const internal_q_tx_buf &) = default;
+	internal_q_tx_buf(const struct trxcon::trxcon_phyif_burst_req *br) : r(*br)
+	{
+		memcpy(buf, (void *)br->burst, br->burst_len);
+	}
 };
 using tx_queue_t = spsc_cond<8 * 1, internal_q_tx_buf, true, false>;
 using cmd_queue_t = spsc_cond<8 * 1, trxcon_phyif_cmd, true, false>;
@@ -415,10 +422,7 @@ int trxcon_phyif_handle_burst_req(void *phyif, const struct trxcon::trxcon_phyif
 		return 0;
 	OSMO_ASSERT(br->burst != 0);
 
-	trxcon::internal_q_tx_buf b;
-	b.r = *br;
-	memcpy(b.buf, (void *)br->burst, br->burst_len);
-
+	trxcon::internal_q_tx_buf b(br);
 	if (!g_exit_flag)
 		trxcon::txq.spsc_push(&b);
 	return 0;
