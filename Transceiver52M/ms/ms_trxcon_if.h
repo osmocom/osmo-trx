@@ -1,6 +1,6 @@
 #pragma once
 /*
- * (C) 2022 by sysmocom s.f.m.c. GmbH <info@sysmocom.de>
+ * (C) 2023 by sysmocom s.f.m.c. GmbH <info@sysmocom.de>
  * All Rights Reserved
  *
  * Author: Eric Wild <ewild@sysmocom.de>
@@ -19,30 +19,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include <netdb.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 
-#include "GSMCommon.h"
 #include "ms.h"
+extern "C" {
+#include <osmocom/bb/trxcon/phyif.h>
+}
 
-class upper_trx : public ms_trx {
-	bool mOn;
-	char demodded_softbits[444];
-
-	// void driveControl();
-	bool driveControl();
-	void driveReceiveFIFO();
-	void driveTx();
-
-	bool pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset);
-
-	std::thread thr_control, thr_rx, thr_tx;
-
-    public:
-	void start_threads();
-	void start_lower_ms();
-	void stop_upper_threads();
-
-	upper_trx(){};
+extern struct trxcon_inst *g_trxcon;
+struct internal_q_tx_buf {
+	trxcon_phyif_burst_req r;
+	uint8_t buf[148];
+	internal_q_tx_buf() = default;
+	internal_q_tx_buf(const internal_q_tx_buf &) = delete;
+	internal_q_tx_buf &operator=(const internal_q_tx_buf &) = default;
+	internal_q_tx_buf(const struct trxcon_phyif_burst_req *br) : r(*br)
+	{
+		memcpy(buf, (void *)br->burst, br->burst_len);
+	}
 };
+using tx_queue_t = spsc_cond<8 * 1, internal_q_tx_buf, true, false>;
+using cmd_queue_t = spsc_cond<8 * 1, trxcon_phyif_cmd, true, false>;
+using cmdr_queue_t = spsc_cond<8 * 1, trxcon_phyif_rsp, false, false>;

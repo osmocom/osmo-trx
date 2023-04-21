@@ -82,12 +82,19 @@ TRXCON_LDADD = \
 	$(top_builddir)/osmocom-bb/src/host/trxcon/src/.libs/libl1sched.a \
 	$(LIBOSMOCODING_LIBS)
 
-MS_SOURCES = \
+MS_LOWER_SRC = \
 	ms/sch.c \
 	ms/ms.cpp \
 	ms/ms_rx_lower.cpp \
 	grgsm_vitac/grgsm_vitac.cpp \
 	grgsm_vitac/viterbi_detector.cc
+
+MS_UPPER_SRC = \
+	ms/ms_upper.cpp \
+	ms/l1ctl_server.c \
+	ms/logging.c \
+	ms/l1ctl_server_cb.cpp \
+	ms/ms_trxcon_if.cpp
 
 noinst_HEADERS += \
    	ms/ms.h \
@@ -95,6 +102,7 @@ noinst_HEADERS += \
 	ms/uhd_specific.h \
 	ms/ms_rx_burst.h \
 	ms/ms_upper.h \
+	ms/ms_trxcon_if.h \
 	ms/itrq.h \
 	ms/sch.h \
 	ms/threadpool.h \
@@ -117,7 +125,7 @@ osmo_trx_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
 
 if ENABLE_MS_TRX
 bin_PROGRAMS += osmo-trx-ms-uhd
-osmo_trx_ms_uhd_SOURCES = $(MS_SOURCES) ms/ms_upper.cpp ms/l1ctl_server.c ms/logging.c ms/l1ctl_server_cb.cpp
+osmo_trx_ms_uhd_SOURCES = $(MS_LOWER_SRC) $(MS_UPPER_SRC)
 osmo_trx_ms_uhd_LDADD = \
 	$(builddir)/device/uhd/libdevice.la \
 	$(COMMON_LDADD) \
@@ -126,7 +134,7 @@ osmo_trx_ms_uhd_LDADD = \
 osmo_trx_ms_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DBUILDUHD
 
 bin_PROGRAMS += osmo-trx-syncthing-uhd
-osmo_trx_syncthing_uhd_SOURCES = $(MS_SOURCES) ms/ms_rx_burst_test.cpp
+osmo_trx_syncthing_uhd_SOURCES = $(MS_LOWER_SRC) ms/ms_rx_burst_test.cpp
 osmo_trx_syncthing_uhd_LDADD = \
 	$(builddir)/device/uhd/libdevice.la \
 	$(COMMON_LDADD) \
@@ -167,7 +175,7 @@ osmo_trx_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(LMS_CFLAGS)
 
 if ENABLE_MS_TRX
 bin_PROGRAMS += osmo-trx-ms-blade
-osmo_trx_ms_blade_SOURCES = $(MS_SOURCES) ms/ms_upper.cpp ms/l1ctl_server.c ms/logging.c ms/l1ctl_server_cb.cpp
+osmo_trx_ms_blade_SOURCES = $(MS_LOWER_SRC) $(MS_UPPER_SRC)
 osmo_trx_ms_blade_LDADD = \
 	$(builddir)/device/bladerf/libdevice.la \
 	$(COMMON_LDADD) \
@@ -176,7 +184,7 @@ osmo_trx_ms_blade_LDADD = \
 osmo_trx_ms_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS) -DBUILDBLADE
 
 bin_PROGRAMS += osmo-trx-syncthing-blade
-osmo_trx_syncthing_blade_SOURCES = $(MS_SOURCES) ms/ms_rx_burst_test.cpp
+osmo_trx_syncthing_blade_SOURCES = $(MS_LOWER_SRC) ms/ms_rx_burst_test.cpp
 osmo_trx_syncthing_blade_LDADD =  \
 	$(builddir)/device/bladerf/libdevice.la \
 	$(COMMON_LDADD) \

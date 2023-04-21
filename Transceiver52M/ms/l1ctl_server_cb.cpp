@@ -24,13 +24,10 @@ extern "C" {
 #include <osmocom/bb/trxcon/trxcon_fsm.h>
 #include <osmocom/bb/trxcon/l1ctl_server.h>
 }
+#include "ms_trxcon_if.h"
 
 static struct l1ctl_server_cfg server_cfg;
 static struct l1ctl_server *server = NULL;
-namespace trxcon
-{
-extern struct trxcon_inst *g_trxcon;
-}
 
 static int l1ctl_rx_cb(struct l1ctl_client *l1c, struct msgb *msg)
 {
@@ -41,9 +38,9 @@ static int l1ctl_rx_cb(struct l1ctl_client *l1c, struct msgb *msg)
 
 static void l1ctl_conn_accept_cb(struct l1ctl_client *l1c)
 {
-	l1c->log_prefix = talloc_strdup(l1c, trxcon::g_trxcon->log_prefix);
-	l1c->priv = trxcon::g_trxcon;
-	trxcon::g_trxcon->l2if = l1c;
+	l1c->log_prefix = talloc_strdup(l1c, g_trxcon->log_prefix);
+	l1c->priv = g_trxcon;
+	g_trxcon->l2if = l1c;
 }
 
 static void l1ctl_conn_close_cb(struct l1ctl_client *l1c)
@@ -56,17 +53,13 @@ static void l1ctl_conn_close_cb(struct l1ctl_client *l1c)
 	osmo_fsm_inst_dispatch(trxcon->fi, TRXCON_EV_L2IF_FAILURE, NULL);
 }
 
-namespace trxcon
-{
 bool trxc_l1ctl_init(void *tallctx)
 {
 	/* Start the L1CTL server */
 	server_cfg = (struct l1ctl_server_cfg){
 		/* TODO: make path configurable */
-		.sock_path = "/tmp/osmocom_l2",
-		.num_clients_max = 1,
-		.conn_read_cb = &l1ctl_rx_cb,
-		.conn_accept_cb = &l1ctl_conn_accept_cb,
+		.sock_path = "/tmp/osmocom_l2",	       .num_clients_max = 1,
+		.conn_read_cb = &l1ctl_rx_cb,	       .conn_accept_cb = &l1ctl_conn_accept_cb,
 		.conn_close_cb = &l1ctl_conn_close_cb,
 	};
 
@@ -76,4 +69,3 @@ bool trxc_l1ctl_init(void *tallctx)
 	}
 	return true;
 }
-} // namespace trxcon

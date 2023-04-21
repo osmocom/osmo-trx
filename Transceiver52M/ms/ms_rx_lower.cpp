@@ -19,8 +19,6 @@
  *
  */
 
-#include "sigProcLib.h"
-#include "signalVector.h"
 #include <atomic>
 #include <cassert>
 #include <complex>

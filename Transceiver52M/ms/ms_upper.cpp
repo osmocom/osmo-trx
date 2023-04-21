@@ -19,6 +19,7 @@
  *
  */
 
+#include <csignal>
 #include "sigProcLib.h"
 #include "ms.h"
 #include <signalVector.h>
@@ -27,70 +28,30 @@
 #include <grgsm_vitac/grgsm_vitac.h>
 
 extern "C" {
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <getopt.h>
-#include <unistd.h>
-#include <signal.h>
-#include <errno.h>
-#include <time.h>
-#include <fenv.h>
 
 #include "sch.h"
 #include "convolve.h"
 #include "convert.h"
 
+#include <osmocom/gsm/gsm_utils.h>
+#include <osmocom/bb/trxcon/trxcon.h>
+#include <osmocom/bb/trxcon/trxcon_fsm.h>
+#include <osmocom/bb/trxcon/l1ctl_server.h>
+
+extern void trxc_log_init(void *tallctx);
 #ifdef LSANDEBUG
 void __lsan_do_recoverable_leak_check();
 #endif
 }
 
+#include "ms_trxcon_if.h"
 #include "ms_upper.h"
 
-namespace trxcon
-{
-extern "C" {
-#include <osmocom/core/fsm.h>
-#include <osmocom/core/msgb.h>
-#include <osmocom/core/talloc.h>
-#include <osmocom/core/signal.h>
-#include <osmocom/core/select.h>
-#include <osmocom/gsm/gsm_utils.h>
-
-#include <osmocom/core/logging.h>
-#include <osmocom/bb/trxcon/logging.h>
-
-#include <osmocom/bb/trxcon/trxcon.h>
-#include <osmocom/bb/trxcon/trxcon_fsm.h>
-#include <osmocom/bb/trxcon/phyif.h>
-#include <osmocom/bb/trxcon/l1ctl_server.h>
-}
-struct trxcon_inst *g_trxcon;
-// trx_instance *trxcon_instance; // local handle
-struct internal_q_tx_buf {
-	trxcon_phyif_burst_req r;
-	uint8_t buf[148];
-	internal_q_tx_buf() = default;
-	internal_q_tx_buf(const internal_q_tx_buf &) = delete;
-	internal_q_tx_buf &operator=(const internal_q_tx_buf &) = default;
-	internal_q_tx_buf(const struct trxcon::trxcon_phyif_burst_req *br) : r(*br)
-	{
-		memcpy(buf, (void *)br->burst, br->burst_len);
-	}
-};
-using tx_queue_t = spsc_cond<8 * 1, internal_q_tx_buf, true, false>;
-using cmd_queue_t = spsc_cond<8 * 1, trxcon_phyif_cmd, true, false>;
-using cmdr_queue_t = spsc_cond<8 * 1, trxcon_phyif_rsp, false, false>;
-static tx_queue_t txq;
-static cmd_queue_t cmdq_to_phy;
-static cmdr_queue_t cmdq_from_phy;
-
 extern bool trxc_l1ctl_init(void *tallctx);
-
-} // namespace trxcon
-extern "C" void trxc_log_init(void *tallctx);
+struct trxcon_inst *g_trxcon;
+tx_queue_t txq;
+cmd_queue_t cmdq_to_phy;
+cmdr_queue_t cmdq_from_phy;
 
 #ifdef LOG
 #undef LOG
@@ -138,12 +99,12 @@ void upper_trx::start_threads()
 		// set_upper_ready(true) needs to happen during cmd handling:
 		// the main loop is driven by rx, so unless rx is on AND transceiver is on we get stuck..
 		driveReceiveFIFO();
-		trxcon::osmo_select_main(1);
+		osmo_select_main(1);
 
-		trxcon::trxcon_phyif_rsp r;
-		if (trxcon::cmdq_from_phy.spsc_pop(&r)) {
+		trxcon_phyif_rsp r;
+		if (cmdq_from_phy.spsc_pop(&r)) {
 			DBGLG() << "HAVE RESP:" << r.type << std::endl;
-			trxcon_phyif_handle_rsp(trxcon::g_trxcon, &r);
+			trxcon_phyif_handle_rsp(g_trxcon, &r);
 		}
 	}
 	set_upper_ready(false);
@@ -196,9 +157,9 @@ bool upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset)
 	const auto is_sch = gsm_sch_check_ts(wTime.TN(), wTime.FN());
 	const auto is_fcch = gsm_fcch_check_ts(wTime.TN(), wTime.FN());
 
-	trxcon::trxcon_phyif_rtr_ind i = { static_cast<uint32_t>(wTime.FN()), static_cast<uint8_t>(wTime.TN()) };
-	trxcon::trxcon_phyif_rtr_rsp r = {};
-	trxcon_phyif_handle_rtr_ind(trxcon::g_trxcon, &i, &r);
+	trxcon_phyif_rtr_ind i = { static_cast<uint32_t>(wTime.FN()), static_cast<uint8_t>(wTime.TN()) };
+	trxcon_phyif_rtr_rsp r = {};
+	trxcon_phyif_handle_rtr_ind(g_trxcon, &i, &r);
 	if (!(r.flags & TRXCON_PHYIF_RTR_F_ACTIVE))
 		return false;
 
@@ -265,28 +226,28 @@ void upper_trx::driveReceiveFIFO()
 		return;
 
 	if (pullRadioVector(burstTime, RSSI, TOA)) {
-		trxcon::trxcon_phyif_burst_ind bi;
+		trxcon_phyif_burst_ind bi;
 		bi.fn = burstTime.FN();
 		bi.tn = burstTime.TN();
 		bi.rssi = RSSI;
 		bi.toa256 = TOA;
 		bi.burst = (sbit_t *)demodded_softbits;
 		bi.burst_len = sizeof(demodded_softbits);
-		trxcon_phyif_handle_burst_ind(trxcon::g_trxcon, &bi);
+		trxcon_phyif_handle_burst_ind(g_trxcon, &bi);
 	}
 
-	struct trxcon::trxcon_phyif_rts_ind rts {
+	struct trxcon_phyif_rts_ind rts {
 		static_cast<uint32_t>(burstTime.FN()), static_cast<uint8_t>(burstTime.TN())
 	};
-	trxcon_phyif_handle_rts_ind(trxcon::g_trxcon, &rts);
+	trxcon_phyif_handle_rts_ind(g_trxcon, &rts);
 }
 
 void upper_trx::driveTx()
 {
-	trxcon::internal_q_tx_buf e;
+	internal_q_tx_buf e;
 	static BitVector newBurst(sizeof(e.buf));
-	while (!trxcon::txq.spsc_pop(&e)) {
-		trxcon::txq.spsc_prep_pop();
+	while (!txq.spsc_pop(&e)) {
+		txq.spsc_prep_pop();
 	}
 
 	// ensure our tx cb is tickled and can exit
@@ -295,7 +256,7 @@ void upper_trx::driveTx()
 		return;
 	}
 
-	trxcon::internal_q_tx_buf *burst = &e;
+	internal_q_tx_buf *burst = &e;
 
 #ifdef TXDEBUG
 	DBGLG() << "got burst!" << burst->r.fn << ":" << burst->ts << " current: " << timekeeper.gsmtime().FN()
@@ -333,31 +294,31 @@ void upper_trx::driveTx()
 }
 
 #ifdef TXDEBUG
-static const char *cmd2str(trxcon::trxcon_phyif_cmd_type c)
+static const char *cmd2str(trxcon_phyif_cmd_type c)
 {
 	switch (c) {
-	case trxcon::TRXCON_PHYIF_CMDT_RESET:
+	case TRXCON_PHYIF_CMDT_RESET:
 		return "TRXCON_PHYIF_CMDT_RESET";
-	case trxcon::TRXCON_PHYIF_CMDT_POWERON:
+	case TRXCON_PHYIF_CMDT_POWERON:
 		return "TRXCON_PHYIF_CMDT_POWERON";
-	case trxcon::TRXCON_PHYIF_CMDT_POWEROFF:
+	case TRXCON_PHYIF_CMDT_POWEROFF:
 		return "TRXCON_PHYIF_CMDT_POWEROFF";
-	case trxcon::TRXCON_PHYIF_CMDT_MEASURE:
+	case TRXCON_PHYIF_CMDT_MEASURE:
 		return "TRXCON_PHYIF_CMDT_MEASURE";
-	case trxcon::TRXCON_PHYIF_CMDT_SETFREQ_H0:
+	case TRXCON_PHYIF_CMDT_SETFREQ_H0:
 		return "TRXCON_PHYIF_CMDT_SETFREQ_H0";
-	case trxcon::TRXCON_PHYIF_CMDT_SETFREQ_H1:
+	case TRXCON_PHYIF_CMDT_SETFREQ_H1:
 		return "TRXCON_PHYIF_CMDT_SETFREQ_H1";
-	case trxcon::TRXCON_PHYIF_CMDT_SETSLOT:
+	case TRXCON_PHYIF_CMDT_SETSLOT:
 		return "TRXCON_PHYIF_CMDT_SETSLOT";
-	case trxcon::TRXCON_PHYIF_CMDT_SETTA:
+	case TRXCON_PHYIF_CMDT_SETTA:
 		return "TRXCON_PHYIF_CMDT_SETTA";
 	default:
 		return "UNKNOWN COMMAND!";
 	}
 }
 
-static void print_cmd(trxcon::trxcon_phyif_cmd_type c)
+static void print_cmd(trxcon_phyif_cmd_type c)
 {
 	DBGLG() << cmd2str(c) << std::endl;
 }
@@ -365,10 +326,10 @@ static void print_cmd(trxcon::trxcon_phyif_cmd_type c)
 
 bool upper_trx::driveControl()
 {
-	trxcon::trxcon_phyif_rsp r;
-	trxcon::trxcon_phyif_cmd cmd;
-	while (!trxcon::cmdq_to_phy.spsc_pop(&cmd)) {
-		trxcon::cmdq_to_phy.spsc_prep_pop();
+	trxcon_phyif_rsp r;
+	trxcon_phyif_cmd cmd;
+	while (!cmdq_to_phy.spsc_pop(&cmd)) {
+		cmdq_to_phy.spsc_prep_pop();
 	}
 
 	if (g_exit_flag)
@@ -379,85 +340,39 @@ bool upper_trx::driveControl()
 #endif
 
 	switch (cmd.type) {
-	case trxcon::TRXCON_PHYIF_CMDT_RESET:
+	case TRXCON_PHYIF_CMDT_RESET:
 		set_ta(0);
 		break;
-	case trxcon::TRXCON_PHYIF_CMDT_POWERON:
+	case TRXCON_PHYIF_CMDT_POWERON:
 		if (!mOn) {
 			mOn = true;
 			set_upper_ready(true);
 		}
 		break;
-	case trxcon::TRXCON_PHYIF_CMDT_POWEROFF:
+	case TRXCON_PHYIF_CMDT_POWEROFF:
 		break;
-	case trxcon::TRXCON_PHYIF_CMDT_MEASURE:
-		r.type = trxcon::trxcon_phyif_cmd_type::TRXCON_PHYIF_CMDT_MEASURE;
+	case TRXCON_PHYIF_CMDT_MEASURE:
+		r.type = trxcon_phyif_cmd_type::TRXCON_PHYIF_CMDT_MEASURE;
 		r.param.measure.band_arfcn = cmd.param.measure.band_arfcn;
 		// FIXME: do we want to measure anything, considering the transceiver just syncs by.. syncing?
 		r.param.measure.dbm = -80;
-		tuneRx(trxcon::gsm_arfcn2freq10(cmd.param.measure.band_arfcn, 0) * 1000 * 100);
-		tuneTx(trxcon::gsm_arfcn2freq10(cmd.param.measure.band_arfcn, 1) * 1000 * 100);
-		trxcon::cmdq_from_phy.spsc_push(&r);
+		tuneRx(gsm_arfcn2freq10(cmd.param.measure.band_arfcn, 0) * 1000 * 100);
+		tuneTx(gsm_arfcn2freq10(cmd.param.measure.band_arfcn, 1) * 1000 * 100);
+		cmdq_from_phy.spsc_push(&r);
 		break;
-	case trxcon::TRXCON_PHYIF_CMDT_SETFREQ_H0:
-		tuneRx(trxcon::gsm_arfcn2freq10(cmd.param.setfreq_h0.band_arfcn, 0) * 1000 * 100);
-		tuneTx(trxcon::gsm_arfcn2freq10(cmd.param.setfreq_h0.band_arfcn, 1) * 1000 * 100);
+	case TRXCON_PHYIF_CMDT_SETFREQ_H0:
+		tuneRx(gsm_arfcn2freq10(cmd.param.setfreq_h0.band_arfcn, 0) * 1000 * 100);
+		tuneTx(gsm_arfcn2freq10(cmd.param.setfreq_h0.band_arfcn, 1) * 1000 * 100);
 		break;
-	case trxcon::TRXCON_PHYIF_CMDT_SETFREQ_H1:
+	case TRXCON_PHYIF_CMDT_SETFREQ_H1:
 		break;
-	case trxcon::TRXCON_PHYIF_CMDT_SETSLOT:
+	case TRXCON_PHYIF_CMDT_SETSLOT:
 		break;
-	case trxcon::TRXCON_PHYIF_CMDT_SETTA:
+	case TRXCON_PHYIF_CMDT_SETTA:
 		set_ta(cmd.param.setta.ta);
 		break;
 	}
 	return false;
-}
-
-// trxcon C call(back) if
-extern "C" {
-int trxcon_phyif_handle_burst_req(void *phyif, const struct trxcon::trxcon_phyif_burst_req *br)
-{
-	if (br->burst_len == 0) // dummy/nope
-		return 0;
-	OSMO_ASSERT(br->burst != 0);
-
-	trxcon::internal_q_tx_buf b(br);
-	if (!g_exit_flag)
-		trxcon::txq.spsc_push(&b);
-	return 0;
-}
-
-int trxcon_phyif_handle_cmd(void *phyif, const struct trxcon::trxcon_phyif_cmd *cmd)
-{
-#ifdef TXDEBUG
-	DBGLG() << "TOP C: " << cmd2str(cmd->type) << std::endl;
-#endif
-	if (!g_exit_flag)
-		trxcon::cmdq_to_phy.spsc_push(cmd);
-	// q for resp polling happens in main loop
-	return 0;
-}
-
-void trxcon_phyif_close(void *phyif)
-{
-}
-
-void trxcon_l1ctl_close(struct trxcon::trxcon_inst *trxcon)
-{
-	/* Avoid use-after-free: both *fi and *trxcon are children of
-	 * the L2IF (L1CTL connection), so we need to re-parent *fi
-	 * to NULL before calling l1ctl_client_conn_close(). */
-	talloc_steal(NULL, trxcon->fi);
-	trxcon::l1ctl_client_conn_close((struct trxcon::l1ctl_client *)trxcon->l2if);
-}
-
-int trxcon_l1ctl_send(struct trxcon::trxcon_inst *trxcon, struct trxcon::msgb *msg)
-{
-	struct trxcon::l1ctl_client *l1c = (struct trxcon::l1ctl_client *)trxcon->l2if;
-
-	return trxcon::l1ctl_client_send(l1c, msg);
-}
 }
 
 void sighandler(int sigset)
@@ -468,10 +383,10 @@ void sighandler(int sigset)
 
 		// we know the flag is atomic and it prevents the trxcon cb handlers from writing
 		// to the queues, so submit some trash to unblock the threads & exit
-		trxcon::trxcon_phyif_cmd cmd = {};
-		trxcon::internal_q_tx_buf b = {};
-		trxcon::txq.spsc_push(&b);
-		trxcon::cmdq_to_phy.spsc_push(&cmd);
+		trxcon_phyif_cmd cmd = {};
+		internal_q_tx_buf b = {};
+		txq.spsc_push(&b);
+		cmdq_to_phy.spsc_push(&cmd);
 		msleep(200);
 
 		return;
@@ -484,13 +399,13 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, sighandler);
 	signal(SIGINT, sighandler);
 
-	trxcon::msgb_talloc_ctx_init(tall_trxcon_ctx, 0);
+	msgb_talloc_ctx_init(tall_trxcon_ctx, 0);
 	trxc_log_init(tall_trxcon_ctx);
 
-	trxcon::g_trxcon = trxcon::trxcon_inst_alloc(tall_trxcon_ctx, 0, 0);
-	trxcon::g_trxcon->gsmtap = nullptr;
-	trxcon::g_trxcon->phyif = nullptr;
-	trxcon::g_trxcon->phy_quirks.fbsb_extend_fns = 866; // 4 seconds, known to work.
+	g_trxcon = trxcon_inst_alloc(tall_trxcon_ctx, 0, 0);
+	g_trxcon->gsmtap = nullptr;
+	g_trxcon->phyif = nullptr;
+	g_trxcon->phy_quirks.fbsb_extend_fns = 866; // 4 seconds, known to work.
 
 	convolve_init();
 	convert_init();
@@ -508,7 +423,7 @@ int main(int argc, char *argv[])
 	}
 	trx->set_name_aff_sched(sched_params::thread_names::MAIN);
 
-	if (!trxcon::trxc_l1ctl_init(tall_trxcon_ctx)) {
+	if (!trxc_l1ctl_init(tall_trxcon_ctx)) {
 		std::cerr << "Error initializing l1ctl, quitting.." << std::endl;
 		return -1;
 	}
