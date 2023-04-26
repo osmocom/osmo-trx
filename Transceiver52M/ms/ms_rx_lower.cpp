@@ -101,11 +101,7 @@ void ms_trx::maybe_update_gain(one_burst &brst)
 	const unsigned int rx_max_cutoff = (rxFullScale * 2) / 3;
 	static int gain_check = 0;
 	static float runmean = 0;
-	float sum = 0;
-	for (auto i : brst.burst)
-		sum += abs(i.real()) + abs(i.imag());
-	sum /= ONE_TS_BURST_LEN * 2;
-
+	float sum = normed_abs_sum(&brst.burst[0], ONE_TS_BURST_LEN);
 	runmean = gain_check ? (runmean * (gain_check + 2) - 1 + sum) / (gain_check + 2) : sum;
 
 	if (gain_check == avgburst_num - 1) {
@@ -231,12 +227,8 @@ SCH_STATE ms_trx::search_for_sch(dev_buf_t *rcd)
 		sch_pos = 0;
 		rcv_done = true;
 		auto sch_search_fun = [this] {
-			auto ptr = reinterpret_cast<const int16_t *>(first_sch_buf);
 			const auto target_val = rxFullScale / 8;
-			float sum = 0;
-			for (unsigned int i = 0; i < SCH_LEN_SPS * 2; i++)
-				sum += std::abs(ptr[i]);
-			sum /= SCH_LEN_SPS * 2;
+			float sum = normed_abs_sum(first_sch_buf, SCH_LEN_SPS);
 
 			//FIXME: arbitrary value, gain cutoff
 			if (sum > target_val || rxgain >= 60) // enough ?

@@ -84,16 +84,19 @@ void convert_and_scale_i(float *dst, const float *src, unsigned int src_len, ST 
 template <typename T>
 struct is_complex : std::false_type {
 	using baset = T;
+	static const unsigned int len_mul = 1;
 };
 
 template <typename T>
 struct is_complex<std::complex<T>> : std::true_type {
 	using baset = typename std::complex<T>::value_type;
+	static const unsigned int len_mul = 2;
 };
 
 template <typename T>
 struct is_complex<Complex<T>> : std::true_type {
 	using baset = typename Complex<T>::value_type;
+	static const unsigned int len_mul = 2;
 };
 
 } // namespace cvt_internal
@@ -104,6 +107,19 @@ void convert_and_scale(DST_T *dst, const SRC_T *src, unsigned int src_len, ST sc
 	using vd = typename cvt_internal::is_complex<DST_T>::baset;
 	using vs = typename cvt_internal::is_complex<SRC_T>::baset;
 	return cvt_internal::convert_and_scale_i((vd *)dst, (vs *)src, src_len, scale);
+}
+
+template <typename array_t>
+float normed_abs_sum(array_t *src, int len)
+{
+	using vd = typename cvt_internal::is_complex<array_t>::baset;
+	auto len_mul = cvt_internal::is_complex<array_t>::len_mul;
+	auto ptr = reinterpret_cast<const vd *>(src);
+	float sum = 0;
+	for (unsigned int i = 0; i < len * len_mul; i++)
+		sum += std::abs(ptr[i]);
+	sum /= len * len_mul;
+	return sum;
 }
 
 struct one_burst {
