@@ -222,7 +222,7 @@ struct blade_hw {
 	{
 		close_device();
 	}
-	blade_hw() : rxFullScale(2047), txFullScale(2047), rxtxdelay(-60)
+	blade_hw() : rxFullScale(2047), txFullScale(2047), rxtxdelay(-60), rxgain(30), txgain(30)
 	{
 	}
 
@@ -290,8 +290,8 @@ struct blade_hw {
 			    (bladerf_bandwidth *)NULL);
 
 		blade_check(bladerf_set_gain_mode, dev, BLADERF_CHANNEL_RX(0), BLADERF_GAIN_MGC);
-		blade_check(bladerf_set_gain, dev, BLADERF_CHANNEL_RX(0), (bladerf_gain)30);
-		blade_check(bladerf_set_gain, dev, BLADERF_CHANNEL_TX(0), (bladerf_gain)30);
+		setRxGain(rxgain, 0);
+		setTxGain(txgain, 0);
 		usleep(1000);
 		blade_check(bladerf_enable_module, dev, BLADERF_MODULE_RX, true);
 		usleep(1000);
@@ -308,8 +308,6 @@ struct blade_hw {
 			buf_mgmt.bufptrqueue.spsc_push(&cur_buffer[i]);
 		}
 
-		setRxGain(20);
-		setTxGain(30);
 
 		usleep(1000);
 
