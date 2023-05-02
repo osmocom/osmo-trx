@@ -49,7 +49,8 @@ const int offset_start = -15;
 static int offset_ctr = 0;
 #endif
 
-template <> std::atomic<bool> ms_trx::base::stop_me_flag(false);
+template <>
+std::atomic<bool> ms_trx::base::stop_me_flag(false);
 
 void tx_test(ms_trx *t, ts_hitter_q_t *q, unsigned int *tsc)
 {
@@ -137,7 +138,8 @@ void tx_test(ms_trx *t, ts_hitter_q_t *q, unsigned int *tsc)
 	}
 }
 #ifdef SYNCTHINGONLY
-template <typename A> auto parsec(std::vector<std::string> &v, A &itr, std::string arg, bool *rv)
+template <typename A>
+auto parsec(std::vector<std::string> &v, A &itr, std::string arg, bool *rv)
 {
 	if (*itr == arg) {
 		*rv = true;
@@ -158,15 +160,17 @@ bool parsec(std::vector<std::string> &v, A &itr, std::string arg, B f, C *rv)
 	}
 	return false;
 }
-template <typename A> bool parsec(std::vector<std::string> &v, A &itr, std::string arg, int scale, int *rv)
+template <typename A>
+bool parsec(std::vector<std::string> &v, A &itr, std::string arg, int scale, int *rv)
 {
 	return parsec(
-		v, itr, arg, [scale](const char *v) -> auto{ return atoi(v) * scale; }, rv);
+		v, itr, arg, [scale](const char *v) -> auto { return atoi(v) * scale; }, rv);
 }
-template <typename A> bool parsec(std::vector<std::string> &v, A &itr, std::string arg, int scale, unsigned int *rv)
+template <typename A>
+bool parsec(std::vector<std::string> &v, A &itr, std::string arg, int scale, unsigned int *rv)
 {
 	return parsec(
-		v, itr, arg, [scale](const char *v) -> auto{ return atoi(v) * scale; }, rv);
+		v, itr, arg, [scale](const char *v) -> auto { return atoi(v) * scale; }, rv);
 }
 
 int main(int argc, char *argv[])

@@ -65,7 +65,8 @@ struct uhd_buf_wrap {
 using dev_buf_t = uhd_buf_wrap;
 using bh_fn_t = std::function<int(dev_buf_t *)>;
 
-template <typename T> struct uhd_hw {
+template <typename T>
+struct uhd_hw {
 	uhd::usrp::multi_usrp::sptr dev;
 	uhd::rx_streamer::sptr rx_stream;
 	uhd::tx_streamer::sptr tx_stream;

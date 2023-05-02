@@ -39,14 +39,16 @@ const size_t NUM_TRANSFERS = 16 * 2;
 const int SAMPLE_SCALE_FACTOR = 15; // actually 16 but sigproc complains about clipping..
 
 // see https://en.cppreference.com/w/cpp/language/parameter_pack  "Brace-enclosed initializers" example
-template <typename Arg, typename... Args> void expand_args(std::ostream &out, Arg &&arg, Args &&...args)
+template <typename Arg, typename... Args>
+void expand_args(std::ostream &out, Arg &&arg, Args &&...args)
 {
 	out << '(' << std::forward<Arg>(arg);
 	(void)(int[]){ 0, (void((out << "," << std::forward<Args>(args))), 0)... };
 	out << ')' << std::endl;
 }
 
-template <class R, class... Args> using RvalFunc = R (*)(Args...);
+template <class R, class... Args>
+using RvalFunc = R (*)(Args...);
 
 template <class R, class... Args>
 R exec_and_check(RvalFunc<R, Args...> func, const char *fname, const char *finame, const char *funcname, int line,
@@ -67,7 +69,8 @@ R exec_and_check(RvalFunc<R, Args...> func, const char *fname, const char *finam
 #pragma pack(push, 1)
 using blade_sample_type = std::complex<int16_t>;
 enum class blade_speed_buffer_type { HS, SS };
-template <blade_speed_buffer_type T> struct blade_usb_message {
+template <blade_speed_buffer_type T>
+struct blade_usb_message {
 	uint32_t reserved;
 	uint64_t ts;
 	uint32_t meta_flags;
@@ -76,7 +79,8 @@ template <blade_speed_buffer_type T> struct blade_usb_message {
 
 static_assert(sizeof(blade_usb_message<blade_speed_buffer_type::SS>) == 2048, "blade buffer mismatch!");
 static_assert(sizeof(blade_usb_message<blade_speed_buffer_type::HS>) == 1024, "blade buffer mismatch!");
-template <unsigned int SZ, blade_speed_buffer_type T> struct blade_otw_buffer {
+template <unsigned int SZ, blade_speed_buffer_type T>
+struct blade_otw_buffer {
 	static_assert((SZ >= 2 && !(SZ % 2)), "min size is 2x usb buffer!");
 	blade_usb_message<T> m[SZ];
 	int actual_samples_per_msg()
@@ -172,7 +176,8 @@ template <unsigned int SZ, blade_speed_buffer_type T> struct blade_otw_buffer {
 };
 #pragma pack(pop)
 
-template <unsigned int SZ, blade_speed_buffer_type T> struct blade_otw_buffer_helper {
+template <unsigned int SZ, blade_speed_buffer_type T>
+struct blade_otw_buffer_helper {
 	static_assert((SZ >= 1024 && ((SZ & (SZ - 1)) == 0)), "only buffer size multiples of 1024 allowed!");
 	static blade_otw_buffer<SZ / 512, T> x;
 };
@@ -181,7 +186,8 @@ using dev_buf_t = typeof(blade_otw_buffer_helper<BLADE_BUFFER_SIZE, blade_speed_
 // using buf_in_use = blade_otw_buffer<2, blade_speed_buffer_type::SS>;
 using bh_fn_t = std::function<int(dev_buf_t *)>;
 
-template <typename T> struct blade_hw {
+template <typename T>
+struct blade_hw {
 	struct bladerf *dev;
 	struct bladerf_stream *rx_stream;
 	struct bladerf_stream *tx_stream;
