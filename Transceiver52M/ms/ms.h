@@ -251,9 +251,7 @@ struct ms_trx : public BASET {
 
 	// provides bursts to upper rx thread
 	rx_queue_t rxqueue;
-#ifdef SYNCTHINGONLY
-	ts_hitter_q_t ts_hitter_q;
-#endif
+
 	blade_sample_type *first_sch_buf;
 	blade_sample_type *burst_copy_buffer;
 

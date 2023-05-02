@@ -38,13 +38,13 @@ extern "C" {
 #undef LOG
 #endif
 
-#if !defined(SYNCTHINGONLY) //|| !defined(NODAMNLOG)
+#if !defined(NODAMNLOG)
 #define DBGLG(...) ms_trx::dummy_log()
 #else
 #define DBGLG(...) std::cerr
 #endif
 
-#if !defined(SYNCTHINGONLY) || !defined(NODAMNLOG)
+#if !defined(NODAMNLOG)
 #define DBGLG2(...) ms_trx::dummy_log()
 #else
 #define DBGLG2(...) std::cerr
@@ -87,18 +87,6 @@ bool ms_trx::decode_sch(float *bits, bool update_global_clock)
 			// global_time_keeper.FN(fn);
 			// global_time_keeper.TN(0);
 		}
-#ifdef SYNCTHINGONLY
-		else {
-			int t3 = sch.t3p * 10 + 1;
-			if (t3 == 11) {
-				// timeslot hitter attempt @ fn 21 in mf
-				DBGLG2() << "sch @ " << t3 << std::endl;
-				auto e = GSM::Time(fn, 0);
-				e += 10;
-				ts_hitter_q.spsc_push(&e);
-			}
-		}
-#endif
 
 		return true;
 	}
@@ -153,14 +141,11 @@ bool ms_trx::handle_sch_or_nb()
 		handle_sch(false);
 		memcpy(brst.sch_bits, sch_demod_bits, sizeof(sch_demod_bits));
 	}
-#ifndef SYNCTHINGONLY
+
 	if (upper_is_ready) { // this is blocking, so only submit if there is a reader - only if upper exists!
-#endif
 		while (!rxqueue.spsc_push(&brst))
 			;
-#ifndef SYNCTHINGONLY
 	}
-#endif
 
 	if (do_auto_gain)
 		maybe_update_gain(brst);

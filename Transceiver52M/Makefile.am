@@ -100,7 +100,6 @@ noinst_HEADERS += \
    	ms/ms.h \
 	ms/bladerf_specific.h \
 	ms/uhd_specific.h \
-	ms/ms_rx_burst.h \
 	ms/ms_upper.h \
 	ms/ms_trxcon_if.h \
 	ms/itrq.h \
@@ -132,15 +131,6 @@ osmo_trx_ms_uhd_LDADD = \
 	$(UHD_LIBS) \
 	$(TRXCON_LDADD)
 osmo_trx_ms_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DBUILDUHD
-
-bin_PROGRAMS += osmo-trx-syncthing-uhd
-osmo_trx_syncthing_uhd_SOURCES = $(MS_LOWER_SRC) ms/ms_rx_burst_test.cpp
-osmo_trx_syncthing_uhd_LDADD = \
-	$(builddir)/device/uhd/libdevice.la \
-	$(COMMON_LDADD) \
-	$(UHD_LIBS) \
-	$(TRXCON_LDADD)
-osmo_trx_syncthing_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DSYNCTHINGONLY -DBUILDUHD
 endif
 endif
 
@@ -182,15 +172,6 @@ osmo_trx_ms_blade_LDADD = \
 	$(BLADE_LIBS) \
 	$(TRXCON_LDADD)
 osmo_trx_ms_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS) -DBUILDBLADE
-
-bin_PROGRAMS += osmo-trx-syncthing-blade
-osmo_trx_syncthing_blade_SOURCES = $(MS_LOWER_SRC) ms/ms_rx_burst_test.cpp
-osmo_trx_syncthing_blade_LDADD =  \
-	$(builddir)/device/bladerf/libdevice.la \
-	$(COMMON_LDADD) \
-	$(BLADE_LIBS) \
-	$(TRXCON_LDADD)
-osmo_trx_syncthing_blade_CPPFLAGS  = $(AM_CPPFLAGS) $(BLADE_CFLAGS) -DSYNCTHINGONLY -DBUILDBLADE -I../device/ipc
 endif
 endif
 
