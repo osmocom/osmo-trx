@@ -78,12 +78,13 @@ struct uhd_hw {
 	const int rxtxdelay;
 	float rxgain, txgain;
 	static std::atomic<bool> stop_lower_threads_flag;
+	double rxfreq_cache, txfreq_cache;
 
 	virtual ~uhd_hw()
 	{
 		delete[] one_pkt_buf;
 	}
-	uhd_hw() : rxFullScale(32767), txFullScale(32767 * 0.3), rxtxdelay(-67)
+	uhd_hw() : rxFullScale(32767), txFullScale(32767 * 0.3), rxtxdelay(-67), rxfreq_cache(0), txfreq_cache(0)
 	{
 	}
 
@@ -93,15 +94,21 @@ struct uhd_hw {
 
 	bool tuneTx(double freq, size_t chan = 0)
 	{
+		if (txfreq_cache == freq)
+			return true;
 		msleep(25);
 		dev->set_tx_freq(freq, chan);
+		txfreq_cache = freq;
 		msleep(25);
 		return true;
 	};
 	bool tuneRx(double freq, size_t chan = 0)
 	{
+		if (rxfreq_cache == freq)
+			return true;
 		msleep(25);
 		dev->set_rx_freq(freq, chan);
+		rxfreq_cache = freq;
 		msleep(25);
 		return true;
 	};

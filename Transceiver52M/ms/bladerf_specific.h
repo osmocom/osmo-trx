@@ -198,6 +198,7 @@ struct blade_hw {
 
 	float rxgain, txgain;
 	static std::atomic<bool> stop_lower_threads_flag;
+	double rxfreq_cache, txfreq_cache;
 
 	struct ms_trx_config {
 		int tx_freq;
@@ -222,7 +223,9 @@ struct blade_hw {
 	{
 		close_device();
 	}
-	blade_hw() : rxFullScale(2047), txFullScale(2047), rxtxdelay(-60), rxgain(30), txgain(30)
+	blade_hw()
+		: rxFullScale(2047), txFullScale(2047), rxtxdelay(-60), rxgain(30), txgain(30), rxfreq_cache(0),
+		  txfreq_cache(0)
 	{
 	}
 
@@ -320,15 +323,21 @@ struct blade_hw {
 
 	bool tuneTx(double freq, size_t chan = 0)
 	{
+		if (txfreq_cache == freq)
+			return true;
 		msleep(15);
 		blade_check(bladerf_set_frequency, dev, BLADERF_CHANNEL_TX(0), (bladerf_frequency)freq);
+		txfreq_cache = freq;
 		msleep(15);
 		return true;
 	};
 	bool tuneRx(double freq, size_t chan = 0)
 	{
+		if (rxfreq_cache == freq)
+			return true;
 		msleep(15);
 		blade_check(bladerf_set_frequency, dev, BLADERF_CHANNEL_RX(0), (bladerf_frequency)freq);
+		rxfreq_cache = freq;
 		msleep(15);
 		return true;
 	};
