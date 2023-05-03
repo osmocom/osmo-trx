@@ -293,7 +293,6 @@ struct ms_trx : public BASET {
 	SCH_STATE search_for_sch(dev_buf_t *rcd);
 	void grab_bursts(dev_buf_t *rcd);
 
-	int init_device();
 	int init_dev_and_streams();
 	void stop_threads();
 	void *rx_cb(ms_trx *t);

@@ -49,7 +49,7 @@ std::atomic<bool> ms_trx::base::stop_lower_threads_flag(false);
 int ms_trx::init_dev_and_streams()
 {
 	int status = 0;
-	status = base::init_device(rx_bh(), tx_bh());
+	status = init_device(rx_bh(), tx_bh());
 	if (status < 0) {
 		std::cerr << "failed to init dev!" << std::endl;
 		return -1;
