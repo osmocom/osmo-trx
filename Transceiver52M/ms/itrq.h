@@ -29,7 +29,58 @@
 
 namespace spsc_detail
 {
-template <bool block_read, bool block_write> class spsc_cond_detail {
+template <bool block_read, bool block_write>
+class spsc_cond_timeout_detail {
+	std::condition_variable cond_r, cond_w;
+	std::mutex lr, lw;
+	std::atomic_int r_flag, w_flag;
+	const int timeout_ms = 200;
+
+    public:
+	explicit spsc_cond_timeout_detail() : r_flag(0), w_flag(0)
+	{
+	}
+
+	~spsc_cond_timeout_detail()
+	{
+	}
+
+	ssize_t spsc_check_r()
+	{
+		std::unique_lock<std::mutex> lk(lr);
+		if (cond_r.wait_for(lk, std::chrono::milliseconds(timeout_ms), [&] { return r_flag != 0; })) {
+			r_flag--;
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	ssize_t spsc_check_w()
+	{
+		std::unique_lock<std::mutex> lk(lw);
+		if (cond_w.wait_for(lk, std::chrono::milliseconds(timeout_ms), [&] { return w_flag != 0; })) {
+			w_flag--;
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	void spsc_notify_r()
+	{
+		std::unique_lock<std::mutex> lk(lr);
+		r_flag++;
+		cond_r.notify_one();
+	}
+	void spsc_notify_w()
+	{
+		std::unique_lock<std::mutex> lk(lw);
+		w_flag++;
+		cond_w.notify_one();
+	}
+};
+
+template <bool block_read, bool block_write>
+class spsc_cond_detail {
 	std::condition_variable cond_r, cond_w;
 	std::mutex lr, lw;
 	std::atomic_int r_flag, w_flag;
@@ -74,7 +125,8 @@ template <bool block_read, bool block_write> class spsc_cond_detail {
 };
 
 // originally designed for select loop integration
-template <bool block_read, bool block_write> class spsc_efd_detail {
+template <bool block_read, bool block_write>
+class spsc_efd_detail {
 	int efd_r, efd_w; /* eventfds used to block/notify readers/writers */
 
     public:
@@ -192,3 +244,6 @@ template <unsigned int SZ, typename ELEM, bool block_read, bool block_write>
 class spsc_evfd : public spsc_detail::spsc<SZ, ELEM, block_read, block_write, spsc_detail::spsc_efd_detail> {};
 template <unsigned int SZ, typename ELEM, bool block_read, bool block_write>
 class spsc_cond : public spsc_detail::spsc<SZ, ELEM, block_read, block_write, spsc_detail::spsc_cond_detail> {};
+template <unsigned int SZ, typename ELEM, bool block_read, bool block_write>
+class spsc_cond_timeout
+	: public spsc_detail::spsc<SZ, ELEM, block_read, block_write, spsc_detail::spsc_cond_timeout_detail> {};

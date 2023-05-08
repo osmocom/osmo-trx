@@ -142,10 +142,8 @@ bool ms_trx::handle_sch_or_nb()
 		memcpy(brst.sch_bits, sch_demod_bits, sizeof(sch_demod_bits));
 	}
 
-	if (upper_is_ready) { // this is blocking, so only submit if there is a reader - only if upper exists!
-		while (!rxqueue.spsc_push(&brst))
-			;
-	}
+	while (upper_is_ready && !rxqueue.spsc_push(&brst))
+		;
 
 	if (do_auto_gain)
 		maybe_update_gain(brst);

@@ -117,7 +117,7 @@ struct one_burst {
 	};
 };
 
-using rx_queue_t = spsc_cond<8 * NUM_RXQ_FRAMES, one_burst, true, false>;
+using rx_queue_t = spsc_cond_timeout<8 * NUM_RXQ_FRAMES, one_burst, true, false>;
 
 enum class SCH_STATE { SEARCHING, FOUND };
 
@@ -267,7 +267,7 @@ struct ms_trx : public BASET {
 	sched_params::target hw_target;
 	single_thread_pool worker_thread;
 
-	void start();
+	void start_lower_ms();
 	std::atomic<bool> upper_is_ready;
 	void set_upper_ready(bool is_ready);
 

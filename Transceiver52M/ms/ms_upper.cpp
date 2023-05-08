@@ -80,36 +80,15 @@ void upper_trx::start_threads()
 		while (!g_exit_flag) {
 			driveControl();
 		}
-		std::cerr << "exit control!" << std::endl;
+		std::cerr << "exit U control!" << std::endl;
 	});
-	msleep(1);
 	thr_tx = std::thread([this] {
 		set_name_aff_sched(sched_params::thread_names::U_TX);
 		while (!g_exit_flag) {
 			driveTx();
 		}
-		std::cerr << "exit tx U!" << std::endl;
+		std::cerr << "exit U tx!" << std::endl;
 	});
-
-	// atomic ensures data is not written to q until loop reads
-	start_lower_ms();
-
-	set_name_aff_sched(sched_params::thread_names::U_RX);
-	while (!g_exit_flag) {
-		// set_upper_ready(true) needs to happen during cmd handling:
-		// the main loop is driven by rx, so unless rx is on AND transceiver is on we get stuck..
-		driveReceiveFIFO();
-		osmo_select_main(1);
-
-		trxcon_phyif_rsp r;
-		if (cmdq_from_phy.spsc_pop(&r)) {
-			DBGLG() << "HAVE RESP:" << r.type << std::endl;
-			trxcon_phyif_handle_rsp(g_trxcon, &r);
-		}
-	}
-	set_upper_ready(false);
-	std::cerr << "exit rx U!" << std::endl;
-	mOn = false;
 
 #ifdef LSANDEBUG
 	std::thread([this] {
@@ -123,9 +102,23 @@ void upper_trx::start_threads()
 #endif
 }
 
-void upper_trx::start_lower_ms()
+void upper_trx::main_loop()
 {
-	ms_trx::start();
+	set_name_aff_sched(sched_params::thread_names::U_RX);
+	set_upper_ready(true);
+	while (!g_exit_flag) {
+		driveReceiveFIFO();
+		osmo_select_main(1);
+
+		trxcon_phyif_rsp r;
+		if (cmdq_from_phy.spsc_pop(&r)) {
+			DBGLG() << "HAVE RESP:" << r.type << std::endl;
+			trxcon_phyif_handle_rsp(g_trxcon, &r);
+		}
+	}
+	set_upper_ready(false);
+	std::cerr << "exit U rx!" << std::endl;
+	mOn = false;
 }
 
 // signalvector is owning despite claiming not to, but we can pretend, too..
@@ -346,7 +339,7 @@ bool upper_trx::driveControl()
 	case TRXCON_PHYIF_CMDT_POWERON:
 		if (!mOn) {
 			mOn = true;
-			set_upper_ready(true);
+			start_lower_ms();
 		}
 		break;
 	case TRXCON_PHYIF_CMDT_POWEROFF:
@@ -430,7 +423,7 @@ int main(int argc, char *argv[])
 
 	// blocking, will return when global exit is requested
 	trx->start_threads();
-
+	trx->main_loop();
 	trx->stop_threads();
 	trx->stop_upper_threads();
 

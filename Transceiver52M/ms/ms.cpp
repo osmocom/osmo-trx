@@ -78,7 +78,7 @@ bh_fn_t ms_trx::tx_bh()
 	};
 }
 
-void ms_trx::start()
+void ms_trx::start_lower_ms()
 {
 	if (stop_lower_threads_flag)
 		return;

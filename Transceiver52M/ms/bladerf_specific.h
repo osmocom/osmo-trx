@@ -192,7 +192,7 @@ struct blade_hw {
 	struct bladerf_stream *rx_stream;
 	struct bladerf_stream *tx_stream;
 	// using pkt2buf = blade_otw_buffer<2, blade_speed_buffer_type::SS>;
-	using tx_buf_q_type = spsc_cond<BLADE_NUM_BUFFERS, dev_buf_t *, true, false>;
+	using tx_buf_q_type = spsc_cond_timeout<BLADE_NUM_BUFFERS, dev_buf_t *, true, false>;
 	const unsigned int rxFullScale, txFullScale;
 	const int rxtxdelay;
 
