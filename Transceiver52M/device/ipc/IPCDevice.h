@@ -115,12 +115,11 @@ class IPCDevice : public RadioDevice {
 	int ipc_chan_sock_write(osmo_fd *bfd);
 
 	/** Object constructor */
-	IPCDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
-		  const std::vector<std::string> &tx_paths, const std::vector<std::string> &rx_paths);
+	IPCDevice(InterfaceType iface, const struct trx_cfg *cfg);
 	virtual ~IPCDevice() override;
 
 	/** Instantiate the IPC */
-	virtual int open(const std::string &args, int ref, bool swap_channels) override;
+	virtual int open() override;
 
 	/** Start the IPC */
 	virtual bool start() override;

@@ -80,17 +80,17 @@ struct dev_band_desc {
 */
 class uhd_device : public RadioDevice {
 public:
-	uhd_device(size_t tx_sps, size_t rx_sps, InterfaceType type,
-		   size_t chan_num, double offset,
-		   const std::vector<std::string>& tx_paths,
-		   const std::vector<std::string>& rx_paths);
-	~uhd_device();
+    uhd_device(InterfaceType iface, const struct trx_cfg *cfg);
+    ~uhd_device();
 
-	int open(const std::string &args, int ref, bool swap_channels);
-	bool start();
-	bool stop();
-	bool restart();
-	enum TxWindowType getWindowType() { return tx_window; }
+    int open();
+    bool start();
+    bool stop();
+    bool restart();
+    enum TxWindowType getWindowType()
+    {
+	    return tx_window;
+    }
 
 	int readSamples(std::vector<short *> &bufs, int len, bool *overrun,
 			TIMESTAMP timestamp, bool *underrun);

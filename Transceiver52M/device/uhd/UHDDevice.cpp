@@ -220,15 +220,10 @@ static double TxPower2TxGain(const dev_band_desc &desc, double tx_power_dbm)
 	return desc.nom_uhd_tx_gain - (desc.nom_out_tx_power - tx_power_dbm);
 }
 
-uhd_device::uhd_device(size_t tx_sps, size_t rx_sps,
-		       InterfaceType iface, size_t chan_num, double lo_offset,
-		       const std::vector<std::string>& tx_paths,
-		       const std::vector<std::string>& rx_paths)
-	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
-	  rx_gain_min(0.0), rx_gain_max(0.0), band_ass_curr_sess(false),
-	  band((enum gsm_band)0), tx_spp(0), rx_spp(0),
-	  started(false), aligned(false), drop_cnt(0),
-	  prev_ts(0,0), ts_initial(0), ts_offset(0), async_event_thrd(NULL)
+uhd_device::uhd_device(InterfaceType iface, const struct trx_cfg *cfg)
+	: RadioDevice(iface, cfg), rx_gain_min(0.0), rx_gain_max(0.0), band_ass_curr_sess(false),
+	  band((enum gsm_band)0), tx_spp(0), rx_spp(0), started(false), aligned(false), drop_cnt(0), prev_ts(0, 0),
+	  ts_initial(0), ts_offset(0), async_event_thrd(NULL)
 {
 }
 
@@ -548,7 +543,7 @@ void uhd_device::set_channels(bool swap)
 	}
 }
 
-int uhd_device::open(const std::string &args, int ref, bool swap_channels)
+int uhd_device::open()
 {
 	const char *refstr;
 	int clock_lock_attempts = 15;
@@ -564,10 +559,10 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 #endif
 
 	// Find UHD devices
-	uhd::device_addr_t addr(args);
+	uhd::device_addr_t addr(cfg->dev_args);
 	uhd::device_addrs_t dev_addrs = uhd::device::find(addr);
 	if (dev_addrs.size() == 0) {
-		LOGC(DDEV, ALERT) << "No UHD devices found with address '" << args << "'";
+		LOGC(DDEV, ALERT) << "No UHD devices found with address '" << cfg->dev_args << "'";
 		return -1;
 	}
 
@@ -576,7 +571,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	try {
 		usrp_dev = uhd::usrp::multi_usrp::make(addr);
 	} catch(uhd::key_error::exception &e) {
-		LOGC(DDEV, ALERT) << "UHD make failed, device " << args << ", exception:\n" << e.what();
+		LOGC(DDEV, ALERT) << "UHD make failed, device " << cfg->dev_args << ", exception:\n" << e.what();
 		return -1;
 	}
 
@@ -590,8 +585,8 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	}
 
 	try {
-		set_channels(swap_channels);
-        } catch (const std::exception &e) {
+		set_channels(cfg->swap_channels);
+	} catch (const std::exception &e) {
 		LOGC(DDEV, ALERT) << "Channel setting failed - " << e.what();
 		return -1;
 	}
@@ -607,7 +602,7 @@ int uhd_device::open(const std::string &args, int ref, bool swap_channels)
 	rx_gains.resize(chans);
 	rx_buffers.resize(chans);
 
-	switch (ref) {
+	switch (cfg->clock_ref) {
 	case REF_INTERNAL:
 		refstr = "internal";
 		break;
@@ -1378,11 +1373,8 @@ std::string uhd_device::str_code(uhd::async_metadata_t metadata)
 }
 
 #ifndef IPCMAGIC
-RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       InterfaceType iface, size_t chans, double lo_offset,
-			       const std::vector<std::string>& tx_paths,
-			       const std::vector<std::string>& rx_paths)
+RadioDevice *RadioDevice::make(InterfaceType type, const struct trx_cfg *cfg)
 {
-	return new uhd_device(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
+	return new uhd_device(type, cfg);
 }
 #endif

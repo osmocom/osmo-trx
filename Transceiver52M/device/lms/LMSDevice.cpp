@@ -131,12 +131,9 @@ static enum lms_dev_type parse_dev_type(lms_device_t *m_lms_dev)
 	return LMS_DEV_UNKNOWN;
 }
 
-LMSDevice::LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
-		     const std::vector<std::string>& tx_paths,
-		     const std::vector<std::string>& rx_paths):
-		     RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths),
-		     m_lms_dev(NULL), started(false), band_ass_curr_sess(false), band((enum gsm_band)0),
-		     m_dev_type(LMS_DEV_UNKNOWN)
+LMSDevice::LMSDevice(InterfaceType iface, const struct trx_cfg *cfg)
+	: RadioDevice(iface, cfg), m_lms_dev(NULL), started(false), band_ass_curr_sess(false), band((enum gsm_band)0),
+	  m_dev_type(LMS_DEV_UNKNOWN)
 {
 	LOGC(DDEV, INFO) << "creating LMS device...";
 
@@ -264,7 +261,7 @@ void LMSDevice::get_dev_band_desc(dev_band_desc& desc)
 	desc = band_desc;
 }
 
-int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
+int LMSDevice::open()
 {
 	lms_info_str_t* info_list;
 	lms_range_t range_sr;
@@ -292,9 +289,9 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	for (i = 0; i < n; i++)
 		LOGC(DDEV, INFO) << "Device [" << i << "]: " << info_list[i];
 
-	dev_id = info_list_find(info_list, n, args);
+	dev_id = info_list_find(info_list, n, cfg->dev_args);
 	if (dev_id == -1) {
-		LOGC(DDEV, ERROR) << "No LMS device found with address '" << args << "'";
+		LOGC(DDEV, ERROR) << "No LMS device found with address '" << cfg->dev_args << "'";
 		delete[] info_list;
 		return -1;
 	}
@@ -312,13 +309,13 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	m_dev_type = parse_dev_type(m_lms_dev);
 	dev_desc = dev_param_map.at(m_dev_type);
 
-	if ((ref != REF_EXTERNAL) && (ref != REF_INTERNAL)){
+	if ((cfg->clock_ref != REF_EXTERNAL) && (cfg->clock_ref != REF_INTERNAL)) {
 		LOGC(DDEV, ERROR) << "Invalid reference type";
 		goto out_close;
 	}
 
 	/* if reference clock is external, setup must happen _before_ calling LMS_Init */
-	if (ref == REF_EXTERNAL) {
+	if (cfg->clock_ref == REF_EXTERNAL) {
 		LOGC(DDEV, INFO) << "Setting External clock reference to 10MHz";
 		/* FIXME: Assume an external 10 MHz reference clock. make
 		   external reference frequency configurable */
@@ -333,7 +330,7 @@ int LMSDevice::open(const std::string &args, int ref, bool swap_channels)
 	}
 
 	/* if reference clock is internal, setup must happen _after_ calling LMS_Init */
-	if (ref == REF_INTERNAL) {
+	if (cfg->clock_ref == REF_INTERNAL) {
 		LOGC(DDEV, INFO) << "Setting Internal clock reference";
 		/* Internal freq param is not used */
 		if (!do_clock_src_freq(REF_INTERNAL, 0))
@@ -1060,18 +1057,15 @@ bool LMSDevice::setRxFreq(double wFreq, size_t chan)
 	return true;
 }
 
-RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       InterfaceType iface, size_t chans, double lo_offset,
-			       const std::vector < std::string > &tx_paths,
-			       const std::vector < std::string > &rx_paths)
+RadioDevice *RadioDevice::make(InterfaceType type, const struct trx_cfg *cfg)
 {
-	if (tx_sps != rx_sps) {
-		LOGC(DDEV, ERROR) << "LMS Requires tx_sps == rx_sps";
+	if (cfg->tx_sps != cfg->rx_sps) {
+		LOGC(DDEV, ERROR) << "LMS requires tx_sps == rx_sps";
 		return NULL;
 	}
-	if (lo_offset != 0.0) {
+	if (cfg->offset != 0.0) {
 		LOGC(DDEV, ERROR) << "LMS doesn't support lo_offset";
 		return NULL;
 	}
-	return new LMSDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
+	return new LMSDevice(type, cfg);
 }

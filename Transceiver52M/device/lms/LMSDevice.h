@@ -107,23 +107,22 @@ private:
 public:
 
 	/** Object constructor */
-	LMSDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
-		  const std::vector<std::string>& tx_paths,
-		  const std::vector<std::string>& rx_paths);
-	~LMSDevice();
+    LMSDevice(InterfaceType iface, const struct trx_cfg *cfg);
+    ~LMSDevice();
 
-	/** Instantiate the LMS */
-	int open(const std::string &args, int ref, bool swap_channels);
+    /** Instantiate the LMS */
+    int open();
 
-	/** Start the LMS */
-	bool start();
+    /** Start the LMS */
+    bool start();
 
-	/** Stop the LMS */
-	bool stop();
+    /** Stop the LMS */
+    bool stop();
 
-	enum TxWindowType getWindowType() {
-		return TX_WINDOW_LMS1;
-	}
+    enum TxWindowType getWindowType()
+    {
+	    return TX_WINDOW_LMS1;
+    }
 
 	/**
 	Read samples from the LMS.

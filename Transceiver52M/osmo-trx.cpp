@@ -571,24 +571,14 @@ static void trx_stop()
 static int trx_start(struct trx_ctx *trx)
 {
 	int type, chans;
-	unsigned int i;
-	std::vector<std::string> rx_paths, tx_paths;
 	RadioDevice::InterfaceType iface = RadioDevice::NORMAL;
 
 	/* Create the low level device object */
 	if (trx->cfg.multi_arfcn)
 		iface = RadioDevice::MULTI_ARFCN;
 
-	/* Generate vector of rx/tx_path: */
-	for (i = 0; i < trx->cfg.num_chans; i++) {
-		rx_paths.push_back(charp2str(trx->cfg.chans[i].rx_path));
-		tx_paths.push_back(charp2str(trx->cfg.chans[i].tx_path));
-	}
-
-	usrp = RadioDevice::make(trx->cfg.tx_sps, trx->cfg.rx_sps, iface,
-				 trx->cfg.num_chans, trx->cfg.offset,
-				 tx_paths, rx_paths);
-	type = usrp->open(charp2str(trx->cfg.dev_args), trx->cfg.clock_ref, trx->cfg.swap_channels);
+	usrp = RadioDevice::make(iface, &trx->cfg);
+	type = usrp->open();
 	if (type < 0) {
 		LOG(ALERT) << "Failed to create radio device" << std::endl;
 		goto shutdown;

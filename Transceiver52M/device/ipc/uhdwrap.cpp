@@ -35,9 +35,12 @@ extern "C" {
 #include "Threads.h"
 #include "Utils.h"
 
-int uhd_wrap::open(const std::string &args, int ref, bool swap_channels)
+// no vty source for cfg params here, so we have to build our own
+static struct trx_cfg actual_cfg = {};
+
+int uhd_wrap::open()
 {
-	int rv = uhd_device::open(args, ref, swap_channels);
+	int rv = uhd_device::open();
 	samps_per_buff_rx = rx_stream->get_max_num_samps();
 	samps_per_buff_tx = tx_stream->get_max_num_samps();
 	channel_count = usrp_dev->get_rx_num_channels();
@@ -84,36 +87,33 @@ int uhd_wrap::wrap_read(TIMESTAMP *timestamp)
 
 extern "C" void *uhdwrap_open(struct ipc_sk_if_open_req *open_req)
 {
-	unsigned int rx_sps, tx_sps;
+	actual_cfg.num_chans = open_req->num_chans;
+	actual_cfg.swap_channels = false;
+	/* FIXME: this is actually the sps value, not the sample rate!
+	 * sample rate is looked up according to the sps rate by uhd backend */
+	actual_cfg.rx_sps = open_req->rx_sample_freq_num / open_req->rx_sample_freq_den;
+	actual_cfg.tx_sps = open_req->tx_sample_freq_num / open_req->tx_sample_freq_den;
 
 	/* FIXME: dev arg string* */
 	/* FIXME: rx frontend bw? */
 	/* FIXME: tx frontend bw? */
-	ReferenceType cref;
 	switch (open_req->clockref) {
 	case FEATURE_MASK_CLOCKREF_EXTERNAL:
-		cref = ReferenceType::REF_EXTERNAL;
+		actual_cfg.clock_ref = ReferenceType::REF_EXTERNAL;
 		break;
 	case FEATURE_MASK_CLOCKREF_INTERNAL:
 	default:
-		cref = ReferenceType::REF_INTERNAL;
+		actual_cfg.clock_ref = ReferenceType::REF_INTERNAL;
 		break;
 	}
 
-	std::vector<std::string> tx_paths;
-	std::vector<std::string> rx_paths;
 	for (unsigned int i = 0; i < open_req->num_chans; i++) {
-		tx_paths.push_back(open_req->chan_info[i].tx_path);
-		rx_paths.push_back(open_req->chan_info[i].rx_path);
+		actual_cfg.chans[i].rx_path = open_req->chan_info[i].tx_path;
+		actual_cfg.chans[i].tx_path = open_req->chan_info[i].rx_path;
 	}
 
-	/* FIXME: this is actually the sps value, not the sample rate!
-	 * sample rate is looked up according to the sps rate by uhd backend */
-	rx_sps = open_req->rx_sample_freq_num / open_req->rx_sample_freq_den;
-	tx_sps = open_req->tx_sample_freq_num / open_req->tx_sample_freq_den;
-	uhd_wrap *uhd_wrap_dev =
-		new uhd_wrap(tx_sps, rx_sps, RadioDevice::NORMAL, open_req->num_chans, 0.0, tx_paths, rx_paths);
-	uhd_wrap_dev->open("", cref, false);
+	uhd_wrap *uhd_wrap_dev = new uhd_wrap(RadioDevice::NORMAL, &actual_cfg);
+	uhd_wrap_dev->open();
 
 	return uhd_wrap_dev;
 }

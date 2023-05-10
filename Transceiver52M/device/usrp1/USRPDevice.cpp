@@ -60,11 +60,7 @@ const dboardConfigType dboardConfig = TXA_RXB;
 
 const double USRPDevice::masterClockRate = 52.0e6;
 
-USRPDevice::USRPDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface,
-		       size_t chan_num, double lo_offset,
-		       const std::vector<std::string>& tx_paths,
-		       const std::vector<std::string>& rx_paths):
-		RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths)
+USRPDevice::USRPDevice(InterfaceType iface, const struct trx_cfg *cfg) : RadioDevice(iface, cfg)
 {
   LOGC(DDEV, INFO) << "creating USRP device...";
 
@@ -94,7 +90,7 @@ USRPDevice::USRPDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface,
 #endif
 }
 
-int USRPDevice::open(const std::string &, int, bool)
+int USRPDevice::open()
 {
   writeLock.unlock();
 
@@ -658,22 +654,19 @@ bool USRPDevice::setTxFreq(double wFreq) { return true;};
 bool USRPDevice::setRxFreq(double wFreq) { return true;};
 #endif
 
-RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps,
-			       InterfaceType iface, size_t chans, double lo_offset,
-			       const std::vector<std::string>& tx_paths,
-			       const std::vector<std::string>& rx_paths)
+RadioDevice *RadioDevice::make(InterfaceType type, const struct trx_cfg *cfg)
 {
-	if (tx_sps != rx_sps) {
-		LOGC(DDEV, ERROR) << "USRP1 requires tx_sps == rx_sps";
-		return NULL;
-	}
-	if (chans != 1) {
-		LOGC(DDEV, ERROR) << "USRP1 supports only 1 channel";
-		return NULL;
-	}
-	if (lo_offset != 0.0) {
-		LOGC(DDEV, ERROR) << "USRP1 doesn't support lo_offset";
-		return NULL;
-	}
-	return new USRPDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
+  if (cfg->tx_sps != cfg->rx_sps) {
+    LOGC(DDEV, ERROR) << "USRP1 requires tx_sps == rx_sps";
+    return NULL;
+  }
+  if (cfg->num_chans != 1) {
+    LOGC(DDEV, ERROR) << "USRP1 supports only 1 channel";
+    return NULL;
+  }
+  if (cfg->offset != 0.0) {
+    LOGC(DDEV, ERROR) << "USRP1 doesn't support lo_offset";
+    return NULL;
+  }
+  return new USRPDevice(type, cfg);
 }

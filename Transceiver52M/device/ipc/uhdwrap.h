@@ -41,7 +41,7 @@ class uhd_wrap : public uhd_device {
 
 	//    void ipc_sock_close() override {};
 	int wrap_read(TIMESTAMP *timestamp);
-	virtual int open(const std::string &args, int ref, bool swap_channels) override;
+	virtual int open() override;
 
 	//	bool start() override;
 	//	bool stop() override;

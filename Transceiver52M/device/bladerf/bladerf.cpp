@@ -84,11 +84,10 @@ static double TxPower2TxGain(const dev_band_desc &desc, double tx_power_dbm)
 	return desc.nom_uhd_tx_gain - (desc.nom_out_tx_power - tx_power_dbm);
 }
 
-blade_device::blade_device(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
-			   const std::vector<std::string> &tx_paths, const std::vector<std::string> &rx_paths)
-	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths), dev(nullptr), rx_gain_min(0.0),
-	  rx_gain_max(0.0), band_ass_curr_sess(false), band((enum gsm_band)0), tx_spp(0), rx_spp(0), started(false),
-	  aligned(false), drop_cnt(0), prev_ts(0), ts_initial(0), ts_offset(0), async_event_thrd(NULL)
+blade_device::blade_device(InterfaceType iface, const struct trx_cfg *cfg)
+	: RadioDevice(iface, cfg), dev(nullptr), rx_gain_min(0.0), rx_gain_max(0.0), band_ass_curr_sess(false),
+	  band((enum gsm_band)0), tx_spp(0), rx_spp(0), started(false), aligned(false), drop_cnt(0), prev_ts(0),
+	  ts_initial(0), ts_offset(0), async_event_thrd(NULL)
 {
 }
 
@@ -312,15 +311,15 @@ int blade_device::getNominalTxPower(size_t chan)
 	return desc.nom_out_tx_power;
 }
 
-int blade_device::open(const std::string &args, int ref, bool swap_channels)
+int blade_device::open()
 {
 	bladerf_log_set_verbosity(BLADERF_LOG_LEVEL_VERBOSE);
 	bladerf_set_usb_reset_on_open(true);
-	auto success = bladerf_open(&dev, args.c_str());
+	auto success = bladerf_open(&dev, cfg->dev_args);
 	if (success != 0) {
 		struct bladerf_devinfo *info;
 		auto num_devs = bladerf_get_device_list(&info);
-		LOGC(DDEV, ALERT) << "No bladerf devices found with identifier '" << args << "'";
+		LOGC(DDEV, ALERT) << "No bladerf devices found with identifier '" << cfg->dev_args << "'";
 		if (num_devs) {
 			for (int i = 0; i < num_devs; i++)
 				LOGC(DDEV, ALERT) << "Found device:" << info[i].product << " serial " << info[i].serial;
@@ -346,7 +345,7 @@ int blade_device::open(const std::string &args, int ref, bool swap_channels)
 	rx_gains.resize(chans);
 	rx_buffers.resize(chans);
 
-	switch (ref) {
+	switch (cfg->clock_ref) {
 	case REF_INTERNAL:
 	case REF_EXTERNAL:
 		break;
@@ -355,7 +354,7 @@ int blade_device::open(const std::string &args, int ref, bool swap_channels)
 		return -1;
 	}
 
-	if (ref == REF_EXTERNAL) {
+	if (cfg->clock_ref == REF_EXTERNAL) {
 		bool is_locked;
 		int status = bladerf_set_pll_enable(dev, true);
 		CHKRET()
@@ -374,7 +373,8 @@ int blade_device::open(const std::string &args, int ref, bool swap_channels)
 		}
 	}
 
-	LOGC(DDEV, INFO) << "Selected clock source is " << ((ref == REF_INTERNAL) ? "internal" : "external 10Mhz");
+	LOGC(DDEV, INFO)
+		<< "Selected clock source is " << ((cfg->clock_ref == REF_INTERNAL) ? "internal" : "external 10Mhz");
 
 	set_rates();
 
@@ -687,8 +687,7 @@ double blade_device::fullScaleOutputValue()
 	return (double)2047;
 }
 
-RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chans, double lo_offset,
-			       const std::vector<std::string> &tx_paths, const std::vector<std::string> &rx_paths)
+RadioDevice *RadioDevice::make(InterfaceType type, const struct trx_cfg *cfg)
 {
-	return new blade_device(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
+	return new blade_device(type, cfg);
 }

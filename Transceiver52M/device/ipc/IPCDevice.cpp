@@ -56,11 +56,10 @@ using namespace std;
 
 static int ipc_chan_sock_cb(struct osmo_fd *bfd, unsigned int flags);
 
-IPCDevice::IPCDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
-		     const std::vector<std::string> &tx_paths, const std::vector<std::string> &rx_paths)
-	: RadioDevice(tx_sps, rx_sps, iface, chan_num, lo_offset, tx_paths, rx_paths), sk_chan_state(chans, ipc_per_trx_sock_state()),
-	  tx_attenuation(), tmp_state(IPC_IF_MSG_GREETING_REQ), shm(NULL), shm_dec(0),
-	  rx_buffers(chans), started(false), tx_gains(chans), rx_gains(chans)
+IPCDevice::IPCDevice(InterfaceType iface, const struct trx_cfg *cfg)
+	: RadioDevice(iface, cfg), sk_chan_state(chans, ipc_per_trx_sock_state()), tx_attenuation(),
+	  tmp_state(IPC_IF_MSG_GREETING_REQ), shm(NULL), shm_dec(0), rx_buffers(chans), started(false), tx_gains(chans),
+	  rx_gains(chans)
 {
 	LOGC(DDEV, INFO) << "creating IPC device...";
 
@@ -771,11 +770,12 @@ static int ipc_chan_sock_cb(struct osmo_fd *bfd, unsigned int flags)
 	return rc;
 }
 
-int IPCDevice::open(const std::string &args, int ref, bool swap_channels)
+int IPCDevice::open()
 {
 	std::string k, v;
 	std::string::size_type keyend;
 	int rc;
+	std::string args(cfg->dev_args);
 
 	if ((keyend = args.find('=')) != std::string::npos) {
 		k = args.substr(0, keyend++);
@@ -810,7 +810,7 @@ int IPCDevice::open(const std::string &args, int ref, bool swap_channels)
 	while (tmp_state != IPC_IF_MSG_INFO_CNF)
 		osmo_select_main(0);
 
-	ipc_tx_open_req(&master_sk_state, chans, ref);
+	ipc_tx_open_req(&master_sk_state, chans, cfg->clock_ref);
 	/* Wait until confirmation is recieved */
 	while (tmp_state != IPC_IF_MSG_OPEN_CNF)
 		osmo_select_main(0);
@@ -1259,16 +1259,15 @@ bool IPCDevice::setRxFreq(double wFreq, size_t chan)
 	return send_chan_wait_rsp(chan, msg, IPC_IF_MSG_SETFREQ_CNF);
 }
 
-RadioDevice *RadioDevice::make(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chans, double lo_offset,
-			       const std::vector<std::string> &tx_paths, const std::vector<std::string> &rx_paths)
+RadioDevice *RadioDevice::make(InterfaceType type, const struct trx_cfg *cfg)
 {
-	if (tx_sps != rx_sps) {
+	if (cfg->tx_sps != cfg->rx_sps) {
 		LOGC(DDEV, ERROR) << "IPC Requires tx_sps == rx_sps";
 		return NULL;
 	}
-	if (lo_offset != 0.0) {
+	if (cfg->offset != 0.0) {
 		LOGC(DDEV, ERROR) << "IPC doesn't support lo_offset";
 		return NULL;
 	}
-	return new IPCDevice(tx_sps, rx_sps, iface, chans, lo_offset, tx_paths, rx_paths);
+	return new IPCDevice(type, cfg);
 }

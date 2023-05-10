@@ -54,11 +54,10 @@ struct dev_band_desc {
 
 class blade_device : public RadioDevice {
     public:
-	blade_device(size_t tx_sps, size_t rx_sps, InterfaceType type, size_t chan_num, double offset,
-		     const std::vector<std::string> &tx_paths, const std::vector<std::string> &rx_paths);
+	blade_device(InterfaceType iface, const struct trx_cfg *cfg);
 	~blade_device();
 
-	int open(const std::string &args, int ref, bool swap_channels);
+	int open();
 	bool start();
 	bool stop();
 	bool restart();

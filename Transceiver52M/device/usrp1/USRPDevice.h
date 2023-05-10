@@ -104,20 +104,21 @@ private:
  public:
 
   /** Object constructor */
-  USRPDevice(size_t tx_sps, size_t rx_sps, InterfaceType iface, size_t chan_num, double lo_offset,
-		const std::vector<std::string>& tx_paths,
-		const std::vector<std::string>& rx_paths);
+     USRPDevice(InterfaceType iface, const struct trx_cfg *cfg);
 
-  /** Instantiate the USRP */
-  int open(const std::string &, int, bool);
+     /** Instantiate the USRP */
+     int open();
 
-  /** Start the USRP */
-  bool start();
+     /** Start the USRP */
+     bool start();
 
-  /** Stop the USRP */
-  bool stop();
+     /** Stop the USRP */
+     bool stop();
 
-  enum TxWindowType getWindowType() { return TX_WINDOW_USRP1; }
+     enum TxWindowType getWindowType()
+     {
+	     return TX_WINDOW_USRP1;
+     }
 
   /**
 	Read samples from the USRP.

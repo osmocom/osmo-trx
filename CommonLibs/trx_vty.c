@@ -607,7 +607,7 @@ static int config_write_trx(struct vty *vty)
 		vty_out(vty, " remote-ip %s%s", trx->cfg.remote_addr, VTY_NEWLINE);
 	if (trx->cfg.base_port != DEFAULT_TRX_PORT)
 		vty_out(vty, " base-port %u%s", trx->cfg.base_port, VTY_NEWLINE);
-	if (trx->cfg.dev_args)
+	if (strlen(trx->cfg.dev_args))
 		vty_out(vty, " dev-args %s%s", trx->cfg.dev_args, VTY_NEWLINE);
 	if (trx->cfg.tx_sps != DEFAULT_TX_SPS)
 		vty_out(vty, " tx-sps %u%s", trx->cfg.tx_sps, VTY_NEWLINE);
@@ -760,6 +760,7 @@ struct trx_ctx *vty_trx_ctx_alloc(void *talloc_ctx)
 	trx->cfg.rx_sps = DEFAULT_RX_SPS;
 	trx->cfg.filler = FILLER_ZERO;
 	trx->cfg.rssi_offset = 0.0f;
+	trx->cfg.dev_args = "";
 
 	return trx;
 }
