@@ -22,18 +22,18 @@
 
 #pragma once
 
+#include <map>
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
+#include "bandmanager.h"
 #include "radioDevice.h"
 #include "smpl_buf.h"
 
 extern "C" {
 #include <osmocom/gsm/gsm_utils.h>
 }
-
-#include <bladerf.h>
 
 enum class blade_dev_type { BLADE1, BLADE2 };
 
@@ -52,7 +52,21 @@ struct dev_band_desc {
 	double rxgain2rssioffset_rel; /* dB */
 };
 
-class blade_device : public RadioDevice {
+/* Device parameter descriptor */
+struct dev_desc {
+	unsigned channels;
+	double mcr;
+	double rate;
+	double offset;
+	std::string desc_str;
+};
+
+using dev_key = std::tuple<blade_dev_type, int, int>;
+using dev_band_key = std::tuple<blade_dev_type, enum gsm_band>;
+using power_map_t = std::map<dev_band_key, dev_band_desc>;
+using dev_map_t = std::map<dev_key, dev_desc>;
+
+class blade_device : public RadioDevice, public band_manager<power_map_t, dev_map_t> {
     public:
 	blade_device(InterfaceType iface, const struct trx_cfg *cfg);
 	~blade_device();
@@ -153,9 +167,6 @@ class blade_device : public RadioDevice {
 
 	std::vector<double> tx_gains, rx_gains;
 	std::vector<double> tx_freqs, rx_freqs;
-	bool band_ass_curr_sess; /* true if  "band" was set after last POWEROFF */
-	enum gsm_band band;
-	struct dev_band_desc band_desc;
 	size_t tx_spp, rx_spp;
 
 	bool started;
@@ -178,9 +189,6 @@ class blade_device : public RadioDevice {
 	bool flush_recv(size_t num_pkts);
 
 	bool set_freq(double freq, size_t chan, bool tx);
-	void get_dev_band_desc(dev_band_desc &desc);
-	bool set_band(enum gsm_band req_band);
-	void assign_band_desc(enum gsm_band req_band);
 
 	Thread *async_event_thrd;
 	Mutex tune_lock;

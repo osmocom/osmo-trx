@@ -30,6 +30,7 @@
 #include "config.h"
 #endif
 
+#include "bandmanager.h"
 #include "radioDevice.h"
 #include "smpl_buf.h"
 
@@ -71,6 +72,19 @@ struct dev_band_desc {
 	double rxgain2rssioffset_rel; /* dB */
 };
 
+struct dev_desc {
+	unsigned channels;
+	double mcr;
+	double rate;
+	double offset;
+	std::string desc_str;
+};
+
+using dev_key = std::tuple<uhd_dev_type, int, int>;
+using dev_band_key = std::tuple<uhd_dev_type, enum gsm_band>;
+using power_map_t = std::map<dev_band_key, dev_band_desc>;
+using dev_map_t = std::map<dev_key, dev_desc>;
+
 /*
     uhd_device - UHD implementation of the Device interface. Timestamped samples
                 are sent to and received from the device. An intermediate buffer
@@ -78,7 +92,7 @@ struct dev_band_desc {
                 Events and errors such as underruns are reported asynchronously
                 by the device and received in a separate thread.
 */
-class uhd_device : public RadioDevice {
+class uhd_device : public RadioDevice, public band_manager<power_map_t, dev_map_t> {
 public:
     uhd_device(InterfaceType iface, const struct trx_cfg *cfg);
     ~uhd_device();
@@ -160,9 +174,6 @@ protected:
 
 	std::vector<double> tx_gains, rx_gains;
 	std::vector<double> tx_freqs, rx_freqs;
-	bool band_ass_curr_sess; /* true if  "band" was set after last POWEROFF */
-	enum gsm_band band;
-	struct dev_band_desc band_desc;
 	size_t tx_spp, rx_spp;
 
 	bool started;
@@ -191,10 +202,6 @@ protected:
 
 	uhd::tune_request_t select_freq(double wFreq, size_t chan, bool tx);
 	bool set_freq(double freq, size_t chan, bool tx);
-	void get_dev_band_desc(dev_band_desc& desc);
-	bool set_band(enum gsm_band req_band);
-	void assign_band_desc(enum gsm_band req_band);
 
 	Thread *async_event_thrd;
-	Mutex tune_lock;
 };

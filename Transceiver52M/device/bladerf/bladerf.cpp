@@ -47,25 +47,11 @@ extern "C" {
 			LOGC(DDEV, ERROR) << bladerf_strerror(status);                                                 \
 	}
 
-/* Device Type, Tx-SPS, Rx-SPS */
-typedef std::tuple<blade_dev_type, int, int> dev_key;
-
-/* Device parameter descriptor */
-struct dev_desc {
-	unsigned channels;
-	double mcr;
-	double rate;
-	double offset;
-	std::string str;
-};
-
-static const std::map<dev_key, dev_desc> dev_param_map{
+static const dev_map_t dev_param_map{
 	{ std::make_tuple(blade_dev_type::BLADE2, 4, 4), { 1, 26e6, GSMRATE, B2XX_TIMING_4_4SPS, "B200 4 SPS" } },
 };
 
-typedef std::tuple<blade_dev_type, enum gsm_band> dev_band_key;
-typedef std::map<dev_band_key, dev_band_desc>::const_iterator dev_band_map_it;
-static const std::map<dev_band_key, dev_band_desc> dev_band_nom_power_param_map{
+static const power_map_t dev_band_nom_power_param_map{
 	{ std::make_tuple(blade_dev_type::BLADE2, GSM_BAND_850), { 89.75, 13.3, -7.5 } },
 	{ std::make_tuple(blade_dev_type::BLADE2, GSM_BAND_900), { 89.75, 13.3, -7.5 } },
 	{ std::make_tuple(blade_dev_type::BLADE2, GSM_BAND_1800), { 89.75, 7.5, -11.0 } },
@@ -85,9 +71,9 @@ static double TxPower2TxGain(const dev_band_desc &desc, double tx_power_dbm)
 }
 
 blade_device::blade_device(InterfaceType iface, const struct trx_cfg *cfg)
-	: RadioDevice(iface, cfg), dev(nullptr), rx_gain_min(0.0), rx_gain_max(0.0), band_ass_curr_sess(false),
-	  band((enum gsm_band)0), tx_spp(0), rx_spp(0), started(false), aligned(false), drop_cnt(0), prev_ts(0),
-	  ts_initial(0), ts_offset(0), async_event_thrd(NULL)
+	: RadioDevice(iface, cfg), band_manager(dev_band_nom_power_param_map, dev_param_map), dev(nullptr),
+	  rx_gain_min(0.0), rx_gain_max(0.0), tx_spp(0), rx_spp(0), started(false), aligned(false), drop_cnt(0),
+	  prev_ts(0), ts_initial(0), ts_offset(0), async_event_thrd(NULL)
 {
 }
 
@@ -102,47 +88,6 @@ blade_device::~blade_device()
 
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		delete rx_buffers[i];
-}
-
-void blade_device::assign_band_desc(enum gsm_band req_band)
-{
-	dev_band_map_it it;
-
-	it = dev_band_nom_power_param_map.find(dev_band_key(dev_type, req_band));
-	if (it == dev_band_nom_power_param_map.end()) {
-		dev_desc desc = dev_param_map.at(dev_key(dev_type, tx_sps, rx_sps));
-		LOGC(DDEV, ERROR) << "No Power parameters exist for device " << desc.str << " on band "
-				  << gsm_band_name(req_band) << ", using B210 ones as fallback";
-		it = dev_band_nom_power_param_map.find(dev_band_key(blade_dev_type::BLADE2, req_band));
-	}
-	OSMO_ASSERT(it != dev_band_nom_power_param_map.end())
-	band_desc = it->second;
-}
-
-bool blade_device::set_band(enum gsm_band req_band)
-{
-	if (band_ass_curr_sess && req_band != band) {
-		LOGC(DDEV, ALERT) << "Requesting band " << gsm_band_name(req_band) << " different from previous band "
-				  << gsm_band_name(band);
-		return false;
-	}
-
-	if (req_band != band) {
-		band = req_band;
-		assign_band_desc(band);
-	}
-	band_ass_curr_sess = true;
-	return true;
-}
-
-void blade_device::get_dev_band_desc(dev_band_desc &desc)
-{
-	if (band == 0) {
-		LOGC(DDEV, ERROR)
-			<< "Power parameters requested before Tx Frequency was set! Providing band 900 by default...";
-		assign_band_desc(GSM_BAND_900);
-	}
-	desc = band_desc;
 }
 
 void blade_device::init_gains()
@@ -457,7 +402,7 @@ bool blade_device::stop()
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		rx_buffers[i]->reset();
 
-	band_ass_curr_sess = false;
+	band_reset();
 
 	started = false;
 	return true;
@@ -580,27 +525,13 @@ bool blade_device::set_freq(double freq, size_t chan, bool tx)
 
 bool blade_device::setTxFreq(double wFreq, size_t chan)
 {
-	uint16_t req_arfcn;
-	enum gsm_band req_band;
-
 	if (chan >= tx_freqs.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 	ScopedLock lock(tune_lock);
 
-	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100, 0);
-	if (req_arfcn == 0xffff) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Tx Frequency " << wFreq / 1000 << " kHz";
-		return false;
-	}
-	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
-		LOGCHAN(chan, DDEV, ALERT)
-			<< "Unknown GSM band for Tx Frequency " << wFreq << " Hz (ARFCN " << req_arfcn << " )";
-		return false;
-	}
-
-	if (!set_band(req_band))
+	if (!update_band_from_freq(wFreq, chan, true))
 		return false;
 
 	if (!set_freq(wFreq, chan, true))
@@ -611,27 +542,13 @@ bool blade_device::setTxFreq(double wFreq, size_t chan)
 
 bool blade_device::setRxFreq(double wFreq, size_t chan)
 {
-	uint16_t req_arfcn;
-	enum gsm_band req_band;
-
 	if (chan >= rx_freqs.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
 	ScopedLock lock(tune_lock);
 
-	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100, 1);
-	if (req_arfcn == 0xffff) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Rx Frequency " << wFreq / 1000 << " kHz";
-		return false;
-	}
-	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
-		LOGCHAN(chan, DDEV, ALERT)
-			<< "Unknown GSM band for Rx Frequency " << wFreq << " Hz (ARFCN " << req_arfcn << " )";
-		return false;
-	}
-
-	if (!set_band(req_band))
+	if (!update_band_from_freq(wFreq, chan, false))
 		return false;
 
 	return set_freq(wFreq, chan, false);

@@ -18,11 +18,13 @@
 #ifndef _LMS_DEVICE_H_
 #define _LMS_DEVICE_H_
 
+#include <map>
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #include "radioDevice.h"
+#include "bandmanager.h"
 #include "smpl_buf.h"
 
 #include <sys/time.h>
@@ -69,8 +71,35 @@ struct dev_band_desc {
 	double rxgain2rssioffset_rel; /* dB */
 };
 
+/* Device parameter descriptor */
+struct dev_desc {
+	/* Does LimeSuite allow switching the clock source for this device?
+	 * LimeSDR-Mini does not have switches but needs soldering to select
+	 * external/internal clock. Any call to LMS_SetClockFreq() will fail.
+	 */
+	bool clock_src_switchable;
+	/* Does LimeSuite allow using REF_INTERNAL for this device?
+	 * LimeNET-Micro does not like selecting internal clock
+	 */
+	bool clock_src_int_usable;
+	/* Sample rate coef (without having TX/RX samples per symbol into account) */
+	double rate;
+	/* Sample rate coef (without having TX/RX samples per symbol into account), if multi-arfcn is enabled */
+	double rate_multiarfcn;
+	/* Coefficient multiplied by TX sample rate in order to shift Tx time */
+	double ts_offset_coef;
+	/* Coefficient multiplied by TX sample rate in order to shift Tx time, if multi-arfcn is enabled */
+	double ts_offset_coef_multiarfcn;
+	/* Device Name Prefix as presented by LimeSuite API LMS_GetDeviceInfo() */
+	std::string desc_str;
+};
+
+using dev_band_key_t = std::tuple<lms_dev_type, gsm_band>;
+using power_map_t = std::map<dev_band_key_t, dev_band_desc>;
+using dev_map_t = std::map<lms_dev_type, struct dev_desc>;
+
 /** A class to handle a LimeSuite supported device */
-class LMSDevice:public RadioDevice {
+class LMSDevice:public RadioDevice, public band_manager<power_map_t, dev_map_t> {
 
 private:
 	lms_device_t *m_lms_dev;
@@ -87,9 +116,6 @@ private:
 	TIMESTAMP ts_initial, ts_offset;
 
 	std::vector<double> tx_gains, rx_gains;
-	bool band_ass_curr_sess; /* true if  "band" was set after last POWEROFF */
-	enum gsm_band band;
-	struct dev_band_desc band_desc;
 
 	enum lms_dev_type m_dev_type;
 
@@ -101,9 +127,6 @@ private:
 	void update_stream_stats_rx(size_t chan, bool *overrun);
 	void update_stream_stats_tx(size_t chan, bool *underrun);
 	bool do_clock_src_freq(enum ReferenceType ref, double freq);
-	void get_dev_band_desc(dev_band_desc& desc);
-	bool set_band(enum gsm_band req_band);
-	void assign_band_desc(enum gsm_band req_band);
 public:
 
 	/** Object constructor */

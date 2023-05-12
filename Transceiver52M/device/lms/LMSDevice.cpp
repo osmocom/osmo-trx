@@ -52,39 +52,16 @@ extern "C" {
 #define LMS_DEV_SDR_MINI_PREFIX_NAME "LimeSDR-Mini"
 #define LMS_DEV_NET_MICRO_PREFIX_NAME "LimeNET-Micro"
 
-/* Device parameter descriptor */
-struct dev_desc {
-	/* Does LimeSuite allow switching the clock source for this device?
-	 * LimeSDR-Mini does not have switches but needs soldering to select
-	 * external/internal clock. Any call to LMS_SetClockFreq() will fail.
-	 */
-	bool clock_src_switchable;
-	/* Does LimeSuite allow using REF_INTERNAL for this device?
-	 * LimeNET-Micro does not like selecting internal clock
-	 */
-	bool clock_src_int_usable;
-	/* Sample rate coef (without having TX/RX samples per symbol into account) */
-	double rate;
-	/* Sample rate coef (without having TX/RX samples per symbol into account), if multi-arfcn is enabled */
-	double rate_multiarfcn;
-	/* Coefficient multiplied by TX sample rate in order to shift Tx time */
-	double ts_offset_coef;
-	/* Coefficient multiplied by TX sample rate in order to shift Tx time, if multi-arfcn is enabled */
-	double ts_offset_coef_multiarfcn;
-	/* Device Name Prefix as presented by LimeSuite API LMS_GetDeviceInfo() */
-	std::string name_prefix;
-};
 
-static const std::map<enum lms_dev_type, struct dev_desc> dev_param_map {
+
+static const dev_map_t dev_param_map {
 	{ LMS_DEV_SDR_USB,   { true,  true,  GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, LMS_DEV_SDR_USB_PREFIX_NAME } },
 	{ LMS_DEV_SDR_MINI,  { false, true,  GSMRATE, MCBTS_SPACING, 8.9e-5, 8.2e-5, LMS_DEV_SDR_MINI_PREFIX_NAME } },
 	{ LMS_DEV_NET_MICRO, { true,  false, GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, LMS_DEV_NET_MICRO_PREFIX_NAME } },
 	{ LMS_DEV_UNKNOWN,   { true,  true,  GSMRATE, MCBTS_SPACING, 8.9e-5, 7.9e-5, "UNKNOWN" } },
 };
 
-typedef std::tuple<lms_dev_type, enum gsm_band> dev_band_key;
-typedef std::map<dev_band_key, dev_band_desc>::const_iterator dev_band_map_it;
-static const std::map<dev_band_key, dev_band_desc> dev_band_nom_power_param_map {
+static const power_map_t dev_band_nom_power_param_map {
 	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_850),	{ 73.0, 11.2,  -6.0  } },
 	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_900),	{ 73.0, 10.8,  -6.0  } },
 	{ std::make_tuple(LMS_DEV_SDR_USB, GSM_BAND_1800),	{ 65.0, -3.5,  -17.0 } }, /* FIXME: OS#4583: 1800Mhz is failing above TxGain=65, which is around -3.5dBm (already < 0 dBm) */
@@ -122,8 +99,8 @@ static enum lms_dev_type parse_dev_type(lms_device_t *m_lms_dev)
 		enum lms_dev_type dev_type = it->first;
 		struct dev_desc desc = it->second;
 
-		if (strncmp(device_info->deviceName, desc.name_prefix.c_str(), desc.name_prefix.length()) == 0) {
-			LOGC(DDEV, INFO) << "Device identified as " << desc.name_prefix;
+		if (strncmp(device_info->deviceName, desc.desc_str.c_str(), desc.desc_str.length()) == 0) {
+			LOGC(DDEV, INFO) << "Device identified as " << desc.desc_str;
 			return dev_type;
 		}
 		it++;
@@ -132,8 +109,9 @@ static enum lms_dev_type parse_dev_type(lms_device_t *m_lms_dev)
 }
 
 LMSDevice::LMSDevice(InterfaceType iface, const struct trx_cfg *cfg)
-	: RadioDevice(iface, cfg), m_lms_dev(NULL), started(false), band_ass_curr_sess(false), band((enum gsm_band)0),
-	  m_dev_type(LMS_DEV_UNKNOWN)
+	: RadioDevice(iface, cfg),
+	  band_manager(m_dev_type, dev_band_nom_power_param_map, dev_param_map, {LMS_DEV_SDR_USB, GSM_BAND_850}), m_lms_dev(NULL),
+	  started(false), m_dev_type(LMS_DEV_UNKNOWN)
 {
 	LOGC(DDEV, INFO) << "creating LMS device...";
 
@@ -218,47 +196,6 @@ int info_list_find(lms_info_str_t* info_list, unsigned int count, const std::str
 			return i;
 	}
 	return -1;
-}
-
-void LMSDevice::assign_band_desc(enum gsm_band req_band)
-{
-	dev_band_map_it it;
-
-	it = dev_band_nom_power_param_map.find(dev_band_key(m_dev_type, req_band));
-	if (it == dev_band_nom_power_param_map.end()) {
-		dev_desc desc = dev_param_map.at(m_dev_type);
-		LOGC(DDEV, ERROR) << "No Tx Power measurements exist for device "
-				    << desc.name_prefix << " on band " << gsm_band_name(req_band)
-				    << ", using LimeSDR-USB ones as fallback";
-		it = dev_band_nom_power_param_map.find(dev_band_key(LMS_DEV_SDR_USB, req_band));
-	}
-	OSMO_ASSERT(it != dev_band_nom_power_param_map.end());
-	band_desc = it->second;
-}
-
-bool LMSDevice::set_band(enum gsm_band req_band)
-{
-	if (band_ass_curr_sess && req_band != band) {
-		LOGC(DDEV, ALERT) << "Requesting band " << gsm_band_name(req_band)
-				  << " different from previous band " << gsm_band_name(band);
-		return false;
-	}
-
-	if (req_band != band) {
-		band = req_band;
-		assign_band_desc(band);
-	}
-	band_ass_curr_sess = true;
-	return true;
-}
-
-void LMSDevice::get_dev_band_desc(dev_band_desc& desc)
-{
-	if (band == 0) {
-		LOGC(DDEV, ERROR) << "Power parameters requested before Tx Frequency was set! Providing band 900 by default...";
-		assign_band_desc(GSM_BAND_900);
-	}
-	desc = band_desc;
 }
 
 int LMSDevice::open()
@@ -466,7 +403,7 @@ bool LMSDevice::stop()
 		LMS_DestroyStream(m_lms_dev, &m_lms_stream_rx[i]);
 	}
 
-	band_ass_curr_sess = false;
+	band_reset();
 
 	started = false;
 	return true;
@@ -483,8 +420,8 @@ bool LMSDevice::do_clock_src_freq(enum ReferenceType ref, double freq)
 		break;
 	case REF_INTERNAL:
 		if (!dev_desc.clock_src_int_usable) {
-			LOGC(DDEV, ERROR) << "Device type " << dev_desc.name_prefix
-					  << " doesn't support internal reference clock";
+			LOGC(DDEV, ERROR)
+				<< "Device type " << dev_desc.desc_str << " doesn't support internal reference clock";
 			return false;
 		}
 		/* According to lms using LMS_CLOCK_EXTREF with a
@@ -502,8 +439,8 @@ bool LMSDevice::do_clock_src_freq(enum ReferenceType ref, double freq)
 		if (LMS_SetClockFreq(m_lms_dev, lms_clk_id, freq) < 0)
 			return false;
 	} else {
-		LOGC(DDEV, INFO) << "Device type " << dev_desc.name_prefix
-				 << " doesn't support switching clock source through SW";
+		LOGC(DDEV, INFO)
+			<< "Device type " << dev_desc.desc_str << " doesn't support switching clock source through SW";
 	}
 
 	return true;
@@ -996,9 +933,6 @@ bool LMSDevice::updateAlignment(TIMESTAMP timestamp)
 
 bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 {
-	uint16_t req_arfcn;
-	enum gsm_band req_band;
-
 	if (chan >= chans) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
@@ -1006,18 +940,7 @@ bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 
 	LOGCHAN(chan, DDEV, NOTICE) << "Setting Tx Freq to " << wFreq << " Hz";
 
-	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100 , 0);
-	if (req_arfcn == 0xffff) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Tx Frequency " << wFreq / 1000 << " kHz";
-		return false;
-	}
-	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Tx Frequency " << wFreq
-					   << " Hz (ARFCN " << req_arfcn << " )";
-		return false;
-	}
-
-	if (!set_band(req_band))
+	if (!update_band_from_freq(wFreq, chan, true))
 		return false;
 
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_TX, chan, wFreq) < 0) {
@@ -1030,23 +953,9 @@ bool LMSDevice::setTxFreq(double wFreq, size_t chan)
 
 bool LMSDevice::setRxFreq(double wFreq, size_t chan)
 {
-	uint16_t req_arfcn;
-	enum gsm_band req_band;
-
 	LOGCHAN(chan, DDEV, NOTICE) << "Setting Rx Freq to " << wFreq << " Hz";
 
-	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100, 1);
-	if (req_arfcn == 0xffff) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Rx Frequency " << wFreq / 1000 << " kHz";
-		return false;
-	}
-	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Rx Frequency " << wFreq
-					   << " Hz (ARFCN " << req_arfcn << " )";
-		return false;
-	}
-
-	if (!set_band(req_band))
+	if (!update_band_from_freq(wFreq, chan, false))
 		return false;
 
 	if (LMS_SetLOFrequency(m_lms_dev, LMS_CH_RX, chan, wFreq) < 0) {

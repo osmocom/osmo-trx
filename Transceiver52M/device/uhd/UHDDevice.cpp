@@ -91,19 +91,7 @@ extern "C" {
  *   USRP1 with timestamps is not supported by UHD.
  */
 
-/* Device Type, Tx-SPS, Rx-SPS */
-typedef std::tuple<uhd_dev_type, int, int> dev_key;
-
-/* Device parameter descriptor */
-struct dev_desc {
-	unsigned channels;
-	double mcr;
-	double rate;
-	double offset;
-	std::string str;
-};
-
-static const std::map<dev_key, dev_desc> dev_param_map {
+static const dev_map_t dev_param_map {
 	{ std::make_tuple(USRP2, 1, 1), { 1, 0.0,  390625,  1.2184e-4,  "N2XX 1 SPS"         } },
 	{ std::make_tuple(USRP2, 4, 1), { 1, 0.0,  390625,  7.6547e-5,  "N2XX 4/1 Tx/Rx SPS" } },
 	{ std::make_tuple(USRP2, 4, 4), { 1, 0.0,  390625,  4.6080e-5,  "N2XX 4 SPS"         } },
@@ -129,9 +117,7 @@ static const std::map<dev_key, dev_desc> dev_param_map {
 	{ std::make_tuple(B2XX_MCBTS, 4, 4), { 1, 51.2e6, MCBTS_SPACING*4, B2XX_TIMING_MCBTS, "B200/B210 4 SPS Multi-ARFCN" } },
 };
 
-typedef std::tuple<uhd_dev_type, enum gsm_band> dev_band_key;
-typedef std::map<dev_band_key, dev_band_desc>::const_iterator dev_band_map_it;
-static const std::map<dev_band_key, dev_band_desc> dev_band_nom_power_param_map {
+static const power_map_t dev_band_nom_power_param_map {
 	{ std::make_tuple(B200, GSM_BAND_850),	{ 89.75, 13.3, -7.5  } },
 	{ std::make_tuple(B200, GSM_BAND_900),	{ 89.75, 13.3, -7.5  } },
 	{ std::make_tuple(B200, GSM_BAND_1800),	{ 89.75, 7.5,  -11.0 } },
@@ -221,8 +207,8 @@ static double TxPower2TxGain(const dev_band_desc &desc, double tx_power_dbm)
 }
 
 uhd_device::uhd_device(InterfaceType iface, const struct trx_cfg *cfg)
-	: RadioDevice(iface, cfg), rx_gain_min(0.0), rx_gain_max(0.0), band_ass_curr_sess(false),
-	  band((enum gsm_band)0), tx_spp(0), rx_spp(0), started(false), aligned(false), drop_cnt(0), prev_ts(0, 0),
+	: RadioDevice(iface, cfg), band_manager(dev_band_nom_power_param_map, dev_param_map), rx_gain_min(0.0),
+	  rx_gain_max(0.0), tx_spp(0), rx_spp(0), started(false), aligned(false), drop_cnt(0), prev_ts(0, 0),
 	  ts_initial(0), ts_offset(0), async_event_thrd(NULL)
 {
 }
@@ -233,47 +219,6 @@ uhd_device::~uhd_device()
 
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		delete rx_buffers[i];
-}
-
-void uhd_device::assign_band_desc(enum gsm_band req_band)
-{
-	dev_band_map_it it;
-
-	it = dev_band_nom_power_param_map.find(dev_band_key(dev_type, req_band));
-	if (it == dev_band_nom_power_param_map.end()) {
-		dev_desc desc = dev_param_map.at(dev_key(dev_type, tx_sps, rx_sps));
-		LOGC(DDEV, ERROR) << "No Power parameters exist for device "
-				    << desc.str << " on band " << gsm_band_name(req_band)
-				    << ", using B210 ones as fallback";
-		it = dev_band_nom_power_param_map.find(dev_band_key(B210, req_band));
-	}
-	OSMO_ASSERT(it != dev_band_nom_power_param_map.end())
-	band_desc = it->second;
-}
-
-bool uhd_device::set_band(enum gsm_band req_band)
-{
-	if (band_ass_curr_sess && req_band != band) {
-		LOGC(DDEV, ALERT) << "Requesting band " << gsm_band_name(req_band)
-				  << " different from previous band " << gsm_band_name(band);
-		return false;
-	}
-
-	if (req_band != band) {
-		band = req_band;
-		assign_band_desc(band);
-	}
-	band_ass_curr_sess = true;
-	return true;
-}
-
-void uhd_device::get_dev_band_desc(dev_band_desc& desc)
-{
-	if (band == 0) {
-		LOGC(DDEV, ERROR) << "Power parameters requested before Tx Frequency was set! Providing band 900 by default...";
-		assign_band_desc(GSM_BAND_900);
-	}
-	desc = band_desc;
 }
 
 void uhd_device::init_gains()
@@ -340,7 +285,7 @@ void uhd_device::set_rates()
 	rx_rate = usrp_dev->get_rx_rate();
 
 	ts_offset = static_cast<TIMESTAMP>(desc.offset * rx_rate);
-	LOGC(DDEV, INFO) << "Rates configured for " << desc.str;
+	LOGC(DDEV, INFO) << "Rates configured for " << desc.desc_str;
 }
 
 double uhd_device::setRxGain(double db, size_t chan)
@@ -791,7 +736,7 @@ bool uhd_device::stop()
 	for (size_t i = 0; i < rx_buffers.size(); i++)
 		rx_buffers[i]->reset();
 
-	band_ass_curr_sess = false;
+	band_reset();
 
 	started = false;
 	return true;
@@ -1031,17 +976,19 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 {
 	std::vector<double> freqs;
 	uhd::tune_result_t tres;
+	std::string str_dir = tx ? "Tx" : "Rx";
+
+	if (!update_band_from_freq(freq, chan, tx))
+		return false;
+
 	uhd::tune_request_t treq = select_freq(freq, chan, tx);
-	std::string str_dir;
 
 	if (tx) {
 		tres = usrp_dev->set_tx_freq(treq, chan);
 		tx_freqs[chan] = usrp_dev->get_tx_freq(chan);
-		str_dir = "Tx";
 	} else {
 		tres = usrp_dev->set_rx_freq(treq, chan);
 		rx_freqs[chan] = usrp_dev->get_rx_freq(chan);
-		str_dir = "Rx";
 	}
 	LOGCHAN(chan, DDEV, INFO) << "set_freq(" << freq << ", " << str_dir << "): " << tres.to_pp_string() << std::endl;
 
@@ -1071,59 +1018,20 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 
 bool uhd_device::setTxFreq(double wFreq, size_t chan)
 {
-	uint16_t req_arfcn;
-	enum gsm_band req_band;
-
 	if (chan >= tx_freqs.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
-	ScopedLock lock(tune_lock);
 
-	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100 , 0);
-	if (req_arfcn == 0xffff) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Tx Frequency " << wFreq / 1000 << " kHz";
-		return false;
-	}
-	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Tx Frequency " << wFreq
-					   << " Hz (ARFCN " << req_arfcn << " )";
-		return false;
-	}
-
-	if (!set_band(req_band))
-		return false;
-
-	if (!set_freq(wFreq, chan, true))
-		return false;
-
-	return true;
+	return set_freq(wFreq, chan, true);
 }
 
 bool uhd_device::setRxFreq(double wFreq, size_t chan)
 {
-	uint16_t req_arfcn;
-	enum gsm_band req_band;
-
 	if (chan >= rx_freqs.size()) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel " << chan;
 		return false;
 	}
-	ScopedLock lock(tune_lock);
-
-	req_arfcn = gsm_freq102arfcn(wFreq / 1000 / 100, 1);
-	if (req_arfcn == 0xffff) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown ARFCN for Rx Frequency " << wFreq / 1000 << " kHz";
-		return false;
-	}
-	if (gsm_arfcn2band_rc(req_arfcn, &req_band) < 0) {
-		LOGCHAN(chan, DDEV, ALERT) << "Unknown GSM band for Rx Frequency " << wFreq
-					   << " Hz (ARFCN " << req_arfcn << " )";
-		return false;
-	}
-
-	if (!set_band(req_band))
-		return false;
 
 	return set_freq(wFreq, chan, false);
 }
