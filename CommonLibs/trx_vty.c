@@ -285,6 +285,60 @@ DEFUN_ATTR(cfg_ul_fn_offset, cfg_ul_fn_offset_cmd,
 	return CMD_SUCCESS;
 }
 
+DEFUN_ATTR(cfg_ul_freq_override, cfg_ul_freq_override_cmd,
+	   "ul-freq-override FLOAT",
+	   "Overrides Rx carrier frequency\n"
+	   "Frequency in Hz (e.g. 145300000)\n",
+	   CMD_ATTR_HIDDEN)
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.overrides.ul_freq_override = true;
+	trx->cfg.overrides.ul_freq = atof(argv[0]);
+
+	return CMD_SUCCESS;
+}
+DEFUN_ATTR(cfg_dl_freq_override, cfg_dl_freq_override_cmd,
+	   "dl-freq-override FLOAT",
+	   "Overrides Tx carrier frequency\n"
+	   "Frequency in Hz (e.g. 145300000)\n",
+	   CMD_ATTR_HIDDEN)
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.overrides.dl_freq_override = true;
+	trx->cfg.overrides.dl_freq = atof(argv[0]);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN_ATTR(cfg_ul_gain_override, cfg_ul_gain_override_cmd,
+	   "ul-gain-override FLOAT",
+	   "Overrides Rx gain\n"
+	   "gain in dB\n",
+	   CMD_ATTR_HIDDEN)
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.overrides.ul_gain_override = true;
+	trx->cfg.overrides.ul_gain = atof(argv[0]);
+
+	return CMD_SUCCESS;
+}
+DEFUN_ATTR(cfg_dl_gain_override, cfg_dl_gain_override_cmd,
+	   "dl-gain-override FLOAT",
+	   "Overrides Tx gain\n"
+	   "gain in dB\n",
+	   CMD_ATTR_HIDDEN)
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.overrides.dl_gain_override = true;
+	trx->cfg.overrides.dl_gain = atof(argv[0]);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_swap_channels, cfg_swap_channels_cmd,
 	"swap-channels (disable|enable)",
 	"Swap primary and secondary channels of the PHY (if any)\n"
@@ -638,6 +692,14 @@ static int config_write_trx(struct vty *vty)
 		vty_out(vty, " stack-size %u%s", trx->cfg.stack_size, VTY_NEWLINE);
 	if (trx->cfg.ul_fn_offset != 0)
 		vty_out(vty, " ul-fn-offset %d%s", trx->cfg.ul_fn_offset, VTY_NEWLINE);
+	if (trx->cfg.overrides.dl_freq_override)
+		vty_out(vty, " dl-freq-override %f%s", trx->cfg.overrides.dl_freq, VTY_NEWLINE);
+	if (trx->cfg.overrides.ul_freq_override)
+		vty_out(vty, " ul-freq-override %f%s", trx->cfg.overrides.ul_freq, VTY_NEWLINE);
+	if (trx->cfg.overrides.dl_gain_override)
+		vty_out(vty, " dl-gain-override %f%s", trx->cfg.overrides.dl_gain, VTY_NEWLINE);
+	if (trx->cfg.overrides.ul_gain_override)
+		vty_out(vty, " ul-gain-override %f%s", trx->cfg.overrides.ul_gain, VTY_NEWLINE);
 	trx_rate_ctr_threshold_write_config(vty, " ");
 
 	for (i = 0; i < trx->cfg.num_chans; i++) {
@@ -803,6 +865,10 @@ int trx_vty_init(struct trx_ctx* trx)
 
 	install_element(TRX_NODE, &cfg_chan_cmd);
 	install_element(TRX_NODE, &cfg_ul_fn_offset_cmd);
+	install_element(TRX_NODE, &cfg_ul_freq_override_cmd);
+	install_element(TRX_NODE, &cfg_dl_freq_override_cmd);
+	install_element(TRX_NODE, &cfg_ul_gain_override_cmd);
+	install_element(TRX_NODE, &cfg_dl_gain_override_cmd);
 	install_node(&chan_node, dummy_config_write);
 	install_element(CHAN_NODE, &cfg_chan_rx_path_cmd);
 	install_element(CHAN_NODE, &cfg_chan_tx_path_cmd);

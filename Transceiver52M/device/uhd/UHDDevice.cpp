@@ -295,6 +295,9 @@ double uhd_device::setRxGain(double db, size_t chan)
 		return 0.0f;
 	}
 
+	if (cfg->overrides.ul_gain_override)
+		return rx_gains[chan];
+
 	usrp_dev->set_rx_gain(db, chan);
 	rx_gains[chan] = usrp_dev->get_rx_gain(chan);
 
@@ -336,6 +339,9 @@ double uhd_device::setPowerAttenuation(int atten, size_t chan) {
 		LOGC(DDEV, ALERT) << "Requested non-existent channel" << chan;
 		return 0.0f;
 	}
+
+	if (cfg->overrides.dl_gain_override)
+		return atten; // ensures caller does not apply digital attenuation
 
 	get_dev_band_desc(desc);
 	tx_power = desc.nom_out_tx_power - atten;
@@ -625,6 +631,32 @@ int uhd_device::open()
 
 	// Print configuration
 	LOGC(DDEV, INFO) << "Device configuration: " << usrp_dev->get_pp_string();
+
+	if (cfg->overrides.dl_freq_override) {
+		uhd::tune_request_t treq_tx = uhd::tune_request_t(cfg->overrides.dl_freq, 0);
+		auto tres = usrp_dev->set_tx_freq(treq_tx, 0);
+		tx_freqs[0] = usrp_dev->get_tx_freq(0);
+		LOGCHAN(0, DDEV, INFO) << "OVERRIDE set_freq(" << tx_freqs[0] << ", TX): " << tres.to_pp_string() << std::endl;
+	}
+
+	if (cfg->overrides.ul_freq_override) {
+		uhd::tune_request_t treq_rx = uhd::tune_request_t(cfg->overrides.ul_freq, 0);
+		auto tres = usrp_dev->set_rx_freq(treq_rx, 0);
+		rx_freqs[0] = usrp_dev->get_rx_freq(0);
+		LOGCHAN(0, DDEV, INFO) << "OVERRIDE set_freq(" << rx_freqs[0] << ", RX): " << tres.to_pp_string() << std::endl;
+	}
+
+	if (cfg->overrides.ul_gain_override) {
+		usrp_dev->set_rx_gain(cfg->overrides.ul_gain, 0);
+		rx_gains[0] = usrp_dev->get_rx_gain(0);
+		LOGCHAN(0, DDEV, INFO) << " OVERRIDE RX gain:" << rx_gains[0] << std::endl;
+	}
+
+	if (cfg->overrides.dl_gain_override) {
+		usrp_dev->set_tx_gain(cfg->overrides.dl_gain, 0);
+		tx_gains[0] = usrp_dev->get_tx_gain(0);
+		LOGCHAN(0, DDEV, INFO) << " OVERRIDE TX gain:" << tx_gains[0] << std::endl;
+	}
 
 	if (iface == MULTI_ARFCN)
 		return MULTI_ARFCN;
@@ -977,6 +1009,9 @@ bool uhd_device::set_freq(double freq, size_t chan, bool tx)
 	std::vector<double> freqs;
 	uhd::tune_result_t tres;
 	std::string str_dir = tx ? "Tx" : "Rx";
+
+	if (cfg->overrides.dl_freq_override || cfg->overrides.ul_freq_override)
+		return true;
 
 	if (!update_band_from_freq(freq, chan, tx))
 		return false;

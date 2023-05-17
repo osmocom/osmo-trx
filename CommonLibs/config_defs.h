@@ -57,4 +57,14 @@ struct trx_cfg {
 	unsigned int stack_size;
 	unsigned int num_chans;
 	struct trx_chan chans[TRX_CHAN_MAX];
+	struct {
+		bool ul_freq_override;
+		bool dl_freq_override;
+		bool ul_gain_override;
+		bool dl_gain_override;
+		double ul_freq;
+		double dl_freq;
+		double ul_gain;
+		double dl_gain;
+	} overrides;
 };
