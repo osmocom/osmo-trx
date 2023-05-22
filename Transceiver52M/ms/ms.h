@@ -289,7 +289,7 @@ struct ms_trx : public BASET {
 
 	bool handle_sch_or_nb();
 	bool handle_sch(bool first = false);
-	bool decode_sch(float *bits, bool update_global_clock);
+	bool decode_sch(char *bits, bool update_global_clock);
 	SCH_STATE search_for_sch(dev_buf_t *rcd);
 	void grab_bursts(dev_buf_t *rcd);
 

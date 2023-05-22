@@ -51,15 +51,16 @@ extern "C" {
 #endif
 
 #define PRINT_Q_OVERFLOW
-bool ms_trx::decode_sch(float *bits, bool update_global_clock)
+
+bool ms_trx::decode_sch(char *bits, bool update_global_clock)
 {
 	int fn;
 	struct sch_info sch;
 	ubit_t info[GSM_SCH_INFO_LEN];
 	sbit_t data[GSM_SCH_CODED_LEN];
 
-	float_to_sbit(&bits[3], &data[0], 1, 39);
-	float_to_sbit(&bits[106], &data[39], 1, 39);
+	memcpy(&data[0], &bits[3], 39);
+	memcpy(&data[39], &bits[106], 39);
 
 	if (!gsm_sch_decode(info, data)) {
 		gsm_sch_parse(info, &sch);
@@ -171,12 +172,7 @@ bool ms_trx::handle_sch(bool is_first_sch_acq)
 	}
 	detect_burst(&ss[start], &channel_imp_resp[0], 0, sch_demod_bits);
 
-	SoftVector bitss(148);
-	for (int i = 0; i < 148; i++) {
-		bitss[i] = (sch_demod_bits[i]);
-	}
-
-	auto sch_decode_success = decode_sch(bitss.begin(), is_first_sch_acq);
+	auto sch_decode_success = decode_sch(sch_demod_bits, is_first_sch_acq);
 
 	if (sch_decode_success) {
 		const auto ts_offset_symb = 0;
