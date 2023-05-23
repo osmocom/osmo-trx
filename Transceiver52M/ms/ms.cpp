@@ -279,13 +279,13 @@ void ms_trx::start()
 	if (stop_lower_threads_flag)
 		return;
 	auto fn = get_rx_burst_handler_fn(rx_bh());
-	rx_task = std::thread(fn);
-	set_name_aff_sched(rx_task.native_handle(), sched_params::thread_names::RXRUN);
+	lower_rx_task = std::thread(fn);
+	set_name_aff_sched(lower_rx_task.native_handle(), sched_params::thread_names::RXRUN);
 
 	usleep(1000);
 	auto fn2 = get_tx_burst_handler_fn(tx_bh());
-	tx_task = std::thread(fn2);
-	set_name_aff_sched(tx_task.native_handle(), sched_params::thread_names::TXRUN);
+	lower_tx_task = std::thread(fn2);
+	set_name_aff_sched(lower_tx_task.native_handle(), sched_params::thread_names::TXRUN);
 
 	actually_enable_streams();
 }
@@ -301,9 +301,9 @@ void ms_trx::stop_threads()
 	stop_lower_threads_flag = true;
 	close_device();
 	std::cerr << "dev closed..." << std::endl;
-	rx_task.join();
+	lower_rx_task.join();
 	std::cerr << "L rx dead..." << std::endl;
-	tx_task.join();
+	lower_tx_task.join();
 	std::cerr << "L tx dead..." << std::endl;
 }
 

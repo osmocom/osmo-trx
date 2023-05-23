@@ -245,8 +245,8 @@ struct ms_trx : public BASET {
 	int timing_advance;
 	bool do_auto_gain;
 
-	std::thread rx_task;
-	std::thread tx_task;
+	std::thread lower_rx_task;
+	std::thread lower_tx_task;
 	std::thread *calcrval_task;
 
 	// provides bursts to upper rx thread
