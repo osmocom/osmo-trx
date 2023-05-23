@@ -200,6 +200,40 @@ class time_keeper {
 	}
 };
 
+static struct sched_params {
+	enum thread_names { U_CTL = 0, U_RX, U_TX, SCH_SEARCH, MAIN, LEAKCHECK, RXRUN, TXRUN, _THRD_NAME_COUNT };
+	enum target { ODROID = 0, PI4 };
+	const char *name;
+	int core;
+	int schedtype;
+	int prio;
+} schdp[][sched_params::_THRD_NAME_COUNT]{
+	{
+		{ "upper_ctrl", 2, SCHED_RR, sched_get_priority_max(SCHED_RR) },
+		{ "upper_rx", 2, SCHED_RR, sched_get_priority_max(SCHED_RR) - 5 },
+		{ "upper_tx", 2, SCHED_RR, sched_get_priority_max(SCHED_RR) - 1 },
+
+		{ "sch_search", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5 },
+		{ "main", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5 },
+		{ "leakcheck", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 10 },
+
+		{ "rxrun", 4, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 2 },
+		{ "txrun", 5, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 1 },
+	},
+	{
+		{ "upper_ctrl", 1, SCHED_RR, sched_get_priority_max(SCHED_RR) },
+		{ "upper_rx", 1, SCHED_RR, sched_get_priority_max(SCHED_RR) - 5 },
+		{ "upper_tx", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 1 },
+
+		{ "sch_search", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5 },
+		{ "main", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5 },
+		{ "leakcheck", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 10 },
+
+		{ "rxrun", 2, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 2 },
+		{ "txrun", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 1 },
+	},
+};
+
 using ts_hitter_q_t = spsc_cond<64, GSM::Time, true, false>;
 
 struct ms_trx : public BASET {
@@ -230,6 +264,8 @@ struct ms_trx : public BASET {
 	int64_t first_sch_ts_start = -1;
 
 	time_keeper timekeeper;
+	int hw_cpus;
+	sched_params::target hw_target;
 
 	void start();
 	std::atomic<bool> upper_is_ready;
@@ -250,8 +286,11 @@ struct ms_trx : public BASET {
 
 	ms_trx()
 		: timing_advance(0), do_auto_gain(false), rxqueue(), first_sch_buf(new blade_sample_type[SCH_LEN_SPS]),
-		  burst_copy_buffer(new blade_sample_type[ONE_TS_BURST_LEN]), rcv_done{ false }, sch_thread_done{ false }
+		  burst_copy_buffer(new blade_sample_type[ONE_TS_BURST_LEN]), rcv_done{ false },
+		  sch_thread_done{ false }, hw_cpus(std::thread::hardware_concurrency()),
+		  hw_target(hw_cpus > 4 ? sched_params::target::ODROID : sched_params::target::PI4)
 	{
+		std::cerr << "scheduling for: " << (hw_cpus > 4 ? "odroid" : "pi4") << std::endl;
 	}
 
 	virtual ~ms_trx()
@@ -269,11 +308,19 @@ struct ms_trx : public BASET {
 		timing_advance = val * 4;
 	}
 
-	void set_name_aff_sched(const char *name, int cpunum, int schedtype, int prio)
+	void set_name_aff_sched(sched_params::thread_names name)
 	{
-		set_name_aff_sched(pthread_self(), name, cpunum, schedtype, prio);
+		set_name_aff_sched(pthread_self(), name);
 	}
 
+	void set_name_aff_sched(std::thread::native_handle_type h, sched_params::thread_names name)
+	{
+		auto tgt = schdp[hw_target][name];
+		// std::cerr << "scheduling for: " << tgt.name << ":" << tgt.core << std::endl;
+		set_name_aff_sched(h, tgt.name, tgt.core, tgt.schedtype, tgt.prio);
+	}
+
+    private:
 	void set_name_aff_sched(std::thread::native_handle_type h, const char *name, int cpunum, int schedtype,
 				int prio)
 	{
@@ -284,16 +331,14 @@ struct ms_trx : public BASET {
 		CPU_ZERO(&cpuset);
 		CPU_SET(cpunum, &cpuset);
 
-		auto rv = pthread_setaffinity_np(h, sizeof(cpuset), &cpuset);
-		if (rv < 0) {
+		if (pthread_setaffinity_np(h, sizeof(cpuset), &cpuset) < 0) {
 			std::cerr << name << " affinity: errreur! " << std::strerror(errno);
 			return exit(0);
 		}
 
 		sched_param sch_params;
 		sch_params.sched_priority = prio;
-		rv = pthread_setschedparam(h, schedtype, &sch_params);
-		if (rv < 0) {
+		if (pthread_setschedparam(h, schedtype, &sch_params) < 0) {
 			std::cerr << name << " sched: errreur! " << std::strerror(errno);
 			return exit(0);
 		}

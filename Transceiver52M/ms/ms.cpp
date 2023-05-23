@@ -278,12 +278,13 @@ void ms_trx::start()
 {
 	auto fn = get_rx_burst_handler_fn(rx_bh());
 	rx_task = std::thread(fn);
-	set_name_aff_sched(rx_task.native_handle(), "rxrun", 2, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 2);
+	set_name_aff_sched(rx_task.native_handle(), sched_params::thread_names::RXRUN);
 
 	usleep(1000);
 	auto fn2 = get_tx_burst_handler_fn(tx_bh());
 	tx_task = std::thread(fn2);
-	set_name_aff_sched(tx_task.native_handle(), "txrun", 2, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 1);
+	set_name_aff_sched(tx_task.native_handle(), sched_params::thread_names::TXRUN);
+
 }
 
 void ms_trx::set_upper_ready(bool is_ready)

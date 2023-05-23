@@ -97,14 +97,14 @@ std::atomic<bool> g_exit_flag;
 void upper_trx::start_threads()
 {
 	thr_control = std::thread([this] {
-		set_name_aff_sched("upper_ctrl", 1, SCHED_RR, sched_get_priority_max(SCHED_RR));
+		set_name_aff_sched(sched_params::thread_names::U_CTL);
 		while (!g_exit_flag) {
 			driveControl();
 		}
 	});
 	msleep(1);
 	thr_tx = std::thread([this] {
-		set_name_aff_sched("upper_tx", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 1);
+		set_name_aff_sched(sched_params::thread_names::U_TX);
 		while (!g_exit_flag) {
 			driveTx();
 		}
@@ -113,7 +113,7 @@ void upper_trx::start_threads()
 	// atomic ensures data is not written to q until loop reads
 	start_lower_ms();
 
-	set_name_aff_sched("upper_rx", 1, SCHED_FIFO, sched_get_priority_max(SCHED_RR) - 5);
+	set_name_aff_sched(sched_params::thread_names::U_RX);
 	while (!g_exit_flag) {
 		// set_upper_ready(true);
 		driveReceiveFIFO();
@@ -128,7 +128,7 @@ void upper_trx::start_threads()
 
 #ifdef LSANDEBUG
 	std::thread([this] {
-		set_name_aff_sched("leakcheck", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 10);
+		set_name_aff_sched(sched_params::thread_names::LEAKCHECK);
 
 		while (1) {
 			std::this_thread::sleep_for(std::chrono::seconds{ 5 });
@@ -485,7 +485,7 @@ int main(int argc, char *argv[])
 		std::cerr << "Error initializing hardware, quitting.." << std::endl;
 		return -1;
 	}
-	trx->set_name_aff_sched("main", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5);
+	trx->set_name_aff_sched(sched_params::thread_names::MAIN);
 
 	if (!trxcon::trxc_l1ctl_init(tall_trxcon_ctx)) {
 		std::cerr << "Error initializing l1ctl, quitting.." << std::endl;

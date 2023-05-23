@@ -235,7 +235,7 @@ SCH_STATE ms_trx::search_for_sch(dev_buf_t *rcd)
 		sch_pos = 0;
 		rcv_done = true;
 		std::thread([this] {
-			set_name_aff_sched("sch_search", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5);
+			set_name_aff_sched(sched_params::thread_names::SCH_SEARCH);
 
 			auto ptr = reinterpret_cast<const int16_t *>(first_sch_buf);
 			const auto target_val = rxFullScale / 8;
