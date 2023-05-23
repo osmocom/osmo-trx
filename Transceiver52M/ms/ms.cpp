@@ -276,6 +276,8 @@ bh_fn_t ms_trx::tx_bh()
 
 void ms_trx::start()
 {
+	if (stop_me_flag)
+		return;
 	auto fn = get_rx_burst_handler_fn(rx_bh());
 	rx_task = std::thread(fn);
 	set_name_aff_sched(rx_task.native_handle(), sched_params::thread_names::RXRUN);
@@ -285,6 +287,7 @@ void ms_trx::start()
 	tx_task = std::thread(fn2);
 	set_name_aff_sched(tx_task.native_handle(), sched_params::thread_names::TXRUN);
 
+	actually_enable_streams();
 }
 
 void ms_trx::set_upper_ready(bool is_ready)
@@ -294,11 +297,14 @@ void ms_trx::set_upper_ready(bool is_ready)
 
 void ms_trx::stop_threads()
 {
-	std::cerr << "killing threads...\r\n" << std::endl;
+	std::cerr << "killing threads..." << std::endl;
 	stop_me_flag = true;
 	close_device();
+	std::cerr << "dev closed..." << std::endl;
 	rx_task.join();
+	std::cerr << "L rx dead..." << std::endl;
 	tx_task.join();
+	std::cerr << "L tx dead..." << std::endl;
 }
 
 void ms_trx::submit_burst(blade_sample_type *buffer, int len, GSM::Time target)

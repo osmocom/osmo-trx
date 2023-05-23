@@ -185,6 +185,11 @@ struct uhd_hw {
 		return 0;
 	}
 
+	void actually_enable_streams()
+	{
+		// nop: stream cmd in handler
+	}
+
 	void *rx_cb(bh_fn_t burst_handler)
 	{
 		void *ret = nullptr;

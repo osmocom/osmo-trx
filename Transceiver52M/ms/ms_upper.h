@@ -43,6 +43,7 @@ class upper_trx : public ms_trx {
     public:
 	void start_threads();
 	void start_lower_ms();
+	void stop_upper_threads();
 
 	upper_trx(){};
 };

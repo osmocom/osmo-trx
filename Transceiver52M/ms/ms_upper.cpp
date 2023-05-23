@@ -94,6 +94,17 @@ extern "C" void trxc_log_init(void *tallctx);
 
 std::atomic<bool> g_exit_flag;
 
+void upper_trx::stop_upper_threads()
+{
+	g_exit_flag = true;
+
+	if (thr_control.joinable())
+		thr_control.join();
+	if (thr_rx.joinable())
+		thr_rx.join();
+	if (thr_tx.joinable())
+		thr_tx.join();
+}
 void upper_trx::start_threads()
 {
 	thr_control = std::thread([this] {
@@ -101,6 +112,7 @@ void upper_trx::start_threads()
 		while (!g_exit_flag) {
 			driveControl();
 		}
+		std::cerr << "exit control!" << std::endl;
 	});
 	msleep(1);
 	thr_tx = std::thread([this] {
@@ -108,6 +120,7 @@ void upper_trx::start_threads()
 		while (!g_exit_flag) {
 			driveTx();
 		}
+		std::cerr << "exit tx U!" << std::endl;
 	});
 
 	// atomic ensures data is not written to q until loop reads
@@ -115,7 +128,8 @@ void upper_trx::start_threads()
 
 	set_name_aff_sched(sched_params::thread_names::U_RX);
 	while (!g_exit_flag) {
-		// set_upper_ready(true);
+		// set_upper_ready(true) needs to happen during cmd handling:
+		// the main loop is driven by rx, so unless rx is on AND transceiver is on we get stuck..
 		driveReceiveFIFO();
 		trxcon::osmo_select_main(1);
 
@@ -125,6 +139,9 @@ void upper_trx::start_threads()
 			trxcon_phyif_handle_rsp(trxcon::g_trxcon, &r);
 		}
 	}
+	set_upper_ready(false);
+	std::cerr << "exit rx U!" << std::endl;
+	mOn = false;
 
 #ifdef LSANDEBUG
 	std::thread([this] {
@@ -267,8 +284,7 @@ void upper_trx::driveTx()
 
 	// ensure our tx cb is tickled and can exit
 	if (g_exit_flag) {
-		blade_sample_type dummy[10] = {};
-		submit_burst_ts(dummy, 10, 1);
+		submit_burst_ts(0, 1337, 1);
 		return;
 	}
 
@@ -360,10 +376,9 @@ bool upper_trx::driveControl()
 		set_ta(0);
 		break;
 	case trxcon::TRXCON_PHYIF_CMDT_POWERON:
-
 		if (!mOn) {
-			set_upper_ready(true);
 			mOn = true;
+			set_upper_ready(true);
 		}
 		break;
 	case trxcon::TRXCON_PHYIF_CMDT_POWEROFF:
@@ -444,7 +459,7 @@ int trxcon_l1ctl_send(struct trxcon::trxcon_inst *trxcon, struct trxcon::msgb *m
 void sighandler(int sigset)
 {
 	// we might get a sigpipe in case the l1ctl ud socket disconnects because mobile quits
-	if (sigset == SIGPIPE) {
+	if (sigset == SIGPIPE || sigset == SIGINT) {
 		g_exit_flag = true;
 
 		// we know the flag is atomic and it prevents the trxcon cb handlers from writing
@@ -453,6 +468,7 @@ void sighandler(int sigset)
 		trxcon::internal_q_tx_buf b = {};
 		trxcon::txq.spsc_push(&b);
 		trxcon::cmdq_to_phy.spsc_push(&cmd);
+		msleep(200);
 
 		return;
 	}
@@ -462,6 +478,7 @@ int main(int argc, char *argv[])
 {
 	auto tall_trxcon_ctx = talloc_init("trxcon context");
 	signal(SIGPIPE, sighandler);
+	signal(SIGINT, sighandler);
 
 	trxcon::msgb_talloc_ctx_init(tall_trxcon_ctx, 0);
 	trxc_log_init(tall_trxcon_ctx);
@@ -492,8 +509,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	// blocking, will return when global exit is requested
 	trx->start_threads();
+
 	trx->stop_threads();
+	trx->stop_upper_threads();
 
 	return status;
 }

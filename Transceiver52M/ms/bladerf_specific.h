@@ -293,10 +293,10 @@ struct blade_hw {
 		setRxGain(rxgain, 0);
 		setTxGain(txgain, 0);
 		usleep(1000);
-		blade_check(bladerf_enable_module, dev, BLADERF_MODULE_RX, true);
-		usleep(1000);
-		blade_check(bladerf_enable_module, dev, BLADERF_MODULE_TX, true);
-		usleep(1000);
+
+		bladerf_set_stream_timeout(dev, BLADERF_TX, 10);
+		bladerf_set_stream_timeout(dev, BLADERF_RX, 10);
+
 		blade_check(bladerf_init_stream, &rx_stream, dev, getrxcb(rxh), &buf_mgmt.rx_samples, BLADE_NUM_BUFFERS,
 			    BLADERF_FORMAT_SC16_Q11_META, BLADE_BUFFER_SIZE, NUM_TRANSFERS, (void *)this);
 
@@ -308,13 +308,14 @@ struct blade_hw {
 			buf_mgmt.bufptrqueue.spsc_push(&cur_buffer[i]);
 		}
 
-
-		usleep(1000);
-
-		// bladerf_set_stream_timeout(dev, BLADERF_TX, 4);
-		// bladerf_set_stream_timeout(dev, BLADERF_RX, 4);
-
 		return 0;
+	}
+
+	void actually_enable_streams()
+	{
+		blade_check(bladerf_enable_module, dev, BLADERF_MODULE_RX, true);
+		usleep(1000);
+		blade_check(bladerf_enable_module, dev, BLADERF_MODULE_TX, true);
 	}
 
 	bool tuneTx(double freq, size_t chan = 0)
@@ -418,8 +419,9 @@ struct blade_hw {
 	auto get_rx_burst_handler_fn(bh_fn_t burst_handler)
 	{
 		auto fn = [this] {
-			int status;
-			status = bladerf_stream(rx_stream, BLADERF_RX_X1);
+			int status = 0;
+			if (!stop_me_flag)
+				status = bladerf_stream(rx_stream, BLADERF_RX_X1);
 			if (status < 0)
 				std::cerr << "rx stream error! " << bladerf_strerror(status) << std::endl;
 
@@ -430,8 +432,9 @@ struct blade_hw {
 	auto get_tx_burst_handler_fn(bh_fn_t burst_handler)
 	{
 		auto fn = [this] {
-			int status;
-			status = bladerf_stream(tx_stream, BLADERF_TX_X1);
+			int status = 0;
+			if (!stop_me_flag)
+				status = bladerf_stream(tx_stream, BLADERF_TX_X1);
 			if (status < 0)
 				std::cerr << "rx stream error! " << bladerf_strerror(status) << std::endl;
 
@@ -442,9 +445,15 @@ struct blade_hw {
 
 	void submit_burst_ts(blade_sample_type *buffer, int len, uint64_t ts)
 	{
-		//get empty bufer from list
 		tx_buf_q_type::elem_t rcd;
 
+		// exit by submitting a dummy buffer to assure the libbladerf stream mutex is happy (thread!)
+		if (!buffer) {
+			bladerf_submit_stream_buffer(tx_stream, (void *)BLADERF_STREAM_SHUTDOWN, 1000);
+			return;
+		}
+
+		//get empty bufer from list
 		while (!buf_mgmt.bufptrqueue.spsc_pop(&rcd))
 			buf_mgmt.bufptrqueue.spsc_prep_pop();
 		assert(rcd != nullptr);
