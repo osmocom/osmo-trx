@@ -116,7 +116,7 @@ struct one_burst {
 	};
 };
 
-using rx_queue_t = spsc_cond<8 * NUM_RXQ_FRAMES, one_burst, true, true>;
+using rx_queue_t = spsc_cond<8 * NUM_RXQ_FRAMES, one_burst, true, false>;
 
 enum class SCH_STATE { SEARCHING, FOUND };
 
