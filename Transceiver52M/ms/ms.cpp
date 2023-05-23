@@ -50,7 +50,7 @@ static int offset_ctr = 0;
 #endif
 
 template <>
-std::atomic<bool> ms_trx::base::stop_me_flag(false);
+std::atomic<bool> ms_trx::base::stop_lower_threads_flag(false);
 
 void tx_test(ms_trx *t, ts_hitter_q_t *q, unsigned int *tsc)
 {
@@ -276,7 +276,7 @@ bh_fn_t ms_trx::tx_bh()
 
 void ms_trx::start()
 {
-	if (stop_me_flag)
+	if (stop_lower_threads_flag)
 		return;
 	auto fn = get_rx_burst_handler_fn(rx_bh());
 	rx_task = std::thread(fn);
@@ -298,7 +298,7 @@ void ms_trx::set_upper_ready(bool is_ready)
 void ms_trx::stop_threads()
 {
 	std::cerr << "killing threads..." << std::endl;
-	stop_me_flag = true;
+	stop_lower_threads_flag = true;
 	close_device();
 	std::cerr << "dev closed..." << std::endl;
 	rx_task.join();

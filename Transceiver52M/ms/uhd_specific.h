@@ -77,7 +77,7 @@ struct uhd_hw {
 	const unsigned int rxFullScale, txFullScale;
 	const int rxtxdelay;
 	float rxgain, txgain;
-	static std::atomic<bool> stop_me_flag;
+	static std::atomic<bool> stop_lower_threads_flag;
 
 	virtual ~uhd_hw()
 	{
@@ -232,7 +232,7 @@ struct uhd_hw {
 			stream_cmd.time_spec = uhd::time_spec_t();
 			rx_stream->issue_stream_cmd(stream_cmd);
 
-			while (!stop_me_flag) {
+			while (!stop_lower_threads_flag) {
 				rx_cb(burst_handler);
 			}
 		};

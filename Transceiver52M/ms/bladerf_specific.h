@@ -197,7 +197,7 @@ struct blade_hw {
 	const int rxtxdelay;
 
 	float rxgain, txgain;
-	static std::atomic<bool> stop_me_flag;
+	static std::atomic<bool> stop_lower_threads_flag;
 
 	struct ms_trx_config {
 		int tx_freq;
@@ -384,7 +384,7 @@ struct blade_hw {
 			static int to_skip = 0;
 			dev_buf_t *rcd = (dev_buf_t *)samples;
 
-			if (stop_me_flag)
+			if (stop_lower_threads_flag)
 				return BLADERF_STREAM_SHUTDOWN;
 
 			if (to_skip < 120) // prevents weird overflows on startup
@@ -409,7 +409,7 @@ struct blade_hw {
 			if (samples) // put buffer address back into queue, ready to be reused
 				trx->buf_mgmt.bufptrqueue.spsc_push(&ptr);
 
-			if (stop_me_flag)
+			if (stop_lower_threads_flag)
 				return BLADERF_STREAM_SHUTDOWN;
 
 			return BLADERF_STREAM_NO_DATA;
@@ -420,7 +420,7 @@ struct blade_hw {
 	{
 		auto fn = [this] {
 			int status = 0;
-			if (!stop_me_flag)
+			if (!stop_lower_threads_flag)
 				status = bladerf_stream(rx_stream, BLADERF_RX_X1);
 			if (status < 0)
 				std::cerr << "rx stream error! " << bladerf_strerror(status) << std::endl;
@@ -433,7 +433,7 @@ struct blade_hw {
 	{
 		auto fn = [this] {
 			int status = 0;
-			if (!stop_me_flag)
+			if (!stop_lower_threads_flag)
 				status = bladerf_stream(tx_stream, BLADERF_TX_X1);
 			if (status < 0)
 				std::cerr << "rx stream error! " << bladerf_strerror(status) << std::endl;
