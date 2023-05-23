@@ -30,6 +30,8 @@
 #include "ms.h"
 #include "grgsm_vitac/grgsm_vitac.h"
 
+#include "threadpool.h"
+
 extern "C" {
 #include "sch.h"
 }
@@ -126,8 +128,11 @@ void ms_trx::maybe_update_gain(one_burst &brst)
 		gainoffset = runmean < (rxFullScale / 2 ? 2 : 1);
 		float newgain = runmean < rx_max_cutoff ? rxgain + gainoffset : rxgain - gainoffset;
 		// FIXME: gian cutoff
-		if (newgain != rxgain && newgain <= 60)
-			std::thread([this, newgain] { setRxGain(newgain); }).detach();
+		if (newgain != rxgain && newgain <= 60) {
+			auto gain_fun = [this, newgain] { setRxGain(newgain); };
+			worker_thread.add_task(gain_fun);
+		}
+
 		runmean = 0;
 	}
 	gain_check = (gain_check + 1) % avgburst_num;
@@ -217,26 +222,36 @@ bool ms_trx::handle_sch(bool is_first_sch_acq)
 	return false;
 }
 
+/*
+accumulates a full big buffer consisting of 8*12 timeslots, then:
+either
+1) adjusts gain if necessary and starts over
+2) searches and finds SCH and is done
+*/
 SCH_STATE ms_trx::search_for_sch(dev_buf_t *rcd)
 {
 	static unsigned int sch_pos = 0;
+	auto to_copy = SCH_LEN_SPS - sch_pos;
+
 	if (sch_thread_done)
 		return SCH_STATE::FOUND;
 
 	if (rcv_done)
 		return SCH_STATE::SEARCHING;
 
-	auto to_copy = SCH_LEN_SPS - sch_pos;
-
-	if (SCH_LEN_SPS == to_copy) // first time
+	if (sch_pos == 0) // keep first ts for time delta calc
 		first_sch_buf_rcv_ts = rcd->get_first_ts();
 
-	if (!to_copy) {
+	if (to_copy) {
+		auto spsmax = rcd->actual_samples_per_buffer();
+		if (to_copy > (unsigned int)spsmax)
+			sch_pos += rcd->readall(first_sch_buf + sch_pos);
+		else
+			sch_pos += rcd->read_n(first_sch_buf + sch_pos, 0, to_copy);
+	} else { // (!to_copy)
 		sch_pos = 0;
 		rcv_done = true;
-		std::thread([this] {
-			set_name_aff_sched(sched_params::thread_names::SCH_SEARCH);
-
+		auto sch_search_fun = [this] {
 			auto ptr = reinterpret_cast<const int16_t *>(first_sch_buf);
 			const auto target_val = rxFullScale / 8;
 			float sum = 0;
@@ -255,16 +270,9 @@ SCH_STATE ms_trx::search_for_sch(dev_buf_t *rcd)
 
 			if (!sch_thread_done)
 				rcv_done = false; // retry!
-			return (bool)sch_thread_done;
-		}).detach();
+		};
+		worker_thread.add_task(sch_search_fun);
 	}
-
-	auto spsmax = rcd->actual_samples_per_buffer();
-	if (to_copy > (unsigned int)spsmax)
-		sch_pos += rcd->readall(first_sch_buf + sch_pos);
-	else
-		sch_pos += rcd->read_n(first_sch_buf + sch_pos, 0, to_copy);
-
 	return SCH_STATE::SEARCHING;
 }
 

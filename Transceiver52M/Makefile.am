@@ -97,6 +97,7 @@ noinst_HEADERS += \
 	ms/ms_upper.h \
 	ms/itrq.h \
 	ms/sch.h \
+	ms/threadpool.h \
 	grgsm_vitac/viterbi_detector.h \
 	grgsm_vitac/constants.h \
 	grgsm_vitac/grgsm_vitac.h

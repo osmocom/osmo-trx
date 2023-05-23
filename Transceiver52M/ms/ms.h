@@ -41,6 +41,7 @@
 #include "Complex.h"
 #include "GSMCommon.h"
 #include "itrq.h"
+#include "threadpool.h"
 
 const unsigned int ONE_TS_BURST_LEN = (3 + 58 + 26 + 58 + 3 + 8.25) * 4 /*sps*/;
 const unsigned int NUM_RXQ_FRAMES = 1; // rx thread <-> upper rx queue
@@ -266,6 +267,7 @@ struct ms_trx : public BASET {
 	time_keeper timekeeper;
 	int hw_cpus;
 	sched_params::target hw_target;
+	single_thread_pool worker_thread;
 
 	void start();
 	std::atomic<bool> upper_is_ready;
@@ -291,6 +293,7 @@ struct ms_trx : public BASET {
 		  hw_target(hw_cpus > 4 ? sched_params::target::ODROID : sched_params::target::PI4)
 	{
 		std::cerr << "scheduling for: " << (hw_cpus > 4 ? "odroid" : "pi4") << std::endl;
+		set_name_aff_sched(worker_thread.get_handle(), sched_params::thread_names::SCH_SEARCH);
 	}
 
 	virtual ~ms_trx()
