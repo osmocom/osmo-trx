@@ -1,5 +1,7 @@
 [Unit]
 Description=Osmocom SDR BTS L1 Transceiver (LimeSuite backend)
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
