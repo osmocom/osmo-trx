@@ -76,6 +76,7 @@ static const int trxcon_log_cfg[] = {
 void trxc_log_init(void *tallctx)
 {
 	osmo_init_logging2(tallctx, &trxcon_log_info);
+	log_target_file_switch_to_wqueue(osmo_stderr_target);
 
 	trxcon_set_log_cfg(&trxcon_log_cfg[0], ARRAY_SIZE(trxcon_log_cfg));
 }
