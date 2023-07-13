@@ -587,8 +587,7 @@ bool USRPDevice::updateAlignment(TIMESTAMP timestamp)
 {
 #ifndef SWLOOPBACK
   short data[] = {0x00,0x02,0x00,0x00};
-  uint32_t *wordPtr = (uint32_t *) data;
-  *wordPtr = host_to_usrp_u32(*wordPtr);
+  /* FIXME: big endian */
   bool tmpUnderrun;
 
   std::vector<short *> buf(1, data);
