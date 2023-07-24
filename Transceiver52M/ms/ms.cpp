@@ -136,15 +136,16 @@ void ms_trx::submit_burst(blade_sample_type *buffer, int len, GSM::Time target)
 		return;
 	}
 
-	auto check = now_time + tosend;
 	int64_t send_ts = now_ts + tosend.FN() * 8 * ONE_TS_BURST_LEN + tosend.TN() * ONE_TS_BURST_LEN - timing_advance;
 #ifdef DBGXX
+	auto check = now_time + tosend;
 	std::cerr << "## fn DIFF: " << diff_fn << " ## tn DIFF: " << diff_tn << " tn LOCAL/OTHER: " << now_time.TN()
 		  << "/" << target_tn << " tndiff" << diff_tn << " tosend:" << tosend.FN() << ":" << tosend.TN()
 		  << " check: " << check.FN() << ":" << check.TN() << " target: " << target.FN() << ":" << target.TN()
 		  << " ts now: " << now_ts << " target ts:" << send_ts << std::endl;
 #endif
-#if 1
+#if 0
+	auto check = now_time + tosend;
 	unsigned int pad = 4 * 4;
 	blade_sample_type buf2[len + pad];
 	std::fill(buf2, buf2 + pad, 0);
