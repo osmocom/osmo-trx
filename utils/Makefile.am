@@ -1,6 +1,8 @@
 AM_CPPFLAGS = $(LIBOSMOCODING_CFLAGS)
 AM_CFLAGS = -Wall
 
+DIST_SUBDIRS = va-test
+
 EXTRA_DIST = clockdump.sh matlab
 
 noinst_PROGRAMS = osmo-prbs-tool

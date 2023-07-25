@@ -374,6 +374,7 @@ AC_CONFIG_FILES([\
     tests/CommonLibs/Makefile \
     tests/Transceiver52M/Makefile \
     utils/Makefile \
+    utils/va-test/Makefile \
     doc/Makefile \
     doc/examples/Makefile \
     contrib/Makefile \

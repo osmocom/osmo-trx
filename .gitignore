@@ -83,6 +83,7 @@ contrib/osmo-trx.spec
 !contrib/osmo-trx.spec.in
 
 utils/osmo-prbs-tool
+utils/va-test/osmo-burst-gen
 /.qtc_clangd/*
 /.cache/*
 /.vscode/*
