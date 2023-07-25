@@ -339,6 +339,25 @@ DEFUN_ATTR(cfg_dl_gain_override, cfg_dl_gain_override_cmd,
 	return CMD_SUCCESS;
 }
 
+DEFUN_ATTR(cfg_use_viterbi, cfg_use_viterbi_cmd,
+	"viterbi-eq (disable|enable)",
+	"Use viterbi equalizer for gmsk (default=disable)\n"
+	"Disable VA\n"
+	"Enable VA\n",
+	CMD_ATTR_HIDDEN)
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	if (strcmp("disable", argv[0]) == 0)
+		trx->cfg.use_va = false;
+	else if (strcmp("enable", argv[0]) == 0)
+		trx->cfg.use_va = true;
+	else
+		return CMD_WARNING;
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_swap_channels, cfg_swap_channels_cmd,
 	"swap-channels (disable|enable)",
 	"Swap primary and secondary channels of the PHY (if any)\n"
@@ -700,6 +719,8 @@ static int config_write_trx(struct vty *vty)
 		vty_out(vty, " dl-gain-override %f%s", trx->cfg.overrides.dl_gain, VTY_NEWLINE);
 	if (trx->cfg.overrides.ul_gain_override)
 		vty_out(vty, " ul-gain-override %f%s", trx->cfg.overrides.ul_gain, VTY_NEWLINE);
+	if (trx->cfg.use_va)
+		vty_out(vty, " viterbi-eq %s%s", trx->cfg.use_va ? "enable" : "disable", VTY_NEWLINE);
 	trx_rate_ctr_threshold_write_config(vty, " ");
 
 	for (i = 0; i < trx->cfg.num_chans; i++) {
@@ -869,6 +890,7 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_dl_freq_override_cmd);
 	install_element(TRX_NODE, &cfg_ul_gain_override_cmd);
 	install_element(TRX_NODE, &cfg_dl_gain_override_cmd);
+	install_element(TRX_NODE, &cfg_use_viterbi_cmd);
 	install_node(&chan_node, dummy_config_write);
 	install_element(CHAN_NODE, &cfg_chan_rx_path_cmd);
 	install_element(CHAN_NODE, &cfg_chan_tx_path_cmd);

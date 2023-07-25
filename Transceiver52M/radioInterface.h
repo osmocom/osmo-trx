@@ -75,7 +75,7 @@ private:
 public:
 
   /** start the interface */
-  bool start();
+  virtual bool start();
   bool stop();
 
   /** initialization */
@@ -151,7 +151,7 @@ private:
 
 public:
   RadioInterfaceResamp(RadioDevice* wDevice, size_t tx_sps, size_t rx_sps);
-  ~RadioInterfaceResamp();
+  virtual ~RadioInterfaceResamp();
 
   bool init(int type);
   void close();
@@ -184,7 +184,7 @@ private:
 public:
   RadioInterfaceMulti(RadioDevice* radio, size_t tx_sps,
                       size_t rx_sps, size_t chans = 1);
-  ~RadioInterfaceMulti();
+  virtual ~RadioInterfaceMulti();
 
   bool init(int type);
   void close();

@@ -29,6 +29,7 @@
 #include <fstream>
 #include "Transceiver.h"
 #include <Logger.h>
+#include <grgsm_vitac/grgsm_vitac.h>
 
 extern "C" {
 #include "osmo_signal.h"
@@ -207,6 +208,8 @@ bool Transceiver::init()
     LOG(FATAL) << "Failed to initialize signal processing library";
     return false;
   }
+
+  initvita();
 
   mDataSockets.resize(mChans, -1);
 
@@ -614,6 +617,44 @@ double Transceiver::rssiOffset(size_t chan)
   return mRadioInterface->rssiOffset(chan) + cfg->rssi_offset;
 }
 
+static SoftVector *demodAnyBurst_va(const signalVector &burst, CorrType type, int sps, int rach_max_toa, int tsc)
+{
+	auto conved_beg = reinterpret_cast<const std::complex<float> *>(&burst.begin()[0]);
+	std::complex<float> chan_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
+	float ncmax;
+	const unsigned burst_len_bits = 148 + 8;
+	char demodded_softbits[burst_len_bits];
+	SoftVector *bits = new SoftVector(burst_len_bits);
+
+	if (type == CorrType::TSC) {
+		auto rach_burst_start = get_norm_chan_imp_resp(conved_beg, chan_imp_resp, &ncmax, tsc);
+		rach_burst_start = std::max(rach_burst_start, 0);
+		detect_burst_nb(conved_beg, chan_imp_resp, rach_burst_start, demodded_softbits);
+	} else {
+		auto normal_burst_start = get_access_imp_resp(conved_beg, chan_imp_resp, &ncmax, 0);
+		normal_burst_start = std::max(normal_burst_start, 0);
+		detect_burst_ab(conved_beg, chan_imp_resp, normal_burst_start, demodded_softbits, rach_max_toa);
+	}
+
+	float *s = &bits->begin()[0];
+	for (unsigned int i = 0; i < 148; i++)
+		s[i] = demodded_softbits[i] * -1;
+	for (unsigned int i = 148; i < burst_len_bits; i++)
+		s[i] = 0;
+	return bits;
+}
+
+#define USE_VA
+
+#ifdef USE_VA
+// signalvector is owning despite claiming not to, but we can pretend, too..
+static void dummy_free(void *wData){};
+static void *dummy_alloc(size_t newSize)
+{
+	return 0;
+};
+#endif
+
 /*
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled.
@@ -634,6 +675,9 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   TransceiverState *state = &mStates[chan];
   bool ctr_changed = false;
   double rssi_offset;
+  static complex burst_shift_buffer[625];
+  static signalVector shift_vec(burst_shift_buffer, 0, 625, dummy_alloc, dummy_free);
+  signalVector *shvec_ptr = &shift_vec;
 
   /* Blocking FIFO read */
   radioVector *radio_burst = mReceiveFIFO[chan]->read();
@@ -713,8 +757,15 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   max_toa = (type == RACH || type == EXT_RACH) ?
             mMaxExpectedDelayAB : mMaxExpectedDelayNB;
 
+  if (cfg->use_va) {
+    // shifted burst copy to make the old demod and detection happy
+    std::copy(burst->begin() + 20, burst->end() - 20, shift_vec.begin());
+  } else {
+    shvec_ptr = burst;
+  }
+
   /* Detect normal or RACH bursts */
-  rc = detectAnyBurst(*burst, mTSC, BURST_THRESH, cfg->rx_sps, type, max_toa, &ebp);
+  rc = detectAnyBurst(*shvec_ptr, mTSC, BURST_THRESH, cfg->rx_sps, type, max_toa, &ebp);
   if (rc <= 0) {
     if (rc == -SIGERR_CLIP) {
       LOGCHAN(chan, DTRXDUL, INFO) << "Clipping detected on received RACH or Normal Burst";
@@ -728,7 +779,13 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
     goto ret_idle;
   }
 
-  rxBurst = demodAnyBurst(*burst, (CorrType) rc, cfg->rx_sps, &ebp);
+  if (cfg->use_va) {
+    scaleVector(*burst, { (1. / (float)((1 << 14) - 1)), 0 });
+    rxBurst = demodAnyBurst_va(*burst, (CorrType)rc, cfg->rx_sps, max_toa, mTSC);
+  } else {
+    rxBurst = demodAnyBurst(*shvec_ptr, (CorrType)rc, cfg->rx_sps, &ebp);
+  }
+
   bi->toa = ebp.toa;
   bi->tsc = ebp.tsc;
   bi->ci = ebp.ci;

@@ -77,6 +77,24 @@ static struct ctrl_handle *g_ctrlh;
 static RadioDevice *usrp;
 static RadioInterface *radio;
 
+/* adjusts read timestamp offset to make the viterbi equalizer happy by including the start tail bits */
+template <typename B>
+class rif_va_wrapper : public B {
+	bool use_va;
+
+    public:
+	template <typename... Args>
+	rif_va_wrapper(bool use_va, Args &&...args) : B(std::forward<Args>(args)...), use_va(use_va)
+	{
+	}
+	bool start() override
+	{
+		auto rv = B::start();
+		B::readTimestamp -= use_va ? 20 : 0;
+		return rv;
+	};
+};
+
 /* Create radio interface
  *     The interface consists of sample rate changes, frequency shifts,
  *     channel multiplexing, and other conversions. The transceiver core
@@ -91,17 +109,17 @@ RadioInterface *makeRadioInterface(struct trx_ctx *trx,
 
 	switch (type) {
 	case RadioDevice::NORMAL:
-		radio = new RadioInterface(usrp, trx->cfg.tx_sps,
-					   trx->cfg.rx_sps, trx->cfg.num_chans);
+		radio = new rif_va_wrapper<RadioInterface>(trx->cfg.use_va, usrp, trx->cfg.tx_sps, trx->cfg.rx_sps,
+							   trx->cfg.num_chans);
 		break;
 	case RadioDevice::RESAMP_64M:
 	case RadioDevice::RESAMP_100M:
-		radio = new RadioInterfaceResamp(usrp, trx->cfg.tx_sps,
-						 trx->cfg.rx_sps);
+		radio = new rif_va_wrapper<RadioInterfaceResamp>(trx->cfg.use_va, usrp, trx->cfg.tx_sps,
+								 trx->cfg.rx_sps);
 		break;
 	case RadioDevice::MULTI_ARFCN:
-		radio = new RadioInterfaceMulti(usrp, trx->cfg.tx_sps,
-						trx->cfg.rx_sps, trx->cfg.num_chans);
+		radio = new rif_va_wrapper<RadioInterfaceMulti>(trx->cfg.use_va, usrp, trx->cfg.tx_sps, trx->cfg.rx_sps,
+								trx->cfg.num_chans);
 		break;
 	default:
 		LOG(ALERT) << "Unsupported radio interface configuration";
@@ -462,6 +480,12 @@ int trx_validate_config(struct trx_ctx *trx)
 	if ((trx->cfg.egprs || trx->cfg.multi_arfcn) &&
 	    (trx->cfg.tx_sps!=4 || trx->cfg.rx_sps!=4)) {
 		LOG(ERROR) << "EDGE and Multi-Carrier options require 4 tx and rx sps. Check you config.";
+		return -1;
+	}
+
+	if (trx->cfg.use_va &&
+	    (trx->cfg.egprs || trx->cfg.multi_arfcn || trx->cfg.tx_sps != 4 || trx->cfg.rx_sps != 4)) {
+		LOG(ERROR) << "Viterbi equalizer only works for gmsk with 4 tx/rx samples per symbol!";
 		return -1;
 	}
 

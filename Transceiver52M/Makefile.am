@@ -40,7 +40,9 @@ COMMON_SOURCES = \
 	ChannelizerBase.cpp \
 	Channelizer.cpp \
 	Synthesis.cpp \
-	proto_trxd.c
+	proto_trxd.c \
+	grgsm_vitac/grgsm_vitac.cpp \
+	grgsm_vitac/viterbi_detector.cc
 
 libtransceiver_common_la_SOURCES = \
 	$(COMMON_SOURCES) \

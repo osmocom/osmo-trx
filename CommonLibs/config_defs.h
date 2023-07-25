@@ -67,4 +67,5 @@ struct trx_cfg {
 		double ul_gain;
 		double dl_gain;
 	} overrides;
+	bool use_va;
 };
