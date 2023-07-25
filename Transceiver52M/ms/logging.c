@@ -1,5 +1,7 @@
 /*
- * (C) 2016-2022 by Vadim Yanitskiy <axilirator@gmail.com>
+ * OsmocomBB <-> SDR connection bridge
+ *
+ * (C) 2016-2017 by Vadim Yanitskiy <axilirator@gmail.com>
  *
  * All Rights Reserved
  *
@@ -19,48 +21,61 @@
 #include <osmocom/core/logging.h>
 #include <osmocom/core/utils.h>
 
-#include <osmocom/bb/trxcon/logging.h>
 #include <osmocom/bb/trxcon/trxcon.h>
+#include <osmocom/bb/trxcon/logging.h>
 
 static struct log_info_cat trxcon_log_info_cat[] = {
 	[DAPP] = {
 		.name = "DAPP",
-		.color = "\033[1;35m",
 		.description = "Application",
-		.loglevel = LOGL_NOTICE,
-		.enabled = 1,
+		.color = "\033[1;35m",
+		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
 	[DL1C] = {
 		.name = "DL1C",
-		.color = "\033[1;31m",
 		.description = "Layer 1 control interface",
-		.loglevel = LOGL_NOTICE,
-		.enabled = 1,
+		.color = "\033[1;31m",
+		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
 	[DL1D] = {
 		.name = "DL1D",
-		.color = "\033[1;31m",
 		.description = "Layer 1 data",
-		.loglevel = LOGL_NOTICE,
-		.enabled = 1,
+		.color = "\033[1;31m",
+		.enabled = 1, .loglevel = LOGL_NOTICE,
+	},
+	[DTRXC] = {
+		.name = "DTRXC",
+		.description = "Transceiver control interface",
+		.color = "\033[1;33m",
+		.enabled = 1, .loglevel = LOGL_NOTICE,
+	},
+	[DTRXD] = {
+		.name = "DTRXD",
+		.description = "Transceiver data interface",
+		.color = "\033[1;33m",
+		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
 	[DSCH] = {
 		.name = "DSCH",
-		.color = "\033[1;36m",
 		.description = "Scheduler management",
-		.loglevel = LOGL_NOTICE,
-		.enabled = 0,
+		.color = "\033[1;36m",
+		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
 	[DSCHD] = {
 		.name = "DSCHD",
-		.color = "\033[1;36m",
 		.description = "Scheduler data",
-		.loglevel = LOGL_NOTICE,
-		.enabled = 0,
+		.color = "\033[1;36m",
+		.enabled = 1, .loglevel = LOGL_NOTICE,
+	},
+	[DGPRS] = {
+		.name = "DGPRS",
+		.description = "L1 GPRS (MAC layer)",
+		.color = "\033[1;36m",
+		.enabled = 1, .loglevel = LOGL_NOTICE,
 	},
 };
 
-static struct log_info trxcon_log_info = {
+static const struct log_info trxcon_log_info = {
 	.cat = trxcon_log_info_cat,
 	.num_cat = ARRAY_SIZE(trxcon_log_info_cat),
 };
@@ -71,6 +86,7 @@ static const int trxcon_log_cfg[] = {
 	[TRXCON_LOGC_L1D] = DL1D,
 	[TRXCON_LOGC_SCHC] = DSCH,
 	[TRXCON_LOGC_SCHD] = DSCHD,
+	[TRXCON_LOGC_GPRS] = DGPRS,
 };
 
 void trxc_log_init(void *tallctx)

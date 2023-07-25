@@ -80,6 +80,7 @@ AM_CPPFLAGS += -I${srcdir}
 TRXCON_LDADD = \
 	$(top_builddir)/osmocom-bb/src/host/trxcon/src/.libs/libtrxcon.a \
 	$(top_builddir)/osmocom-bb/src/host/trxcon/src/.libs/libl1sched.a \
+	$(top_builddir)/osmocom-bb/src/host/trxcon/src/.libs/libl1gprs.a \
 	$(LIBOSMOCODING_LIBS)
 
 MS_LOWER_SRC = \

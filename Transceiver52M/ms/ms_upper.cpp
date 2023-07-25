@@ -395,7 +395,7 @@ int main(int argc, char *argv[])
 	msgb_talloc_ctx_init(tall_trxcon_ctx, 0);
 	trxc_log_init(tall_trxcon_ctx);
 
-	g_trxcon = trxcon_inst_alloc(tall_trxcon_ctx, 0, 0);
+	g_trxcon = trxcon_inst_alloc(tall_trxcon_ctx, 0);
 	g_trxcon->gsmtap = nullptr;
 	g_trxcon->phyif = nullptr;
 	g_trxcon->phy_quirks.fbsb_extend_fns = 866; // 4 seconds, known to work.
