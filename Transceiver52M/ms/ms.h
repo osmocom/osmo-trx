@@ -50,7 +50,7 @@ const unsigned int SCH_LEN_SPS = (ONE_TS_BURST_LEN * 8 /*ts*/ * 12 /*frames*/);
 template <typename T>
 void clamp_array(T *start2, unsigned int len, T max)
 {
-	for (int i = 0; i < len; i++) {
+	for (unsigned int i = 0; i < len; i++) {
 		const T t1 = start2[i] < -max ? -max : start2[i];
 		const T t2 = t1 > max ? max : t1;
 		start2[i] = t2;
@@ -263,7 +263,6 @@ struct ms_trx : public BASET {
 
 	std::thread lower_rx_task;
 	std::thread lower_tx_task;
-	std::thread *calcrval_task;
 
 	// provides bursts to upper rx thread
 	rx_queue_t rxqueue;
@@ -300,10 +299,12 @@ struct ms_trx : public BASET {
 	void maybe_update_gain(one_burst &brst);
 
 	ms_trx()
-		: timing_advance(0), do_auto_gain(false), rxqueue(), first_sch_buf(new blade_sample_type[SCH_LEN_SPS]),
-		  burst_copy_buffer(new blade_sample_type[ONE_TS_BURST_LEN]), rcv_done{ false },
-		  sch_thread_done{ false }, hw_cpus(std::thread::hardware_concurrency()),
-		  hw_target(hw_cpus > 4 ? sched_params::target::ODROID : sched_params::target::PI4)
+		: mTSC(0), mBSIC(0), timing_advance(0), do_auto_gain(false), rxqueue(),
+		  first_sch_buf(new blade_sample_type[SCH_LEN_SPS]),
+		  burst_copy_buffer(new blade_sample_type[ONE_TS_BURST_LEN]), first_sch_buf_rcv_ts(0),
+		  rcv_done{ false }, sch_thread_done{ false }, hw_cpus(std::thread::hardware_concurrency()),
+		  hw_target(hw_cpus > 4 ? sched_params::target::ODROID : sched_params::target::PI4),
+		  upper_is_ready(false)
 	{
 		std::cerr << "scheduling for: " << (hw_cpus > 4 ? "odroid" : "pi4") << std::endl;
 		set_name_aff_sched(worker_thread.get_handle(), sched_params::thread_names::SCH_SEARCH);

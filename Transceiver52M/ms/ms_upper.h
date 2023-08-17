@@ -44,5 +44,5 @@ class upper_trx : public ms_trx {
 	void driveReceiveFIFO();
 	void driveTx();
 
-	upper_trx(){};
+	upper_trx() : mOn(false){};
 };

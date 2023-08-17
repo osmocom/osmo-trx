@@ -45,7 +45,7 @@ struct single_thread_pool {
 		return;
 	}
 
-	single_thread_pool() : worker_thread(std::thread([this] { thread_loop(); }))
+	single_thread_pool() : stop_flag(false), is_ready(false), worker_thread(std::thread([this] { thread_loop(); }))
 	{
 	}
 	~single_thread_pool()
