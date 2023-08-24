@@ -822,7 +822,7 @@ struct trx_ctx *vty_trx_ctx_alloc(void *talloc_ctx)
 	trx->cfg.rx_sps = DEFAULT_RX_SPS;
 	trx->cfg.filler = FILLER_ZERO;
 	trx->cfg.rssi_offset = 0.0f;
-	trx->cfg.dev_args = "";
+	trx->cfg.dev_args = talloc_strdup(trx, "");
 
 	return trx;
 }
