@@ -27,6 +27,8 @@
 #include <radioInterface.h>
 #include <grgsm_vitac/grgsm_vitac.h>
 
+// #define TXDEBUG
+
 extern "C" {
 
 #include "sch.h"
@@ -66,29 +68,54 @@ void upper_trx::stop_upper_threads()
 {
 	g_exit_flag = true;
 
-	if (thr_control.joinable())
-		thr_control.join();
-	if (thr_rx.joinable())
-		thr_rx.join();
-	if (thr_tx.joinable())
-		thr_tx.join();
+	pthread_join(thr_control, NULL);
+	pthread_join(thr_tx, NULL);
 }
+
 void upper_trx::start_threads()
 {
-	thr_control = std::thread([this] {
-		set_name_aff_sched(sched_params::thread_names::U_CTL);
-		while (!g_exit_flag) {
-			driveControl();
-		}
-		std::cerr << "exit U control!" << std::endl;
-	});
-	thr_tx = std::thread([this] {
-		set_name_aff_sched(sched_params::thread_names::U_TX);
-		while (!g_exit_flag) {
-			driveTx();
-		}
-		std::cerr << "exit U tx!" << std::endl;
-	});
+	DBGLG(...) << "spawning threads.." << std::endl;
+
+	thr_control = spawn_worker_thread(
+		sched_params::thread_names::U_CTL,
+		[](void *args) -> void * {
+			upper_trx *t = reinterpret_cast<upper_trx *>(args);
+#ifdef TXDEBUG
+			struct sched_param param;
+			int policy;
+			pthread_getschedparam(pthread_self(), &policy, &param);
+			printf("ID: %lu, CPU: %d policy = %d priority = %d\n", pthread_self(), sched_getcpu(), policy,
+			       param.sched_priority);
+#endif
+			std::cerr << "started U control!" << std::endl;
+			while (!g_exit_flag) {
+				t->driveControl();
+			}
+			std::cerr << "exit U control!" << std::endl;
+
+			return 0;
+		},
+		this);
+	thr_tx = spawn_worker_thread(
+		sched_params::thread_names::U_TX,
+		[](void *args) -> void * {
+			upper_trx *t = reinterpret_cast<upper_trx *>(args);
+#ifdef TXDEBUG
+			struct sched_param param;
+			int policy;
+			pthread_getschedparam(pthread_self(), &policy, &param);
+			printf("ID: %lu, CPU: %d policy = %d priority = %d\n", pthread_self(), sched_getcpu(), policy,
+			       param.sched_priority);
+#endif
+			std::cerr << "started U tx!" << std::endl;
+			while (!g_exit_flag) {
+				t->driveTx();
+			}
+			std::cerr << "exit U tx!" << std::endl;
+
+			return 0;
+		},
+		this);
 
 #ifdef LSANDEBUG
 	std::thread([this] {
@@ -251,7 +278,7 @@ void upper_trx::driveTx()
 
 	internal_q_tx_buf *burst = &e;
 
-#ifdef TXDEBUG
+#ifdef TXDEBUG2
 	DBGLG() << "got burst!" << burst->r.fn << ":" << burst->ts << " current: " << timekeeper.gsmtime().FN()
 		<< " dff: " << (int64_t)((int64_t)timekeeper.gsmtime().FN() - (int64_t)burst->r.fn) << std::endl;
 #endif
@@ -270,7 +297,7 @@ void upper_trx::driveTx()
 	// float -> int16
 	blade_sample_type burst_buf[txburst->size()];
 	convert_and_scale(burst_buf, txburst->begin(), txburst->size() * 2, 1);
-#ifdef TXDEBUG
+#ifdef TXDEBUG2
 	auto check = signalVector(txburst->size(), 40);
 	convert_and_scale(check.begin(), burst_buf, txburst->size() * 2, 1);
 	estim_burst_params ebp;
@@ -313,7 +340,7 @@ static const char *cmd2str(trxcon_phyif_cmd_type c)
 
 static void print_cmd(trxcon_phyif_cmd_type c)
 {
-	DBGLG() << cmd2str(c) << std::endl;
+	DBGLG() << "handling " << cmd2str(c) << std::endl;
 }
 #endif
 
@@ -323,6 +350,8 @@ bool upper_trx::driveControl()
 	trxcon_phyif_cmd cmd;
 	while (!cmdq_to_phy.spsc_pop(&cmd)) {
 		cmdq_to_phy.spsc_prep_pop();
+		if (g_exit_flag)
+			return false;
 	}
 
 	if (g_exit_flag)

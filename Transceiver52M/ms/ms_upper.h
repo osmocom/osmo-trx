@@ -27,22 +27,22 @@
 #include "ms.h"
 
 class upper_trx : public ms_trx {
-	bool mOn;
+	volatile bool mOn;
 	char demodded_softbits[444];
 
 	// void driveControl();
-	bool driveControl();
-	void driveReceiveFIFO();
-	void driveTx();
-
 	bool pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset);
 
-	std::thread thr_control, thr_rx, thr_tx;
+	pthread_t thr_control, thr_tx;
 
     public:
 	void start_threads();
 	void main_loop();
 	void stop_upper_threads();
+
+	bool driveControl();
+	void driveReceiveFIFO();
+	void driveTx();
 
 	upper_trx(){};
 };

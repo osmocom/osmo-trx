@@ -336,6 +336,15 @@ struct ms_trx : public BASET {
 		set_name_aff_sched(h, tgt.name, tgt.core, tgt.schedtype, tgt.prio);
 	}
 
+	using pt_sig = void *(*)(void *);
+
+	pthread_t spawn_worker_thread(sched_params::thread_names name, pt_sig fun, void *arg)
+	{
+		auto tgt = schdp[hw_target][name];
+		// std::cerr << "scheduling for: " << tgt.name << ":" << tgt.core << " prio:" << tgt.prio << std::endl;
+		return do_spawn_thr(tgt.name, tgt.core, tgt.schedtype, tgt.prio, fun, arg);
+	}
+
     private:
 	void set_name_aff_sched(std::thread::native_handle_type h, const char *name, int cpunum, int schedtype,
 				int prio)
@@ -358,5 +367,29 @@ struct ms_trx : public BASET {
 			std::cerr << name << " sched: errreur! " << std::strerror(errno);
 			return exit(0);
 		}
+	}
+
+	pthread_t do_spawn_thr(const char *name, int cpunum, int schedtype, int prio, pt_sig fun, void *arg)
+	{
+		pthread_t thread;
+
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+
+		sched_param sch_params;
+		sch_params.sched_priority = prio;
+		cpu_set_t cpuset;
+		CPU_ZERO(&cpuset);
+		CPU_SET(cpunum, &cpuset);
+		auto a = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
+		a |= pthread_attr_setschedpolicy(&attr, schedtype);
+		a |= pthread_attr_setschedparam(&attr, &sch_params);
+		a |= pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+		if(a)
+			std::cerr << "thread arg rc:" << a << std::endl;
+		pthread_create(&thread, &attr, fun, arg);
+		pthread_setname_np(thread, name);
+		pthread_attr_destroy(&attr);
+		return thread;
 	}
 };
