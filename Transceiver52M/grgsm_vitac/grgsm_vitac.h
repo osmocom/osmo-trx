@@ -42,12 +42,17 @@
 #define MULTI_VER_TARGET_ATTR_CLANGONLY
 #endif
 
+/* ancient gcc < 8 has no attribute, clang always pretends to be gcc 4 */
+#if !defined(__clang__) && __GNUC__ < 8
+#define NO_UBSAN __attribute__((no_sanitize_undefined))
+#else
 #if defined(__has_attribute)
 #if __has_attribute(no_sanitize)
 #define NO_UBSAN __attribute__((no_sanitize("undefined")))
 #endif
 #else
 #define NO_UBSAN
+#endif
 #endif
 
 #define SYNC_SEARCH_RANGE 30
