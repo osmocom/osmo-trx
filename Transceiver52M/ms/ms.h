@@ -44,7 +44,6 @@
 #include "threadpool.h"
 
 const unsigned int ONE_TS_BURST_LEN = (3 + 58 + 26 + 58 + 3 + 8.25) * 4 /*sps*/;
-const unsigned int NUM_RXQ_FRAMES = 1; // rx thread <-> upper rx queue
 const unsigned int SCH_LEN_SPS = (ONE_TS_BURST_LEN * 8 /*ts*/ * 12 /*frames*/);
 
 template <typename T>
@@ -133,7 +132,7 @@ struct one_burst {
 	};
 };
 
-using rx_queue_t = spsc_cond_timeout<8 * NUM_RXQ_FRAMES, one_burst, true, false>;
+using rx_queue_t = spsc_cond_timeout<4, one_burst, true, false>;
 
 enum class SCH_STATE { SEARCHING, FOUND };
 
