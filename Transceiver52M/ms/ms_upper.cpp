@@ -35,7 +35,9 @@ extern "C" {
 #include "convolve.h"
 #include "convert.h"
 
+#include <osmocom/core/application.h>
 #include <osmocom/gsm/gsm_utils.h>
+
 #include <osmocom/bb/trxcon/trxcon.h>
 #include <osmocom/bb/trxcon/trxcon_fsm.h>
 #include <osmocom/bb/trxcon/l1ctl_server.h>
@@ -423,6 +425,17 @@ int main(int argc, char *argv[])
 
 	msgb_talloc_ctx_init(tall_trxcon_ctx, 0);
 	trxc_log_init(tall_trxcon_ctx);
+
+	/* Configure pretty logging */
+	log_set_print_extended_timestamp(osmo_stderr_target, 1);
+	log_set_print_category_hex(osmo_stderr_target, 0);
+	log_set_print_category(osmo_stderr_target, 1);
+	log_set_print_level(osmo_stderr_target, 1);
+
+	log_set_print_filename2(osmo_stderr_target, LOG_FILENAME_BASENAME);
+	log_set_print_filename_pos(osmo_stderr_target, LOG_FILENAME_POS_LINE_END);
+
+	osmo_fsm_log_timeouts(true);
 
 	g_trxcon = trxcon_inst_alloc(tall_trxcon_ctx, 0);
 	g_trxcon->gsmtap = nullptr;
