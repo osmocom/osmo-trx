@@ -1,3 +1,69 @@
+osmo-trx (1.6.0) unstable; urgency=medium
+
+  [ Vadim Yanitskiy ]
+  * configure.ac: check if LIBTRXCON_DIR (submodule) exists
+  * tests: Makefile.am: move -I flags from AM_CFLAGS to AM_CPPFLAGS
+  * tests: there shall be no libraries in LDFLAGS
+  * tests: use -no-install libtool flag to avoid ./lt-* scripts
+  * tests: LMSDeviceTest: fix CPPFLAGS vs CXXFLAGS
+  * ipc-driver-test: clean up variables in Makefile.am
+  * CommonLibs: remove unused *trx in cfg[_no]_ctr_error_threshold_cmd
+  * CommonLibs: clean up and fix Makefile.am
+  * ms: logging: print category, level, and extended timestamp
+
+  [ Oliver Smith ]
+  * Run struct_endianness.py
+  * debian: set compat level to 10
+  * systemd: depend on networking-online.target
+  * USRPDevice:updateAlignment: remove byteswap code
+
+  [ Eric ]
+  * .clang-format: adjust template formatting
+  * ms: update submodule to currently known working version
+  * ms: adjust tx scaling for tx samples
+  * ms : fix the template formatting
+  * ms: fix the gain init for blade
+  * ms: prettify scheduling + add odroid
+  * ms: fix startup & shutdown of blade
+  * ms: block burst q to upper layer
+  * ms: use single thread pool
+  * ms : rename var
+  * ms : rename var
+  * ms: cache frequency
+  * ms: pretty tx buf class
+  * ms: rearrange internal trxcon<->phy if
+  * ms: remove syncthing tool
+  * ms: prune common sch acq code
+  * ms: rearrange code to allow clean exits
+  * ms: flexible template for value_type buffer sum
+  * ms: make init call less confusing
+  * transceiver: pass cfg struct instead of args
+  * devices: unify band handling
+  * ms: fix blocking logging
+  * ms: drop the tx burst padding
+  * trx: fix dev-args issue
+  * ms: update osmocom-bb
+  * ms: restructure the va code to add rach support
+  * transceiver: add experimental viterbi equalizer support
+  * ms/va: make ancient gcc < 8 happy
+  * ms: fix thread prio startup issue
+  * ms: fix a few coverity complaints related to initialization
+  * ms: bump osmocom-bb submodule to current head
+
+  [ Eric Wild ]
+  * ms: adjust float<->integral type conversion
+  * ms: sch: drop intermediate softvector
+  * devices: add freq/gain override for uhd
+
+  [ arehbein ]
+  * Transition to use of 'telnet_init_default'
+
+  [ Pau Espin Pedrol ]
+  * Call osmo_fd_unregister() before closing and changing bfd->fd
+  * ms: update osmocom-bb submodule
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Tue, 12 Sep 2023 15:56:57 +0200
+
 osmo-trx (1.5.0) unstable; urgency=medium
 
   [ Oliver Smith ]
