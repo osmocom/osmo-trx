@@ -258,6 +258,7 @@ void upper_trx::driveReceiveFIFO()
 		trxcon_phyif_handle_burst_ind(g_trxcon, &bi);
 	}
 
+	burstTime.incTN(2);
 	struct trxcon_phyif_rts_ind rts {
 		static_cast<uint32_t>(burstTime.FN()), static_cast<uint8_t>(burstTime.TN())
 	};

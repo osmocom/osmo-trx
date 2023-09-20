@@ -130,7 +130,7 @@ void ms_trx::submit_burst(blade_sample_type *buffer, int len, GSM::Time target)
 		tosend.decTN(-diff_tn);
 
 	// in theory fn equal and tn+3 equal is also a problem...
-	if (diff_fn < 0 || (diff_fn == 0 && (now_time.TN() - target_tn < 1))) {
+	if (diff_fn < 0 || (diff_fn == 0 && (target_tn-now_time.TN() < 3))) {
 		std::cerr << "## TX too late?! fn DIFF:" << diff_fn << " tn LOCAL: " << now_time.TN()
 			  << " tn OTHER: " << target_tn << std::endl;
 		return;
