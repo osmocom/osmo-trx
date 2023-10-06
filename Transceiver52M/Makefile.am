@@ -88,6 +88,7 @@ TRXCON_LDADD = \
 MS_LOWER_SRC = \
 	ms/sch.c \
 	ms/ms.cpp \
+	ms/threadsched.cpp \
 	ms/ms_rx_lower.cpp \
 	grgsm_vitac/grgsm_vitac.cpp \
 	grgsm_vitac/viterbi_detector.cc
@@ -101,6 +102,7 @@ MS_UPPER_SRC = \
 
 noinst_HEADERS += \
    	ms/ms.h \
+	ms/threadsched.h \
 	ms/bladerf_specific.h \
 	ms/uhd_specific.h \
 	ms/ms_upper.h \

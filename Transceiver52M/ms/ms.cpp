@@ -35,6 +35,8 @@ extern "C" {
 #include "sch.h"
 }
 
+#include "threadsched.h"
+
 dummylog ms_trx::dummy_log;
 
 #ifdef DBGXX
@@ -83,13 +85,11 @@ void ms_trx::start_lower_ms()
 	if (stop_lower_threads_flag)
 		return;
 	auto fn = get_rx_burst_handler_fn(rx_bh());
-	lower_rx_task = std::thread(fn);
-	set_name_aff_sched(lower_rx_task.native_handle(), sched_params::thread_names::RXRUN);
+	lower_rx_task = spawn_worker_thread(sched_params::thread_names::RXRUN, fn, this);
 
 	usleep(1000);
 	auto fn2 = get_tx_burst_handler_fn(tx_bh());
-	lower_tx_task = std::thread(fn2);
-	set_name_aff_sched(lower_tx_task.native_handle(), sched_params::thread_names::TXRUN);
+	lower_tx_task = spawn_worker_thread(sched_params::thread_names::TXRUN, fn2, this);
 
 	actually_enable_streams();
 }
@@ -105,9 +105,9 @@ void ms_trx::stop_threads()
 	stop_lower_threads_flag = true;
 	close_device();
 	std::cerr << "dev closed..." << std::endl;
-	lower_rx_task.join();
+	pthread_join(lower_rx_task, nullptr);
 	std::cerr << "L rx dead..." << std::endl;
-	lower_tx_task.join();
+	pthread_join(lower_tx_task, nullptr);
 	std::cerr << "L tx dead..." << std::endl;
 }
 

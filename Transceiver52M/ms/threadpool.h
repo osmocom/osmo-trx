@@ -20,13 +20,12 @@
  *
  */
 
-#include <functional>
-#include <thread>
 #include <atomic>
 #include <vector>
 #include <future>
 #include <mutex>
 #include <queue>
+#include "threadsched.h"
 
 struct single_thread_pool {
 	std::mutex m;
@@ -34,7 +33,7 @@ struct single_thread_pool {
 	std::atomic<bool> stop_flag;
 	std::atomic<bool> is_ready;
 	std::deque<std::function<void()>> wq;
-	std::thread worker_thread;
+	pthread_t worker_thread;
 
 	template <class F>
 	void add_task(F &&f)
@@ -45,17 +44,21 @@ struct single_thread_pool {
 		return;
 	}
 
-	single_thread_pool() : stop_flag(false), is_ready(false), worker_thread(std::thread([this] { thread_loop(); }))
+	single_thread_pool() : stop_flag(false), is_ready(false)
 	{
+		worker_thread = spawn_worker_thread(
+			sched_params::thread_names::SCH_SEARCH,
+			[](void *args) -> void * {
+				using thist = decltype(this);
+				thist t = reinterpret_cast<thist>(args);
+				t->thread_loop();
+				return 0;
+			},
+			this);
 	}
 	~single_thread_pool()
 	{
 		stop();
-	}
-
-	std::thread::native_handle_type get_handle()
-	{
-		return worker_thread.native_handle();
 	}
 
     private:
@@ -67,7 +70,7 @@ struct single_thread_pool {
 			stop_flag = true;
 			cv.notify_one();
 		}
-		worker_thread.join();
+		pthread_join(worker_thread, nullptr);
 	}
 
 	void thread_loop()

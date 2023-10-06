@@ -26,7 +26,7 @@
 #include <cstdint>
 #include <mutex>
 #include <iostream>
-#include <thread>
+// #include <thread>
 
 #if defined(BUILDBLADE)
 #include "bladerf_specific.h"
@@ -42,6 +42,7 @@
 #include "GSMCommon.h"
 #include "itrq.h"
 #include "threadpool.h"
+#include "threadsched.h"
 
 const unsigned int ONE_TS_BURST_LEN = (3 + 58 + 26 + 58 + 3 + 8.25) * 4 /*sps*/;
 const unsigned int SCH_LEN_SPS = (ONE_TS_BURST_LEN * 8 /*ts*/ * 12 /*frames*/);
@@ -216,43 +217,23 @@ class time_keeper {
 	}
 };
 
-static struct sched_params {
-	enum thread_names { U_CTL = 0, U_RX, U_TX, SCH_SEARCH, MAIN, LEAKCHECK, RXRUN, TXRUN, _THRD_NAME_COUNT };
-	enum target { ODROID = 0, PI4 };
-	const char *name;
-	int core;
-	int schedtype;
-	int prio;
-} schdp[][sched_params::_THRD_NAME_COUNT]{
-	{
-		{ "upper_ctrl", 2, SCHED_RR, sched_get_priority_max(SCHED_RR) },
-		{ "upper_rx", 2, SCHED_RR, sched_get_priority_max(SCHED_RR) - 5 },
-		{ "upper_tx", 2, SCHED_RR, sched_get_priority_max(SCHED_RR) - 1 },
-
-		{ "sch_search", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5 },
-		{ "main", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5 },
-		{ "leakcheck", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 10 },
-
-		{ "rxrun", 4, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 2 },
-		{ "txrun", 5, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 1 },
-	},
-	{
-		{ "upper_ctrl", 1, SCHED_RR, sched_get_priority_max(SCHED_RR) },
-		{ "upper_rx", 1, SCHED_RR, sched_get_priority_max(SCHED_RR) - 5 },
-		{ "upper_tx", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 1 },
-
-		{ "sch_search", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5 },
-		{ "main", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 5 },
-		{ "leakcheck", 1, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 10 },
-
-		{ "rxrun", 2, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 2 },
-		{ "txrun", 3, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO) - 1 },
-	},
-};
-
 using ts_hitter_q_t = spsc_cond<64, GSM::Time, true, false>;
 
-struct ms_trx : public BASET {
+// used to globally initialize the sched/hw information
+struct sched_hw_info {
+	int hw_cpus;
+	sched_params::target hw_target;
+
+	sched_hw_info()
+	{
+		hw_cpus = std::thread::hardware_concurrency();
+		hw_target = hw_cpus > 4 ? sched_params::target::ODROID : sched_params::target::PI4;
+		set_sched_target(hw_target);
+		std::cerr << "scheduling for: " << (hw_cpus > 4 ? "odroid" : "pi4") << std::endl;
+	}
+};
+
+struct ms_trx : public BASET, public sched_hw_info {
 	using base = BASET;
 	static dummylog dummy_log;
 	unsigned int mTSC;
@@ -260,8 +241,8 @@ struct ms_trx : public BASET {
 	int timing_advance;
 	bool do_auto_gain;
 
-	std::thread lower_rx_task;
-	std::thread lower_tx_task;
+	pthread_t lower_rx_task;
+	pthread_t lower_tx_task;
 
 	// provides bursts to upper rx thread
 	rx_queue_t rxqueue;
@@ -277,9 +258,7 @@ struct ms_trx : public BASET {
 	int64_t first_sch_ts_start = -1;
 
 	time_keeper timekeeper;
-	int hw_cpus;
-	sched_params::target hw_target;
-	single_thread_pool worker_thread;
+	single_thread_pool worker_thread; // uses base class sched target hw info
 
 	void start_lower_ms();
 	std::atomic<bool> upper_is_ready;
@@ -301,12 +280,8 @@ struct ms_trx : public BASET {
 		: mTSC(0), mBSIC(0), timing_advance(0), do_auto_gain(false), rxqueue(),
 		  first_sch_buf(new blade_sample_type[SCH_LEN_SPS]),
 		  burst_copy_buffer(new blade_sample_type[ONE_TS_BURST_LEN]), first_sch_buf_rcv_ts(0),
-		  rcv_done{ false }, sch_thread_done{ false }, hw_cpus(std::thread::hardware_concurrency()),
-		  hw_target(hw_cpus > 4 ? sched_params::target::ODROID : sched_params::target::PI4),
-		  upper_is_ready(false)
+		  rcv_done{ false }, sch_thread_done{ false }, upper_is_ready(false)
 	{
-		std::cerr << "scheduling for: " << (hw_cpus > 4 ? "odroid" : "pi4") << std::endl;
-		set_name_aff_sched(worker_thread.get_handle(), sched_params::thread_names::SCH_SEARCH);
 	}
 
 	virtual ~ms_trx()
@@ -322,74 +297,5 @@ struct ms_trx : public BASET {
 	{
 		assert(val > -127 && val < 128);
 		timing_advance = val * 4;
-	}
-
-	void set_name_aff_sched(sched_params::thread_names name)
-	{
-		set_name_aff_sched(pthread_self(), name);
-	}
-
-	void set_name_aff_sched(std::thread::native_handle_type h, sched_params::thread_names name)
-	{
-		auto tgt = schdp[hw_target][name];
-		// std::cerr << "scheduling for: " << tgt.name << ":" << tgt.core << std::endl;
-		set_name_aff_sched(h, tgt.name, tgt.core, tgt.schedtype, tgt.prio);
-	}
-
-	using pt_sig = void *(*)(void *);
-
-	pthread_t spawn_worker_thread(sched_params::thread_names name, pt_sig fun, void *arg)
-	{
-		auto tgt = schdp[hw_target][name];
-		// std::cerr << "scheduling for: " << tgt.name << ":" << tgt.core << " prio:" << tgt.prio << std::endl;
-		return do_spawn_thr(tgt.name, tgt.core, tgt.schedtype, tgt.prio, fun, arg);
-	}
-
-    private:
-	void set_name_aff_sched(std::thread::native_handle_type h, const char *name, int cpunum, int schedtype,
-				int prio)
-	{
-		pthread_setname_np(h, name);
-
-		cpu_set_t cpuset;
-
-		CPU_ZERO(&cpuset);
-		CPU_SET(cpunum, &cpuset);
-
-		if (pthread_setaffinity_np(h, sizeof(cpuset), &cpuset) < 0) {
-			std::cerr << name << " affinity: errreur! " << std::strerror(errno);
-			return exit(0);
-		}
-
-		sched_param sch_params;
-		sch_params.sched_priority = prio;
-		if (pthread_setschedparam(h, schedtype, &sch_params) < 0) {
-			std::cerr << name << " sched: errreur! " << std::strerror(errno);
-			return exit(0);
-		}
-	}
-
-	pthread_t do_spawn_thr(const char *name, int cpunum, int schedtype, int prio, pt_sig fun, void *arg)
-	{
-		pthread_t thread;
-
-		pthread_attr_t attr;
-		pthread_attr_init(&attr);
-
-		sched_param sch_params;
-		sch_params.sched_priority = prio;
-		cpu_set_t cpuset;
-		CPU_ZERO(&cpuset);
-		CPU_SET(cpunum, &cpuset);
-		auto a = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
-		a |= pthread_attr_setschedpolicy(&attr, schedtype);
-		a |= pthread_attr_setschedparam(&attr, &sch_params);
-		a |= pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-		if(a)
-			std::cerr << "thread arg rc:" << a << std::endl;
-		pthread_create(&thread, &attr, fun, arg);
-		pthread_setname_np(thread, name);
-		pthread_attr_destroy(&attr);
-		return thread;
 	}
 };

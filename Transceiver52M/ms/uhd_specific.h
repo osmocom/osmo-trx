@@ -231,24 +231,29 @@ struct uhd_hw {
 
 	auto get_rx_burst_handler_fn(bh_fn_t burst_handler)
 	{
-		auto fn = [this, burst_handler] {
+		// C cb -> ghetto closure capture, which is fine, the args never change.
+		static auto rx_burst_cap_this = this;
+		static auto rx_burst_cap_bh = burst_handler;
+		auto fn = [](void *args) -> void * {
 			pthread_setname_np(pthread_self(), "rxrun");
 
 			uhd::stream_cmd_t stream_cmd(uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS);
 			stream_cmd.stream_now = true;
 			stream_cmd.time_spec = uhd::time_spec_t();
-			rx_stream->issue_stream_cmd(stream_cmd);
+			rx_burst_cap_this->rx_stream->issue_stream_cmd(stream_cmd);
 
-			while (!stop_lower_threads_flag) {
-				rx_cb(burst_handler);
+			while (!rx_burst_cap_this->stop_lower_threads_flag) {
+				rx_burst_cap_this->rx_cb(rx_burst_cap_bh);
 			}
+			return 0;
 		};
 		return fn;
 	}
 	auto get_tx_burst_handler_fn(bh_fn_t burst_handler)
 	{
-		auto fn = [] {
+		auto fn = [](void *args) -> void * {
 			// dummy
+			return 0;
 		};
 		return fn;
 	}

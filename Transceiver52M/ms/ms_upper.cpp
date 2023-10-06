@@ -50,6 +50,7 @@ void __lsan_do_recoverable_leak_check();
 
 #include "ms_trxcon_if.h"
 #include "ms_upper.h"
+#include "threadsched.h"
 
 extern bool trxc_l1ctl_init(void *tallctx);
 struct trxcon_inst *g_trxcon;
@@ -457,7 +458,7 @@ int main(int argc, char *argv[])
 		std::cerr << "Error initializing hardware, quitting.." << std::endl;
 		return -1;
 	}
-	trx->set_name_aff_sched(sched_params::thread_names::MAIN);
+	set_name_aff_sched(sched_params::thread_names::MAIN);
 
 	if (!trxc_l1ctl_init(tall_trxcon_ctx)) {
 		std::cerr << "Error initializing l1ctl, quitting.." << std::endl;

@@ -428,10 +428,12 @@ struct blade_hw {
 
 	auto get_rx_burst_handler_fn(bh_fn_t burst_handler)
 	{
-		auto fn = [this] {
+		using thist = decltype(this);
+		auto fn = [](void *args) -> void * {
+			thist t = reinterpret_cast<thist>(args);
 			int status = 0;
 			if (!stop_lower_threads_flag)
-				status = bladerf_stream(rx_stream, BLADERF_RX_X1);
+				status = bladerf_stream(t->rx_stream, BLADERF_RX_X1);
 			if (status < 0)
 				std::cerr << "rx stream error! " << bladerf_strerror(status) << std::endl;
 
@@ -441,10 +443,12 @@ struct blade_hw {
 	}
 	auto get_tx_burst_handler_fn(bh_fn_t burst_handler)
 	{
-		auto fn = [this] {
+		using thist = decltype(this);
+		auto fn = [](void *args) -> void * {
+			thist t = reinterpret_cast<thist>(args);
 			int status = 0;
 			if (!stop_lower_threads_flag)
-				status = bladerf_stream(tx_stream, BLADERF_TX_X1);
+				status = bladerf_stream(t->tx_stream, BLADERF_TX_X1);
 			if (status < 0)
 				std::cerr << "rx stream error! " << bladerf_strerror(status) << std::endl;
 
