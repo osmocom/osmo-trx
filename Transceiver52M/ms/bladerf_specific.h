@@ -254,6 +254,8 @@ struct blade_hw {
 
 		bladerf_log_set_verbosity(BLADERF_LOG_LEVEL_DEBUG);
 		bladerf_set_usb_reset_on_open(true);
+
+		setenv("BLADERF_DEFAULT_TUNING_MODE","fpga",1); // ensure blade 2 does not spend 10 seconds initializing host control
 		blade_check(bladerf_open, &dev, "");
 		if (!dev) {
 			std::cerr << "open failed, device missing?" << std::endl;
