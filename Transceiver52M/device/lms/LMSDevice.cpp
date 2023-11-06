@@ -245,6 +245,7 @@ int LMSDevice::open()
 
 	m_dev_type = parse_dev_type(m_lms_dev);
 	dev_desc = dev_param_map.at(m_dev_type);
+	update_band_dev(m_dev_type);
 
 	if ((cfg->clock_ref != REF_EXTERNAL) && (cfg->clock_ref != REF_INTERNAL)) {
 		LOGC(DDEV, ERROR) << "Invalid reference type";
