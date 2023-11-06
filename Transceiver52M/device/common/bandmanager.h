@@ -34,7 +34,7 @@ class band_manager {
 	using powerkeyt = typename powermapt::key_type;
 	using powermappedt = typename powermapt::mapped_type;
 	using devkeyt = typename devmapt::key_type;
-	const devkeyt &m_dev_type;
+	devkeyt m_dev_type;
 	const powermapt &m_power_map;
 	const devmapt &m_dev_map;
 	powerkeyt m_fallback;
@@ -100,6 +100,10 @@ class band_manager {
 	void band_reset()
 	{
 		band_ass_curr_sess = false;
+	}
+
+	void update_band_dev(devkeyt dev_type) {
+		m_dev_type = dev_type;
 	}
 
 	void get_dev_band_desc(powermappedt &desc)

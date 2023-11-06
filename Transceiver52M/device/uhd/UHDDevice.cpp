@@ -530,6 +530,8 @@ int uhd_device::open()
 	if (!parse_dev_type())
 		return -1;
 
+	update_band_dev(dev_key(dev_type, tx_sps, rx_sps));
+
 	if ((dev_type == E3XX) && !uhd_e3xx_version_chk()) {
 		LOGC(DDEV, ALERT) << "E3XX requires UHD 003.009.000 or greater";
 		return -1;

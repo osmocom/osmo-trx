@@ -279,6 +279,7 @@ int blade_device::open()
 
 	dev_type = blade_dev_type::BLADE2;
 	tx_window = TX_WINDOW_FIXED;
+	update_band_dev(dev_key(dev_type, tx_sps, rx_sps));
 
 	struct bladerf_devinfo info;
 	bladerf_get_devinfo(dev, &info);
