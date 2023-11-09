@@ -1,3 +1,10 @@
+osmo-trx (1.6.1) unstable; urgency=medium
+
+  [ Eric Wild ]
+  * devices: fix wrong gain to power mapping
+
+ -- Eric Wild <ewild@sysmocom.de>  Thu, 09 Nov 2023 14:16:21 +0200
+
 osmo-trx (1.6.0) unstable; urgency=medium
 
   [ Vadim Yanitskiy ]
