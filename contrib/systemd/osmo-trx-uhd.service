@@ -8,6 +8,7 @@ Type=simple
 Restart=always
 StateDirectory=osmocom
 WorkingDirectory=%S/osmocom
+Environment=HOME=%h
 ExecStart=/usr/bin/osmo-trx-uhd -C /etc/osmocom/osmo-trx-uhd.cfg
 RestartSec=2
 # CPU scheduling policy:
