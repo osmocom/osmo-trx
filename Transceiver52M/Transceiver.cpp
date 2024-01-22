@@ -959,19 +959,18 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
       sprintf(response, "RSP NOHANDOVER 0 %u %u", ts, ss);
     }
   } else if (match_cmd(command, "SETMAXDLY", &params)) {
-    //set expected maximum time-of-arrival
+    //set expected maximum time-of-arrival for Access Bursts
     int maxDelay;
     sscanf(params, "%d", &maxDelay);
     mMaxExpectedDelayAB = maxDelay; // 1 GSM symbol is approx. 1 km
     sprintf(response,"RSP SETMAXDLY 0 %d",maxDelay);
   } else if (match_cmd(command, "SETMAXDLYNB", &params)) {
-    //set expected maximum time-of-arrival
+    //set expected maximum time-of-arrival for Normal Bursts
     int maxDelay;
     sscanf(params, "%d", &maxDelay);
     mMaxExpectedDelayNB = maxDelay; // 1 GSM symbol is approx. 1 km
     sprintf(response,"RSP SETMAXDLYNB 0 %d",maxDelay);
   } else if (match_cmd(command, "SETRXGAIN", &params)) {
-    //set expected maximum time-of-arrival
     int newGain;
     sscanf(params, "%d", &newGain);
     newGain = mRadioInterface->setRxGain(newGain, chan);
