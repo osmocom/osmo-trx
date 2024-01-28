@@ -1,3 +1,15 @@
+# all config examples must be listed here unconditionally, so that
+# all of them end up in the release tarball (see OS#6349)
+EXTRA_DIST = \
+	osmo-trx-uhd/osmo-trx-limesdr.cfg \
+	osmo-trx-uhd/osmo-trx-usrp_b200.cfg \
+	osmo-trx-uhd/osmo-trx-uhd.cfg \
+	osmo-trx-uhd/osmo-trx-umtrx.cfg \
+	osmo-trx-lms/osmo-trx-limesdr.cfg \
+	osmo-trx-lms/osmo-trx-lms.cfg \
+	osmo-trx-ipc/osmo-trx-ipc.cfg \
+	$(NULL)
+
 OSMOCONF_FILES =
 osmoconfdir = $(sysconfdir)/osmocom
 
@@ -19,7 +31,6 @@ OSMOCONF_FILES += osmo-trx-ipc/osmo-trx-ipc.cfg
 endif
 
 osmoconf_DATA = $(OSMOCONF_FILES)
-EXTRA_DIST = $(OSMOCONF_FILES)
 
 CFG_FILES = find $(srcdir) -type f -name '*.cfg*' | sed -e 's,^$(srcdir),,'
 
