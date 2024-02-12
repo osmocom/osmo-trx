@@ -44,5 +44,6 @@ class upper_trx : public ms_trx {
 	void driveReceiveFIFO();
 	void driveTx();
 
-	upper_trx() : mOn(false){};
+	upper_trx() = delete;
+	explicit upper_trx(struct mssdr_cfg *cfgdata) : ms_trx(cfgdata), mOn(false){};
 };
