@@ -199,6 +199,7 @@ bool upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset)
 		return true;
 	}
 
+#if 1
 	convert_and_scale(ss, e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(rxFullScale));
 
 	pow = energyDetect(sv, 20 * 4 /*sps*/);
@@ -232,6 +233,42 @@ bool upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset)
 		// 	detect_burst(ss, &chan_imp_resp2[0], dummy_burst_start, outbin);
 #endif
 	}
+#else
+
+	// lower layer sch detection offset, easy to verify by just printing the detected value using both the va+sigproc code.
+	convert_and_scale(ss + 16, e.burst, ONE_TS_BURST_LEN * 2, 15);
+
+	pow = energyDetect(sv, 20 * 4 /*sps*/);
+	if (pow < -1) {
+		LOG(ALERT) << "Received empty burst";
+		return false;
+	}
+
+	avg = sqrt(pow);
+
+	/* Detect normal or RACH bursts */
+	CorrType type = CorrType::TSC;
+	struct estim_burst_params ebp;
+	auto rc = detectAnyBurst(sv, mTSC, 3, 4, type, 48, &ebp);
+	if (rc > 0) {
+		type = (CorrType)rc;
+	}
+
+	if (rc < 0) {
+		std::cerr << "UR : \x1B[31m rx fail \033[0m @ toa:" << ebp.toa << " " << e.gsmts.FN() << ":"
+			  << e.gsmts.TN() << std::endl;
+		return false;
+	}
+	SoftVector *bits = demodAnyBurst(sv, type, 4, &ebp);
+
+	SoftVector::const_iterator burstItr = bits->begin();
+	// invert and fix to +-127 sbits
+	for (int ii = 0; ii < 148; ii++) {
+		demodded_softbits[ii] = *burstItr++ > 0.0f ? -127 : 127;
+	}
+	delete bits;
+
+#endif
 	RSSI = (int)floor(20.0 * log10(rxFullScale / avg));
 	// FIXME: properly handle offset, sch/nb alignment diff? handled by lower anyway...
 	timingOffset = (int)round(0);

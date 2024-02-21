@@ -129,6 +129,8 @@ struct PulseSequence {
 static CorrelationSequence *gMidambles[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 static CorrelationSequence *gEdgeMidambles[] = {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 static CorrelationSequence *gRACHSequences[] = {NULL,NULL,NULL};
+static CorrelationSequence *gSCHSequence = NULL;
+static CorrelationSequence *gDummySequence = NULL;
 static PulseSequence *GSMPulse1 = NULL;
 static PulseSequence *GSMPulse4 = NULL;
 
@@ -150,6 +152,12 @@ void sigProcLibDestroy()
     delete gRACHSequences[i];
     gRACHSequences[i] = NULL;
   }
+
+  delete gSCHSequence;
+  gSCHSequence = NULL;
+
+  delete gDummySequence;
+  gDummySequence = NULL;
 
   delete GMSKRotation1;
   delete GMSKReverseRotation1;
@@ -315,6 +323,7 @@ static signalVector *convolve(const signalVector *x, const signalVector *h,
     append = true;
     break;
   case CUSTOM:
+  // FIXME: x->getstart?
     if (start < h->size() - 1) {
       head = h->size() - start;
       append = true;
@@ -1289,6 +1298,77 @@ release:
   return status;
 }
 
+static bool generateDummyMidamble(int sps)
+{
+  bool status = true;
+  float toa;
+  complex *data = NULL;
+  signalVector *autocorr = NULL, *midamble = NULL;
+  signalVector *midMidamble = NULL, *_midMidamble = NULL;
+
+  delete gDummySequence;
+
+  /* Use middle 16 bits of each TSC. Correlation sequence is not pulse shaped */
+  midMidamble = modulateBurst(gDummyBurstTSC.segment(5,16), 0, sps, true);
+  if (!midMidamble)
+    return false;
+
+  /* Simulated receive sequence is pulse shaped */
+  midamble = modulateBurst(gDummyBurstTSC, 0, sps, false);
+  if (!midamble) {
+    status = false;
+    goto release;
+  }
+
+  // NOTE: Because ideal TSC 16-bit midamble is 66 symbols into burst,
+  //       the ideal TSC has an + 180 degree phase shift,
+  //       due to the pi/2 frequency shift, that
+  //       needs to be accounted for.
+  //       26-midamble is 61 symbols into burst, has +90 degree phase shift.
+  scaleVector(*midMidamble, complex(-1.0, 0.0));
+  scaleVector(*midamble, complex(0.0, 1.0));
+
+  conjugateVector(*midMidamble);
+
+  /* For SSE alignment, reallocate the midamble sequence on 16-byte boundary */
+  data = (complex *) convolve_h_alloc(midMidamble->size());
+  _midMidamble = new signalVector(data, 0, midMidamble->size(), convolve_h_alloc, free);
+  _midMidamble->setAligned(true);
+  midMidamble->copyTo(*_midMidamble);
+
+  autocorr = convolve(midamble, _midMidamble, NULL, NO_DELAY);
+  if (!autocorr) {
+    status = false;
+    goto release;
+  }
+
+  gDummySequence = new CorrelationSequence;
+  gDummySequence->sequence = _midMidamble;
+  gDummySequence->gain = peakDetect(*autocorr, &toa, NULL);
+
+  /* For 1 sps only
+   *     (Half of correlation length - 1) + midpoint of pulse shape + remainder
+   *     13.5 = (16 / 2 - 1) + 1.5 + (26 - 10) / 2
+   */
+  if (sps == 1)
+    gDummySequence->toa = toa - 13.5;
+  else
+    gDummySequence->toa = 0;
+
+release:
+  delete autocorr;
+  delete midamble;
+  delete midMidamble;
+
+  if (!status) {
+    delete _midMidamble;
+    free(data);
+    gDummySequence = NULL;
+  }
+
+  return status;
+}
+
 static CorrelationSequence *generateEdgeMidamble(int tsc)
 {
   complex *data = NULL;
@@ -1384,6 +1464,69 @@ release:
   return status;
 }
 
+bool generateSCHSequence(int sps)
+{
+  bool status = true;
+  float toa;
+  complex *data = NULL;
+  signalVector *autocorr = NULL;
+  signalVector *seq0 = NULL, *seq1 = NULL, *_seq1 = NULL;
+
+  delete gSCHSequence;
+
+  seq0 = modulateBurst(gSCHSynchSequence, 0, sps, false);
+  if (!seq0)
+    return false;
+
+  seq1 = modulateBurst(gSCHSynchSequence, 0, sps, true);
+  if (!seq1) {
+    status = false;
+    goto release;
+  }
+
+  conjugateVector(*seq1);
+
+  /* For SSE alignment, reallocate the midamble sequence on 16-byte boundary */
+  data = (complex *) convolve_h_alloc(seq1->size());
+  _seq1 = new signalVector(data, 0, seq1->size(), convolve_h_alloc, free);
+  _seq1->setAligned(true);
+  seq1->copyTo(*_seq1);
+
+  autocorr = convolve(seq0, _seq1, autocorr, NO_DELAY);
+  if (!autocorr) {
+    status = false;
+    goto release;
+  }
+
+  gSCHSequence = new CorrelationSequence;
+  gSCHSequence->sequence = _seq1;
+  gSCHSequence->buffer = data;
+  gSCHSequence->gain = peakDetect(*autocorr, &toa, NULL);
+
+  /* For 1 sps only
+   *     (Half of correlation length - 1) + midpoint of pulse shaping filer
+   *     20.5 = (64 / 2 - 1) + 1.5
+   */
+  if (sps == 1)
+    gSCHSequence->toa = toa - 32.5;
+  else
+    gSCHSequence->toa = 0.0;
+
+release:
+  delete autocorr;
+  delete seq0;
+  delete seq1;
+
+  if (!status) {
+    delete _seq1;
+    free(data);
+    gSCHSequence = NULL;
+  }
+
+  return status;
+}
+
+
 /*
  * Peak-to-average computation +/- range from peak in symbols
  */
@@ -1441,14 +1584,15 @@ float energyDetect(const signalVector &rxBurst, unsigned windowLength)
   return energy/windowLength;
 }
 
-static signalVector *downsampleBurst(const signalVector &burst)
+static signalVector *downsampleBurst(const signalVector &burst, int in_len = DOWNSAMPLE_IN_LEN,
+				     int out_len = DOWNSAMPLE_OUT_LEN)
 {
-  signalVector in(DOWNSAMPLE_IN_LEN, dnsampler->len());
-  signalVector *out = new signalVector(DOWNSAMPLE_OUT_LEN);
-  burst.copyToSegment(in, 0, DOWNSAMPLE_IN_LEN);
+  signalVector in(in_len, dnsampler->len());
+  // gSCHSequence->sequence->size(), ensure next conv has no realloc
+  signalVector *out = new signalVector(out_len, 64);
+  burst.copyToSegment(in, 0, in_len);
 
-  if (dnsampler->rotate((float *) in.begin(), DOWNSAMPLE_IN_LEN,
-                        (float *) out->begin(), DOWNSAMPLE_OUT_LEN) < 0) {
+  if (dnsampler->rotate((float *)in.begin(), in_len, (float *)out->begin(), out_len) < 0) {
     delete out;
     out = NULL;
   }
@@ -1468,6 +1612,12 @@ static float computeCI(const signalVector *burst, const CorrelationSequence *syn
   float S, C;
   /* Integer position where the sequence starts */
   const int ps = start + 1 - N + (int)roundf(toa);
+
+  if(ps < 0) // might be -22 for toa 40 with N=64, if off by a lot during sch ms sync
+    return 0;
+
+  if (ps + N > (int)burst->size())
+	  return 0;
 
   /* Estimate Signal power */
   S = 0.0f;
@@ -1652,6 +1802,80 @@ static int detectRACHBurst(const signalVector &burst, float threshold, int sps,
   return rc;
 }
 
+int detectSCHBurst(signalVector &burst,
+		    float thresh,
+		    int sps,
+        sch_detect_type state, struct estim_burst_params *ebp)
+{
+  int rc, start, target, head, tail, len;
+  complex _amp;
+  CorrelationSequence *sync;
+
+  if ((sps != 1) && (sps != 4))
+    return -1;
+
+  target = 3 + 39 + 64;
+
+  switch (state) {
+  case sch_detect_type::SCH_DETECT_NARROW:
+    head = 4;
+    tail = 4;
+    break;
+  case sch_detect_type::SCH_DETECT_BUFFER:
+	  target = 1;
+	  head = 0;
+	  tail = (12 * 8 * 625) / 4; // 12 frames, downsampled /4 to 1 sps
+	  break;
+  case sch_detect_type::SCH_DETECT_FULL:
+  default:
+    head = target - 1;
+    tail = 39 + 3 + 9;
+    break;
+  }
+
+  start = (target - head) * 1 - 1;
+  len = (head + tail) * 1;
+  sync = gSCHSequence;
+  signalVector corr(len);
+
+  signalVector *dec = downsampleBurst(burst, len * 4, len);
+  rc = detectBurst(*dec, corr, sync, thresh, 1, start, len, ebp);
+  delete dec;
+
+  if (rc < 0) {
+    return -1;
+  } else if (!rc) {
+      ebp->amp = 0.0f;
+      ebp->toa = 0.0f;
+    return 0;
+  }
+
+  if (state == sch_detect_type::SCH_DETECT_BUFFER)
+	  ebp->toa = ebp->toa - (3 + 39 + 64);
+  else {
+	  /* Subtract forward search bits from delay */
+	  ebp->toa = ebp->toa - head;
+  }
+
+  return rc;
+}
+
+static int detectDummyBurst(const signalVector &burst, float threshold,
+                               int sps, unsigned max_toa, struct estim_burst_params *ebp)
+{
+  int rc, target, head, tail;
+  CorrelationSequence *sync;
+
+  target = 3 + 58 + 16 + 5;
+  head = 10;
+  tail = 6 + max_toa;
+  sync = gDummySequence;
+
+  ebp->tsc = 0;
+  rc = detectGeneralBurst(burst, threshold, sps, target, head, tail, sync, ebp);
+  return rc;
+}
+
 /*
  * Normal burst detection
  *
@@ -1670,7 +1894,7 @@ static int analyzeTrafficBurst(const signalVector &burst, unsigned tsc, float th
     return -SIGERR_UNSUPPORTED;
 
   target = 3 + 58 + 16 + 5;
-  head = 6;
+  head = 10;
   tail = 6 + max_toa;
   sync = gMidambles[tsc];
 
@@ -1718,6 +1942,9 @@ int detectAnyBurst(const signalVector &burst, unsigned tsc, float threshold,
   case EXT_RACH:
   case RACH:
     rc = detectRACHBurst(burst, threshold, sps, max_toa, type == EXT_RACH, ebp);
+    break;
+  case IDLE:
+    rc = detectDummyBurst(burst, threshold, sps, max_toa, ebp);
     break;
   default:
     LOG(ERR) << "Invalid correlation type";
@@ -1920,6 +2147,9 @@ bool sigProcLibSetup()
   generateRACHSequence(&gRACHSequences[0], gRACHSynchSequenceTS0, 1);
   generateRACHSequence(&gRACHSequences[1], gRACHSynchSequenceTS1, 1);
   generateRACHSequence(&gRACHSequences[2], gRACHSynchSequenceTS2, 1);
+
+  generateSCHSequence(1);
+  generateDummyMidamble(1);
 
   for (int tsc = 0; tsc < 8; tsc++) {
     generateMidamble(1, tsc);
