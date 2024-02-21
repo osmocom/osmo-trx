@@ -95,7 +95,7 @@ NO_UBSAN static void detect_burst_generic(const gr_complex *input, gr_complex *c
 	viterbi_detector(filtered_burst, burst_size, rhh, start_state, stop_states, 2, output);
 
 	for (unsigned int i = 0; i < burst_size; i++)
-		output_binary[i] = (char)(output[i] * -127); // pre flip bits!
+		output_binary[i] = output[i] > 0 ? -127 : 127; // pre flip bits!
 }
 
 NO_UBSAN void detect_burst_nb(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary,
