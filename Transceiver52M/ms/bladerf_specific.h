@@ -269,7 +269,8 @@ struct blade_hw {
 
 		bool is_locked;
 		blade_check(bladerf_set_pll_enable, dev, true);
-		blade_check(bladerf_set_pll_refclk, dev, 10000000UL);
+		uint64_t refclock = 10000000UL;
+		blade_check(bladerf_set_pll_refclk, dev, refclock);
 		for (int i = 0; i < 20; i++) {
 			usleep(50 * 1000);
 			bladerf_get_pll_lock_state(dev, &is_locked);
