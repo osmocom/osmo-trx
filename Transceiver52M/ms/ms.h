@@ -217,8 +217,6 @@ class time_keeper {
 	}
 };
 
-using ts_hitter_q_t = spsc_cond<64, GSM::Time, true, false>;
-
 // used to globally initialize the sched/hw information
 struct sched_hw_info {
 	int hw_cpus;
