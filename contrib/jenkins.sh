@@ -88,6 +88,7 @@ export PATH="$inst/bin:$PATH"
 CONFIG="
 	--enable-sanitize
 	--enable-werror
+	--with-bladerf
 	--with-ipc
 	--with-lms
 	--with-mstrx
