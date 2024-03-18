@@ -38,6 +38,7 @@ Transceiver52M/device/ipc/ipc-driver-test
 .deps
 .libs
 .dirstamp
+.version
 *~
 Makefile
 config.log
