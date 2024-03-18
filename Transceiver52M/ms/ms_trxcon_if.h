@@ -37,6 +37,6 @@ struct internal_q_tx_buf {
 		memcpy(buf, (void *)br->burst, br->burst_len);
 	}
 };
-using tx_queue_t = spsc_cond<8 * 1, internal_q_tx_buf, true, false>;
+using tx_queue_t = spsc_cond_timeout<8 * 1, internal_q_tx_buf, true, false>;
 using cmd_queue_t = spsc_cond_timeout<8 * 1, trxcon_phyif_cmd, true, false>;
-using cmdr_queue_t = spsc_cond<8 * 1, trxcon_phyif_rsp, false, false>;
+using cmdr_queue_t = spsc_cond_timeout<8 * 1, trxcon_phyif_rsp, false, false>;
