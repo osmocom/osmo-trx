@@ -85,7 +85,16 @@ export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="$inst/lib"
 export PATH="$inst/bin:$PATH"
 
-CONFIG="--enable-sanitize --enable-werror --with-uhd --with-usrp1 --with-lms --with-ipc --with-mstrx $INSTR"
+CONFIG="
+	--enable-sanitize
+	--enable-werror
+	--with-ipc
+	--with-lms
+	--with-mstrx
+	--with-uhd
+	--with-usrp1
+	$INSTR
+"
 
 # Additional configure options and depends
 if [ "$WITH_MANUALS" = "1" ]; then
@@ -109,7 +118,7 @@ $MAKE check \
   || cat-testlogs.sh
 
 if arch | grep -v -q arm; then
-	DISTCHECK_CONFIGURE_FLAGS="$CONFIG" $MAKE $PARALLEL_MAKE distcheck \
+	DISTCHECK_CONFIGURE_FLAGS="$(echo $CONFIG | tr -d '\n')" $MAKE $PARALLEL_MAKE distcheck \
 	  || cat-testlogs.sh
 fi
 
