@@ -12,8 +12,10 @@ override_dh_auto_configure:
 	dh_auto_configure -- \
 		--enable-manuals \
 		--with-systemdsystemunitdir=/lib/systemd/system \
+		--with-bladerf \
 		--with-ipc \
 		--with-lms \
+		--with-mstrx \
 		--with-uhd \
 		--with-usrp1 \
 		$(NULL)
