@@ -186,7 +186,6 @@ struct blade_otw_buffer_helper {
 };
 
 using dev_buf_t = typeof(blade_otw_buffer_helper<BLADE_BUFFER_SIZE, blade_speed_buffer_type::SS>::x);
-// using buf_in_use = blade_otw_buffer<2, blade_speed_buffer_type::SS>;
 using bh_fn_t = std::function<int(dev_buf_t *)>;
 
 template <typename T>
@@ -194,7 +193,6 @@ struct blade_hw {
 	struct bladerf *dev;
 	struct bladerf_stream *rx_stream;
 	struct bladerf_stream *tx_stream;
-	// using pkt2buf = blade_otw_buffer<2, blade_speed_buffer_type::SS>;
 	using tx_buf_q_type = spsc_cond_timeout<BLADE_NUM_BUFFERS, dev_buf_t *, true, false>;
 	const unsigned int rxFullScale, txFullScale;
 	const int rxtxdelay;

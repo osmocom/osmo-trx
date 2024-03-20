@@ -21,7 +21,6 @@
  */
 
 #include <atomic>
-#include <vector>
 #include <future>
 #include <mutex>
 #include <queue>

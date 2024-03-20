@@ -181,7 +181,6 @@ class time_keeper {
 		std::lock_guard<std::mutex> g(m);
 		global_time_keeper.incTN(1);
 		global_ts_keeper = new_ts;
-		// std::cerr << "u " << new_ts << std::endl;
 	}
 	void inc_and_update_safe(int64_t new_ts)
 	{
@@ -191,7 +190,6 @@ class time_keeper {
 		assert(diff > 0.5 * ONE_TS_BURST_LEN);
 		global_time_keeper.incTN(1);
 		global_ts_keeper = new_ts;
-		// std::cerr << "s " << new_ts << std::endl;
 	}
 	void dec_by_one()
 	{
@@ -216,8 +214,6 @@ class time_keeper {
 		*ts = global_ts_keeper;
 	}
 };
-
-using ts_hitter_q_t = spsc_cond<64, GSM::Time, true, false>;
 
 // used to globally initialize the sched/hw information
 struct sched_hw_info {

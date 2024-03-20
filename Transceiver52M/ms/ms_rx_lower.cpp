@@ -89,8 +89,6 @@ bool ms_trx::decode_sch(char *bits, bool update_global_clock)
 			mBSIC = sch.bsic;
 			mTSC = sch.bsic & 0x7;
 			timekeeper.set(fn, 0);
-			// global_time_keeper.FN(fn);
-			// global_time_keeper.TN(0);
 		}
 
 		return true;
@@ -261,7 +259,6 @@ bool ms_trx::handle_sch(bool is_first_sch_acq)
 		clamp_array(bits->begin(), 148, 1.5f);
 
 		float_to_sbit(&bits->begin()[0], (signed char *)&sch_demod_bits[0], 62, 148);
-		// float_to_sbit(&bits->begin()[106], &data[39], 62, 39);
 
 		if (decode_sch((char *)sch_demod_bits, is_first_sch_acq)) {
 			auto current_gsm_time_updated = timekeeper.gsmtime();
@@ -371,7 +368,6 @@ void ms_trx::grab_bursts(dev_buf_t *rcd)
 
 		if (fracts)
 			timekeeper.inc_both();
-		// timekeeper.inc_and_update(first_sch_ts_start + 1 * ONE_TS_BURST_LEN);
 
 		timekeeper.dec_by_one(); // oops, off by one?
 

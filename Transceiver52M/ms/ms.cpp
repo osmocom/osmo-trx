@@ -22,18 +22,12 @@
 #include "GSMCommon.h"
 #include <atomic>
 #include <cassert>
-#include <complex>
+
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
-#include <thread>
-#include <fstream>
 
 #include "ms.h"
-
-extern "C" {
-#include "sch.h"
-}
 
 #include "threadsched.h"
 
