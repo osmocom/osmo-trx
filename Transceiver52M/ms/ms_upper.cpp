@@ -172,9 +172,11 @@ bool upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset)
 	std::fill(workbuf, workbuf + workbuf_size, 0);
 	// assert(sv.begin() == &workbuf[40]);
 
-	while (!rxqueue.spsc_pop(&e)) {
+	while (!rxqueue.spsc_pop(&e) && !g_exit_flag) {
 		rxqueue.spsc_prep_pop();
 	}
+	if (g_exit_flag)
+		return false;
 
 	wTime = e.gsmts;
 

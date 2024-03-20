@@ -34,7 +34,7 @@ class spsc_cond_timeout_detail {
 	std::condition_variable cond_r, cond_w;
 	std::mutex lr, lw;
 	std::atomic_int r_flag, w_flag;
-	const int timeout_ms = 200;
+	const int timeout_ms = 600;
 
     public:
 	explicit spsc_cond_timeout_detail() : r_flag(0), w_flag(0)

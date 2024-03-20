@@ -54,6 +54,8 @@ extern "C" {
 
 #define PRINT_Q_OVERFLOW
 
+extern std::atomic<bool> g_exit_flag;
+
 bool ms_trx::decode_sch(char *bits, bool update_global_clock)
 {
 	int fn;
@@ -141,7 +143,7 @@ bool ms_trx::handle_sch_or_nb()
 		memcpy(brst.sch_bits, sch_demod_bits, sizeof(sch_demod_bits));
 	}
 
-	while (upper_is_ready && !rxqueue.spsc_push(&brst))
+	while (!g_exit_flag && upper_is_ready && !rxqueue.spsc_push(&brst))
 		;
 
 	if (!use_agc)
