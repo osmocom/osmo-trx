@@ -8,6 +8,7 @@ EXTRA_DIST = \
 	osmo-trx-lms/osmo-trx-limesdr.cfg \
 	osmo-trx-lms/osmo-trx-lms.cfg \
 	osmo-trx-ipc/osmo-trx-ipc.cfg \
+	osmo-trx-ms-blade/mssdr.cfg \
 	$(NULL)
 
 OSMOCONF_FILES =

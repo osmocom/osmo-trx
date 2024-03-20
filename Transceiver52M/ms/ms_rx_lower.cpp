@@ -108,12 +108,12 @@ void ms_trx::maybe_update_gain(one_burst &brst)
 	runmean = gain_check ? (runmean * (gain_check + 2) - 1 + sum) / (gain_check + 2) : sum;
 
 	if (gain_check == avgburst_num - 1) {
-		DBGLG2() << "\x1B[32m #RXG \033[0m" << rxgain << " " << runmean << " " << sum << std::endl;
+		DBGLG2() << "\x1B[32m #RXG \033[0m" << cfg.rxgain << " " << runmean << " " << sum << std::endl;
 		auto gainoffset = runmean < (rxFullScale / 4 ? 4 : 2);
 		gainoffset = runmean < (rxFullScale / 2 ? 2 : 1);
-		float newgain = runmean < rx_max_cutoff ? rxgain + gainoffset : rxgain - gainoffset;
+		float newgain = runmean < rx_max_cutoff ? cfg.rxgain + gainoffset : cfg.rxgain - gainoffset;
 		// FIXME: gian cutoff
-		if (newgain != rxgain && newgain <= 60) {
+		if (newgain != cfg.rxgain && newgain <= 60) {
 			auto gain_fun = [this, newgain] { setRxGain(newgain); };
 			worker_thread.add_task(gain_fun);
 		}
@@ -144,7 +144,7 @@ bool ms_trx::handle_sch_or_nb()
 	while (upper_is_ready && !rxqueue.spsc_push(&brst))
 		;
 
-	if (do_auto_gain)
+	if (!use_agc)
 		maybe_update_gain(brst);
 
 	return false;
@@ -158,24 +158,24 @@ bool ms_trx::handle_sch(bool is_first_sch_acq)
 	const auto buf_len = is_first_sch_acq ? SCH_LEN_SPS : ONE_TS_BURST_LEN;
 	const auto which_in_buffer = is_first_sch_acq ? first_sch_buf : burst_copy_buffer;
 	memset((void *)&sch_acq_buffer[0], 0, sizeof(sch_acq_buffer));
-#if 1
-	const auto which_out_buffer = is_first_sch_acq ? sch_acq_buffer : &sch_acq_buffer[40 * 2];
-	const auto ss = reinterpret_cast<std::complex<float> *>(which_out_buffer);
-	std::complex<float> channel_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
-	int start;
-	convert_and_scale(which_out_buffer, which_in_buffer, buf_len * 2, 1.f / float(rxFullScale));
-	if (is_first_sch_acq) {
-		float max_corr = 0;
-		start = get_sch_buffer_chan_imp_resp(ss, &channel_imp_resp[0], buf_len, &max_corr);
-	} else {
-		start = get_sch_chan_imp_resp(ss, &channel_imp_resp[0]);
-		start = start < 39 ? start : 39;
-		start = start > -39 ? start : -39;
-	}
-	detect_burst_nb(&ss[start], &channel_imp_resp[0], 0, sch_demod_bits);
+	if (use_va) {
+		const auto which_out_buffer = is_first_sch_acq ? sch_acq_buffer : &sch_acq_buffer[40 * 2];
+		const auto ss = reinterpret_cast<std::complex<float> *>(which_out_buffer);
+		std::complex<float> channel_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
+		int start;
+		convert_and_scale(which_out_buffer, which_in_buffer, buf_len * 2, 1.f / float(rxFullScale));
+		if (is_first_sch_acq) {
+			float max_corr = 0;
+			start = get_sch_buffer_chan_imp_resp(ss, &channel_imp_resp[0], buf_len, &max_corr);
+		} else {
+			start = get_sch_chan_imp_resp(ss, &channel_imp_resp[0]);
+			start = start < 39 ? start : 39;
+			start = start > -39 ? start : -39;
+		}
+		detect_burst_nb(&ss[start], &channel_imp_resp[0], 0, sch_demod_bits);
 
-	auto sch_decode_success = decode_sch(sch_demod_bits, is_first_sch_acq);
-#if 0
+		auto sch_decode_success = decode_sch(sch_demod_bits, is_first_sch_acq);
+#if 0 // useful to debug offset shifts
 	auto burst = new signalVector(buf_len, 50);
 	const auto corr_type = is_first_sch_acq ? sch_detect_type::SCH_DETECT_BUFFER : sch_detect_type::SCH_DETECT_FULL;
 	struct estim_burst_params ebp;
@@ -189,113 +189,114 @@ bool ms_trx::handle_sch(bool is_first_sch_acq)
 	std::cerr << "ooffs: " << howmuchdelay << " " << std::endl;
 	std::cerr << "voffs: " << start << " " << sch_decode_success << std::endl;
 #endif
-	if (sch_decode_success) {
-		const auto ts_offset_symb = 4;
-		if (is_first_sch_acq) {
-			// update ts to first sample in sch buffer, to allow delay calc for current ts
-			first_sch_ts_start = first_sch_buf_rcv_ts + start - (ts_offset_symb * 4) - 1;
-		} else if (abs(start) > 1) {
-			// continuous sch tracking, only update if off too much
-			temp_ts_corr_offset += -start;
-			std::cerr << "offs: " << start << " " << temp_ts_corr_offset << std::endl;
+		if (sch_decode_success) {
+			const auto ts_offset_symb = 4;
+			if (is_first_sch_acq) {
+				// update ts to first sample in sch buffer, to allow delay calc for current ts
+				first_sch_ts_start = first_sch_buf_rcv_ts + start - (ts_offset_symb * 4) - 1;
+			} else if (abs(start) > 1) {
+				// continuous sch tracking, only update if off too much
+				temp_ts_corr_offset += -start;
+				std::cerr << "offs: " << start << " " << temp_ts_corr_offset << std::endl;
+			}
+
+			return true;
+		} else {
+			DBGLG2() << "L SCH : \x1B[31m decode fail \033[0m @ toa:" << start << " "
+				 << current_gsm_time.FN() << ":" << current_gsm_time.TN() << std::endl;
 		}
-
-		return true;
 	} else {
-		DBGLG2() << "L SCH : \x1B[31m decode fail \033[0m @ toa:" << start << " " << current_gsm_time.FN()
-			 << ":" << current_gsm_time.TN() << std::endl;
-	}
-#else
-	const auto ts_offset_symb = 4;
-	auto burst = new signalVector(buf_len, 50);
-	const auto corr_type = is_first_sch_acq ? sch_detect_type::SCH_DETECT_BUFFER : sch_detect_type::SCH_DETECT_FULL;
-	struct estim_burst_params ebp;
+		const auto ts_offset_symb = 4;
+		auto burst = new signalVector(buf_len, 50);
+		const auto corr_type =
+			is_first_sch_acq ? sch_detect_type::SCH_DETECT_BUFFER : sch_detect_type::SCH_DETECT_FULL;
+		struct estim_burst_params ebp;
 
-	// scale like uhd, +-2k -> +-32k
-	convert_and_scale(burst->begin(), which_in_buffer, buf_len * 2, SAMPLE_SCALE_FACTOR);
+		// scale like uhd, +-2k -> +-32k
+		convert_and_scale(burst->begin(), which_in_buffer, buf_len * 2, SAMPLE_SCALE_FACTOR);
 
-	auto rv = detectSCHBurst(*burst, 4, 4, corr_type, &ebp);
+		auto rv = detectSCHBurst(*burst, 4, 4, corr_type, &ebp);
 
-	int howmuchdelay = ebp.toa * 4;
+		int howmuchdelay = ebp.toa * 4;
 
-	if (!rv) {
-		delete burst;
-		DBGLG() << "SCH : \x1B[31m detect fail \033[0m NOOOOOOOOOOOOOOOOOO toa:" << ebp.toa << " "
-			<< current_gsm_time.FN() << ":" << current_gsm_time.TN() << std::endl;
-		return false;
-	}
-
-	SoftVector *bits;
-	if (is_first_sch_acq) {
-		// can't be legit with a buf size spanning _at least_ one SCH but delay that implies partial sch burst
-		if (howmuchdelay < 0 || (buf_len - howmuchdelay) < ONE_TS_BURST_LEN) {
+		if (!rv) {
 			delete burst;
+			DBGLG() << "SCH : \x1B[31m detect fail \033[0m NOOOOOOOOOOOOOOOOOO toa:" << ebp.toa << " "
+				<< current_gsm_time.FN() << ":" << current_gsm_time.TN() << std::endl;
 			return false;
 		}
 
-		struct estim_burst_params ebp2;
-		// auto sch_chunk = new signalVector(ONE_TS_BURST_LEN, 50);
-		// auto sch_chunk_start = sch_chunk->begin();
-		// memcpy(sch_chunk_start, sch_buf_f.data() + howmuchdelay, sizeof(std::complex<float>) * ONE_TS_BURST_LEN);
-
-		auto delay = delayVector(burst, NULL, -howmuchdelay);
-
-		scaleVector(*delay, (complex)1.0 / ebp.amp);
-
-		auto rv2 = detectSCHBurst(*delay, 4, 4, sch_detect_type::SCH_DETECT_FULL, &ebp2);
-		DBGLG() << "FIRST SCH : " << (rv2 ? "yes " : "   ") << "Timing offset     " << ebp2.toa << " symbols"
-			<< std::endl;
-
-		bits = demodAnyBurst(*delay, SCH, 4, &ebp2);
-		delete delay;
-	} else {
-		bits = demodAnyBurst(*burst, SCH, 4, &ebp);
-	}
-
-	delete burst;
-
-	// clamp to +-1.5 because +-127 softbits scaled by 64 after -0.5 can be at most +-1.5
-	clamp_array(bits->begin(), 148, 1.5f);
-
-	float_to_sbit(&bits->begin()[0], (signed char *)&sch_demod_bits[0], 62, 148);
-	// float_to_sbit(&bits->begin()[106], &data[39], 62, 39);
-
-	if (decode_sch((char *)sch_demod_bits, is_first_sch_acq)) {
-		auto current_gsm_time_updated = timekeeper.gsmtime();
+		SoftVector *bits;
 		if (is_first_sch_acq) {
-			// update ts to first sample in sch buffer, to allow delay calc for current ts
-			first_sch_ts_start = first_sch_buf_rcv_ts + howmuchdelay - (ts_offset_symb * 4);
-		} else {
-			// continuous sch tracking, only update if off too much
-			auto diff = [](float x, float y) { return x > y ? x - y : y - x; };
-
-			auto d = diff(ebp.toa, ts_offset_symb);
-			if (abs(d) > 0.3) {
-				if (ebp.toa < ts_offset_symb)
-					ebp.toa = d;
-				else
-					ebp.toa = -d;
-				temp_ts_corr_offset += ebp.toa * 4;
-
-				DBGLG() << "offs: " << ebp.toa << " " << temp_ts_corr_offset << std::endl;
+			// can't be legit with a buf size spanning _at least_ one SCH but delay that implies partial sch burst
+			if (howmuchdelay < 0 || (buf_len - howmuchdelay) < ONE_TS_BURST_LEN) {
+				delete burst;
+				return false;
 			}
+
+			struct estim_burst_params ebp2;
+			// auto sch_chunk = new signalVector(ONE_TS_BURST_LEN, 50);
+			// auto sch_chunk_start = sch_chunk->begin();
+			// memcpy(sch_chunk_start, sch_buf_f.data() + howmuchdelay, sizeof(std::complex<float>) * ONE_TS_BURST_LEN);
+
+			auto delay = delayVector(burst, NULL, -howmuchdelay);
+
+			scaleVector(*delay, (complex)1.0 / ebp.amp);
+
+			auto rv2 = detectSCHBurst(*delay, 4, 4, sch_detect_type::SCH_DETECT_FULL, &ebp2);
+			DBGLG() << "FIRST SCH : " << (rv2 ? "yes " : "   ") << "Timing offset     " << ebp2.toa
+				<< " symbols" << std::endl;
+
+			bits = demodAnyBurst(*delay, SCH, 4, &ebp2);
+			delete delay;
+		} else {
+			bits = demodAnyBurst(*burst, SCH, 4, &ebp);
 		}
 
-		auto a = gsm_sch_check_fn(current_gsm_time_updated.FN() - 1);
-		auto b = gsm_sch_check_fn(current_gsm_time_updated.FN());
-		auto c = gsm_sch_check_fn(current_gsm_time_updated.FN() + 1);
-		DBGLG() << "L SCH : Timing offset     " << rv << " " << ebp.toa << " " << a << b << c << "fn "
-			<< current_gsm_time_updated.FN() << ":" << current_gsm_time_updated.TN() << std::endl;
+		delete burst;
+
+		// clamp to +-1.5 because +-127 softbits scaled by 64 after -0.5 can be at most +-1.5
+		clamp_array(bits->begin(), 148, 1.5f);
+
+		float_to_sbit(&bits->begin()[0], (signed char *)&sch_demod_bits[0], 62, 148);
+		// float_to_sbit(&bits->begin()[106], &data[39], 62, 39);
+
+		if (decode_sch((char *)sch_demod_bits, is_first_sch_acq)) {
+			auto current_gsm_time_updated = timekeeper.gsmtime();
+			if (is_first_sch_acq) {
+				// update ts to first sample in sch buffer, to allow delay calc for current ts
+				first_sch_ts_start = first_sch_buf_rcv_ts + howmuchdelay - (ts_offset_symb * 4);
+			} else {
+				// continuous sch tracking, only update if off too much
+				auto diff = [](float x, float y) { return x > y ? x - y : y - x; };
+
+				auto d = diff(ebp.toa, ts_offset_symb);
+				if (abs(d) > 0.3) {
+					if (ebp.toa < ts_offset_symb)
+						ebp.toa = d;
+					else
+						ebp.toa = -d;
+					temp_ts_corr_offset += ebp.toa * 4;
+
+					DBGLG() << "offs: " << ebp.toa << " " << temp_ts_corr_offset << std::endl;
+				}
+			}
+
+			auto a = gsm_sch_check_fn(current_gsm_time_updated.FN() - 1);
+			auto b = gsm_sch_check_fn(current_gsm_time_updated.FN());
+			auto c = gsm_sch_check_fn(current_gsm_time_updated.FN() + 1);
+			DBGLG() << "L SCH : Timing offset     " << rv << " " << ebp.toa << " " << a << b << c << "fn "
+				<< current_gsm_time_updated.FN() << ":" << current_gsm_time_updated.TN() << std::endl;
+
+			delete bits;
+			return true;
+		} else {
+			DBGLG2() << "L SCH : \x1B[31m decode fail \033[0m @ toa:" << ebp.toa << " "
+				 << current_gsm_time.FN() << ":" << current_gsm_time.TN() << std::endl;
+		}
 
 		delete bits;
-		return true;
-	} else {
-		DBGLG2() << "L SCH : \x1B[31m decode fail \033[0m @ toa:" << ebp.toa << " " << current_gsm_time.FN()
-			 << ":" << current_gsm_time.TN() << std::endl;
 	}
-
-	delete bits;
-#endif
 	return false;
 }
 
@@ -333,12 +334,12 @@ SCH_STATE ms_trx::search_for_sch(dev_buf_t *rcd)
 			float sum = normed_abs_sum(first_sch_buf, SCH_LEN_SPS);
 
 			//FIXME: arbitrary value, gain cutoff
-			if (sum > target_val || rxgain >= 60) // enough ?
+			if (sum > target_val || cfg.rxgain >= 60) // enough ?
 				sch_thread_done = this->handle_sch(true);
 			else {
-				std::cerr << "\x1B[32m #RXG \033[0m gain " << rxgain << " -> " << rxgain + 4
+				std::cerr << "\x1B[32m #RXG \033[0m gain " << cfg.rxgain << " -> " << cfg.rxgain + 4
 					  << " sample avg:" << sum << " target: >=" << target_val << std::endl;
-				setRxGain(rxgain + 4);
+				setRxGain(cfg.rxgain + 4);
 			}
 
 			if (!sch_thread_done)

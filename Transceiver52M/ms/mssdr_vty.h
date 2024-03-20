@@ -1,6 +1,6 @@
 #pragma once
 /*
- * (C) 2022 by sysmocom s.f.m.c. GmbH <info@sysmocom.de>
+ * (C) 2024 by sysmocom s.f.m.c. GmbH <info@sysmocom.de>
  * All Rights Reserved
  *
  * Author: Eric Wild <ewild@sysmocom.de>
@@ -19,31 +19,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include <netdb.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 
-#include "GSMCommon.h"
-#include "ms.h"
-
-class upper_trx : public ms_trx {
-	volatile bool mOn;
-	char demodded_softbits[444];
-
-	// void driveControl();
-	bool pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset);
-
-	pthread_t thr_control, thr_tx;
-
-    public:
-	void start_threads();
-	void main_loop();
-	void stop_upper_threads();
-
-	bool driveControl();
-	void driveReceiveFIFO();
-	void driveTx();
-
-	upper_trx() = delete;
-	explicit upper_trx(struct mssdr_cfg *cfgdata) : ms_trx(cfgdata), mOn(false){};
+struct mssdr_cfg {
+	struct {
+		bool ul_freq_override;
+		bool dl_freq_override;
+		bool ul_gain_override;
+		bool dl_gain_override;
+		double ul_freq;
+		double dl_freq;
+		double ul_gain;
+		double dl_gain;
+	} overrides;
+	bool use_va;
+	bool use_agc;
 };
+
+struct mssdr_ctx {
+	struct mssdr_cfg cfg;
+};
+
+struct mssdr_ctx *vty_mssdr_ctx_alloc(void *talloc_ctx);
+int mssdr_vty_init(struct mssdr_ctx *trx);
+extern struct vty_app_info g_mssdr_vty_info;

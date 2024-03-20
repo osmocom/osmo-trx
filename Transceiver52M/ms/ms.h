@@ -239,7 +239,7 @@ struct ms_trx : public BASET, public sched_hw_info {
 	unsigned int mTSC;
 	unsigned int mBSIC;
 	int timing_advance;
-	bool do_auto_gain;
+	bool use_va;
 
 	pthread_t lower_rx_task;
 	pthread_t lower_tx_task;
@@ -276,8 +276,8 @@ struct ms_trx : public BASET, public sched_hw_info {
 	void *tx_cb();
 	void maybe_update_gain(one_burst &brst);
 
-	ms_trx()
-		: mTSC(0), mBSIC(0), timing_advance(0), do_auto_gain(false), rxqueue(),
+	ms_trx(struct mssdr_cfg *cfgdata)
+		: BASET(cfgdata), mTSC(0), mBSIC(0), timing_advance(0), use_va(cfgdata->use_va), rxqueue(),
 		  first_sch_buf(new blade_sample_type[SCH_LEN_SPS]),
 		  burst_copy_buffer(new blade_sample_type[ONE_TS_BURST_LEN]), first_sch_buf_rcv_ts(0),
 		  rcv_done{ false }, sch_thread_done{ false }, upper_is_ready(false)

@@ -32,6 +32,9 @@
 #include <libbladeRF.h>
 #include <Timeval.h>
 #include <unistd.h>
+extern "C" {
+#include "mssdr_vty.h"
+}
 
 const size_t BLADE_BUFFER_SIZE = 1024 * 1;
 const size_t BLADE_NUM_BUFFERS = 32 * 1;
@@ -195,8 +198,8 @@ struct blade_hw {
 	using tx_buf_q_type = spsc_cond_timeout<BLADE_NUM_BUFFERS, dev_buf_t *, true, false>;
 	const unsigned int rxFullScale, txFullScale;
 	const int rxtxdelay;
+	bool use_agc;
 
-	float rxgain, txgain;
 	static std::atomic<bool> stop_lower_threads_flag;
 	double rxfreq_cache, txfreq_cache;
 
@@ -205,9 +208,13 @@ struct blade_hw {
 		int rx_freq;
 		int sample_rate;
 		int bandwidth;
+		float rxgain;
+		float txgain;
 
 	    public:
-		ms_trx_config() : tx_freq(881e6), rx_freq(926e6), sample_rate(((1625e3 / 6) * 4)), bandwidth(1e6)
+		ms_trx_config()
+			: tx_freq(881e6), rx_freq(926e6), sample_rate(((1625e3 / 6) * 4)), bandwidth(1e6), rxgain(30),
+			  txgain(30)
 		{
 		}
 	} cfg;
@@ -223,10 +230,14 @@ struct blade_hw {
 	{
 		close_device();
 	}
-	blade_hw()
-		: rxFullScale(2047), txFullScale(2047), rxtxdelay(-60), rxgain(30), txgain(30), rxfreq_cache(0),
+	blade_hw(struct mssdr_cfg *cfgdata)
+		: rxFullScale(2047), txFullScale(2047), rxtxdelay(-60), use_agc(cfgdata->use_agc), rxfreq_cache(0),
 		  txfreq_cache(0)
 	{
+		cfg.tx_freq = cfgdata->overrides.ul_freq;
+		cfg.rx_freq = cfgdata->overrides.dl_freq;
+		cfg.rxgain = cfgdata->overrides.dl_gain;
+		cfg.txgain = cfgdata->overrides.ul_gain;
 	}
 
 	void close_device()
@@ -251,6 +262,7 @@ struct blade_hw {
 	int init_device(bh_fn_t rxh, bh_fn_t txh)
 	{
 		struct bladerf_rational_rate rate = { 0, static_cast<uint64_t>((1625e3 * 4)) * 64, 6 * 64 }, actual;
+		std::cerr << "cfg: ul " << cfg.tx_freq << " dl " << cfg.rx_freq << std::endl;
 
 		bladerf_log_set_verbosity(BLADERF_LOG_LEVEL_DEBUG);
 		bladerf_set_usb_reset_on_open(true);
@@ -294,9 +306,10 @@ struct blade_hw {
 		blade_check(bladerf_set_bandwidth, dev, BLADERF_CHANNEL_TX(0), (bladerf_bandwidth)cfg.bandwidth,
 			    (bladerf_bandwidth *)NULL);
 
-		blade_check(bladerf_set_gain_mode, dev, BLADERF_CHANNEL_RX(0), BLADERF_GAIN_MGC);
-		setRxGain(rxgain, 0);
-		setTxGain(txgain, 0);
+		blade_check(bladerf_set_gain_mode, dev, BLADERF_CHANNEL_RX(0),
+			    use_agc ? BLADERF_GAIN_AUTOMATIC : BLADERF_GAIN_MGC);
+		setRxGain(cfg.rxgain, 0);
+		setTxGain(cfg.txgain, 0);
 		usleep(1000);
 
 		bladerf_set_stream_timeout(dev, BLADERF_TX, 10);
@@ -350,7 +363,7 @@ struct blade_hw {
 
 	double setRxGain(double dB, size_t chan = 0)
 	{
-		rxgain = dB;
+		cfg.rxgain = dB;
 		msleep(15);
 		blade_check(bladerf_set_gain, dev, BLADERF_CHANNEL_RX(0), (bladerf_gain)dB);
 		msleep(15);
@@ -358,7 +371,7 @@ struct blade_hw {
 	};
 	double setTxGain(double dB, size_t chan = 0)
 	{
-		txgain = dB;
+		cfg.txgain = dB;
 		msleep(15);
 		blade_check(bladerf_set_gain, dev, BLADERF_CHANNEL_TX(0), (bladerf_gain)dB);
 		msleep(15);

@@ -97,6 +97,7 @@ MS_UPPER_SRC = \
 	ms/ms_upper.cpp \
 	ms/l1ctl_server.c \
 	ms/logging.c \
+	ms/mssdr_vty.c \
 	ms/l1ctl_server_cb.cpp \
 	ms/ms_trxcon_if.cpp
 
@@ -110,6 +111,7 @@ noinst_HEADERS += \
 	ms/itrq.h \
 	ms/sch.h \
 	ms/threadpool.h \
+	ms/mssdr_vty.h \
 	grgsm_vitac/viterbi_detector.h \
 	grgsm_vitac/constants.h \
 	grgsm_vitac/grgsm_vitac.h

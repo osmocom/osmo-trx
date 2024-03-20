@@ -160,10 +160,11 @@ static void *static_alloc(size_t newSize)
 
 bool upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset)
 {
-	float pow, avg = 1.0;
+	// float pow, avg = 1.0;
 	const auto zero_pad_len = 40; // give the VA some runway for misaligned bursts
 	const auto workbuf_size = zero_pad_len + ONE_TS_BURST_LEN + zero_pad_len;
 	static complex workbuf[workbuf_size];
+	static int32_t meas_p, meas_rssi;
 
 	static signalVector sv(workbuf, zero_pad_len, ONE_TS_BURST_LEN, static_alloc, static_free);
 	one_burst e;
@@ -183,8 +184,11 @@ bool upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset)
 	trxcon_phyif_rtr_ind i = { static_cast<uint32_t>(wTime.FN()), static_cast<uint8_t>(wTime.TN()) };
 	trxcon_phyif_rtr_rsp r = {};
 	trxcon_phyif_handle_rtr_ind(g_trxcon, &i, &r);
-	if (!(r.flags & TRXCON_PHYIF_RTR_F_ACTIVE))
+	if (!(r.flags & TRXCON_PHYIF_RTR_F_ACTIVE)) {
+		bladerf_get_rfic_rssi(dev, 0, &meas_p, &meas_rssi);
+		// std::cerr << "G : \x1B[31m rx fail \033[0m @:" << meas_rssi << std::endl;
 		return false;
+	}
 
 	if (is_fcch) {
 		// return trash
@@ -199,77 +203,75 @@ bool upper_trx::pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset)
 		return true;
 	}
 
-#if 1
-	convert_and_scale(ss, e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(rxFullScale));
+	if (use_va) {
+		convert_and_scale(ss, e.burst, ONE_TS_BURST_LEN * 2, 1.f / float(rxFullScale));
 
-	pow = energyDetect(sv, 20 * 4 /*sps*/);
-	if (pow < -1) {
-		LOG(ALERT) << "Received empty burst";
-		return false;
-	}
+		// pow = energyDetect(sv, 20 * 4 /*sps*/);
+		// if (pow < -1) {
+		// 	LOG(ALERT) << "Received empty burst";
+		// 	return false;
+		// }
 
-	avg = sqrt(pow);
-	{
-		float ncmax;
-		std::complex<float> chan_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
-		auto normal_burst_start = get_norm_chan_imp_resp(ss, &chan_imp_resp[0], &ncmax, mTSC);
+		// avg = sqrt(pow);
+		{
+			float ncmax;
+			std::complex<float> chan_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
+			auto normal_burst_start = get_norm_chan_imp_resp(ss, &chan_imp_resp[0], &ncmax, mTSC);
 #ifdef DBGXX
-		float dcmax;
-		std::complex<float> chan_imp_resp2[CHAN_IMP_RESP_LENGTH * d_OSR];
-		auto dummy_burst_start = get_norm_chan_imp_resp(ss, &chan_imp_resp2[0], &dcmax, TS_DUMMY);
-		auto is_nb = ncmax > dcmax;
-		// DBGLG() << " U " << (is_nb ? "NB" : "DB") << "@ o nb: " << normal_burst_start
-		// 	  << " o db: " << dummy_burst_start << std::endl;
+			float dcmax;
+			std::complex<float> chan_imp_resp2[CHAN_IMP_RESP_LENGTH * d_OSR];
+			auto dummy_burst_start = get_norm_chan_imp_resp(ss, &chan_imp_resp2[0], &dcmax, TS_DUMMY);
+			auto is_nb = ncmax > dcmax;
+			// DBGLG() << " U " << (is_nb ? "NB" : "DB") << "@ o nb: " << normal_burst_start
+			// 	  << " o db: " << dummy_burst_start << std::endl;
 #endif
-		normal_burst_start = normal_burst_start < 39 ? normal_burst_start : 39;
-		normal_burst_start = normal_burst_start > -39 ? normal_burst_start : -39;
+			normal_burst_start = normal_burst_start < 39 ? normal_burst_start : 39;
+			normal_burst_start = normal_burst_start > -39 ? normal_burst_start : -39;
 #ifdef DBGXX
-		// fprintf(stderr, "%s %d\n", (is_nb ? "N":"D"), burst_time.FN());
-		// if (is_nb)
+			// fprintf(stderr, "%s %d\n", (is_nb ? "N":"D"), burst_time.FN());
+			// if (is_nb)
 #endif
-		detect_burst_nb(ss, &chan_imp_resp[0], normal_burst_start, demodded_softbits);
+			detect_burst_nb(ss, &chan_imp_resp[0], normal_burst_start, demodded_softbits);
 #ifdef DBGXX
-		// else
-		// 	detect_burst(ss, &chan_imp_resp2[0], dummy_burst_start, outbin);
+			// else
+			// 	detect_burst(ss, &chan_imp_resp2[0], dummy_burst_start, outbin);
 #endif
+		}
+	} else {
+		// lower layer sch detection offset, easy to verify by just printing the detected value using both the va+sigproc code.
+		convert_and_scale(ss + 16, e.burst, ONE_TS_BURST_LEN * 2, 15);
+
+		// pow = energyDetect(sv, 20 * 4 /*sps*/);
+		// if (pow < -1) {
+		// 	LOG(ALERT) << "Received empty burst";
+		// 	return false;
+		// }
+
+		// avg = sqrt(pow);
+
+		/* Detect normal or RACH bursts */
+		CorrType type = CorrType::TSC;
+		struct estim_burst_params ebp;
+		auto rc = detectAnyBurst(sv, mTSC, 3, 4, type, 48, &ebp);
+		if (rc > 0) {
+			type = (CorrType)rc;
+		}
+
+		if (rc < 0) {
+			std::cerr << "UR : \x1B[31m rx fail \033[0m @ toa:" << ebp.toa << " " << e.gsmts.FN() << ":"
+				  << e.gsmts.TN() << std::endl;
+			return false;
+		}
+		SoftVector *bits = demodAnyBurst(sv, type, 4, &ebp);
+
+		SoftVector::const_iterator burstItr = bits->begin();
+		// invert and fix to +-127 sbits
+		for (int ii = 0; ii < 148; ii++) {
+			demodded_softbits[ii] = *burstItr++ > 0.0f ? -127 : 127;
+		}
+		delete bits;
 	}
-#else
-
-	// lower layer sch detection offset, easy to verify by just printing the detected value using both the va+sigproc code.
-	convert_and_scale(ss + 16, e.burst, ONE_TS_BURST_LEN * 2, 15);
-
-	pow = energyDetect(sv, 20 * 4 /*sps*/);
-	if (pow < -1) {
-		LOG(ALERT) << "Received empty burst";
-		return false;
-	}
-
-	avg = sqrt(pow);
-
-	/* Detect normal or RACH bursts */
-	CorrType type = CorrType::TSC;
-	struct estim_burst_params ebp;
-	auto rc = detectAnyBurst(sv, mTSC, 3, 4, type, 48, &ebp);
-	if (rc > 0) {
-		type = (CorrType)rc;
-	}
-
-	if (rc < 0) {
-		std::cerr << "UR : \x1B[31m rx fail \033[0m @ toa:" << ebp.toa << " " << e.gsmts.FN() << ":"
-			  << e.gsmts.TN() << std::endl;
-		return false;
-	}
-	SoftVector *bits = demodAnyBurst(sv, type, 4, &ebp);
-
-	SoftVector::const_iterator burstItr = bits->begin();
-	// invert and fix to +-127 sbits
-	for (int ii = 0; ii < 148; ii++) {
-		demodded_softbits[ii] = *burstItr++ > 0.0f ? -127 : 127;
-	}
-	delete bits;
-
-#endif
-	RSSI = (int)floor(20.0 * log10(rxFullScale / avg));
+	RSSI = meas_rssi; // (int)floor(20.0 * log10(rxFullScale / avg));
 	// FIXME: properly handle offset, sch/nb alignment diff? handled by lower anyway...
 	timingOffset = (int)round(0);
 
@@ -419,13 +421,13 @@ bool upper_trx::driveControl()
 		r.param.measure.band_arfcn = cmd.param.measure.band_arfcn;
 		// FIXME: do we want to measure anything, considering the transceiver just syncs by.. syncing?
 		r.param.measure.dbm = -80;
-		tuneRx(gsm_arfcn2freq10(cmd.param.measure.band_arfcn, 0) * 1000 * 100);
-		tuneTx(gsm_arfcn2freq10(cmd.param.measure.band_arfcn, 1) * 1000 * 100);
+		// tuneRx(gsm_arfcn2freq10(cmd.param.measure.band_arfcn, 0) * 1000 * 100);
+		// tuneTx(gsm_arfcn2freq10(cmd.param.measure.band_arfcn, 1) * 1000 * 100);
 		cmdq_from_phy.spsc_push(&r);
 		break;
 	case TRXCON_PHYIF_CMDT_SETFREQ_H0:
-		tuneRx(gsm_arfcn2freq10(cmd.param.setfreq_h0.band_arfcn, 0) * 1000 * 100);
-		tuneTx(gsm_arfcn2freq10(cmd.param.setfreq_h0.band_arfcn, 1) * 1000 * 100);
+		// tuneRx(gsm_arfcn2freq10(cmd.param.setfreq_h0.band_arfcn, 0) * 1000 * 100);
+		// tuneTx(gsm_arfcn2freq10(cmd.param.setfreq_h0.band_arfcn, 1) * 1000 * 100);
 		break;
 	case TRXCON_PHYIF_CMDT_SETFREQ_H1:
 		break;
@@ -456,6 +458,12 @@ void sighandler(int sigset)
 	}
 }
 
+extern "C" {
+#include <osmocom/vty/command.h>
+#include <osmocom/vty/logging.h>
+#include "mssdr_vty.h"
+}
+
 int main(int argc, char *argv[])
 {
 	auto tall_trxcon_ctx = talloc_init("trxcon context");
@@ -476,6 +484,22 @@ int main(int argc, char *argv[])
 
 	osmo_fsm_log_timeouts(true);
 
+	auto g_mssdr_ctx = vty_mssdr_ctx_alloc(tall_trxcon_ctx);
+	vty_init(&g_mssdr_vty_info);
+	logging_vty_add_cmds();
+	mssdr_vty_init(g_mssdr_ctx);
+
+	const char *home_dir = getenv("HOME");
+	if (!home_dir)
+		home_dir = "~";
+	auto config_file = talloc_asprintf(tall_trxcon_ctx, "%s/%s", home_dir, ".osmocom/bb/mssdr.cfg");
+
+	int rc = vty_read_config_file(config_file, NULL);
+	if (rc < 0) {
+		fprintf(stderr, "Failed to parse config file: '%s'\n", config_file);
+		exit(2);
+	}
+
 	g_trxcon = trxcon_inst_alloc(tall_trxcon_ctx, 0);
 	g_trxcon->gsmtap = nullptr;
 	g_trxcon->phyif = nullptr;
@@ -487,8 +511,7 @@ int main(int argc, char *argv[])
 	initvita();
 
 	int status = 0;
-	auto trx = new upper_trx();
-	trx->do_auto_gain = true;
+	auto trx = new upper_trx(&g_mssdr_ctx->cfg);
 
 	status = trx->init_dev_and_streams();
 	if (status < 0) {
