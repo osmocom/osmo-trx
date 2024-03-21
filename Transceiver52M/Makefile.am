@@ -127,16 +127,16 @@ osmo_trx_uhd_LDADD = \
 	$(UHD_LIBS)
 osmo_trx_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS)
 
-if ENABLE_MS_TRX
-bin_PROGRAMS += osmo-trx-ms-uhd
-osmo_trx_ms_uhd_SOURCES = $(MS_LOWER_SRC) $(MS_UPPER_SRC)
-osmo_trx_ms_uhd_LDADD = \
-	$(builddir)/device/uhd/libdevice.la \
-	$(COMMON_LDADD) \
-	$(UHD_LIBS) \
-	$(TRXCON_LDADD)
-osmo_trx_ms_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DBUILDUHD
-endif
+#if ENABLE_MS_TRX
+#bin_PROGRAMS += osmo-trx-ms-uhd
+#osmo_trx_ms_uhd_SOURCES = $(MS_LOWER_SRC) $(MS_UPPER_SRC)
+#osmo_trx_ms_uhd_LDADD = \
+#	$(builddir)/device/uhd/libdevice.la \
+#	$(COMMON_LDADD) \
+#	$(UHD_LIBS) \
+#	$(TRXCON_LDADD)
+#osmo_trx_ms_uhd_CPPFLAGS  = $(AM_CPPFLAGS) $(UHD_CFLAGS) -DBUILDUHD
+#endif
 endif
 
 if DEVICE_USRP1
