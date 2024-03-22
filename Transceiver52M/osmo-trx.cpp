@@ -645,6 +645,7 @@ int main(int argc, char *argv[])
 
 	osmo_init_logging2(tall_trx_ctx, &log_info);
 	log_enable_multithread();
+	log_cache_enable();
 	osmo_stats_init(tall_trx_ctx);
 	vty_init(&g_vty_info);
 	logging_vty_add_cmds();
