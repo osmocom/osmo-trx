@@ -17,6 +17,7 @@ edge[dir=back, arrowtail=empty]
 7[label = "{UHDDevice|...}"]
 8[label = "{LMSDevice|...}"]
 9[label = "{USRPDevice|...}"]
+10[label = "{IPCDevice|...}"]
 
 2->3[arrowtail=odiamond]
 3->4[constraint=false]
@@ -25,6 +26,7 @@ edge[dir=back, arrowtail=empty]
 6->7
 6->8
 6->9
+6->10
 }
 ----
 

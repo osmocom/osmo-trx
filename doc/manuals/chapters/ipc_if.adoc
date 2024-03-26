@@ -1,0 +1,301 @@
+[[ipc_if]]
+== osmo-trx-ipc IPC Interface
+
+This interface is the one used by _osmo_trx_ipc_ backend to communicate to a
+third party process in charge of driving the lowest layer device-specific bits
+(from now on the Driver).
+
+It consists of a set of Unix Domain (UD) sockets for the control plane, plus a
+shared memory region for the data plane.
+
+Related code can be found in the
+https://gitea.osmocom.org/cellular-infrastructure/osmo-trx/src/branch/master/Transceiver52M/device/ipc[Transceiver52M/device/ipc/]
+directory in _osmo-trx.git_.
+
+If you are a potential driver implementator, the
+various primitives and data structures are publicly available in header file
+https://gitea.osmocom.org/cellular-infrastructure/osmo-trx/src/branch/master/Transceiver52M/device/ipc/shm.h[Transceiver52M/device/ipc/shm.h].
+
+=== Control plane
+
+Control plane protocol is transmitted over Unix Domain (UD) sockets using
+message based primitives. Each primitive has a type identified by an integer,
+and each type of primitive has a number of extra attributes attached to it. The
+IPC interface consists of 2 types of UD sockets:
+
+* _Master_ UD socket: One per osmo-trx-ipc process.
+
+* _Channel_ UD socket: One for each channel managed by osmo-trx-ipc process.
+
+The _Driver_ is in all cases expected to take the server role when creating UD
+sockets, while _osmo-trx-ipc_ takes the client role and connects to sockets
+provided by the driver.
+
+=== Master UD socket
+
+During startup, _osmo-trx-ipc_ will try connecting to the _Driver_ Master UD
+socket located in the path provided by its own (VTY) configuration. As a result,
+it means the _Driver_ process must be running and listening on the Master UD
+socket before _osmo-trx-ipc_ is started, otherwise _osmo-trx-ipc_ will fail and
+exit.
+
+Once connected, _osmo-trx-ipc_ will submit a `GREETING_REQ` message primitive
+announcing the maximum supported protocol version (first version ever is `1`,
+increasing over time).
+
+The _Driver_ shall then answer in `GREETING_CNF` message primitive with its own
+maximum supported version (`<=` version received), providing 0 if none is
+supported.
+
+If _osmo-trx-ipc_ receives back the requested version, then both sides agreed
+on the protocol version to use.
+If _osmo-trx-ipc_ receives back a lower version, it shall decide to continue
+with version negotiation using a lower version, until a supported version or 0
+is received. If finally 0 is received, _osmo-trx-ipc_ will disconnect and exit
+with failure.
+
+Once the version is negotiated (`v1` as of current date), _osmo-trx-ipc_ will
+ask for device information and available characeristics to the _Driver_ using
+the `INFO_REQ` message primitive.
+
+The _Driver_ shall then answer with a `INFO_CNF` message
+containing information, such as:
+
+* String containing device description
+
+* Available reference clocks,
+
+* {rx,tx} I/Q scaling factors
+
+* Maximum number of channels supported
+
+* for each channel:
+
+** List of available {rx,tx} paths/antennas.
+
+** {min,max}{rx,tx} gains
+
+** Nominal transmit power
+
+All the information received from the _Driver_ during `INFO_CNF` will be used by
+_osmo-trx-ipc_ to decide whether it can fullfil the requested configuration from
+the user, and proceed to open the device, or exit with a failure (for instance
+number of channels, referece clock or tx/rx antenna selected by the user cannot
+be fullfilled).
+
+_osmo-trx-ipc_ will then proceed to open the device and do an initial
+configuration using an `OPEN_REQ` message, where it will provide the _Driver_
+with the desired selected configuration (such as number of channels, rx/tx
+paths, clock reference, bandwidth filters, etc.).
+
+The _Driver_ shall then configure the device and send back a `OPEN_CNF` with:
+
+* `return_code` integer attribute set to `0` on success or `!0` on error.
+
+* Name of the Posix Shared Memory region where data plane is going to be
+transmitted.
+
+* One path for each channel, containing the just-created UD socket to manage
+that channel (for instance by taking Master UD socket path and appending
+`_$chan_idx`).
+
+* Path Delay: this is the loopback path delay in samples (= used as a timestamp
+offset internally by _osmo-trx-ipc_), this value contains the analog delay as
+well as the delay introduced by the digital filters in the fpga in the sdr
+devices, and is therefore device type and bandwidth/sample rate dependant. This
+can not be omitted, wrong values will lead to a _osmo-trx-ipc_ that just doesn't
+detect any bursts.
+
+Finally, _osmo-trx-ipc_ will connect to each channel's UD socket (see next
+section).
+
+Upon _osmo-trx-ipc_ closing the UD master socket connection, the _Driver_ shall
+go into _closed_ state: stop all processing and instruct the device to power
+off.
+
+TIP: See
+https://gitea.osmocom.org/cellular-infrastructure/osmo-trx/src/branch/master/Transceiver52M/device/ipc/shm.h[Transceiver52M/device/ipc/shm.h]
+for the detailed definition of all the related message primitives and data
+types for this socket.
+
+=== Channel UD Socket
+
+This socket can be used by _osmo-trx-ipc_ to start/stop data plane processing or
+change channel's parameters such as Rx/Tx Frequency, Rx/Tx gains, etc.
+
+A channel can be either in _started_ or _stopped_ state. When a channel is
+created (during `OPEN_REQ` in the Master UD Socket), it's by default in
+_stopped_ state. `START_REQ` and `STOP_REQ` messages control this state, and
+eventual failures can be reported through `START_CNF` and `STOP_CNF` by the
+_Driver_.
+
+The message `START_REQ` instructs the _Driver_ to start processing data in the
+data plane. Similary, `STOP_REQ` instructs the _Driver_ to stop processing data
+in the data plane.
+
+Some parameters are usually changed only when the channel is in stopped mode,
+for instance Rx/Tx Frequency.
+
+TIP: See
+https://gitea.osmocom.org/cellular-infrastructure/osmo-trx/src/branch/master/Transceiver52M/device/ipc/shm.h[Transceiver52M/device/ipc/shm.h]
+for the detailed definition of all the related message primitives and data
+types for this socket.
+
+=== Data Plane
+
+Data plane protocol is implemented by means of a ring buffer structure on top of
+Posix Shared Memory (see `man 7 shm_overview`) between _osmo-trx-ipc_ process
+and the _Driver_.
+
+The Posix Shared Memory region is created and its memory structure prepared by
+the _Driver_ and its name shared with _osmo-trx-ipc_ during _OPEN_CNF_ message
+in the Master UD Socket from the Control Plane. Resource allocation for the
+shared memory area and cleanup is up to the ipc server, as is mutex
+initialization for the buffers.
+
+==== Posix Shared Memory structure
+
+[[fig-shm-structure]]
+.General overview of Posix Shared Memory structure
+[graphviz]
+----
+digraph hierarchy {
+node[shape=record,style=filled,fillcolor=gray95]
+edge[dir=back, arrowtail=empty]
+
+SHM[label = "{Posix Shared Memory region|+ num_chans\l+ Channels[]\l}"]
+CHAN0[label = "{Channel 0|...}"]
+CHAN1[label = "{Channel 1|...}"]
+CHANN[label = "{Channel ...|}"]
+STREAM0_UL[label = "{UL Stream|+ semaphore\l+ read_next\l+ write_next\l+ buffer_size /* In samples */\l+ num_buffers\l+ sample_buffers[]\l}"]
+STREAM0_DL[label = "{DL Stream|+ semaphore\l+ read_next\l+ write_next\l+ buffer_size /* In samples */\l+ num_buffers\l+ sample_buffers[]\l}"]
+STREAM1_UL[label = "{UL Stream|...}"]
+STREAM1_DL[label = "{DL Stream|...}"]
+STREAMN_UL[label = "{UL Stream|...}"]
+STREAMN_DL[label = "{DL Stream|...}"]
+BUF_0DL0[label = "{DL Sample Buffer 0|+ timestamp\l+ buffer_size /* In samples */\l+ samples[] = [16bit I + 16bit Q,...]\l}"]
+BUF_0DLN[label = "{DL Sample Buffer ....|...}"]
+BUF_0UL0[label = "{UL Sample Buffer 0|+ timestamp\l+ buffer_size /* In samples */\l+ samples[] = [16bit I + 16bit Q,...]\l}"]
+BUF_0ULN[label = "{UL Sample Buffer ...|...}"]
+
+SHM->CHAN0
+SHM->CHAN1
+SHM->CHANN
+
+CHAN0->STREAM0_DL
+CHAN0->STREAM0_UL
+STREAM0_DL->BUF_0DL0
+STREAM0_DL->BUF_0DLN
+STREAM0_UL->BUF_0UL0
+STREAM0_UL->BUF_0ULN
+
+CHAN1->STREAM1_UL
+CHAN1->STREAM1_DL
+
+CHANN->STREAMN_UL
+CHANN->STREAMN_DL
+}
+----
+
+The Posix Shared Memory region contains an array of _Channels_.
+
+Each _Channel_ contains 2 Streams:
+
+* Downlink _Stream_
+
+* Uplink _Stream_
+
+Each _Stream_ handles a ring buffer, which is implemented as:
+
+* An array of pointers to _Sample Buffer_ structures.
+
+* Variables containing the number of buffers in the array, as well as the
+maximum size in samples for each Sample Buffer.
+
+* Variables containing `next_read` and `next_write` _Sample Buffer_ (its index
+in the array of pointers).
+
+* Unnamed Posix semaphores to do the required locking while using the ring
+buffer.
+
+Each _Sample Buffer_ contains:
+
+* A `timestamp` variable, containing the position in the stream of the first
+sample in the buffer
+
+* A `data_len` variable, containing the amount of samples available to process
+in the buffer
+
+* An array of samples of size specified by the stream struct it is part of.
+
+==== Posix Shared Memory format
+
+The Posix Shared memory region shall be formatted applying the following
+considerations:
+
+* All pointers in the memory region are encoded as offsets from the start
+address of the region itself, to allow different processes with different
+address spaces to decode them.
+
+* All structs must be force-aligned to 8 bytes
+
+* Number of buffers must be power of 2 (2,4,8,16,...) - 4 appears to be plenty
+
+* IQ samples format: One (complex) sample consists of 16bit i + 16bit q, so the
+buffer size is number of IQ pairs.
+
+* A reasonable per-buffer size (in samples) is 2500, since this happens to be
+the ususal TX (downlink) buffer size used by _osmo-trx-ipc_ with the b210 (rx
+over-the-wire packet size for the b210 is 2040 samples, so the larger value of
+both is convenient).
+
+TIP: See
+https://gitea.osmocom.org/cellular-infrastructure/osmo-trx/src/branch/master/Transceiver52M/device/ipc/shm.h[Transceiver52M/device/ipc/shm.h]
+for the detailed definition of all the objects being part of the Posix Shared
+memory region structure
+
+==== Posix Shared Memory procedures
+
+The queue in the shared memory area is not supposed to be used for actual
+buffering of data, only for exchange, so the general expectation is that it is
+mostly empty. The only exception to that might be minor processing delays, and
+during startup.
+
+Care must be taken to ensure that only timed waits for the mutex protecting it
+and the condition variables are used, in order to ensure that no deadlock occurs
+should the other side die/quit.
+
+Thread cancellation should be disabled during reads/writes from/to the queue. In
+general a timeout can be considered a non recoverable error during regular
+processing after startup, at least with the current timeout value of one second.
+
+Should over- or underflows occur a corresponding message should be sent towards
+_osmo-trx-ipc_.
+
+Upon **read** of `N` samples, the reader does something like:
+
+. Acquire the semaphore in the channel's stream object.
+
+. Read `stream->next_read`, if `next_read==next_write`, become blocked in
+another sempahore (unlocking the previous one) until writer signals us, then
+`buff = stream->buffers[next_read]`
+
+. Read `buff->data_len` samples, reset the buffer data (`data_len=0`),
+increment `next_read` and if read samples is `<N`, continue with next buffer
+until `next_read==next_write`, then block again or if timeout elapsed, then  we
+reach conditon buffer underflow and `return len < N`.
+
+. Release the semaphore
+
+Upon **write** of `N` samples, the writer does something like:
+
+. Acquire the semapore in the channel's stream object.
+
+. Write samples to `buff = stream->buffers[next_write]`. If `data_len!=0`,
+signal `buffer_overflow` (increase field in stream object) and probably
+increase next_read`.
+
+. Increase `next_write`.
+
+. If `next_write` was `== next_read`, signal the reader through the other
+semaphore that it can continue reading.

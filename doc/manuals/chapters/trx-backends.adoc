@@ -71,3 +71,103 @@ with a memory buffer. In this mode, data written to the USRP is actually stored
 in a buffer, and read commands to the USRP simply pull data from this buffer.
 This was very useful in early testing, and still may be useful in testing basic
 Transceiver and radioInterface functionality.
+
+
+[[backend_ipc]]
+=== `osmo-trx-ipc` Inter Process Communication backend
+
+This OsmoTRX model provides its own Inter Process Communication (IPC) interface
+to drive the radio device driver (from now on the Driver), allowing for third
+party processes to implement the lowest layer device-specific bits without being
+affected by copyleft licenses of OsmoTRX.
+
+For more information on such interface, see section <<ipc_if>>.
+
+[[fig-backend-ipc]]
+.Architecture with _osmo-trx-ipc_ and its IPC _Driver_
+[graphviz]
+----
+digraph G {
+        rankdir=LR;
+        MS0 [label="MS"];
+        MS1 [label="MS"];
+        OsmoTRX [label="osmo-trx-ipc", color=red];
+        BTS;
+
+        subgraph cluster_ipc_driver {
+                label = "IPC Driver";
+                color=red;
+                RE [label = "Radio Equipment"];
+                REC [label="Radio Equipment Controller"];
+                RE->REC;
+        }
+
+        REC->OsmoTRX [label="IPC Interface", color=red];
+
+        MS0->RE [label="Um"];
+        MS1->RE [label="Um"];
+        OsmoTRX->BTS [label="bursts over UDP"];
+
+}
+----
+
+A sample config file for this OsmoTRX model can be found in _osmo-trx.git_ https://gitea.osmocom.org/cellular-infrastructure/osmo-trx/src/branch/master/doc/examples/osmo-trx-ipc/osmo-trx-ipc.cfg[doc/examples/osmo-trx-ipc/osmo-trx-ipc.cfg]
+
+In the config file, the following VTY command can be used to set up the IPC UD Master Socket _osmo-trx-ipc_ will connect to at startup:
+
+.Example: _osmo-trx-ipc_ will connect to UD Master Socket /tmp/ipc_sock0 upon startup
+----
+dev-args ipc_msock=/tmp/ipc_sock0
+----
+
+==== ipc-device-test
+
+When built with `--with-ipc --with-uhd` configure options, _osmo-trx.git_ will
+build the test program called _ipc-driver-test_. This program implements the
+_Driver_ side of the osmo-trx-ipc interface (see <<ipc_if>> for more
+information) on one side, and also interacts internally with UHD (eg B210 as
+when using osmo-trx-uhd).
+
+You can use this small program as a reference to:
+
+* Test and experiment with _osmo-trx-ipc_.
+
+* Write your own IPC _Driver_ connecting to osmo-trx-ipc.
+
+[[fig-backend-ipc-device-test]]
+.Architecture with _osmo-trx-ipc_ and ipc-device-test as IPC _Driver_
+[graphviz]
+----
+digraph G {
+        rankdir=LR;
+        MS0 [label="MS"];
+        MS1 [label="MS"];
+        SDR;
+        ipc_device_test[label = "ipc-device-test", color=red];
+        OsmoTRX [label="osmo-trx-ipc", color=red];
+        BTS;
+
+        MS0->SDR [label="Um"];
+        MS1->SDR [label="Um"];
+        SDR->ipc_device_test [label="UHD"];
+        ipc_device_test->OsmoTRX [label="IPC Interface", color=red];
+        OsmoTRX->BTS [label="bursts over UDP"];
+}
+----
+
+The code for this app is found here:
+
+* https://gitea.osmocom.org/cellular-infrastructure/osmo-trx/src/branch/master/Transceiver52M/device/ipc/ipc-driver-test.h[Transceiver52M/device/ipc/ipc-driver-test.h]
+
+* https://gitea.osmocom.org/cellular-infrastructure/osmo-trx/src/branch/master/Transceiver52M/device/ipc/ipc-driver-test.c[Transceiver52M/device/ipc/ipc-driver-test.c]
+
+Those files use the server-side (_Driver_ side) code to operate the Posix Shared
+Memory region implemented in files `shm.c`, `shm.h`, `ipc_shm.c` and `ipc_shm.h`
+in the same directory.
+
+Most of the code in that same directory is deliverately released under a BSD
+license (unlike most of _osmo-trx.git_), allowing third parties to reuse/recycle
+the code on their implemented _Driver_ program no matter it being proprietary or
+under an open license. However, care must be taken with external dependencies,
+as for instance shm.c uses the talloc memory allocator, which is GPL licensed
+and hence cannot be used in a proprietary driver.
