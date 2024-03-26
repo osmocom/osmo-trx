@@ -9,7 +9,7 @@ digraph hierarchy {
 node[shape=record,style=filled,fillcolor=gray95]
 edge[dir=back, arrowtail=empty]
 
-2[label = "{Transceiver|+ constructor()\l+ destructor()\l+ init()\l+ numChans()\l+ receiveFIFO()\l+ setSignalHandler()}"]
+2[label = "{Transceiver|+ constructor()\l+ destructor()\l+ init()\l+ numChans()\l+ receiveFIFO()\l+ setSignalHandler()\l}"]
 3[label = "{RadioInterface|...}"]
 4[label = "{RadioInterfaceResamp|...}"]
 5[label = "{RadioInterfaceMulti|...}"]
