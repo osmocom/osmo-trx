@@ -240,7 +240,6 @@ AS_IF([test "x$with_sse" != "xno"], [
     AM_CONDITIONAL(HAVE_SSE4_1, false)
 ])
 
-dnl Check if the compiler supports specified GCC's built-in function
 AC_DEFUN([CHECK_BUILTIN_SUPPORT], [
   AC_CACHE_CHECK(
     [whether ${CC} has $1 built-in],
@@ -380,6 +379,5 @@ AC_CONFIG_FILES([\
     contrib/Makefile \
     contrib/systemd/Makefile \
     doc/manuals/Makefile \
-    contrib/osmo-trx.spec \
 ])
 AC_OUTPUT

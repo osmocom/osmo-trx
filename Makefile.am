@@ -54,7 +54,6 @@ EXTRA_DIST = \
 	LEGAL \
 	COPYING \
 	README.md \
-	contrib/osmo-trx.spec.in \
 	debian \
 	git-version-gen \
 	$(NULL)
