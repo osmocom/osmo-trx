@@ -1,3 +1,13 @@
+osmo-trx (1.6.2) unstable; urgency=medium
+
+  [ Harald Welte ]
+  * osmo-trx-uhd: Make sure HOME environment variable is set
+
+  [ Vadim Yanitskiy ]
+  * doc/examples: fix missing config files in release tarballs
+
+ -- Oliver Smith <osmith@sysmocom.de>  Wed, 08 May 2024 10:04:43 +0200
+
 osmo-trx (1.6.1) unstable; urgency=medium
 
   [ Eric Wild ]
