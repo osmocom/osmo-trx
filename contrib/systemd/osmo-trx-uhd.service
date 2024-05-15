@@ -9,8 +9,11 @@ Restart=always
 StateDirectory=osmocom
 WorkingDirectory=%S/osmocom
 Environment=HOME=%h
+User=osmocom
+Group=osmocom
 ExecStart=/usr/bin/osmo-trx-uhd -C /etc/osmocom/osmo-trx-uhd.cfg
 RestartSec=2
+AmbientCapabilities=CAP_SYS_NICE
 # CPU scheduling policy:
 CPUSchedulingPolicy=rr
 # For real-time scheduling policies an integer between 1 (lowest priority) and 99 (highest priority):

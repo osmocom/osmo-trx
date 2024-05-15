@@ -8,8 +8,11 @@ Type=simple
 Restart=always
 StateDirectory=osmocom
 WorkingDirectory=%S/osmocom
+User=osmocom
+Group=osmocom
 ExecStart=/usr/bin/osmo-trx-lms -C /etc/osmocom/osmo-trx-lms.cfg
 RestartSec=2
+AmbientCapabilities=CAP_SYS_NICE
 # CPU scheduling policy:
 CPUSchedulingPolicy=rr
 # For real-time scheduling policies an integer between 1 (lowest priority) and 99 (highest priority):
