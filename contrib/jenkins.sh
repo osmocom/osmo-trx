@@ -79,7 +79,7 @@ osmo-clean-workspace.sh
 mkdir "$deps" || true
 
 osmo-build-dep.sh libosmocore "" "--enable-sanitize --disable-doxygen --disable-pcsc"
-PARALLEL_MAKE="" osmo-build-dep.sh libusrp
+PARALLEL_MAKE="" osmo-build-dep.sh libusrp osmith/wip
 
 export PKG_CONFIG_PATH="$inst/lib/pkgconfig:$PKG_CONFIG_PATH"
 export LD_LIBRARY_PATH="$inst/lib"
