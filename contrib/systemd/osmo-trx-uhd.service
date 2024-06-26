@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 StateDirectory=osmocom
 WorkingDirectory=%S/osmocom
-Environment=HOME=%h
+Environment=HOME=%S/osmocom
 User=osmocom
 Group=osmocom
 ExecStart=/usr/bin/osmo-trx-uhd -C /etc/osmocom/osmo-trx-uhd.cfg
