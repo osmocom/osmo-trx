@@ -1,3 +1,55 @@
+osmo-trx (1.7.0) unstable; urgency=medium
+
+  [ Eric ]
+  * ms: adjust ts advance
+  * ms: reduce rx burst queue size
+  * ms: init blade with fpga control
+  * devices: fix wrong gain to power mapping
+  * ms: get rid of std::thread
+  * ms: add demod test tool and data
+
+  [ Vadim Yanitskiy ]
+  * osmo-trx-ms: bump osmocom-bb submodule commit
+  * Transceiver::ctrl_sock_handle_rx(): fix copy-pasted comments
+  * build: include version files into the release tarball
+  * doc/examples: fix missing config files in release tarballs
+  * README.md: cosmetic: fix a typo
+
+  [ Harald Welte ]
+  * osmo-trx-uhd: Make sure HOME environment variable is set
+  * README.md: Improve markdown formatting
+  * README.md: Add Forum and Issue Tracker links
+  * Add funding link to github mirror
+  * README.md: Remove stray apostrophe
+
+  [ Andreas Eversberg ]
+  * Use uniform log format for default config files
+
+  [ Eric Wild ]
+  * ms: do not set the blade tuning mode
+  * ms: hard preswapped VA gsm bits
+  * ms: add sigproclib demod
+  * ms: fix up template deduction failure
+  * ms: update osmocom-bb submodule
+  * ms: disabe uhd ms build
+  * transceiver: use log level cache
+
+  [ Oliver Smith ]
+  * gitignore: add .version
+  * debian/rules: make configure args diff friendly
+  * debian: add osmo-trx-ms-blade
+  * contrib/jenkins: make configure args diff friendly
+  * contrib/jenkins: add --with-bladerf
+  * contrib: remove rpm spec file
+  * contrib/systemd: run as osmocom user
+  * contrib/systemd/osmo-trx-uhd: fix HOME=
+
+  [ Pau Espin Pedrol ]
+  * code-architecture.adoc: Fix missing alignment in digraph
+  * doc: Introduce documentation for osmo-trx-ipc and its IPC interface
+
+ -- Oliver Smith <osmith@sysmocom.de>  Wed, 24 Jul 2024 15:57:14 +0200
+
 osmo-trx (1.6.0) unstable; urgency=medium
 
   [ Vadim Yanitskiy ]
