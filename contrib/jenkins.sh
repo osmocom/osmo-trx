@@ -62,8 +62,6 @@ if [ -z "${INSIDE_CHROOT}" ]; then
         fi
 fi
 
-set -ex
-
 if ! [ -x "$(command -v osmo-build-dep.sh)" ]; then
 	echo "Error: We need to have scripts/osmo-deps.sh from http://git.osmocom.org/osmo-ci/ in PATH !"
 	exit 2
