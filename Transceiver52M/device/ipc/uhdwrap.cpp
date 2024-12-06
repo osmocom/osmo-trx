@@ -108,8 +108,8 @@ extern "C" void *uhdwrap_open(struct ipc_sk_if_open_req *open_req)
 	}
 
 	for (unsigned int i = 0; i < open_req->num_chans; i++) {
-		actual_cfg.chans[i].rx_path = open_req->chan_info[i].tx_path;
-		actual_cfg.chans[i].tx_path = open_req->chan_info[i].rx_path;
+		actual_cfg.chans[i].rx_path = open_req->chan_info[i].rx_path;
+		actual_cfg.chans[i].tx_path = open_req->chan_info[i].tx_path;
 	}
 
 	uhd_wrap *uhd_wrap_dev = new uhd_wrap(RadioDevice::NORMAL, &actual_cfg);
