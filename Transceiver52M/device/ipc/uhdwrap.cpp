@@ -41,6 +41,8 @@ static struct trx_cfg actual_cfg = {};
 int uhd_wrap::open()
 {
 	int rv = uhd_device::open();
+	if (rv!=NORMAL) return rv;
+	
 	samps_per_buff_rx = rx_stream->get_max_num_samps();
 	samps_per_buff_tx = tx_stream->get_max_num_samps();
 	channel_count = usrp_dev->get_rx_num_channels();
@@ -112,6 +114,7 @@ extern "C" void *uhdwrap_open(struct ipc_sk_if_open_req *open_req)
 		actual_cfg.chans[i].tx_path = open_req->chan_info[i].rx_path;
 	}
 
+	actual_cfg.dev_args = (char*)"";
 	uhd_wrap *uhd_wrap_dev = new uhd_wrap(RadioDevice::NORMAL, &actual_cfg);
 	uhd_wrap_dev->open();
 
