@@ -28,7 +28,7 @@ std::vector<std::string> comma_delimited_to_vector(const char* opt)
 	{
 	    std::string substr;
 	    getline(ss, substr, ',');
-	    result.push_back(substr);
+	    result.push_back(std::move(substr));
 	}
 	return result;
 }
