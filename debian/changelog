@@ -1,3 +1,13 @@
+osmo-trx (1.7.1) unstable; urgency=medium
+
+  [ Oliver Smith ]
+  * contrib/jenkins: remove broken chroot + qemu code
+
+  [ Neels Hofmeyr ]
+  * comma_delimited_to_vector() optimization CID#465430
+
+ -- Oliver Smith <osmith@sysmocom.de>  Wed, 12 Feb 2025 12:43:24 +0100
+
 osmo-trx (1.7.0) unstable; urgency=medium
 
   [ Eric ]
