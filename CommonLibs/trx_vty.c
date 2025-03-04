@@ -781,17 +781,6 @@ DEFUN(show_trx, show_trx_cmd,
 	return CMD_SUCCESS;
 }
 
-static int trx_vty_is_config_node(struct vty *vty, int node)
-{
-	switch (node) {
-	case TRX_NODE:
-	case CHAN_NODE:
-		return 1;
-	default:
-		return 0;
-	}
-}
-
 static int trx_vty_go_parent(struct vty *vty)
 {
 	switch (vty->node) {
@@ -829,7 +818,6 @@ struct vty_app_info g_vty_info = {
 	.version	= PACKAGE_VERSION,
 	.copyright	= trx_copyright,
 	.go_parent_cb	= trx_vty_go_parent,
-	.is_config_node	= trx_vty_is_config_node,
 };
 
 struct trx_ctx *vty_trx_ctx_alloc(void *talloc_ctx)
