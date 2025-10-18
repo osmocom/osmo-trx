@@ -75,18 +75,19 @@ USRPDevice::USRPDevice(InterfaceType iface, const struct trx_cfg *cfg) : RadioDe
    * split sample rate Tx/Rx - 4/1 sps we need to need to
    * compensate for advance rather than delay.
    */
-  if (tx_sps == 1)
-    pingOffset = 272;
-  else if (tx_sps == 4)
-    pingOffset = 269 - 7500;
-  else
-    pingOffset = 0;
+  pingOffset = 272;
+
+  /* Split SPS (4/1) unsupported on USRP1
+   * if(tx_sps == 4 && rx_sps == 1)
+   *   pingOffset = 269 - 7500;
+   */
 
 #ifdef SWLOOPBACK
   samplePeriod = 1.0e6/actualSampleRate;
   loopbackBufferSize = 0;
   gettimeofday(&lastReadTime,NULL);
   firstRead = false;
+  pingOffset = 0;
 #endif
 }
 
@@ -101,7 +102,7 @@ int USRPDevice::open()
   m_uRx.reset();
   try {
     m_uRx = usrp_standard_rx_sptr(usrp_standard_rx::make(
-                                        0, decimRate * tx_sps, 1, -1,
+                                        0, decimRate, 1, -1,
                                         usrp_standard_rx::FPGA_MODE_NORMAL,
                                         1024, 16 * 8, rbf));
     m_uRx->set_fpga_master_clock_freq(masterClockRate);
