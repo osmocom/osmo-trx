@@ -1,3 +1,14 @@
+osmo-trx (1.7.2) unstable; urgency=medium
+
+  [ Pau Espin Pedrol ]
+  * Drop use of deprecated vty is_config_node() cb
+  * lms: Use define LMS_LOG_CRITICAL instead of value
+
+  [ Jack Lee ]
+  * trx: Fix tx/rx-sps 4 for USRP1 devices
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Wed, 03 Dec 2025 19:22:15 +0100
+
 osmo-trx (1.7.1) unstable; urgency=medium
 
   [ Oliver Smith ]
