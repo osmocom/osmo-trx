@@ -547,7 +547,6 @@ static void print_config(struct trx_ctx *trx)
 	std::ostringstream ost("");
 
 	ost << "Config Settings" << std::endl;
-	ost << "   Log Level............... " << (unsigned int) osmo_stderr_target->loglevel << std::endl;
 	ost << "   Device args............. " << charp2str(trx->cfg.dev_args) << std::endl;
 	ost << "   TRX Base Port........... " << trx->cfg.base_port << std::endl;
 	ost << "   TRX Address............. " << charp2str(trx->cfg.bind_addr) << std::endl;
