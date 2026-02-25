@@ -66,6 +66,7 @@ extern "C" {
 }
 #include "Threads.h"
 #include "Logger.h"
+#include "Utils.h"
 
 /* Used in dev_ctrs_pending, when set it means that channel slot contains unused
    (non-pending) counter data */
@@ -224,7 +225,7 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 		dev_ctrs_pending[dev_ctr->chan] = *dev_ctr;
 		if (osmo_timerfd_schedule(&dev_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
 			LOGC(DCTR, ERROR) << "Failed to schedule timerfd: " << errno
-					  << " = "<< strerror_r(errno, err_buf, sizeof(err_buf));
+					  << " = "<< strerror_buf(errno, err_buf, sizeof(err_buf));
 		}
 		dev_rate_ctr_mutex.unlock();
 		break;
@@ -235,7 +236,7 @@ static int device_sig_cb(unsigned int subsys, unsigned int signal,
 		trx_ctrs_pending[trx_ctr->chan] = *trx_ctr;
 		if (osmo_timerfd_schedule(&trx_rate_ctr_timerfd, &next_sched, &intv_sched) < 0) {
 			LOGC(DCTR, ERROR) << "Failed to schedule timerfd: " << errno
-					  << " = "<< strerror_r(errno, err_buf, sizeof(err_buf));
+					  << " = "<< strerror_buf(errno, err_buf, sizeof(err_buf));
 		}
 		trx_rate_ctr_mutex.unlock();
 		break;

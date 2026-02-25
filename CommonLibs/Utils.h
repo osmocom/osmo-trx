@@ -20,3 +20,5 @@
 #include <string>
 
 std::vector<std::string> comma_delimited_to_vector(const char* opt);
+
+char *strerror_buf(int err, char *buf, size_t buf_size);

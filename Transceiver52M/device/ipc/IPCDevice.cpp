@@ -31,6 +31,7 @@
 #include "Threads.h"
 #include "IPCDevice.h"
 #include "smpl_buf.h"
+#include "Utils.h"
 
 extern "C" {
 #include <sys/mman.h>
@@ -100,7 +101,7 @@ int IPCDevice::ipc_shm_connect(const char *shm_name)
 	LOGP(DDEV, LOGL_NOTICE, "Opening shm path %s\n", shm_name);
 	if ((fd = shm_open(shm_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)) < 0) {
 		LOGP(DDEV, LOGL_ERROR, "shm_open %d: %s\n", errno,
-		     strerror_r(errno, err_buf, sizeof(err_buf)));
+		     strerror_buf(errno, err_buf, sizeof(err_buf)));
 		rc = -errno;
 		goto err_shm_open;
 	}
@@ -109,7 +110,7 @@ int IPCDevice::ipc_shm_connect(const char *shm_name)
 	struct stat shm_stat;
 	if (fstat(fd, &shm_stat) < 0) {
 		LOGP(DDEV, LOGL_ERROR, "fstat %d: %s\n", errno,
-		     strerror_r(errno, err_buf, sizeof(err_buf)));
+		     strerror_buf(errno, err_buf, sizeof(err_buf)));
 		rc = -errno;
 		goto err_mmap;
 	}
@@ -119,7 +120,7 @@ int IPCDevice::ipc_shm_connect(const char *shm_name)
 	LOGP(DDEV, LOGL_NOTICE, "mmaping shared memory fd %d (size=%zu)\n", fd, shm_len);
 	if ((shm = mmap(NULL, shm_len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) {
 		LOGP(DDEV, LOGL_ERROR, "mmap %d: %s\n", errno,
-		     strerror_r(errno, err_buf, sizeof(err_buf)));
+		     strerror_buf(errno, err_buf, sizeof(err_buf)));
 		rc = -errno;
 		goto err_mmap;
 	}
@@ -850,7 +851,7 @@ void IPCDevice::manually_poll_sock_fds()
 
 	if (select(max_fd + 1, &crfds, &cwfds, 0, &wait) < 0) {
 		LOGP(DDEV, LOGL_ERROR, "select() failed: %s\n",
-		     strerror_r(errno, err_buf, sizeof(err_buf)));
+		     strerror_buf(errno, err_buf, sizeof(err_buf)));
 		return;
 	}
 

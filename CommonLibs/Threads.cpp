@@ -31,6 +31,7 @@
 #include "Threads.h"
 #include "Timeval.h"
 #include "Logger.h"
+#include "Utils.h"
 
 extern "C" {
 #include <osmocom/core/thread.h>
@@ -51,10 +52,10 @@ void set_selfthread_name(const char *name)
 	if (pthread_setname_np(selfid, name) == 0) {
 		LOG(INFO) << "Thread "<< selfid << " (task " << tid << ") set name: " << name;
 	} else {
-		char buf[256];
+		char err_buf[256];
 		int err = errno;
-		char* err_str = strerror_r(err, buf, sizeof(buf));
-		LOG(NOTICE) << "Thread "<< selfid << " (task " << tid << ") set name \"" << name << "\" failed: (" << err << ") " << err_str;
+		LOG(NOTICE) << "Thread "<< selfid << " (task " << tid << ") set name \"" << name << "\" failed: (" << err
+			<< ") " << strerror_buf(err, err_buf, sizeof(err_buf));
 	}
 }
 

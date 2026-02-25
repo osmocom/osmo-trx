@@ -17,6 +17,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <cstring>
 
 std::vector<std::string> comma_delimited_to_vector(const char* opt)
 {
@@ -31,4 +32,20 @@ std::vector<std::string> comma_delimited_to_vector(const char* opt)
 	    result.push_back(std::move(substr));
 	}
 	return result;
+}
+
+char *strerror_buf(int err, char *buf, size_t buf_size)
+{
+	if (buf == nullptr || buf_size == 0)
+		return nullptr;
+
+	char *err_str = buf;
+#if defined(__GLIBC__) && defined(_GNU_SOURCE)
+	err_str = strerror_r(err, buf, buf_size);
+#else
+	if (!strerror_r(err, buf, buf_size)) {
+		snprintf(buf, buf_size, "Unknown error %d", err);
+	}
+#endif
+	return err_str;
 }
