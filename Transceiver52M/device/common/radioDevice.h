@@ -53,105 +53,228 @@ class RadioDevice {
 
   static RadioDevice *make(InterfaceType type, const struct trx_cfg *cfg);
 
-  /** Initialize the USRP */
+  /**
+   * @brief Open the radio device and initialize it with the provided configuration
+   * @return NORMAL == 0 if the radio device was successfully opened and initialized, -1 otherwise
+   */
   virtual int open() = 0;
 
   virtual ~RadioDevice() { }
 
-  /** Start the USRP */
+  /**
+   * @brief Start the radio device
+   * @return true if the radio was successfully started, false otherwise
+   */
   virtual bool start()=0;
 
-  /** Stop the USRP */
+  /**
+   * @brief Stop the radio device
+   * @return true if the radio device was successfully stopped, false otherwise
+   */
   virtual bool stop()=0;
 
-  /** Get the Tx window type */
+  /**
+   * @brief Get the type of the transmit window, which can be one of TX_WINDOW_USRP1, TX_WINDOW_FIXED,
+   * or TX_WINDOW_LMS1.
+   * The transmit window type determines how the radio device handles the timing of transmitted samples.
+   * @return The type of the transmit window used by the radio device
+   */
   virtual enum TxWindowType getWindowType()=0;
 
   /**
-	Read samples from the radio.
-	@param buf preallocated buf to contain read result
-	@param len number of samples desired
-	@param overrun Set if read buffer has been overrun, e.g. data not being read fast enough
-	@param timestamp The timestamp of the first samples to be read
-	@param underrun Set if radio does not have data to transmit, e.g. data not being sent fast enough
-	@return The number of samples actually read
-  */
+   * @brief Read samples from the radio device.
+   * @param bufs preallocated buffers to contain read result
+   * @param len number of samples desired
+   * @param overrun Set if read buffer has been overrun, e.g. data not being read fast enough
+   * @param timestamp The timestamp of the first samples to be read
+   * @param underrun Set if radio device does not have data to transmit, e.g. data not being sent fast enough
+   * @return The number of samples actually read
+   */
   virtual int readSamples(std::vector<short *> &bufs, int len, bool *overrun,
                           TIMESTAMP timestamp = 0xffffffff, bool *underrun = 0) = 0;
+
   /**
-        Write samples to the radio.
-        @param buf Contains the data to be written.
-        @param len number of samples to write.
-        @param underrun Set if radio does not have data to transmit, e.g. data not being sent fast enough
-        @param timestamp The timestamp of the first sample of the data buffer.
-        @return The number of samples actually written
-  */
+   * @brief Write samples to the radio device.
+   * @param bufs Contains the data to be written.
+   * @param len number of samples to write.
+   * @param underrun Set if radio device does not have data to transmit, e.g. data not being sent fast enough
+   * @param timestamp The timestamp of the first sample of the data buffer.
+   * @return The number of samples actually written
+   */
   virtual int writeSamples(std::vector<short *> &bufs, int len, bool *underrun,
                            TIMESTAMP timestamp) = 0;
 
-  /** Update the alignment between the read and write timestamps */
+  /**
+   * @brief Update the alignment between the read and write timestamps
+   * @param timestamp The timestamp to use for alignment
+   * @return true if the alignment was successfully updated, false otherwise
+   */
   virtual bool updateAlignment(TIMESTAMP timestamp)=0;
 
-  /** Set the transmitter frequency */
+  /**
+   * @brief Set the transmitter frequency
+   * @param wFreq The frequency to set
+   * @param chan The channel to set the frequency for
+   * @return true if the transmitter frequency was successfully set, false otherwise
+   */
   virtual bool setTxFreq(double wFreq, size_t chan = 0) = 0;
 
-  /** Set the receiver frequency */
+  /**
+   * @brief Set the receiver frequency
+   * @param wFreq The frequency to set
+   * @param chan The channel to set the frequency for
+   * @return true if the receiver frequency was successfully set, false otherwise
+   */
   virtual bool setRxFreq(double wFreq, size_t chan = 0) = 0;
 
-  /** Returns the starting write Timestamp*/
+  /**
+   * @brief Get the initial write timestamp, which is the timestamp of the first sample to be transmitted
+   * after starting the device.
+   * @return The initial write timestamp
+   */
   virtual TIMESTAMP initialWriteTimestamp(void)=0;
 
-  /** Returns the starting read Timestamp*/
+  /**
+   * @brief Get the initial read timestamp, i.e. the timestamp of the first received sample
+   * after starting the device.
+   * @return The initial read timestamp
+   */
   virtual TIMESTAMP initialReadTimestamp(void)=0;
 
-  /** returns the full-scale transmit amplitude **/
+  /**
+   * @brief Returns the full-scale transmit amplitude
+   * Usually is set to half the ADC range multiplied by 1/√2
+   * (i.e. ADC_range/2 * 1/√2 ≈ ADC_range/2 * 0.70710678) to avoid clipping for complex samples I + jQ.
+   * With |I|, |Q| <= 1/√2 the magnitude I^2 + Q^2 <= 1.
+   * @return The full-scale transmit amplitude
+   */
   virtual double fullScaleInputValue()=0;
 
-  /** returns the full-scale receive amplitude **/
+  /**
+   * @brief Returns the full-scale receive amplitude
+   * Usually is set to half of ADC range, e.g. 32767 for a 16-bit ADC.
+   * @return The full-scale receive amplitude
+   */
   virtual double fullScaleOutputValue()=0;
 
-  /** sets the receive chan gain, returns the gain setting **/
+  /**
+   * @brief Set the receive channel gain
+   * @param dB The gain value in dB
+   * @param chan The channel to set the gain for
+   * @return The actual gain setting after applying the change
+   */
   virtual double setRxGain(double dB, size_t chan = 0) = 0;
 
-  /** gets the current receive gain **/
+  /**
+   * @brief Get the current receive channel gain
+   * @param chan The channel to get the gain for
+   * @return The current gain setting
+   */
   virtual double getRxGain(size_t chan = 0) = 0;
 
-  /** return maximum Rx Gain **/
+  /**
+   * @brief Get the maximum Rx Gain
+   * @return The maximum Rx Gain
+   */
   virtual double maxRxGain(void) = 0;
 
-  /** return minimum Rx Gain **/
+  /**
+   * @brief Get the minimum Rx Gain
+   * @return The minimum Rx Gain
+   */
   virtual double minRxGain(void) = 0;
 
-  /** return base RSSI offset to apply for received samples **/
+  /**
+   * @brief Get the RSSI offset for a given channel to apply for received samples
+   * @param chan The channel to get the RSSI offset for
+   * @return The RSSI offset for the given channel
+   */
   virtual double rssiOffset(size_t chan) = 0;
 
-  /** returns the Nominal transmit output power of the transceiver in dBm, negative on error **/
+  /**
+   * @brief Get the nominal transmit output power for a given channel
+   * @param chan The channel to get the nominal transmit output power for
+   * @return The nominal transmit output power in dBm, negative on error
+   */
   virtual int getNominalTxPower(size_t chan = 0) = 0;
 
-  /** sets the RX path to use, returns true if successful and false otherwise */
+  /**
+   * @brief Sets the RX path to use
+   * @param ant The antenna to set
+   * @param chan The channel to set the antenna for
+   * @return True if successful, false otherwise
+   */
   virtual bool setRxAntenna(const std::string &ant, size_t chan = 0) = 0;
 
-  /** return the used RX path */
+  /**
+   * @brief Get the used RX path
+   * @param chan The channel to get the antenna for
+   * @return The current RX path
+   */
   virtual std::string getRxAntenna(size_t chan = 0) = 0;
 
-  /** sets the RX path to use, returns true if successful and false otherwise */
+  /**
+   * @brief Sets the TX path to use
+   * @param ant The antenna to set
+   * @param chan The channel to set the antenna for
+   * @return True if successful, false otherwise
+   */
   virtual bool setTxAntenna(const std::string &ant, size_t chan = 0) = 0;
 
-  /** return the used RX path */
+  /**
+   * @brief Get the used TX path
+   * @param chan The channel to get the antenna for
+   * @return The current TX path
+   */
   virtual std::string getTxAntenna(size_t chan = 0) = 0;
 
-  /** return whether user drives synchronization of Tx/Rx of USRP */
+  /**
+   * @brief Return whether user drives synchronization of Tx/Rx
+   * @return true if user drives synchronization of Tx/Rx, false otherwise
+   */
   virtual bool requiresRadioAlign() = 0;
 
-  /** Minimum latency that the device can achieve */
+  /**
+   * @brief Return the minimum latency the radio device can achieve
+   * @return The minimum latency
+   */
   virtual GSM::Time minLatency() = 0;
 
   /** Return internal status values */
+
+  /**
+   * @brief Get the transceiver frequency
+   * @param chan The channel to get the frequency for
+   * @return The current transceiver frequency
+   */
   virtual double getTxFreq(size_t chan = 0) = 0;
+
+  /**
+   * @brief Get the receiver frequency
+   * @param chan The channel to get the frequency for
+   * @return The current receiver frequency
+   */
   virtual double getRxFreq(size_t chan = 0) = 0;
+
+  /**
+   * @brief Return actual sample rate of the radio device
+   * @return The current sample rate
+   */
   virtual double getSampleRate()=0;
 
+  /**
+   * @brief Set the power attenuation for a given channel
+   * @param atten The attenuation value in dB
+   * @param chan The channel to set the attenuation for
+   * @return The actual attenuation setting after applying the change
+   */
   virtual double setPowerAttenuation(int atten, size_t chan) = 0;
+
+  /**
+   * @brief Get the power attenuation for a given channel
+   * @param chan The channel to get the attenuation for
+   * @return The current attenuation setting
+   */
   virtual double getPowerAttenuation(size_t chan=0) = 0;
 
   protected:
