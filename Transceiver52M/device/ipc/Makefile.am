@@ -24,11 +24,13 @@ if DEVICE_UHD
 
 bin_PROGRAMS = ipc-driver-test
 #ipc_driver_test_SHORTNAME = drvt
-ipc_driver_test_SOURCES = ipc-driver-test.c uhdwrap.cpp ../uhd/UHDDevice.cpp
+ipc_driver_test_SOURCES = ipc-driver-test.c uhdwrap.cpp
 ipc_driver_test_LDADD = \
-	libdevice.la \
-	$(COMMON_LA) \
-	$(LIBOSMOCORE_LIBS) \
 	$(UHD_LIBS) \
+	$(LIBOSMOCORE_LIBS) \
+	$(COMMON_LA) \
+	libdevice.la \
+	$(top_builddir)/Transceiver52M/device/uhd/UHDDevice.o \
 	$(NULL)
+
 endif
