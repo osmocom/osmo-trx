@@ -68,7 +68,7 @@ PKG_PROG_PKG_CONFIG([0.20])
 AC_LIBTOOL_WIN32_DLL
 AC_ENABLE_SHARED	dnl do build shared libraries
 AC_DISABLE_STATIC	dnl don't build static libraries
-AC_PROG_LIBTOOL
+LT_INIT
 
 dnl Checks for header files.
 AC_HEADER_STDC
