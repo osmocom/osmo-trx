@@ -286,7 +286,6 @@ AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4
 AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
 AM_CONDITIONAL(ENABLE_MS_TRX, [test "x$with_mstrx" = "xyes"])
 
-PKG_CHECK_MODULES(LIBUSB, libusb-1.0)
 PKG_CHECK_MODULES(FFTWF, fftw3f)
 
 # Generate manuals
