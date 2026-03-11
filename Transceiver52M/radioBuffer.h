@@ -1,3 +1,6 @@
+#ifndef RADIO_BUFFER_H
+#define RADIO_BUFFER_H
+
 #include <stdlib.h>
 #include <stddef.h>
 #include <vector>
@@ -43,3 +46,5 @@ private:
 	std::vector<float *> segments;
 	bool outDirection;
 };
+
+#endif /* RADIO_BUFFER_H */

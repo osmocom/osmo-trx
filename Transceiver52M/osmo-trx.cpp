@@ -22,6 +22,10 @@
 #include "radioDevice.h"
 #include "Utils.h"
 
+#ifdef ENABLE_MULTI_ARFCN
+#include "radioInterfaceMulti.h"
+#endif /* ENABLE_MULTI_ARFCN */
+
 #include <time.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -117,10 +121,12 @@ RadioInterface *makeRadioInterface(struct trx_ctx *trx,
 		radio = new rif_va_wrapper<RadioInterfaceResamp>(trx->cfg.use_va, usrp, trx->cfg.tx_sps,
 								 trx->cfg.rx_sps);
 		break;
+#ifdef ENABLE_MULTI_ARFCN
 	case RadioDevice::MULTI_ARFCN:
 		radio = new rif_va_wrapper<RadioInterfaceMulti>(trx->cfg.use_va, usrp, trx->cfg.tx_sps, trx->cfg.rx_sps,
 								trx->cfg.num_chans);
 		break;
+#endif /* ENABLE_MULTI_ARFCN */
 	default:
 		LOG(ALERT) << "Unsupported radio interface configuration";
 		return NULL;

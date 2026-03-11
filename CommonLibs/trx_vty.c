@@ -222,6 +222,12 @@ DEFUN(cfg_multi_arfcn, cfg_multi_arfcn_cmd,
 		return CMD_SUCCESS;
 	}
 
+#ifndef ENABLE_MULTI_ARFCN
+	vty_out(vty, "%% osmo-trx was built without multi-ARFCN support%s",
+		VTY_NEWLINE);
+	return CMD_WARNING;
+#endif
+
 	if (trx->cfg.num_chans > TRX_MCHAN_MAX) {
 		vty_out(vty, "Up to %i channels are supported for multi-TRX mode%s",
 			TRX_MCHAN_MAX, VTY_NEWLINE);

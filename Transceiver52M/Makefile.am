@@ -37,18 +37,26 @@ COMMON_SOURCES = \
 	sigProcLib.cpp \
 	signalVector.cpp \
 	Transceiver.cpp \
-	ChannelizerBase.cpp \
-	Channelizer.cpp \
-	Synthesis.cpp \
 	proto_trxd.c \
 	grgsm_vitac/grgsm_vitac.cpp \
 	grgsm_vitac/viterbi_detector.cc
+
+if ENABLE_MULTI_ARFCN
+COMMON_SOURCES += \
+	ChannelizerBase.cpp \
+	Channelizer.cpp \
+	Synthesis.cpp
+endif
 
 libtransceiver_common_la_SOURCES = \
 	$(COMMON_SOURCES) \
 	Resampler.cpp \
 	radioInterfaceResamp.cpp \
-	radioInterfaceMulti.cpp
+	$(NULL)
+
+if ENABLE_MULTI_ARFCN
+libtransceiver_common_la_SOURCES += radioInterfaceMulti.cpp
+endif
 
 noinst_HEADERS = \
 	Complex.h \
@@ -60,10 +68,15 @@ noinst_HEADERS = \
 	signalVector.h \
 	Transceiver.h \
 	Resampler.h \
+	proto_trxd.h
+
+if ENABLE_MULTI_ARFCN
+noinst_HEADERS += \
+	radioInterfaceMulti.h \
 	ChannelizerBase.h \
 	Channelizer.h \
-	Synthesis.h \
-	proto_trxd.h
+	Synthesis.h
+endif
 
 COMMON_LDADD = \
 	libtransceiver_common.la \

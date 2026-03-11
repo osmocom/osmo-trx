@@ -12,7 +12,8 @@
 
 */
 
-
+#ifndef RADIO_INTERFACE_H
+#define RADIO_INTERFACE_H
 
 #include "sigProcLib.h"
 #include "GSMCommon.h"
@@ -22,8 +23,6 @@
 #include "radioClock.h"
 #include "radioBuffer.h"
 #include "Resampler.h"
-#include "Channelizer.h"
-#include "Synthesis.h"
 
 static const unsigned gSlotLen = 148;      ///< number of symbols per slot, not counting guard periods
 
@@ -162,35 +161,4 @@ struct freq_cfg_state {
   double freq_hz;
 };
 
-class RadioInterfaceMulti : public RadioInterface {
-private:
-  bool pushBuffer();
-  int pullBuffer();
-  bool verify_arfcn_consistency(double freq, size_t chan, bool tx);
-  virtual int setPowerAttenuation(int atten, size_t chan = 0);
-
-  signalVector *outerSendBuffer;
-  signalVector *outerRecvBuffer;
-  std::vector<signalVector *> history;
-  std::vector<bool> active;
-  std::vector<struct freq_cfg_state> rx_freq_state;
-  std::vector<struct freq_cfg_state> tx_freq_state;
-
-  Resampler *dnsampler;
-  Resampler *upsampler;
-  Channelizer *channelizer;
-  Synthesis *synthesis;
-
-public:
-  RadioInterfaceMulti(RadioDevice* radio, size_t tx_sps,
-                      size_t rx_sps, size_t chans = 1);
-  virtual ~RadioInterfaceMulti();
-
-  bool init(int type);
-  void close();
-
-  bool tuneTx(double freq, size_t chan);
-  bool tuneRx(double freq, size_t chan);
-  virtual double setRxGain(double dB, size_t chan);
-  virtual double rssiOffset(size_t chan = 0);
-};
+#endif /* RADIO_INTERFACE_H */

@@ -286,7 +286,19 @@ AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4
 AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
 AM_CONDITIONAL(ENABLE_MS_TRX, [test "x$with_mstrx" = "xyes"])
 
-PKG_CHECK_MODULES(FFTWF, fftw3f)
+# Disable Multi ARFCN support
+AC_ARG_ENABLE(multi-arfcn,
+	[AS_HELP_STRING(
+		[--disable-multi-arfcn],
+		[Disable Multi ARFCN support [default=enabled]],
+	)],
+	[enable_multi_arfcn=$enableval], [enable_multi_arfcn="yes"])
+AM_CONDITIONAL(ENABLE_MULTI_ARFCN, [test "x$enable_multi_arfcn" = "xyes"])
+
+if test "x$enable_multi_arfcn" = "xyes"; then
+	AC_DEFINE([ENABLE_MULTI_ARFCN],[1],[Building with enabled Multi ARFCN])
+	PKG_CHECK_MODULES(FFTWF, fftw3f)
+fi
 
 # Generate manuals
 AC_ARG_ENABLE(manuals,

@@ -22,7 +22,7 @@
  * See the COPYING file in the main directory for details.
  */
 
-#include <radioInterface.h>
+#include <radioInterfaceMulti.h>
 #include <Logger.h>
 
 #include "Resampler.h"
