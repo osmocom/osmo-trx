@@ -828,8 +828,8 @@ void Transceiver::reset()
  * @param  params pointer to arguments, or NULL
  * @return        true if command matches, otherwise false
  */
-static bool match_cmd(char *buf,
-  const char *cmd, char **params)
+static bool match_cmd(const char *buf,
+  const char *cmd, const char **params)
 {
   size_t cmd_len = strlen(cmd);
 
@@ -900,7 +900,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
   ctrl_msg cmd_to_send;
   char *buffer = cmd_received.data;
   char *response = cmd_to_send.data;
-  char *command, *params;
+  const char *command, *params;
   int msgLen;
   ctrl_sock_state& s = mCtrlSockets[chan];
 
