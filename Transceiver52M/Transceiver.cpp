@@ -900,6 +900,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
   ctrl_msg cmd_to_send;
   char *buffer = cmd_received.data;
   char *response = cmd_to_send.data;
+  const size_t response_size = sizeof(cmd_to_send.data);
   const char *command, *params;
   int msgLen;
   ctrl_sock_state& s = mCtrlSockets[chan];
@@ -929,12 +930,12 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
 
   if (match_cmd(command, "POWEROFF", NULL)) {
     stop();
-    sprintf(response,"RSP POWEROFF 0");
+    snprintf(response, response_size, "RSP POWEROFF 0");
   } else if (match_cmd(command, "POWERON", NULL)) {
     if (!start()) {
-      sprintf(response,"RSP POWERON 1");
+      snprintf(response, response_size, "RSP POWERON 1");
     } else {
-      sprintf(response,"RSP POWERON 0");
+      snprintf(response, response_size, "RSP POWERON 0");
       for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++)
           mHandover[i][j] = false;
@@ -944,62 +945,62 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     unsigned ts = 0, ss = 0;
     sscanf(params, "%u %u", &ts, &ss);
     if (ts > 7 || ss > 7) {
-      sprintf(response, "RSP HANDOVER 1 %u %u", ts, ss);
+      snprintf(response, response_size, "RSP HANDOVER 1 %u %u", ts, ss);
     } else {
       mHandover[ts][ss] = true;
-      sprintf(response, "RSP HANDOVER 0 %u %u", ts, ss);
+      snprintf(response, response_size, "RSP HANDOVER 0 %u %u", ts, ss);
     }
   } else if (match_cmd(command, "NOHANDOVER", &params)) {
     unsigned ts = 0, ss = 0;
     sscanf(params, "%u %u", &ts, &ss);
     if (ts > 7 || ss > 7) {
-      sprintf(response, "RSP NOHANDOVER 1 %u %u", ts, ss);
+      snprintf(response, response_size, "RSP NOHANDOVER 1 %u %u", ts, ss);
     } else {
       mHandover[ts][ss] = false;
-      sprintf(response, "RSP NOHANDOVER 0 %u %u", ts, ss);
+      snprintf(response, response_size, "RSP NOHANDOVER 0 %u %u", ts, ss);
     }
   } else if (match_cmd(command, "SETMAXDLY", &params)) {
     //set expected maximum time-of-arrival for Access Bursts
     int maxDelay;
     sscanf(params, "%d", &maxDelay);
     mMaxExpectedDelayAB = maxDelay; // 1 GSM symbol is approx. 1 km
-    sprintf(response,"RSP SETMAXDLY 0 %d",maxDelay);
+    snprintf(response, response_size, "RSP SETMAXDLY 0 %d", maxDelay);
   } else if (match_cmd(command, "SETMAXDLYNB", &params)) {
     //set expected maximum time-of-arrival for Normal Bursts
     int maxDelay;
     sscanf(params, "%d", &maxDelay);
     mMaxExpectedDelayNB = maxDelay; // 1 GSM symbol is approx. 1 km
-    sprintf(response,"RSP SETMAXDLYNB 0 %d",maxDelay);
+    snprintf(response, response_size, "RSP SETMAXDLYNB 0 %d", maxDelay);
   } else if (match_cmd(command, "SETRXGAIN", &params)) {
     int newGain;
     sscanf(params, "%d", &newGain);
     newGain = mRadioInterface->setRxGain(newGain, chan);
-    sprintf(response,"RSP SETRXGAIN 0 %d",newGain);
+    snprintf(response, response_size, "RSP SETRXGAIN 0 %d", newGain);
   } else if (match_cmd(command, "NOISELEV", NULL)) {
     if (mOn) {
       float lev = mStates[chan].mNoiseLev;
-      sprintf(response,"RSP NOISELEV 0 %d",
+      snprintf(response, response_size, "RSP NOISELEV 0 %d",
               (int) round(20.0 * log10(rxFullScale / lev)));
     }
     else {
-      sprintf(response,"RSP NOISELEV 1 0");
+      snprintf(response, response_size, "RSP NOISELEV 1 0");
     }
   } else if (match_cmd(command, "SETPOWER", &params)) {
     int power;
     sscanf(params, "%d", &power);
     power = mRadioInterface->setPowerAttenuation(power, chan);
     mStates[chan].mPower = power;
-    sprintf(response, "RSP SETPOWER 0 %d", power);
+    snprintf(response, response_size, "RSP SETPOWER 0 %d", power);
   } else if (match_cmd(command, "ADJPOWER", &params)) {
     int power, step;
     sscanf(params, "%d", &step);
     power = mStates[chan].mPower + step;
     power = mRadioInterface->setPowerAttenuation(power, chan);
     mStates[chan].mPower = power;
-    sprintf(response, "RSP ADJPOWER 0 %d", power);
-} else if (match_cmd(command, "NOMTXPOWER", NULL)) {
+    snprintf(response, response_size, "RSP ADJPOWER 0 %d", power);
+  } else if (match_cmd(command, "NOMTXPOWER", NULL)) {
     int power = mRadioInterface->getNominalTxPower(chan);
-    sprintf(response, "RSP NOMTXPOWER 0 %d", power);
+    snprintf(response, response_size, "RSP NOMTXPOWER 0 %d", power);
   } else if (match_cmd(command, "RXTUNE", &params)) {
     // tune receiver
     int freqKhz;
@@ -1007,10 +1008,10 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     mRxFreq = (freqKhz + cfg->freq_offset_khz) * 1e3;
     if (!mRadioInterface->tuneRx(mRxFreq, chan)) {
        LOGCHAN(chan, DTRXCTRL, FATAL) << "RX failed to tune";
-       sprintf(response,"RSP RXTUNE 1 %d",freqKhz);
+       snprintf(response, response_size, "RSP RXTUNE 1 %d", freqKhz);
     }
     else
-       sprintf(response,"RSP RXTUNE 0 %d",freqKhz);
+       snprintf(response, response_size, "RSP RXTUNE 0 %d", freqKhz);
   } else if (match_cmd(command, "TXTUNE", &params)) {
     // tune txmtr
     int freqKhz;
@@ -1018,20 +1019,20 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     mTxFreq = (freqKhz + cfg->freq_offset_khz) * 1e3;
     if (!mRadioInterface->tuneTx(mTxFreq, chan)) {
        LOGCHAN(chan, DTRXCTRL, FATAL) << "TX failed to tune";
-       sprintf(response,"RSP TXTUNE 1 %d",freqKhz);
+       snprintf(response, response_size, "RSP TXTUNE 1 %d", freqKhz);
     }
     else
-       sprintf(response,"RSP TXTUNE 0 %d",freqKhz);
+       snprintf(response, response_size, "RSP TXTUNE 0 %d", freqKhz);
   } else if (match_cmd(command, "SETTSC", &params)) {
     // set TSC
     unsigned TSC;
     sscanf(params, "%u", &TSC);
     if (TSC > 7) {
-      sprintf(response, "RSP SETTSC 1 %d", TSC);
+      snprintf(response, response_size, "RSP SETTSC 1 %d", TSC);
     } else {
       LOGC(DTRXCTRL, NOTICE) << "Changing TSC from " << mTSC << " to " << TSC;
       mTSC = TSC;
-      sprintf(response,"RSP SETTSC 0 %d", TSC);
+      snprintf(response, response_size, "RSP SETTSC 0 %d", TSC);
     }
   } else if (match_cmd(command, "SETSLOT", &params)) {
     // set slot type
@@ -1040,12 +1041,12 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     sscanf(params, "%d %d", &timeslot, &corrCode);
     if ((timeslot < 0) || (timeslot > 7)) {
       LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus message on control interface";
-      sprintf(response,"RSP SETSLOT 1 %d %d",timeslot,corrCode);
+      snprintf(response, response_size, "RSP SETSLOT 1 %d %d", timeslot, corrCode);
       return 0;
     }
     mStates[chan].chanType[timeslot] = (ChannelCombination) corrCode;
     setModulus(timeslot, chan);
-    sprintf(response,"RSP SETSLOT 0 %d %d",timeslot,corrCode);
+    snprintf(response, response_size, "RSP SETSLOT 0 %d %d", timeslot, corrCode);
   } else if (match_cmd(command, "SETFORMAT", &params)) {
     // set TRXD protocol version
     unsigned version_recv;
@@ -1054,28 +1055,28 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     if (version_recv > TRX_DATA_FORMAT_VER) {
       LOGCHAN(chan, DTRXCTRL, INFO) << "rejecting TRXD version " << version_recv
                                     << " in favor of " <<  TRX_DATA_FORMAT_VER;
-      sprintf(response, "RSP SETFORMAT %u %u", TRX_DATA_FORMAT_VER, version_recv);
+      snprintf(response, response_size, "RSP SETFORMAT %u %u", TRX_DATA_FORMAT_VER, version_recv);
     } else {
       LOGCHAN(chan, DTRXCTRL, NOTICE) << "switching to TRXD version " << version_recv;
       mVersionTRXD[chan] = version_recv;
-      sprintf(response, "RSP SETFORMAT %u %u", version_recv, version_recv);
+      snprintf(response, response_size, "RSP SETFORMAT %u %u", version_recv, version_recv);
     }
   } else if (match_cmd(command, "RFMUTE", &params)) {
     // (Un)mute RF TX and RX
     unsigned mute;
     sscanf(params, "%u", &mute);
     mStates[chan].mMuted = mute ? true : false;
-    sprintf(response, "RSP RFMUTE 0 %u", mute);
+    snprintf(response, response_size, "RSP RFMUTE 0 %u", mute);
   } else if (match_cmd(command, "_SETBURSTTODISKMASK", &params)) {
     // debug command! may change or disappear without notice
     // set a mask which bursts to dump to disk
     int mask;
     sscanf(params, "%d", &mask);
     mWriteBurstToDiskMask = mask;
-    sprintf(response,"RSP _SETBURSTTODISKMASK 0 %d",mask);
+    snprintf(response, response_size, "RSP _SETBURSTTODISKMASK 0 %d", mask);
   } else {
     LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus command " << command << " on control interface.";
-    sprintf(response,"RSP ERR 1");
+    snprintf(response, response_size, "RSP ERR 1");
   }
 
   LOGCHAN(chan, DTRXCTRL, INFO) << "response is '" << response << "'";
