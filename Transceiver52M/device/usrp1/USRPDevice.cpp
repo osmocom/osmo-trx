@@ -45,19 +45,6 @@
 
 using namespace std;
 
-enum dboardConfigType {
-  TXA_RXB,
-  TXB_RXA,
-  TXA_RXA,
-  TXB_RXB
-};
-
-#ifdef SINGLEDB
-const dboardConfigType dboardConfig = TXA_RXA;
-#else
-const dboardConfigType dboardConfig = TXA_RXB;
-#endif
-
 const double USRPDevice::masterClockRate = 52.0e6;
 
 USRPDevice::USRPDevice(InterfaceType iface, const struct trx_cfg *cfg) : RadioDevice(iface, cfg)
@@ -148,24 +135,10 @@ int USRPDevice::open()
 
 #endif
 
-  switch (dboardConfig) {
-  case TXA_RXB:
-    txSubdevSpec = usrp_subdev_spec(0,0);
-    rxSubdevSpec = usrp_subdev_spec(1,0);
-    break;
-  case TXB_RXA:
-    txSubdevSpec = usrp_subdev_spec(1,0);
-    rxSubdevSpec = usrp_subdev_spec(0,0);
-    break;
-  case TXA_RXA:
+  if (cfg->usrp1_singledb) {
     txSubdevSpec = usrp_subdev_spec(0,0);
     rxSubdevSpec = usrp_subdev_spec(0,0);
-    break;
-  case TXB_RXB:
-    txSubdevSpec = usrp_subdev_spec(1,0);
-    rxSubdevSpec = usrp_subdev_spec(1,0);
-    break;
-  default:
+  } else {
     txSubdevSpec = usrp_subdev_spec(0,0);
     rxSubdevSpec = usrp_subdev_spec(1,0);
   }

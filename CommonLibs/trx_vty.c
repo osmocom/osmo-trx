@@ -632,6 +632,19 @@ DEFUN(cfg_chan, cfg_chan_cmd,
 	return CMD_SUCCESS;
 }
 
+DEFUN(cfg_usrp1_singledb, cfg_usrp1_singledb_cmd,
+	"usrp1-singledb (disable|enable)",
+	"Use single daughterboard on USRP1 (default=disable)\n"
+	"Use dual daughterboard configuration (TX on DB A, RX on DB B)\n"
+	"Use single daughterboard configuration (TX/RX on DB A)\n")
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.usrp1_singledb = (strcmp(argv[0], "enable") == 0);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_chan_rx_path, cfg_chan_rx_path_cmd,
 	"rx-path NAME",
 	"Set the Rx Path\n"
@@ -727,6 +740,8 @@ static int config_write_trx(struct vty *vty)
 		vty_out(vty, " ul-gain-override %f%s", trx->cfg.overrides.ul_gain, VTY_NEWLINE);
 	if (trx->cfg.use_va)
 		vty_out(vty, " viterbi-eq %s%s", trx->cfg.use_va ? "enable" : "disable", VTY_NEWLINE);
+	if (trx->cfg.usrp1_singledb)
+		vty_out(vty, " usrp1-singledb %s%s", trx->cfg.usrp1_singledb ? "enable" : "disable", VTY_NEWLINE);
 	trx_rate_ctr_threshold_write_config(vty, " ");
 
 	for (i = 0; i < trx->cfg.num_chans; i++) {
@@ -765,6 +780,7 @@ static void trx_dump_vty(struct vty *vty, struct trx_ctx *trx)
 	vty_out(vty, " Real Time Priority: %u (%s)%s", trx->cfg.sched_rr,
 		trx->cfg.sched_rr ? "Enabled" : "Disabled", VTY_NEWLINE);
 	vty_out(vty, " Stack size per Thread in BYTE (0 = OS default): %u%s", trx->cfg.stack_size, VTY_NEWLINE);
+	vty_out(vty, " Single daughterboard (for USRP1): %s%s", trx->cfg.usrp1_singledb ? "Enabled" : "Disabled", VTY_NEWLINE);
 	vty_out(vty, " Channels: %u%s", trx->cfg.num_chans, VTY_NEWLINE);
 	for (i = 0; i < trx->cfg.num_chans; i++) {
 		chan = &trx->cfg.chans[i];
@@ -877,6 +893,7 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_ctr_error_threshold_cmd);
 	install_element(TRX_NODE, &cfg_no_ctr_error_threshold_cmd);
 	install_element(TRX_NODE, &cfg_stack_size_cmd);
+	install_element(TRX_NODE, &cfg_usrp1_singledb_cmd);
 
 	install_element(TRX_NODE, &cfg_chan_cmd);
 	install_element(TRX_NODE, &cfg_ul_fn_offset_cmd);

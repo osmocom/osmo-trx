@@ -66,6 +66,12 @@ by the radioInterface/USRP. Received bursts (from the radioInterface) pass
 through a simple energy detector, a RACH or midamble correlator, and a DFE-based
 demodulator.
 
+By default, osmo-trx-usrp1 will use daughterboard A for transmitting and
+daughterboard B for receiving. Some USRP1 configurations use only a single
+daughterboard for both TX and RX, and thus the receiver will not work as
+daughterboard B does not exist. Daughterboard A can be configured to be used
+for both TX and RX with `usrp1-singledb enable`.
+
 NOTE: There's a `SWLOOPBACK` #define statement, where the USRP is replaced
 with a memory buffer. In this mode, data written to the USRP is actually stored
 in a buffer, and read commands to the USRP simply pull data from this buffer.

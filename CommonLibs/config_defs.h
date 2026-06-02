@@ -68,4 +68,5 @@ struct trx_cfg {
 		double dl_gain;
 	} overrides;
 	bool use_va;
+	bool usrp1_singledb;
 };

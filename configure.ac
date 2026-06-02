@@ -149,11 +149,6 @@ AC_ARG_WITH(mstrx, [
         [enable MS TRX])
 ])
 
-AC_ARG_WITH(singledb, [
-    AS_HELP_STRING([--with-singledb],
-        [enable single daughterboard use on USRP1])
-])
-
 AC_ARG_WITH(neon, [
     AS_HELP_STRING([--with-neon],
         [enable ARM NEON support])
@@ -227,10 +222,6 @@ AS_IF([test "x$with_mstrx" = "xyes"], [
     # Work this around by pointing it to an empty dir.
     AC_SUBST(LIBTRXCON_DIR, "osmocom-bb")
     AC_MSG_RESULT([no])
-])
-
-AS_IF([test "x$with_singledb" = "xyes"], [
-    AC_DEFINE(SINGLEDB, 1, Define to 1 for single daughterboard)
 ])
 
 # Find and define supported SIMD extensions
