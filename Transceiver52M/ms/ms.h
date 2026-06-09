@@ -43,6 +43,9 @@
 #include "itrq.h"
 #include "threadpool.h"
 #include "threadsched.h"
+extern "C" {
+#include <osmocom/core/bits.h>
+}
 
 const unsigned int ONE_TS_BURST_LEN = (3 + 58 + 26 + 58 + 3 + 8.25) * 4 /*sps*/;
 const unsigned int SCH_LEN_SPS = (ONE_TS_BURST_LEN * 8 /*ts*/ * 12 /*frames*/);
@@ -129,7 +132,7 @@ struct one_burst {
 	GSM::Time gsmts;
 	union {
 		blade_sample_type burst[ONE_TS_BURST_LEN];
-		char sch_bits[148];
+		sbit_t sch_bits[148];
 	};
 };
 

@@ -39,6 +39,10 @@
 #include "viterbi_detector.h"
 #include "grgsm_vitac.h"
 
+extern "C" {
+#include <osmocom/core/bits.h>
+}
+
 gr_complex d_acc_training_seq[N_ACCESS_BITS]; ///<encoded training sequence of a RACH burst
 gr_complex d_sch_training_seq[N_SYNC_BITS]; ///<encoded training sequence of a SCH burst
 gr_complex d_norm_training_seq[TRAIN_SEQ_NUM][N_TRAIN_BITS]; ///<encoded training sequences of a normal and dummy burst
@@ -77,7 +81,7 @@ void initvita()
 
 template <unsigned int burst_size>
 NO_UBSAN static void detect_burst_generic(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start,
-					  char *output_binary, int ss)
+					  sbit_t *output_binary, int ss)
 {
 	std::vector<gr_complex> rhh_temp(CHAN_IMP_RESP_LENGTH * d_OSR);
 	unsigned int stop_states[2] = { 4, 12 };
@@ -98,22 +102,22 @@ NO_UBSAN static void detect_burst_generic(const gr_complex *input, gr_complex *c
 		output_binary[i] = output[i] > 0 ? -127 : 127; // pre flip bits!
 }
 
-NO_UBSAN void detect_burst_nb(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary,
+NO_UBSAN void detect_burst_nb(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, sbit_t *output_binary,
 			      int ss)
 {
 	return detect_burst_generic<BURST_SIZE>(input, chan_imp_resp, burst_start, output_binary, ss);
 }
-NO_UBSAN void detect_burst_ab(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary,
+NO_UBSAN void detect_burst_ab(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, sbit_t *output_binary,
 			      int ss)
 {
 	return detect_burst_generic<8 + 41 + 36 + 3>(input, chan_imp_resp, burst_start, output_binary, ss);
 }
 
-NO_UBSAN void detect_burst_nb(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary)
+NO_UBSAN void detect_burst_nb(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, sbit_t *output_binary)
 {
 	return detect_burst_nb(input, chan_imp_resp, burst_start, output_binary, 3);
 }
-NO_UBSAN void detect_burst_ab(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary)
+NO_UBSAN void detect_burst_ab(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, sbit_t *output_binary)
 {
 	return detect_burst_ab(input, chan_imp_resp, burst_start, output_binary, 3);
 }

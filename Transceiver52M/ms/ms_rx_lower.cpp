@@ -34,6 +34,8 @@
 
 extern "C" {
 #include "sch.h"
+
+#include <osmocom/core/bits.h>
 }
 
 #ifdef LOG
@@ -123,7 +125,7 @@ void ms_trx::maybe_update_gain(one_burst &brst)
 	gain_check = (gain_check + 1) % avgburst_num;
 }
 
-static char sch_demod_bits[148];
+static sbit_t sch_demod_bits[148];
 
 bool ms_trx::handle_sch_or_nb()
 {
@@ -174,7 +176,7 @@ bool ms_trx::handle_sch(bool is_first_sch_acq)
 	}
 	detect_burst_nb(&ss[start], &channel_imp_resp[0], 0, sch_demod_bits);
 
-	auto sch_decode_success = decode_sch(sch_demod_bits, is_first_sch_acq);
+	auto sch_decode_success = decode_sch((char *)sch_demod_bits, is_first_sch_acq);
 #if 0
 	auto burst = new signalVector(buf_len, 50);
 	const auto corr_type = is_first_sch_acq ? sch_detect_type::SCH_DETECT_BUFFER : sch_detect_type::SCH_DETECT_FULL;

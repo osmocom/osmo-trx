@@ -27,6 +27,7 @@
 extern "C" {
 #include "convert.h"
 #include <convolve.h>
+#include <osmocom/core/bits.h>
 }
 
 #define _CRT_SECURE_NO_WARNINGS
@@ -291,7 +292,7 @@ void demod_real_burst(int num = 0)
 	std::cerr << "demod test va:" << std::endl;
 	std::complex<float> chan_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
 	float ncmax;
-	char demodded_softbits[444];
+	sbit_t demodded_softbits[444];
 
 	// demod at known offset
 	{
@@ -376,7 +377,7 @@ void demod_generated_burst(CorrType t)
 	if (rs.ct == CorrType::RACH) {
 		std::complex<float> chan_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
 		float ncmax;
-		char demodded_softbits[444];
+		sbit_t demodded_softbits[444];
 		int normal_burst_start = 0;
 		normal_burst_start = get_access_imp_resp(conved_beg, &chan_imp_resp[0], &ncmax, 0);
 		normal_burst_start = std::max(normal_burst_start, 0);
@@ -414,7 +415,7 @@ void demod_generated_burst(CorrType t)
 	} else {
 		std::complex<float> chan_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
 		float ncmax;
-		char demodded_softbits[444];
+		sbit_t demodded_softbits[444];
 
 		auto normal_burst_start = get_norm_chan_imp_resp(conved_beg, &chan_imp_resp[0], &ncmax, tsc);
 		detect_burst_nb(conved_beg, &chan_imp_resp[0], normal_burst_start + 0, demodded_softbits);
@@ -431,7 +432,7 @@ void demod_generated_burst(CorrType t)
 	}
 
 	struct estim_burst_params ebp;
-	char demodded_softbits[444];
+	sbit_t demodded_softbits[444];
 	complex *rx_sigproc_cfloat = reinterpret_cast<complex *>(conved_beg);
 	signalVector sv(rx_sigproc_cfloat, 0, rs.convolved->size(), dummy_alloc, dummy_free);
 

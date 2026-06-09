@@ -623,7 +623,7 @@ static SoftVector *demodAnyBurst_va(const signalVector &burst, CorrType type, in
 	std::complex<float> chan_imp_resp[CHAN_IMP_RESP_LENGTH * d_OSR];
 	float ncmax;
 	const unsigned burst_len_bits = 148 + 8;
-	char demodded_softbits[burst_len_bits];
+	sbit_t demodded_softbits[burst_len_bits];
 	SoftVector *bits = new SoftVector(burst_len_bits);
 
 	if (type == CorrType::TSC) {

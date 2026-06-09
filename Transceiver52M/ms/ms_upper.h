@@ -26,9 +26,13 @@
 #include "GSMCommon.h"
 #include "ms.h"
 
+extern "C" {
+#include <osmocom/core/bits.h>
+}
+
 class upper_trx : public ms_trx {
 	volatile bool mOn;
-	char demodded_softbits[444];
+	sbit_t demodded_softbits[444];
 
 	// void driveControl();
 	bool pullRadioVector(GSM::Time &wTime, int &RSSI, int &timingOffset);

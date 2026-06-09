@@ -24,6 +24,10 @@
 #include <vector>
 #include "constants.h"
 
+extern "C" {
+#include <osmocom/core/bits.h>
+}
+
 /* may only be used for for the DEFINITIONS!
 * see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91664
 */
@@ -63,10 +67,10 @@ void initvita();
 int process_vita_burst(gr_complex *input, int tsc, unsigned char *output_binary);
 int process_vita_sc_burst(gr_complex *input, int tsc, unsigned char *output_binary, int *offset);
 
-void detect_burst_nb(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary, int ss);
-void detect_burst_ab(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary, int ss);
-void detect_burst_nb(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary);
-void detect_burst_ab(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, char *output_binary);
+void detect_burst_nb(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, sbit_t *output_binary, int ss);
+void detect_burst_ab(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, sbit_t *output_binary, int ss);
+void detect_burst_nb(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, sbit_t *output_binary);
+void detect_burst_ab(const gr_complex *input, gr_complex *chan_imp_resp, int burst_start, sbit_t *output_binary);
 
 void gmsk_mapper(const unsigned char *input, int nitems, gr_complex *gmsk_output, gr_complex start_point);
 gr_complex correlate_sequence(const gr_complex *sequence, int length, const gr_complex *input);
