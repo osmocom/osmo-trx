@@ -1,0 +1,50 @@
+=== test_msg_parse ===
+'CMD POWERON' -> type=0 cmd='POWERON' status=0 params=''
+	re-encoded: 'CMD POWERON'
+'CMD POWEROFF' -> type=0 cmd='POWEROFF' status=0 params=''
+	re-encoded: 'CMD POWEROFF'
+'CMD RXTUNE 890000' -> type=0 cmd='RXTUNE' status=0 params='890000'
+	re-encoded: 'CMD RXTUNE 890000'
+'CMD SETSLOT 0 7 C5/S1' -> type=0 cmd='SETSLOT' status=0 params='0 7 C5/S1'
+	re-encoded: 'CMD SETSLOT 0 7 C5/S1'
+'CMD ECHO' -> type=0 cmd='ECHO' status=0 params=''
+	re-encoded: 'CMD ECHO'
+'CMD FAKE_TOA 128 0' -> type=0 cmd='FAKE_TOA' status=0 params='128 0'
+	re-encoded: 'CMD FAKE_TOA 128 0'
+'RSP POWERON 0' -> type=1 cmd='POWERON' status=0 params=''
+	re-encoded: 'RSP POWERON 0'
+'RSP SETSLOT 0 0 7' -> type=1 cmd='SETSLOT' status=0 params='0 7'
+	re-encoded: 'RSP SETSLOT 0 0 7'
+'RSP SETFORMAT 1 2' -> type=1 cmd='SETFORMAT' status=1 params='2'
+	re-encoded: 'RSP SETFORMAT 1 2'
+'RSP NOMTXPOWER 0 23' -> type=1 cmd='NOMTXPOWER' status=0 params='23'
+	re-encoded: 'RSP NOMTXPOWER 0 23'
+'RSP ERR 1' -> type=1 cmd='ERR' status=1 params=''
+	re-encoded: 'RSP ERR 1'
+'RSP MEASURE 0 890000 -85' -> type=1 cmd='MEASURE' status=0 params='890000 -85'
+	re-encoded: 'RSP MEASURE 0 890000 -85'
+'IND CLOCK 402312' -> type=2 cmd='CLOCK' status=0 params='402312'
+	re-encoded: 'IND CLOCK 402312'
+'NDI KCOLC 123456' -> rc=-22
+'RSP NOSTATUS' -> rc=-22
+'CMD ' -> rc=-22
+'' -> rc=-22
+=== test_msg_build ===
+'CMD POWERON' (rc=11)
+'CMD SETSLOT 0 7' (rc=15)
+'RSP POWERON 0' (rc=13)
+'RSP SETSLOT 1 0 7' (rc=17)
+'IND CLOCK 402312' (rc=16)
+build into a too small buffer: rc=-90
+=== test_params_scan ===
+'3 7' -> rc=2 tn=3 ts_type=7
+=== test_clk_ind ===
+'IND CLOCK 402312' -> fn=402312
+'IND CLOCK 0' -> fn=0
+'IND CLOCK 2715647' -> fn=2715647
+'IND CLOCK 2715648' -> rc=-34
+'IND CLOCK' -> rc=-22
+'IND KCOLC 123' -> rc=-22
+'CMD CLOCK 123' -> rc=-22
+build with out of range fn: rc=-34
+Done

@@ -66,7 +66,11 @@ fi
 PKG_PROG_PKG_CONFIG([0.20])
 
 AC_LIBTOOL_WIN32_DLL
-AC_DISABLE_SHARED	dnl don't build shared libraries
+dnl Most libraries in this tree (CommonLibs, GSM, Transceiver52M/*) are
+dnl noinst convenience libraries and never installed, so static vs. shared
+dnl makes no difference for them. libosmo-trx/src/libosmotrx.la, however,
+dnl is installed and meant to be linked by other packages (osmo-bts,
+dnl osmocom-bb/trxcon), so shared library support must stay enabled.
 AC_ENABLE_STATIC	dnl do build static libraries
 LT_INIT
 
@@ -358,6 +362,10 @@ AC_MSG_RESULT([LDFLAGS="$LDFLAGS"])
 dnl Output files
 AC_CONFIG_FILES([\
     Makefile \
+    libosmo-trx/Makefile \
+    libosmo-trx/include/Makefile \
+    libosmo-trx/src/Makefile \
+    libosmo-trx/libosmotrx.pc \
     CommonLibs/Makefile \
     GSM/Makefile \
     Transceiver52M/Makefile \
@@ -373,6 +381,7 @@ AC_CONFIG_FILES([\
     Transceiver52M/device/ipc/Makefile \
     Transceiver52M/device/bladerf/Makefile \
     tests/Makefile \
+    tests/libosmo-trx/Makefile \
     tests/CommonLibs/Makefile \
     tests/Transceiver52M/Makefile \
     utils/Makefile \

@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: Osmocom TRX protocol library
+Description: C Utility Library for the TRXC/TRXD (OpenBTS-style TRX) protocol
+Version: @VERSION@
+Requires: libosmocore libosmogsm
+Libs: -L${libdir} -losmotrx
+Cflags: -I${includedir}/

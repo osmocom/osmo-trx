@@ -49,3 +49,15 @@ AT_KEYWORDS([convolve_test])
 cat $abs_srcdir/Transceiver52M/convolve_test.ok > expout
 AT_CHECK([$abs_top_builddir/tests/Transceiver52M/convolve_test], [], [expout], [])
 AT_CLEANUP
+
+AT_SETUP([trxc_test])
+AT_KEYWORDS([trxc_test])
+cat $abs_srcdir/libosmo-trx/trxc_test.ok > expout
+AT_CHECK([$abs_top_builddir/tests/libosmo-trx/trxc_test], [], [expout], [])
+AT_CLEANUP
+
+AT_SETUP([trxd_test])
+AT_KEYWORDS([trxd_test])
+cat $abs_srcdir/libosmo-trx/trxd_test.ok > expout
+AT_CHECK([$abs_top_builddir/tests/libosmo-trx/trxd_test], [], [expout], [])
+AT_CLEANUP

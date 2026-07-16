@@ -1,4 +1,5 @@
 SUBDIRS = \
+	libosmo-trx \
 	CommonLibs \
 	Transceiver52M \
 	$(NULL)
