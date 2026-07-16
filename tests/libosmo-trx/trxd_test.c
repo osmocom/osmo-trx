@@ -124,13 +124,6 @@ static void test_burst_ind_nope(uint8_t pdu_ver)
 	bi.flags = OSMO_TRXD_F_NOPE_IND | OSMO_TRXD_F_CI_CB;
 
 	rc = osmo_trxd_burst_ind_build(msg, pdu_ver, &bi);
-	if (pdu_ver == 0) {
-		/* TRXDv0 cannot carry NOPE.ind */
-		printf("build: rc=%d (expected -ENOTSUP)\n", rc);
-		OSMO_ASSERT(rc == -ENOTSUP);
-		msgb_free(msg);
-		return;
-	}
 	OSMO_ASSERT(rc == 0);
 	osmo_trxd_build_fin(msg, pdu_ver);
 	printf("build: %s\n", osmo_trxd_burst_ind_name(&bi));
@@ -255,6 +248,34 @@ static void test_burst_req(uint8_t pdu_ver, size_t burst_len)
 		OSMO_ASSERT(br2.mod == br.mod);
 		OSMO_ASSERT(br2.tsc_set == br.tsc_set && br2.tsc == br.tsc);
 	}
+
+	msgb_free(msg);
+}
+
+static void test_burst_req_nope(uint8_t pdu_ver)
+{
+	struct osmo_trxd_parse_state st;
+	struct osmo_trxd_burst_req br, br2;
+	struct msgb *msg = msgb_alloc(4096, "nope");
+	int rc;
+
+	printf("=== %s(v%u) ===\n", __func__, pdu_ver);
+
+	fill_burst_req(&br, 0);
+	br.flags = OSMO_TRXD_F_NOPE_REQ;
+
+	rc = osmo_trxd_burst_req_build(msg, pdu_ver, &br);
+	OSMO_ASSERT(rc == 0);
+	osmo_trxd_build_fin(msg, pdu_ver);
+	printf("build: %s\n", osmo_trxd_burst_req_name(&br));
+
+	osmo_trxd_parse_state_init(&st);
+	rc = osmo_trxd_burst_req_parse(&st, &br2, msgb_data(msg), msgb_length(msg));
+	OSMO_ASSERT(rc == (int)msgb_length(msg));
+	printf("parse: %s\n", osmo_trxd_burst_req_name(&br2));
+
+	OSMO_ASSERT(br2.flags & OSMO_TRXD_F_NOPE_REQ);
+	OSMO_ASSERT(br2.burst_len == 0);
 
 	msgb_free(msg);
 }
@@ -389,6 +410,7 @@ int main(int argc, char **argv)
 	for (uint8_t pdu_ver = 0; pdu_ver <= OSMO_TRXD_PDU_VER_MAX; pdu_ver++) {
 		test_burst_req(pdu_ver, OSMO_TRXD_BURST_LEN_GMSK);
 		test_burst_req(pdu_ver, OSMO_TRXD_BURST_LEN_8PSK);
+		test_burst_req_nope(pdu_ver);
 		test_burst_req_batch(pdu_ver);
 
 		test_burst_ind(pdu_ver, OSMO_TRXD_BURST_LEN_GMSK);

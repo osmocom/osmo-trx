@@ -6,6 +6,9 @@ parse: BURST.req tn=2 fn=2654321 att=10 mod=GMSK burst_len=148
 build: BURST.req tn=2 fn=2654321 att=10 mod=8-PSK set=0 tsc=3 burst_len=444
 datagram (450 bytes): 02002880710a00010001000100010001...
 parse: BURST.req tn=2 fn=2654321 att=10 mod=8-PSK burst_len=444
+=== test_burst_req_nope(v0) ===
+build: NOPE.req tn=2 fn=2654321 att=10
+parse: NOPE.req tn=2 fn=2654321 att=10
 === test_burst_ind(v0, burst_len=148) ===
 build: BURST.ind tn=5 fn=1234567 rssi=-63 toa256=-512 C/I=-150 cB mod=GMSK set=1 tsc=7 burst_len=148
 datagram (156 bytes): 050012d6873ffe001be31be31be31be3...
@@ -15,7 +18,8 @@ build: BURST.ind tn=5 fn=1234567 rssi=-63 toa256=-512 C/I=-150 cB mod=8-PSK set=
 datagram (452 bytes): 050012d6873ffe001be31be31be31be3...
 parse: BURST.ind tn=5 fn=1234567 rssi=-63 toa256=-512 mod=8-PSK burst_len=444
 === test_burst_ind_nope(v0) ===
-build: rc=-95 (expected -ENOTSUP)
+build: NOPE.ind tn=5 fn=1234567 rssi=-63 toa256=-512 C/I=-150 cB
+parse: NOPE.ind tn=5 fn=1234567 rssi=-63 toa256=-512
 === test_burst_req(v1, burst_len=148) ===
 build: BURST.req tn=2 fn=2654321 att=10 mod=GMSK set=0 tsc=3 burst_len=148
 datagram (154 bytes): 12002880710a00010001000100010001...
@@ -24,6 +28,9 @@ parse: BURST.req tn=2 fn=2654321 att=10 mod=GMSK burst_len=148
 build: BURST.req tn=2 fn=2654321 att=10 mod=8-PSK set=0 tsc=3 burst_len=444
 datagram (450 bytes): 12002880710a00010001000100010001...
 parse: BURST.req tn=2 fn=2654321 att=10 mod=8-PSK burst_len=444
+=== test_burst_req_nope(v1) ===
+build: NOPE.req tn=2 fn=2654321 att=10
+parse: NOPE.req tn=2 fn=2654321 att=10
 === test_burst_ind(v1, burst_len=148) ===
 build: BURST.ind tn=5 fn=1234567 rssi=-63 toa256=-512 C/I=-150 cB mod=GMSK set=1 tsc=7 burst_len=148
 datagram (159 bytes): 150012d6873ffe000fff6a1be31be31b...
@@ -43,6 +50,9 @@ parse: BURST.req tn=2 fn=2654321 att=10 trx_num=0 mod=GMSK set=0 tsc=3 burst_len
 build: BURST.req tn=2 fn=2654321 att=10 mod=8-PSK set=0 tsc=3 burst_len=444
 datagram (456 bytes): 2200230a000000000028807100010001...
 parse: BURST.req tn=2 fn=2654321 att=10 trx_num=0 mod=8-PSK set=0 tsc=3 burst_len=444
+=== test_burst_req_nope(v2) ===
+build: NOPE.req tn=2 fn=2654321 att=10
+parse: NOPE.req tn=2 fn=2654321 att=10 trx_num=0
 === test_burst_req_batch(v2) ===
 datagram (472 bytes)
 parse[0]: BURST.req tn=0 fn=2654321 att=10 trx_num=0 mod=GMSK set=0 tsc=3 burst_len=148

@@ -38,6 +38,8 @@ enum osmo_trxd_mod_type {
 
 /* Presence/meta flags for osmo_trxd_burst_{ind,req} */
 #define OSMO_TRXD_F_NOPE_IND	(1 << 0) /*!< no burst detected / idle indication */
+/*! alias of OSMO_TRXD_F_NOPE_IND, reading cleaner in BURST.req context */
+#define OSMO_TRXD_F_NOPE_REQ	OSMO_TRXD_F_NOPE_IND
 #define OSMO_TRXD_F_MOD_TYPE	(1 << 1) /*!< 'mod' is valid */
 #define OSMO_TRXD_F_TS_INFO	(1 << 2) /*!< 'tsc_set'/'tsc' are valid */
 #define OSMO_TRXD_F_CI_CB	(1 << 3) /*!< 'ci_cb' is valid */

@@ -211,6 +211,12 @@ static int trxd_burst_ind_parse_v0(struct osmo_trxd_burst_ind *bi,
 
 	trxd_burst_ind_parse_hdr_v0(bi, buf);
 
+	/* NOPE.ind: TRXDv0 has no MTS, the burst payload is simply omitted */
+	if (burst_len == 0) {
+		bi->flags |= OSMO_TRXD_F_NOPE_IND;
+		return buf_len;
+	}
+
 	switch (burst_len) {
 	case OSMO_TRXD_BURST_LEN_GMSK:
 	case OSMO_TRXD_BURST_LEN_GMSK + 2:
@@ -383,9 +389,9 @@ int osmo_trxd_burst_ind_parse(struct osmo_trxd_parse_state *st,
  *  \param[inout] msg destination message buffer
  *  \param[in] pdu_ver TRXD PDU version to encode
  *  \param[in] bi burst indication to be encoded
- *  \returns 0 on success; negative on error.  Note that TRXDv0 cannot
- *	     carry NOPE.ind PDUs: -ENOTSUP is returned and the caller
- *	     shall skip (not send) them. */
+ *  \returns 0 on success; negative on error.  Note that TRXDv0 has no
+ *	     MTS field, so a NOPE.ind is encoded as a header-only PDU
+ *	     with the burst payload omitted. */
 int osmo_trxd_burst_ind_build(struct msgb *msg, uint8_t pdu_ver,
 			      const struct osmo_trxd_burst_ind *bi)
 {
@@ -395,9 +401,6 @@ int osmo_trxd_burst_ind_build(struct msgb *msg, uint8_t pdu_ver,
 
 	switch (pdu_ver) {
 	case 0:
-		/* v0 doesn't support NOPE.ind, the caller shall skip it */
-		if (bi->flags & OSMO_TRXD_F_NOPE_IND)
-			return -ENOTSUP;
 		buf = msgb_put(msg, TRXD_IND_V0HDR_LEN);
 		buf[0] = ((pdu_ver & 0x0f) << 4) | (bi->tn & 0x07);
 		osmo_store32be(bi->fn, buf + 1);
@@ -461,6 +464,12 @@ static int trxd_burst_req_parse_v01(struct osmo_trxd_burst_req *br,
 	br->fn = osmo_load32be(&buf[1]);
 	br->att = buf[5];
 
+	/* NOPE.req: TRXDv0/v1 have no MTS, the burst payload is simply omitted */
+	if (burst_len == 0) {
+		br->flags |= OSMO_TRXD_F_NOPE_REQ;
+		return buf_len;
+	}
+
 	switch (burst_len) {
 	case OSMO_TRXD_BURST_LEN_8PSK:
 		br->mod = OSMO_TRXD_MOD_T_8PSK;
@@ -512,6 +521,12 @@ static int trxd_burst_req_parse_v2(struct osmo_trxd_parse_state *st,
 		hdr_len += sizeof(uint32_t);
 	} else {
 		br->fn = st->fn;
+	}
+
+	/* NOPE.req contains no burst */
+	if (br->flags & OSMO_TRXD_F_NOPE_REQ) {
+		br->burst_len = 0;
+		return hdr_len;
 	}
 
 	burst_len = burst_len_by_mod(br->mod);
@@ -630,9 +645,11 @@ int osmo_trxd_burst_req_build(struct msgb *msg, uint8_t pdu_ver,
 		return -ENOTSUP;
 	}
 
-	/* copy hard-bits {0,1} */
-	memcpy(msgb_put(msg, br->burst_len),
-	       &br->burst[0], br->burst_len);
+	if (~br->flags & OSMO_TRXD_F_NOPE_REQ) {
+		/* copy hard-bits {0,1} */
+		memcpy(msgb_put(msg, br->burst_len),
+		       &br->burst[0], br->burst_len);
+	}
 
 	return 0;
 }
@@ -684,9 +701,13 @@ const char *osmo_trxd_burst_req_name(const struct osmo_trxd_burst_req *br)
 	static __thread char buf[256];
 	struct osmo_strbuf sb = { .buf = buf, .len = sizeof(buf) };
 
-	OSMO_STRBUF_PRINTF(sb, "BURST.req tn=%u fn=%u att=%u", br->tn, br->fn, br->att);
+	OSMO_STRBUF_PRINTF(sb, "%s tn=%u fn=%u att=%u",
+			   (br->flags & OSMO_TRXD_F_NOPE_REQ) ? "NOPE.req" : "BURST.req",
+			   br->tn, br->fn, br->att);
 	if (br->flags & OSMO_TRXD_F_TRX_NUM)
 		OSMO_STRBUF_PRINTF(sb, " trx_num=%u", br->trx_num);
+	if (br->flags & OSMO_TRXD_F_NOPE_REQ)
+		return buf;
 	if (br->flags & OSMO_TRXD_F_MOD_TYPE)
 		OSMO_STRBUF_PRINTF(sb, " mod=%s", osmo_trxd_mod_type_name(br->mod));
 	if (br->flags & OSMO_TRXD_F_TS_INFO)
