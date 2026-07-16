@@ -34,6 +34,7 @@ endif
 
 # Order must be preserved
 SUBDIRS += \
+	libosmo-trx \
 	CommonLibs \
 	GSM \
 	Transceiver52M \
