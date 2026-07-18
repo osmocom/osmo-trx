@@ -38,6 +38,11 @@
 build into a too small buffer: rc=-90
 === test_params_scan ===
 '3 7' -> rc=2 tn=3 ts_type=7
+=== test_long_params ===
+SETFH params_len=1028
+build: rc=1038
+parse: rc=0 cmd='SETFH' params_len=1028
+parse oversized params: rc=-90
 === test_clk_ind ===
 'IND CLOCK 402312' -> fn=402312
 'IND CLOCK 0' -> fn=0

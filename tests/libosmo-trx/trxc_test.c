@@ -114,6 +114,50 @@ static void test_params_scan(void)
 	OSMO_ASSERT(rc == 2 && tn == 3 && ts_type == 7);
 }
 
+/* SETFH (trxcon dialect) carries the whole Mobile Allocation as pairs of
+ * Rx/Tx frequencies in kHz, so its parameters can be over 1000 characters
+ * long (up to 64 ARFCNs).  Ensure that such messages survive a round-trip. */
+static void test_long_params(void)
+{
+	char buf[OSMO_TRXC_MSG_BUF_SIZE];
+	struct osmo_trxc_msg msg = {
+		.type = OSMO_TRXC_MT_CMD,
+		.cmd = OSMO_TRXC_CMD_SETFH,
+	};
+	struct osmo_trxc_msg parsed;
+	size_t len;
+	int rc;
+
+	printf("=== %s ===\n", __func__);
+
+	/* HSN=32 MAIO=5, then 64 pairs of DCS1800 Rx/Tx frequencies */
+	len = snprintf(msg.params, sizeof(msg.params), "32 5");
+	for (unsigned int i = 0; i < 64; i++) {
+		len += snprintf(msg.params + len, sizeof(msg.params) - len,
+				" %u %u", 1805200 + i * 200, 1710200 + i * 200);
+	}
+	printf("SETFH params_len=%zu\n", len);
+	OSMO_ASSERT(len < sizeof(msg.params));
+
+	rc = osmo_trxc_msg_build(buf, sizeof(buf), &msg);
+	printf("build: rc=%d\n", rc);
+	OSMO_ASSERT(rc > 0);
+
+	rc = osmo_trxc_msg_parse(&parsed, buf, rc);
+	printf("parse: rc=%d cmd='%s' params_len=%zu\n",
+	       rc, parsed.cmd, strlen(parsed.params));
+	OSMO_ASSERT(rc == 0);
+	OSMO_ASSERT(strcmp(parsed.params, msg.params) == 0);
+
+	/* parameters longer than OSMO_TRXC_PARAMS_LEN_MAX shall be rejected */
+	len = strlen(buf);
+	memset(buf + len, '6', sizeof(buf) - len - 1);
+	buf[sizeof(buf) - 1] = '\0';
+	rc = osmo_trxc_msg_parse(&parsed, buf, strlen(buf));
+	printf("parse oversized params: rc=%d\n", rc);
+	OSMO_ASSERT(rc < 0);
+}
+
 static void test_clk_ind(void)
 {
 	static const char * const messages[] = {
@@ -155,6 +199,7 @@ int main(int argc, char **argv)
 	test_msg_parse();
 	test_msg_build();
 	test_params_scan();
+	test_long_params();
 	test_clk_ind();
 
 	printf("Done\n");
