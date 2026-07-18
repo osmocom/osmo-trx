@@ -7,10 +7,14 @@
 
 /*! Maximum length of a command verb (incl. '\0') */
 #define OSMO_TRXC_CMD_LEN_MAX		32
-/*! Maximum length of the parameters string (incl. '\0') */
-#define OSMO_TRXC_PARAMS_LEN_MAX	128
 /*! Recommended TRXC socket read/send buffer size */
 #define OSMO_TRXC_MSG_BUF_SIZE		1500
+/*! Maximum length of the parameters string (incl. '\0').  Must be large
+ * enough for SETFH, which carries the whole Mobile Allocation as pairs of
+ * Rx/Tx frequencies in kHz (over 1000 characters for 64 ARFCNs).  Sized so
+ * that any message ("RSP " + verb + status) still fits the buffer above;
+ * the extra -32 is a rounded-up safety margin for that fixed overhead. */
+#define OSMO_TRXC_PARAMS_LEN_MAX	(OSMO_TRXC_MSG_BUF_SIZE - OSMO_TRXC_CMD_LEN_MAX - 32)
 
 enum osmo_trxc_msg_type {
 	OSMO_TRXC_MT_CMD,	/*!< "CMD <verb> [<params>]" (L1 -> TRX) */
@@ -55,6 +59,7 @@ char *osmo_trxc_msg_name_buf(char *buf, size_t buf_size,
 #define OSMO_TRXC_CMD_HANDOVER		"HANDOVER"
 #define OSMO_TRXC_CMD_NOHANDOVER	"NOHANDOVER"
 #define OSMO_TRXC_CMD_RFMUTE		"RFMUTE"
+#define OSMO_TRXC_CMD_SETFH		"SETFH"
 #define OSMO_TRXC_CMD_ERR		"ERR" /*!< verb of a reject response */
 
 /* Clock socket: "IND CLOCK <fn>" */
