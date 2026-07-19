@@ -44,11 +44,15 @@
 /*! Default retransmit timeout (in seconds) */
 #define TRXC_CLIENT_RETRANS_SEC		2
 
+static int trxc_client_fatal(struct osmo_trxc_client *client,
+			     const struct osmo_trxc_msg *rsp);
+
 /*! A single command in the queue */
 struct trxc_cmd_entry {
 	struct llist_head list;
 	struct osmo_trxc_msg msg;	/* type == OSMO_TRXC_MT_CMD */
 	uint32_t flags;			/* OSMO_TRXC_F_* */
+	unsigned int n_retrans;	/* number of retransmissions so far */
 	osmo_trxc_client_rsp_cb *rsp_cb;
 	void *cb_data;
 };
@@ -58,6 +62,7 @@ struct osmo_trxc_client {
 	char *name;			/* log prefix */
 	int log_cat;			/* logging category (default DLGLOBAL) */
 	unsigned int retrans_sec;	/* retransmit timeout */
+	unsigned int max_retrans;	/* maximum number of retransmissions (0 = no limit) */
 
 	struct llist_head cmd_queue;	/* list of struct trxc_cmd_entry */
 	struct trxc_cmd_entry *last_acked;
@@ -113,6 +118,15 @@ static void trxc_client_retrans_timer_cb(void *data)
 	LOGCL(client, LOGL_NOTICE, "No response from transceiver for '" CMD_NAME_FMT "'\n",
 	      CMD_NAME_ARGS(e));
 
+	if (client->max_retrans != 0 && e->n_retrans >= client->max_retrans) {
+		LOGCL(client, LOGL_FATAL, "Giving up on '" CMD_NAME_FMT "' after %u "
+		      "retransmissions, transceiver offline?\n",
+		      CMD_NAME_ARGS(e), e->n_retrans);
+		trxc_client_fatal(client, NULL);
+		return; /* keep the command queue frozen, do not re-arm the timer */
+	}
+
+	e->n_retrans++;
 	trxc_client_send_next(client);
 }
 
@@ -190,6 +204,16 @@ void osmo_trxc_client_set_log_cat(struct osmo_trxc_client *client, int log_cat)
 void osmo_trxc_client_set_retrans(struct osmo_trxc_client *client, unsigned int sec)
 {
 	client->retrans_sec = sec;
+}
+
+/*! Set the maximum number of retransmissions of a command (default: 0).
+ *  Once a command has been retransmitted the given number of times without
+ *  a response, the engine gives up and escalates to the fatal_error
+ *  call-back (with rsp == NULL); the command queue remains frozen.
+ *  The special value 0 means no limit: retransmit indefinitely. */
+void osmo_trxc_client_set_max_retrans(struct osmo_trxc_client *client, unsigned int n)
+{
+	client->max_retrans = n;
 }
 
 /*! Enqueue a new command for transmission.
@@ -397,6 +421,9 @@ int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t
 		 * the call-back of the command in flight, so that it can
 		 * implement a fallback (see the SETFORMAT negotiation). */
 	}
+
+	/* the transceiver is responsive (again) */
+	e->n_retrans = 0;
 
 	client->in_rx = true;
 	if (e->rsp_cb != NULL)

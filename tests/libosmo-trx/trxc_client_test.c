@@ -164,6 +164,39 @@ static void test_retrans(void)
 	osmo_trxc_client_free(client);
 }
 
+static void test_max_retrans(void)
+{
+	struct osmo_trxc_client *client = client_alloc();
+
+	printf("=== %s ===\n", __func__);
+
+	/* give up after 3 retransmissions (like trxcon does) */
+	osmo_trxc_client_set_max_retrans(client, 3);
+
+	osmo_trxc_client_poweron(client, &rsp_cb, "poweron");
+	/* no response: 3 retransmissions, then fatal_error escalation */
+	for (unsigned int i = 0; i < 5; i++)
+		fake_time_passes(2);
+
+	osmo_trxc_client_free(client);
+
+	/* a response resets the retransmission counter */
+	client = client_alloc();
+	osmo_trxc_client_set_max_retrans(client, 3);
+
+	osmo_trxc_client_poweron(client, &rsp_cb, "poweron");
+	fake_time_passes(2);
+	fake_time_passes(2);
+	rx_rsp(client, "RSP POWERON 0");
+	osmo_trxc_client_rxtune(client, 890000, &rsp_cb, "rxtune");
+	/* the previous 2 retransmissions shall not count for RXTUNE */
+	fake_time_passes(2);
+	fake_time_passes(2);
+	rx_rsp(client, "RSP RXTUNE 0 890000");
+
+	osmo_trxc_client_free(client);
+}
+
 static int rsp_retry_cb(struct osmo_trxc_client *client,
 			const struct osmo_trxc_msg *rsp, void *cb_data)
 {
@@ -307,6 +340,7 @@ int main(int argc, char **argv)
 	test_queueing();
 	test_dup_rsp();
 	test_retrans();
+	test_max_retrans();
 	test_rsp_cb_retry();
 	test_fatal_error();
 	test_negotiate_format();

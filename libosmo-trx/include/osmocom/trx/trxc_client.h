@@ -48,6 +48,7 @@ void *osmo_trxc_client_get_priv(const struct osmo_trxc_client *client);
 int osmo_trxc_client_set_name(struct osmo_trxc_client *client, const char *fmt, ...);
 void osmo_trxc_client_set_log_cat(struct osmo_trxc_client *client, int log_cat);
 void osmo_trxc_client_set_retrans(struct osmo_trxc_client *client, unsigned int sec);
+void osmo_trxc_client_set_max_retrans(struct osmo_trxc_client *client, unsigned int n);
 
 /*! escalate to the fatal_error call-back on NACK */
 #define OSMO_TRXC_F_CRITICAL		(1 << 0)
