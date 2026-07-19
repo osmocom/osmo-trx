@@ -350,7 +350,9 @@ ret_error:
 	return -EIO;
 }
 
-/*! Close all sockets of the given endpoint (drops pending Tx batches) */
+/*! Close all sockets of the given endpoint.
+ *  Pending TRXC messages ('goodbye' commands like POWEROFF) are flushed
+ *  to the socket (best-effort); pending Tx data batches are dropped. */
 void osmo_trx_ep_close(struct osmo_trx_ep *ep)
 {
 	LOGEP(ep, LOGL_NOTICE, "Closing TRXC/TRXD connections l=%s:%u<->r=%s:%u\n",
@@ -363,6 +365,8 @@ void osmo_trx_ep_close(struct osmo_trx_ep *ep)
 	for (unsigned int i = 0; i < ep->cfg.num_chans; i++) {
 		struct osmo_trx_ep_chan *chan = &ep->chans[i];
 
+		if (chan->ctrl_iofd != NULL)
+			osmo_iofd_flush(chan->ctrl_iofd);
 		osmo_iofd_free(chan->ctrl_iofd);
 		chan->ctrl_iofd = NULL;
 		osmo_iofd_free(chan->data_iofd);
