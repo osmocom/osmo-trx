@@ -28,6 +28,31 @@ tx_msg: 'CMD POWERON'
 rx_rsp: 'RSP POWERON 0'
 rsp_cb(poweron): 'RSP POWERON 0'
 (time passes: 10 s)
+=== test_max_retrans ===
+tx_msg: 'CMD POWERON'
+(time passes: 2 s)
+tx_msg: 'CMD POWERON'
+(time passes: 2 s)
+tx_msg: 'CMD POWERON'
+(time passes: 2 s)
+tx_msg: 'CMD POWERON'
+(time passes: 2 s)
+fatal_error: '(null)'
+(time passes: 2 s)
+tx_msg: 'CMD POWERON'
+(time passes: 2 s)
+tx_msg: 'CMD POWERON'
+(time passes: 2 s)
+tx_msg: 'CMD POWERON'
+rx_rsp: 'RSP POWERON 0'
+rsp_cb(poweron): 'RSP POWERON 0'
+tx_msg: 'CMD RXTUNE 890000'
+(time passes: 2 s)
+tx_msg: 'CMD RXTUNE 890000'
+(time passes: 2 s)
+tx_msg: 'CMD RXTUNE 890000'
+rx_rsp: 'RSP RXTUNE 0 890000'
+rsp_cb(rxtune): 'RSP RXTUNE 0 890000'
 === test_rsp_cb_retry ===
 tx_msg: 'CMD POWERON'
 rx_rsp: 'RSP POWERON 1'

@@ -57,6 +57,7 @@ void *osmo_trxc_client_get_priv(const struct osmo_trxc_client *client);
 int osmo_trxc_client_set_name(struct osmo_trxc_client *client, const char *fmt, ...);
 void osmo_trxc_client_set_log_cat(struct osmo_trxc_client *client, int log_cat);
 int osmo_trxc_client_set_retrans(struct osmo_trxc_client *client, unsigned int sec);
+void osmo_trxc_client_set_max_retrans(struct osmo_trxc_client *client, unsigned int n);
 /*! set the tx_msg call-back (mandatory before the first command is sent) */
 void osmo_trxc_client_set_tx_msg_cb(struct osmo_trxc_client *client,
 				    osmo_trxc_client_tx_msg_cb *cb);
