@@ -88,7 +88,6 @@ struct osmo_trxc_client {
 /* Transmit the first command in the queue (if any), (re)start the timer */
 static void trxc_client_send_next(struct osmo_trxc_client *client)
 {
-	char buf[OSMO_TRXC_MSG_BUF_SIZE];
 	struct trxc_cmd_entry *e;
 	int rc;
 
@@ -96,11 +95,8 @@ static void trxc_client_send_next(struct osmo_trxc_client *client)
 		return;
 	e = llist_first_entry(&client->cmd_queue, struct trxc_cmd_entry, list);
 
-	rc = osmo_trxc_msg_build(buf, sizeof(buf), &e->msg);
-	OSMO_ASSERT(rc > 0); /* validated in osmo_trxc_client_send_cmd() */
-
-	LOGCL(client, LOGL_DEBUG, "Tx '%s'\n", buf);
-	rc = client->ops->tx_msg(client, buf, rc);
+	LOGCL(client, LOGL_DEBUG, "Tx '%s'\n", osmo_trxc_msg_name(&e->msg));
+	rc = client->ops->tx_msg(client, &e->msg);
 	if (rc < 0)
 		LOGCL(client, LOGL_ERROR, "tx_msg() failed with rc=%d\n", rc);
 
@@ -351,46 +347,39 @@ static int trxc_client_fatal(struct osmo_trxc_client *client,
 	return -EINVAL;
 }
 
-/*! Feed a datagram received on the ctrl socket into the engine.
+/*! Feed a received (parsed) response message into the engine.
  *
- *  To be called by the application for every datagram read from the TRXC
- *  socket.  The engine parses the message, filters duplicate responses
- *  caused by retransmissions, matches the response against the command
- *  in flight, invokes its response call-back and transmits the next
- *  queued command (if any).
+ *  The engine filters duplicate responses caused by retransmissions,
+ *  matches the response against the command in flight, invokes its
+ *  response call-back and transmits the next queued command (if any).
+ *  E.g. an osmo_trx_ep user calls this from osmo_trx_ep_rx_ctrl_msg().
  *
  *  \param[in] client TRXC client instance
- *  \param[in] buf received datagram (not necessarily zero-terminated)
- *  \param[in] len length of the datagram
+ *  \param[in] rsp received message (rsp->type must be OSMO_TRXC_MT_RSP)
  *  \returns 0 on success; negative on error */
-int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t len)
+int osmo_trxc_client_rx_msg(struct osmo_trxc_client *client,
+			    const struct osmo_trxc_msg *rsp)
 {
-	struct osmo_trxc_msg rsp;
 	struct trxc_cmd_entry *e;
 	bool flushed;
 	int rc;
 
-	rc = osmo_trxc_msg_parse(&rsp, buf, len);
-	if (rc < 0) {
-		LOGCL(client, LOGL_NOTICE, "Rx malformed TRXC message (rc=%d)\n", rc);
-		return rc;
-	}
-	if (rsp.type != OSMO_TRXC_MT_RSP) {
+	if (rsp->type != OSMO_TRXC_MT_RSP) {
 		LOGCL(client, LOGL_NOTICE, "Rx unexpected TRXC message '%s'\n",
-		      osmo_trxc_msg_name(&rsp));
+		      osmo_trxc_msg_name(rsp));
 		return -EINVAL;
 	}
 
-	LOGCL(client, LOGL_INFO, "Rx '%s'\n", osmo_trxc_msg_name(&rsp));
+	LOGCL(client, LOGL_INFO, "Rx '%s'\n", osmo_trxc_msg_name(rsp));
 
 	/* abort the retransmit timer */
 	osmo_timer_del(&client->retrans_timer);
 
 	if (llist_empty(&client->cmd_queue)) {
 		/* a response from a retransmission, skip it */
-		if (client->last_acked != NULL && cmd_matches_rsp(client->last_acked, &rsp)) {
+		if (client->last_acked != NULL && cmd_matches_rsp(client->last_acked, rsp)) {
 			LOGCL(client, LOGL_NOTICE, "Discarding duplicate response '%s'\n",
-			      osmo_trxc_msg_name(&rsp));
+			      osmo_trxc_msg_name(rsp));
 			return 0;
 		}
 		LOGCL(client, LOGL_NOTICE, "Rx response without a pending command\n");
@@ -399,11 +388,11 @@ int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t
 
 	e = llist_first_entry(&client->cmd_queue, struct trxc_cmd_entry, list);
 
-	if (!cmd_matches_rsp(e, &rsp)) {
+	if (!cmd_matches_rsp(e, rsp)) {
 		/* a response from a retransmission, skip it */
-		if (client->last_acked != NULL && cmd_matches_rsp(client->last_acked, &rsp)) {
+		if (client->last_acked != NULL && cmd_matches_rsp(client->last_acked, rsp)) {
 			LOGCL(client, LOGL_NOTICE, "Discarding duplicate response '%s'\n",
-			      osmo_trxc_msg_name(&rsp));
+			      osmo_trxc_msg_name(rsp));
 			/* the command in flight still awaits its response */
 			osmo_timer_schedule(&client->retrans_timer, client->retrans_sec, 0);
 			return 0;
@@ -411,10 +400,10 @@ int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t
 
 		LOGCL(client, (e->flags & OSMO_TRXC_F_CRITICAL) ? LOGL_FATAL : LOGL_NOTICE,
 		      "Response '%s' does not match pending '" CMD_NAME_FMT "'\n",
-		      osmo_trxc_msg_name(&rsp), CMD_NAME_ARGS(e));
+		      osmo_trxc_msg_name(rsp), CMD_NAME_ARGS(e));
 
 		if (e->flags & OSMO_TRXC_F_CRITICAL)
-			return trxc_client_fatal(client, &rsp);
+			return trxc_client_fatal(client, rsp);
 
 		/* We may get 'RSP ERR 1' for non-critical commands not
 		 * supported by the transceiver.  Deliver such responses to
@@ -427,15 +416,15 @@ int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t
 
 	client->in_rx = true;
 	if (e->rsp_cb != NULL)
-		rc = e->rsp_cb(client, &rsp, e->cb_data);
+		rc = e->rsp_cb(client, rsp, e->cb_data);
 	else
-		rc = trxc_client_default_rsp_cb(client, e, &rsp);
+		rc = trxc_client_default_rsp_cb(client, e, rsp);
 	flushed = client->flushed_in_rx;
 	client->flushed_in_rx = false;
 	client->in_rx = false;
 
 	if (rc < 0)
-		return trxc_client_fatal(client, &rsp);
+		return trxc_client_fatal(client, rsp);
 
 	/* the call-back requested a re-transmission in rc seconds */
 	if (rc > 0) {
@@ -456,6 +445,29 @@ int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t
 	trxc_client_send_next(client);
 
 	return 0;
+}
+
+/*! Feed a datagram received on the ctrl socket into the engine.
+ *
+ *  A convenience wrapper around osmo_trxc_client_rx_msg() for applications
+ *  managing the TRXC socket themselves: parses the given datagram first.
+ *
+ *  \param[in] client TRXC client instance
+ *  \param[in] buf received datagram (not necessarily zero-terminated)
+ *  \param[in] len length of the datagram
+ *  \returns 0 on success; negative on error */
+int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t len)
+{
+	struct osmo_trxc_msg rsp;
+	int rc;
+
+	rc = osmo_trxc_msg_parse(&rsp, buf, len);
+	if (rc < 0) {
+		LOGCL(client, LOGL_NOTICE, "Rx malformed TRXC message (rc=%d)\n", rc);
+		return rc;
+	}
+
+	return osmo_trxc_client_rx_msg(client, &rsp);
 }
 
 /***********************************************************************

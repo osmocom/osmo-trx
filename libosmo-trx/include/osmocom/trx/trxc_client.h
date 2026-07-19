@@ -30,9 +30,10 @@ typedef int osmo_trxc_client_rsp_cb(struct osmo_trxc_client *client,
 				    void *cb_data);
 
 struct osmo_trxc_client_ops {
-	/*! transmit a serialized TRXC message (mandatory).
-	 *  E.g. write() / osmo_iofd_write_msgb() on the app's ctrl socket. */
-	int (*tx_msg)(struct osmo_trxc_client *client, const char *buf, size_t len);
+	/*! transmit a TRXC message (mandatory).
+	 *  E.g. osmo_trx_ep_send_ctrl_msg() for osmo_trx_ep users, or
+	 *  osmo_trxc_msg_build() + write() on a self-managed ctrl socket. */
+	int (*tx_msg)(struct osmo_trxc_client *client, const struct osmo_trxc_msg *msg);
 	/*! a critical command definitively failed (optional; default: log).
 	 *  \param[in] rsp the offending response (may be NULL) */
 	void (*fatal_error)(struct osmo_trxc_client *client,
@@ -60,6 +61,8 @@ int osmo_trxc_client_send_cmd(struct osmo_trxc_client *client, uint32_t flags,
 			      const char *cmd, const char *fmt, ...);
 void osmo_trxc_client_flush(struct osmo_trxc_client *client);
 
+int osmo_trxc_client_rx_msg(struct osmo_trxc_client *client,
+			    const struct osmo_trxc_msg *rsp);
 int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t len);
 
 /*! TRXD PDU version negotiation result call-back.
