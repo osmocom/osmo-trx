@@ -34,12 +34,17 @@
 extern "C" {
 #include <osmocom/core/signal.h>
 #include <osmocom/core/select.h>
+#include <osmocom/trx/trxc.h>
+#include <osmocom/trx/trxd.h>
 #include "config_defs.h"
 }
 
 class Transceiver;
 
 extern Transceiver *transceiver;
+
+/* The latest TRXD header format version advertised/accepted by this TRX implementation */
+#define TRX_DATA_FORMAT_VER	1
 
 /** Channel descriptor for transceiver object and channel number pair */
 struct TrxChanThParams {
@@ -150,10 +155,9 @@ public:
 private:
   size_t mChans;
 struct ctrl_msg {
-  char data[101];
+  char data[OSMO_TRXC_MSG_BUF_SIZE];
   ctrl_msg() {};
 };
-
 struct ctrl_sock_state {
   osmo_fd conn_bfd;
   std::deque<ctrl_msg> txmsgqueue;
@@ -202,7 +206,7 @@ struct ctrl_sock_state {
   void pushRadioVector(GSM::Time &nowTime);
 
   /** Pull and demodulate a burst from the receive FIFO */
-  int pullRadioVector(size_t chan, struct trx_ul_burst_ind *ind);
+  int pullRadioVector(size_t chan, struct osmo_trxd_burst_ind *ind);
 
   /** Set modulus for specific timeslot */
   void setModulus(size_t timeslot, size_t chan);
@@ -264,7 +268,7 @@ protected:
   double rssiOffset(size_t chan);
   void reset();
 
-  void logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi);
+  void logRxBurst(size_t chan, const struct osmo_trxd_burst_ind *bi);
 };
 
 void *RxUpperLoopAdapter(TrxChanThParams *params);

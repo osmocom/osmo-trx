@@ -33,12 +33,14 @@
 
 extern "C" {
 #include "osmo_signal.h"
-#include "proto_trxd.h"
 
 #include <osmocom/core/utils.h>
 #include <osmocom/core/socket.h>
 #include <osmocom/core/bits.h>
+#include <osmocom/core/msgb.h>
 #include <osmocom/vty/cpu_sched_vty.h>
+#include <osmocom/trx/trxc.h>
+#include <osmocom/trx/trxd.h>
 }
 
 #ifdef HAVE_CONFIG_H
@@ -655,6 +657,21 @@ static void *dummy_alloc(size_t newSize)
 };
 #endif
 
+/* Convert a soft bit normalized to 0..1 (1.0 = confident '1') into the
+ * sbit_t domain (-127..127) used by osmo_trxd_burst_ind, matching the wire
+ * encoding of osmo_trxd_burst_ind_build()/soft_bits_build() (byte = 127 -
+ * sbit): a value of 1.0 rounds to a raw byte of 255, which the TRXD wire
+ * format reserves as -127 (see soft_bits_parse()), so clamp accordingly. */
+static inline sbit_t float_soft_bit_to_sbit(float x)
+{
+  int v = 127 - (int) lround(x * 255.0);
+  if (v > 127)
+    v = 127;
+  if (v < -127)
+    v = -127;
+  return (sbit_t) v;
+}
+
 /*
  * Pull bursts from the FIFO and handle according to the slot
  * and burst correlation type. Equalzation is currently disabled.
@@ -662,7 +679,7 @@ static void *dummy_alloc(size_t newSize)
  *        -ENOENT: timeslot is off (fn and tn in bi are filled),
  *        -EIO: read error
  */
-int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
+int Transceiver::pullRadioVector(size_t chan, struct osmo_trxd_burst_ind *bi)
 {
   int rc;
   struct estim_burst_params ebp;
@@ -675,6 +692,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   TransceiverState *state = &mStates[chan];
   bool ctr_changed = false;
   double rssi_offset;
+  float soft_bits[OSMO_TRXD_BURST_LEN_MAX];
   static complex burst_shift_buffer[625];
   static signalVector shift_vec(burst_shift_buffer, 0, 625, dummy_alloc, dummy_free);
   signalVector *shvec_ptr = &shift_vec;
@@ -691,17 +709,12 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   CorrType type = expectedCorrType(burstTime, chan);
 
   /* Initialize struct bi */
-  bi->nbits = 0;
+  memset(bi, 0, sizeof(*bi));
+  bi->flags = OSMO_TRXD_F_MOD_TYPE | OSMO_TRXD_F_TS_INFO | OSMO_TRXD_F_CI_CB;
   bi->fn = burstTime.FN();
   bi->tn = burstTime.TN();
-  bi->rssi = 0.0;
-  bi->toa = 0.0;
-  bi->noise = 0.0;
-  bi->idle = false;
-  bi->modulation = MODULATION_GMSK;
-  bi->tss = 0; /* TODO: we only support tss 0 right now */
-  bi->tsc = 0;
-  bi->ci = 0.0;
+  bi->mod = OSMO_TRXD_MOD_T_GMSK;
+  bi->tsc_set = 0; /* TODO: we only support tsc_set 0 right now */
 
   /* Debug: dump bursts to disk */
   /* bits 0-7  - chan 0 timeslots
@@ -748,8 +761,7 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
   }
 
   rssi_offset = rssiOffset(chan);
-  bi->rssi = 20.0 * log10(rxFullScale / avg) + rssi_offset;
-  bi->noise = 20.0 * log10(rxFullScale / state->mNoiseLev) + rssi_offset;
+  bi->rssi = (int8_t) lround(-(20.0 * log10(rxFullScale / avg) + rssi_offset));
 
   if (type == IDLE)
     goto ret_idle;
@@ -786,21 +798,23 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
     rxBurst = demodAnyBurst(*shvec_ptr, (CorrType)rc, cfg->rx_sps, &ebp);
   }
 
-  bi->toa = ebp.toa;
+  bi->toa256 = (int16_t) lround(ebp.toa * 256.0);
   bi->tsc = ebp.tsc;
-  bi->ci = ebp.ci;
+  bi->ci_cb = (int16_t) ((ebp.ci * 10) + 0.5);
 
   /* EDGE demodulator returns 444 (gSlotLen * 3) bits */
   if (rxBurst->size() == EDGE_BURST_NBITS) {
-    bi->modulation = MODULATION_8PSK;
-    bi->nbits = EDGE_BURST_NBITS;
+    bi->mod = OSMO_TRXD_MOD_T_8PSK;
+    bi->burst_len = EDGE_BURST_NBITS;
   } else { /* size() here is actually gSlotLen + 8, due to guard periods */
-    bi->modulation = MODULATION_GMSK;
-    bi->nbits = gSlotLen;
+    bi->mod = OSMO_TRXD_MOD_T_GMSK;
+    bi->burst_len = gSlotLen;
   }
 
-  // Convert -1..+1 soft bits to 0..1 soft bits
-  vectorSlicer(bi->rx_burst, rxBurst->begin(), bi->nbits);
+  // Convert -1..+1 soft bits to 0..1 soft bits, then to the sbit_t wire domain
+  vectorSlicer(soft_bits, rxBurst->begin(), bi->burst_len);
+  for (size_t i = 0; i < bi->burst_len; i++)
+    bi->burst[i] = float_soft_bit_to_sbit(soft_bits[i]);
 
   delete rxBurst;
   delete radio_burst;
@@ -809,7 +823,8 @@ int Transceiver::pullRadioVector(size_t chan, struct trx_ul_burst_ind *bi)
 ret_idle:
   if (ctr_changed)
     dispatch_trx_rate_ctr_change(state, chan);
-  bi->idle = true;
+  bi->flags |= OSMO_TRXD_F_NOPE_IND;
+  bi->burst_len = 0;
   delete radio_burst;
   return 0;
 }
@@ -818,36 +833,6 @@ void Transceiver::reset()
 {
   for (size_t i = 0; i < mTxPriorityQueues.size(); i++)
     mTxPriorityQueues[i].clear();
-}
-
-
-/**
- * Matches a buffer with a command.
- * @param  buf    a buffer to look command in
- * @param  cmd    a command to look in buffer
- * @param  params pointer to arguments, or NULL
- * @return        true if command matches, otherwise false
- */
-static bool match_cmd(const char *buf,
-  const char *cmd, const char **params)
-{
-  size_t cmd_len = strlen(cmd);
-
-  /* Check a command itself */
-  if (strncmp(buf, cmd, cmd_len))
-    return false;
-
-  /* A command has arguments */
-  if (params != NULL) {
-    /* Make sure there is a space */
-    if (buf[cmd_len] != ' ')
-      return false;
-
-    /* Update external pointer */
-    *params = buf + cmd_len + 1;
-  }
-
-  return true;
 }
 
 void Transceiver::ctrl_sock_send(ctrl_msg& m, int chan)
@@ -896,17 +881,15 @@ close:
 
 int Transceiver::ctrl_sock_handle_rx(int chan)
 {
+  struct osmo_trxc_msg cmd, rsp;
   ctrl_msg cmd_received;
   ctrl_msg cmd_to_send;
-  char *buffer = cmd_received.data;
-  char *response = cmd_to_send.data;
-  const size_t response_size = sizeof(cmd_to_send.data);
-  const char *command, *params;
   int msgLen;
+  int rc;
   ctrl_sock_state& s = mCtrlSockets[chan];
 
   /* Attempt to read from control socket */
-  msgLen = read(s.conn_bfd.fd, buffer, sizeof(cmd_received.data)-1);
+  msgLen = read(s.conn_bfd.fd, cmd_received.data, sizeof(cmd_received.data) - 1);
   if (msgLen < 0 && errno == EAGAIN)
       return 0; /* Try again later */
   if (msgLen <= 0) {
@@ -914,184 +897,196 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     return -EIO;
   }
 
-
-  /* Zero-terminate received string */
-  buffer[msgLen] = '\0';
-
-  /* Verify a command signature */
-  if (strncmp(buffer, "CMD ", 4)) {
+  rc = osmo_trxc_msg_parse(&cmd, cmd_received.data, msgLen);
+  if (rc < 0 || cmd.type != OSMO_TRXC_MT_CMD) {
     LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus message on control interface";
     return -EIO;
   }
 
-  /* Set command pointer */
-  command = buffer + 4;
-  LOGCHAN(chan, DTRXCTRL, INFO) << "command is '" << command << "'";
+  memset(&rsp, 0, sizeof(rsp));
+  rsp.type = OSMO_TRXC_MT_RSP;
+  rsp.status = 1; /* default: NACK, cleared to 0 on the success path of each verb below */
+  snprintf(rsp.cmd, sizeof(rsp.cmd), "%s", cmd.cmd);
 
-  if (match_cmd(command, "POWEROFF", NULL)) {
+  LOGCHAN(chan, DTRXCTRL, INFO) << "command is '" << osmo_trxc_msg_name(&cmd) << "'";
+
+  if (!strcmp(cmd.cmd, "POWEROFF")) {
     stop();
-    snprintf(response, response_size, "RSP POWEROFF 0");
-  } else if (match_cmd(command, "POWERON", NULL)) {
-    if (!start()) {
-      snprintf(response, response_size, "RSP POWERON 1");
-    } else {
-      snprintf(response, response_size, "RSP POWERON 0");
+    rsp.status = 0;
+  } else if (!strcmp(cmd.cmd, "POWERON")) {
+    if (start()) {
+      rsp.status = 0;
       for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++)
           mHandover[i][j] = false;
       }
     }
-  } else if (match_cmd(command, "HANDOVER", &params)) {
+  } else if (!strcmp(cmd.cmd, "HANDOVER")) {
     unsigned ts = 0, ss = 0;
-    sscanf(params, "%u %u", &ts, &ss);
-    if (ts > 7 || ss > 7) {
-      snprintf(response, response_size, "RSP HANDOVER 1 %u %u", ts, ss);
-    } else {
+    if (osmo_trxc_msg_params_scan(&cmd, "%u %u", &ts, &ss) == 2 && ts <= 7 && ss <= 7) {
       mHandover[ts][ss] = true;
-      snprintf(response, response_size, "RSP HANDOVER 0 %u %u", ts, ss);
+      rsp.status = 0;
     }
-  } else if (match_cmd(command, "NOHANDOVER", &params)) {
+    snprintf(rsp.params, sizeof(rsp.params), "%u %u", ts, ss);
+  } else if (!strcmp(cmd.cmd, "NOHANDOVER")) {
     unsigned ts = 0, ss = 0;
-    sscanf(params, "%u %u", &ts, &ss);
-    if (ts > 7 || ss > 7) {
-      snprintf(response, response_size, "RSP NOHANDOVER 1 %u %u", ts, ss);
-    } else {
+    if (osmo_trxc_msg_params_scan(&cmd, "%u %u", &ts, &ss) == 2 && ts <= 7 && ss <= 7) {
       mHandover[ts][ss] = false;
-      snprintf(response, response_size, "RSP NOHANDOVER 0 %u %u", ts, ss);
+      rsp.status = 0;
     }
-  } else if (match_cmd(command, "SETMAXDLY", &params)) {
+    snprintf(rsp.params, sizeof(rsp.params), "%u %u", ts, ss);
+  } else if (!strcmp(cmd.cmd, "SETMAXDLY")) {
     //set expected maximum time-of-arrival for Access Bursts
-    int maxDelay;
-    sscanf(params, "%d", &maxDelay);
-    mMaxExpectedDelayAB = maxDelay; // 1 GSM symbol is approx. 1 km
-    snprintf(response, response_size, "RSP SETMAXDLY 0 %d", maxDelay);
-  } else if (match_cmd(command, "SETMAXDLYNB", &params)) {
+    int maxDelay = 0;
+    if (osmo_trxc_msg_params_scan(&cmd, "%d", &maxDelay) == 1) {
+      mMaxExpectedDelayAB = maxDelay; // 1 GSM symbol is approx. 1 km
+      rsp.status = 0;
+    }
+    snprintf(rsp.params, sizeof(rsp.params), "%d", maxDelay);
+  } else if (!strcmp(cmd.cmd, "SETMAXDLYNB")) {
     //set expected maximum time-of-arrival for Normal Bursts
-    int maxDelay;
-    sscanf(params, "%d", &maxDelay);
-    mMaxExpectedDelayNB = maxDelay; // 1 GSM symbol is approx. 1 km
-    snprintf(response, response_size, "RSP SETMAXDLYNB 0 %d", maxDelay);
-  } else if (match_cmd(command, "SETRXGAIN", &params)) {
-    int newGain;
-    sscanf(params, "%d", &newGain);
-    newGain = mRadioInterface->setRxGain(newGain, chan);
-    snprintf(response, response_size, "RSP SETRXGAIN 0 %d", newGain);
-  } else if (match_cmd(command, "NOISELEV", NULL)) {
+    int maxDelay = 0;
+    if (osmo_trxc_msg_params_scan(&cmd, "%d", &maxDelay) == 1) {
+      mMaxExpectedDelayNB = maxDelay; // 1 GSM symbol is approx. 1 km
+      rsp.status = 0;
+    }
+    snprintf(rsp.params, sizeof(rsp.params), "%d", maxDelay);
+  } else if (!strcmp(cmd.cmd, "SETRXGAIN")) {
+    int newGain = 0;
+    if (osmo_trxc_msg_params_scan(&cmd, "%d", &newGain) == 1) {
+      newGain = mRadioInterface->setRxGain(newGain, chan);
+      rsp.status = 0;
+    }
+    snprintf(rsp.params, sizeof(rsp.params), "%d", newGain);
+  } else if (!strcmp(cmd.cmd, "NOISELEV")) {
     if (mOn) {
       float lev = mStates[chan].mNoiseLev;
-      snprintf(response, response_size, "RSP NOISELEV 0 %d",
+      rsp.status = 0;
+      snprintf(rsp.params, sizeof(rsp.params), "%d",
               (int) round(20.0 * log10(rxFullScale / lev)));
-    }
-    else {
-      snprintf(response, response_size, "RSP NOISELEV 1 0");
-    }
-  } else if (match_cmd(command, "SETPOWER", &params)) {
-    int power;
-    sscanf(params, "%d", &power);
-    power = mRadioInterface->setPowerAttenuation(power, chan);
-    mStates[chan].mPower = power;
-    snprintf(response, response_size, "RSP SETPOWER 0 %d", power);
-  } else if (match_cmd(command, "ADJPOWER", &params)) {
-    int power, step;
-    sscanf(params, "%d", &step);
-    power = mStates[chan].mPower + step;
-    power = mRadioInterface->setPowerAttenuation(power, chan);
-    mStates[chan].mPower = power;
-    snprintf(response, response_size, "RSP ADJPOWER 0 %d", power);
-  } else if (match_cmd(command, "NOMTXPOWER", NULL)) {
-    int power = mRadioInterface->getNominalTxPower(chan);
-    snprintf(response, response_size, "RSP NOMTXPOWER 0 %d", power);
-  } else if (match_cmd(command, "RXTUNE", &params)) {
-    // tune receiver
-    int freqKhz;
-    sscanf(params, "%d", &freqKhz);
-    mRxFreq = (freqKhz + cfg->freq_offset_khz) * 1e3;
-    if (!mRadioInterface->tuneRx(mRxFreq, chan)) {
-       LOGCHAN(chan, DTRXCTRL, FATAL) << "RX failed to tune";
-       snprintf(response, response_size, "RSP RXTUNE 1 %d", freqKhz);
-    }
-    else
-       snprintf(response, response_size, "RSP RXTUNE 0 %d", freqKhz);
-  } else if (match_cmd(command, "TXTUNE", &params)) {
-    // tune txmtr
-    int freqKhz;
-    sscanf(params, "%d", &freqKhz);
-    mTxFreq = (freqKhz + cfg->freq_offset_khz) * 1e3;
-    if (!mRadioInterface->tuneTx(mTxFreq, chan)) {
-       LOGCHAN(chan, DTRXCTRL, FATAL) << "TX failed to tune";
-       snprintf(response, response_size, "RSP TXTUNE 1 %d", freqKhz);
-    }
-    else
-       snprintf(response, response_size, "RSP TXTUNE 0 %d", freqKhz);
-  } else if (match_cmd(command, "SETTSC", &params)) {
-    // set TSC
-    unsigned TSC;
-    sscanf(params, "%u", &TSC);
-    if (TSC > 7) {
-      snprintf(response, response_size, "RSP SETTSC 1 %d", TSC);
     } else {
+      snprintf(rsp.params, sizeof(rsp.params), "0");
+    }
+  } else if (!strcmp(cmd.cmd, "SETPOWER")) {
+    int power = 0;
+    if (osmo_trxc_msg_params_scan(&cmd, "%d", &power) == 1) {
+      power = mRadioInterface->setPowerAttenuation(power, chan);
+      mStates[chan].mPower = power;
+      rsp.status = 0;
+    }
+    snprintf(rsp.params, sizeof(rsp.params), "%d", power);
+  } else if (!strcmp(cmd.cmd, "ADJPOWER")) {
+    int power = mStates[chan].mPower, step;
+    if (osmo_trxc_msg_params_scan(&cmd, "%d", &step) == 1) {
+      power = mStates[chan].mPower + step;
+      power = mRadioInterface->setPowerAttenuation(power, chan);
+      mStates[chan].mPower = power;
+      rsp.status = 0;
+    }
+    snprintf(rsp.params, sizeof(rsp.params), "%d", power);
+  } else if (!strcmp(cmd.cmd, "NOMTXPOWER")) {
+    int power = mRadioInterface->getNominalTxPower(chan);
+    rsp.status = 0;
+    snprintf(rsp.params, sizeof(rsp.params), "%d", power);
+  } else if (!strcmp(cmd.cmd, "RXTUNE")) {
+    // tune receiver
+    int freqKhz = 0;
+    if (osmo_trxc_msg_params_scan(&cmd, "%d", &freqKhz) == 1) {
+      mRxFreq = (freqKhz + cfg->freq_offset_khz) * 1e3;
+      if (!mRadioInterface->tuneRx(mRxFreq, chan))
+        LOGCHAN(chan, DTRXCTRL, FATAL) << "RX failed to tune";
+      else
+        rsp.status = 0;
+    }
+    snprintf(rsp.params, sizeof(rsp.params), "%d", freqKhz);
+  } else if (!strcmp(cmd.cmd, "TXTUNE")) {
+    // tune txmtr
+    int freqKhz = 0;
+    if (osmo_trxc_msg_params_scan(&cmd, "%d", &freqKhz) == 1) {
+      mTxFreq = (freqKhz + cfg->freq_offset_khz) * 1e3;
+      if (!mRadioInterface->tuneTx(mTxFreq, chan))
+        LOGCHAN(chan, DTRXCTRL, FATAL) << "TX failed to tune";
+      else
+        rsp.status = 0;
+    }
+    snprintf(rsp.params, sizeof(rsp.params), "%d", freqKhz);
+  } else if (!strcmp(cmd.cmd, "SETTSC")) {
+    // set TSC
+    unsigned TSC = 0;
+    if (osmo_trxc_msg_params_scan(&cmd, "%u", &TSC) == 1 && TSC <= 7) {
       LOGC(DTRXCTRL, NOTICE) << "Changing TSC from " << mTSC << " to " << TSC;
       mTSC = TSC;
-      snprintf(response, response_size, "RSP SETTSC 0 %d", TSC);
+      rsp.status = 0;
     }
-  } else if (match_cmd(command, "SETSLOT", &params)) {
+    snprintf(rsp.params, sizeof(rsp.params), "%u", TSC);
+  } else if (!strcmp(cmd.cmd, "SETSLOT")) {
     // set slot type
-    int  corrCode;
-    int  timeslot;
-    sscanf(params, "%d %d", &timeslot, &corrCode);
-    if ((timeslot < 0) || (timeslot > 7)) {
+    struct osmo_trxc_setslot ss;
+    if (osmo_trxc_setslot_parse(&ss, &cmd) < 0) {
       LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus message on control interface";
-      snprintf(response, response_size, "RSP SETSLOT 1 %d %d", timeslot, corrCode);
-      return 0;
+    } else if (ss.vamos) {
+      LOGCHAN(chan, DTRXCTRL, NOTICE) << "VAMOS channel combinations are not supported";
+    } else {
+      mStates[chan].chanType[ss.tn] = (ChannelCombination) ss.chan_comb;
+      setModulus(ss.tn, chan);
+      rsp.status = 0;
     }
-    mStates[chan].chanType[timeslot] = (ChannelCombination) corrCode;
-    setModulus(timeslot, chan);
-    snprintf(response, response_size, "RSP SETSLOT 0 %d %d", timeslot, corrCode);
-  } else if (match_cmd(command, "SETFORMAT", &params)) {
+    snprintf(rsp.params, sizeof(rsp.params), "%s", cmd.params);
+  } else if (!strcmp(cmd.cmd, "SETFORMAT")) {
     // set TRXD protocol version
-    unsigned version_recv;
-    sscanf(params, "%u", &version_recv);
+    unsigned version_recv = 0;
+    osmo_trxc_msg_params_scan(&cmd, "%u", &version_recv);
     LOGCHAN(chan, DTRXCTRL, INFO) << "BTS requests TRXD version switch: " << version_recv;
     if (version_recv > TRX_DATA_FORMAT_VER) {
       LOGCHAN(chan, DTRXCTRL, INFO) << "rejecting TRXD version " << version_recv
                                     << " in favor of " <<  TRX_DATA_FORMAT_VER;
-      snprintf(response, response_size, "RSP SETFORMAT %u %u", TRX_DATA_FORMAT_VER, version_recv);
+      rsp.status = TRX_DATA_FORMAT_VER;
     } else {
       LOGCHAN(chan, DTRXCTRL, NOTICE) << "switching to TRXD version " << version_recv;
       mVersionTRXD[chan] = version_recv;
-      snprintf(response, response_size, "RSP SETFORMAT %u %u", version_recv, version_recv);
+      rsp.status = version_recv;
     }
-  } else if (match_cmd(command, "RFMUTE", &params)) {
+    snprintf(rsp.params, sizeof(rsp.params), "%u", version_recv);
+  } else if (!strcmp(cmd.cmd, "RFMUTE")) {
     // (Un)mute RF TX and RX
-    unsigned mute;
-    sscanf(params, "%u", &mute);
-    mStates[chan].mMuted = mute ? true : false;
-    snprintf(response, response_size, "RSP RFMUTE 0 %u", mute);
-  } else if (match_cmd(command, "_SETBURSTTODISKMASK", &params)) {
+    unsigned mute = 0;
+    if (osmo_trxc_msg_params_scan(&cmd, "%u", &mute) == 1) {
+      mStates[chan].mMuted = mute ? true : false;
+      rsp.status = 0;
+    }
+    snprintf(rsp.params, sizeof(rsp.params), "%u", mute);
+  } else if (!strcmp(cmd.cmd, "_SETBURSTTODISKMASK")) {
     // debug command! may change or disappear without notice
     // set a mask which bursts to dump to disk
-    int mask;
-    sscanf(params, "%d", &mask);
-    mWriteBurstToDiskMask = mask;
-    snprintf(response, response_size, "RSP _SETBURSTTODISKMASK 0 %d", mask);
+    int mask = 0;
+    if (osmo_trxc_msg_params_scan(&cmd, "%d", &mask) == 1) {
+      mWriteBurstToDiskMask = mask;
+      rsp.status = 0;
+    }
+    snprintf(rsp.params, sizeof(rsp.params), "%d", mask);
   } else {
-    LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus command " << command << " on control interface.";
-    snprintf(response, response_size, "RSP ERR 1");
+    LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus command " << cmd.cmd << " on control interface.";
+    snprintf(rsp.cmd, sizeof(rsp.cmd), "%s", OSMO_TRXC_CMD_ERR);
   }
 
-  LOGCHAN(chan, DTRXCTRL, INFO) << "response is '" << response << "'";
-  transceiver->ctrl_sock_send(cmd_to_send, chan);
+  LOGCHAN(chan, DTRXCTRL, INFO) << "response is '" << osmo_trxc_msg_name(&rsp) << "'";
+
+  rc = osmo_trxc_msg_build(cmd_to_send.data, sizeof(cmd_to_send.data), &rsp);
+  if (rc < 0) {
+    LOGCHAN(chan, DTRXCTRL, ERROR) << "failed to build response (rc=" << rc << ")";
+    return -EIO;
+  }
+  ctrl_sock_send(cmd_to_send, chan);
   return 0;
 }
 
 bool Transceiver::driveTxPriorityQueue(size_t chan)
 {
+  char buffer[OSMO_TRXD_MSG_BUF_SIZE];
   int msgLen;
-  int burstLen;
-  struct trxd_hdr_v01_dl *dl;
-  char buffer[sizeof(*dl) + EDGE_BURST_NBITS];
-  uint32_t fn;
-  uint8_t tn;
+  struct osmo_trxd_parse_state st;
+  struct osmo_trxd_burst_req br;
+  int rc;
 
   // check data socket
   msgLen = read(mDataSockets[chan], buffer, sizeof(buffer));
@@ -1100,48 +1095,37 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
     return false;
   }
 
-  switch (msgLen) {
-    case sizeof(*dl) + gSlotLen: /* GSM burst */
-      burstLen = gSlotLen;
-      break;
-    case sizeof(*dl) + EDGE_BURST_NBITS: /* EDGE burst */
-      if (cfg->tx_sps != 4) {
-        LOGCHAN(chan, DTRXDDL, ERROR) << "EDGE burst received but SPS is set to " << cfg->tx_sps;
-        return false;
-      }
-      burstLen = EDGE_BURST_NBITS;
-      break;
-    default:
-      LOGCHAN(chan, DTRXDDL, ERROR) << "badly formatted packet on GSM->TRX interface (len="<< msgLen << ")";
-      return false;
-  }
-
-  dl = (struct trxd_hdr_v01_dl *) buffer;
-
-  /* Convert TDMA FN to the host endianness */
-  fn = osmo_load32be(&dl->common.fn);
-  tn = dl->common.tn;
-
-  /* Make sure we support the received header format */
-  switch (dl->common.version) {
-  case 0:
-  /* Version 1 has the same format */
-  case 1:
-    break;
-  default:
-    LOGCHAN(chan, DTRXDDL, ERROR) << "Rx TRXD message with unknown header version " << unsigned(dl->common.version);
+  osmo_trxd_parse_state_init(&st);
+  rc = osmo_trxd_burst_req_parse(&st, &br, (const uint8_t *) buffer, msgLen);
+  if (rc < 0) {
+    LOGCHAN(chan, DTRXDDL, ERROR) << "failed to parse BURST.req (rc=" << rc << ")";
     return false;
   }
 
-  LOGCHAN(chan, DTRXDDL, DEBUG) << "Rx TRXD message (hdr_ver=" << unsigned(dl->common.version)
-    << "): fn=" << fn << ", tn=" << unsigned(tn) << ", burst_len=" << burstLen;
+  switch (br.burst_len) {
+  case gSlotLen: /* GSM burst */
+    break;
+  case EDGE_BURST_NBITS: /* EDGE burst */
+    if (cfg->tx_sps != 4) {
+      LOGCHAN(chan, DTRXDDL, ERROR) << "EDGE burst received but SPS is set to " << cfg->tx_sps;
+      return false;
+    }
+    break;
+  default:
+    LOGCHAN(chan, DTRXDDL, ERROR) << "badly formatted packet on GSM->TRX interface (burst_len="
+                                  << br.burst_len << ")";
+    return false;
+  }
+
+  LOGCHAN(chan, DTRXDDL, DEBUG) << "Rx TRXD message: fn=" << br.fn << ", tn=" << unsigned(br.tn)
+                                << ", burst_len=" << br.burst_len;
 
   TransceiverState *state = &mStates[chan];
-  GSM::Time currTime = GSM::Time(fn, tn);
+  GSM::Time currTime = GSM::Time(br.fn, br.tn);
 
   /* Verify proper FN order in DL stream */
-  if (state->first_dl_fn_rcv[tn]) {
-    int32_t delta = GSM::FNDelta(currTime.FN(), state->last_dl_time_rcv[tn].FN());
+  if (state->first_dl_fn_rcv[br.tn]) {
+    int32_t delta = GSM::FNDelta(currTime.FN(), state->last_dl_time_rcv[br.tn].FN());
     if (delta == 1) {
         /* usual expected scenario, continue code flow */
     } else if (delta == 0) {
@@ -1151,7 +1135,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
       return true;
     } else if (delta < 0) {
       LOGCHAN(chan, DTRXDDL, INFO) << "Rx TRXD msg with previous FN " << currTime
-                                     << " vs last " << state->last_dl_time_rcv[tn];
+                                     << " vs last " << state->last_dl_time_rcv[br.tn];
        state->ctrs.tx_trxd_fn_outoforder++;
        dispatch_trx_rate_ctr_change(state, chan);
        /* Allow adding radio vector below, since it gets sorted in the queue */
@@ -1161,25 +1145,25 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
          * setups. Also, osmo-trx supports optionally filling empty bursts on
          * its own. In that case bts-trx is not obliged to submit all bursts. */
       LOGCHAN(chan, DTRXDDL, INFO) << "Rx TRXD msg with future FN " << currTime
-                                     << " vs last " << state->last_dl_time_rcv[tn]
+                                     << " vs last " << state->last_dl_time_rcv[br.tn]
                                      << ", " << delta - 1 << " FN lost";
       state->ctrs.tx_trxd_fn_skipped += delta - 1;
       dispatch_trx_rate_ctr_change(state, chan);
     }
     if (delta > 0)
-      state->last_dl_time_rcv[tn] = currTime;
+      state->last_dl_time_rcv[br.tn] = currTime;
   } else { /* Initial check, simply store state */
-    state->first_dl_fn_rcv[tn] = true;
-    state->last_dl_time_rcv[tn] = currTime;
+    state->first_dl_fn_rcv[br.tn] = true;
+    state->last_dl_time_rcv[br.tn] = currTime;
   }
 
-  BitVector newBurst(burstLen);
+  BitVector newBurst(br.burst_len);
   BitVector::iterator itr = newBurst.begin();
-  uint8_t *bufferItr = dl->soft_bits;
+  const ubit_t *bufferItr = br.burst;
   while (itr < newBurst.end())
     *itr++ = *bufferItr++;
 
-  addRadioVector(chan, newBurst, dl->tx_att, currTime);
+  addRadioVector(chan, newBurst, br.att, currTime);
 
   return true;
 }
@@ -1203,32 +1187,36 @@ bool Transceiver::driveReceiveRadio()
   return true;
 }
 
-void Transceiver::logRxBurst(size_t chan, const struct trx_ul_burst_ind *bi)
+void Transceiver::logRxBurst(size_t chan, const struct osmo_trxd_burst_ind *bi)
 {
   std::ostringstream os;
-  for (size_t i=0; i < bi->nbits; i++) {
-    if (bi->rx_burst[i] > 0.5) os << "1";
-    else if (bi->rx_burst[i] > 0.25) os << "|";
-    else if (bi->rx_burst[i] > 0.0) os << "'";
+  for (size_t i = 0; i < bi->burst_len; i++) {
+    /* sbit_t polarity: <0 confident '1', 127 confident '0' (see float_soft_bit_to_sbit()) */
+    if (bi->burst[i] < 0) os << "1";
+    else if (bi->burst[i] < 64) os << "|";
+    else if (bi->burst[i] < 127) os << "'";
     else os << "-";
   }
 
   double rssi_offset = rssiOffset(chan);
+  double noise_dbfs = 20.0 * log10(rxFullScale / mStates[chan].mNoiseLev) + rssi_offset;
+  double rssi_dbfs = -bi->rssi - rssi_offset;
 
   LOGCHAN(chan, DTRXDUL, DEBUG) << std::fixed << std::right
     << " time: "   << unsigned(bi->tn) << ":" << bi->fn
-    << " RSSI: "   << std::setw(5) << std::setprecision(1) << (bi->rssi - rssi_offset)
-                   << "dBFS/" << std::setw(6) << -bi->rssi << "dBm"
-    << " noise: "  << std::setw(5) << std::setprecision(1) << (bi->noise - rssi_offset)
-                   << "dBFS/" << std::setw(6) << -bi->noise << "dBm"
-    << " TOA: "    << std::setw(5) << std::setprecision(2) << bi->toa
-    << " C/I: "    << std::setw(5) << std::setprecision(2) << bi->ci << "dB"
+    << " RSSI: "   << std::setw(5) << std::setprecision(1) << rssi_dbfs
+                   << "dBFS/" << std::setw(6) << int(bi->rssi) << "dBm"
+    << " noise: "  << std::setw(5) << std::setprecision(1) << (noise_dbfs - rssi_offset)
+                   << "dBFS/" << std::setw(6) << -noise_dbfs << "dBm"
+    << " TOA: "    << std::setw(5) << std::setprecision(2) << (bi->toa256 / 256.0)
+    << " C/I: "    << std::setw(5) << std::setprecision(2) << (bi->ci_cb / 10.0) << "dB"
     << " bits: "   << os;
 }
 
 bool Transceiver::driveReceiveFIFO(size_t chan)
 {
-  struct trx_ul_burst_ind bi;
+  struct osmo_trxd_burst_ind bi;
+  struct msgb *msg;
   int rc;
 
   if ((rc = pullRadioVector(chan, &bi)) < 0) {
@@ -1239,17 +1227,29 @@ bool Transceiver::driveReceiveFIFO(size_t chan)
     return false; /* other errors: we want to stop the process */
   }
 
-  if (!bi.idle && log_check_level(DTRXDUL, LOGL_DEBUG))
+  if (!(bi.flags & OSMO_TRXD_F_NOPE_IND) && log_check_level(DTRXDUL, LOGL_DEBUG))
     logRxBurst(chan, &bi);
 
-  switch (mVersionTRXD[chan]) {
-    case 0:
-      return trxd_send_burst_ind_v0(chan, mDataSockets[chan], &bi);
-    case 1:
-      return trxd_send_burst_ind_v1(chan, mDataSockets[chan], &bi);
-    default:
-      OSMO_ASSERT(false);
+  msg = msgb_alloc(OSMO_TRXD_MSG_BUF_SIZE, "trxd_burst_ind");
+  if (!msg)
+    return false;
+
+  rc = osmo_trxd_burst_ind_build(msg, mVersionTRXD[chan], &bi);
+  if (rc < 0) {
+    LOGCHAN(chan, DTRXDUL, ERROR) << "failed to build BURST.ind (rc=" << rc << ")";
+    msgb_free(msg);
+    return false;
   }
+  osmo_trxd_build_fin(msg, mVersionTRXD[chan]);
+
+  rc = write(mDataSockets[chan], msgb_data(msg), msgb_length(msg));
+  msgb_free(msg);
+  if (rc < 0) {
+    LOGCHAN(chan, DTRXDUL, NOTICE) << "mDataSockets write(" << mDataSockets[chan] << ") failed: " << rc;
+    return false;
+  }
+
+  return true;
 }
 
 void Transceiver::driveTxFIFO()
@@ -1310,16 +1310,22 @@ void Transceiver::driveTxFIFO()
 
 bool Transceiver::writeClockInterface()
 {
-  int msgLen;
-  char command[50];
+  char command[64];
+  int rc;
   // FIXME -- This should be adaptive.
-  sprintf(command,"IND CLOCK %llu",(unsigned long long) (mTransmitDeadlineClock.FN()+2));
+  uint32_t fn = mTransmitDeadlineClock.FN() + 2;
+
+  rc = osmo_trxc_clock_ind_build(command, sizeof(command), fn);
+  if (rc < 0) {
+    LOGC(DTRXCLK, ERROR) << "failed to build IND CLOCK " << fn;
+    return false;
+  }
 
   LOGC(DTRXCLK, INFO) << "sending " << command;
 
-  msgLen = write(mClockSocket, command, strlen(command) + 1);
-  if (msgLen <= 0) {
-    LOGC(DTRXCLK, ERROR) << "mClockSocket write(" << mClockSocket << ") failed: " << msgLen;
+  rc = write(mClockSocket, command, strlen(command) + 1);
+  if (rc <= 0) {
+    LOGC(DTRXCLK, ERROR) << "mClockSocket write(" << mClockSocket << ") failed: " << rc;
     return false;
   }
 

@@ -23,9 +23,28 @@ include $(top_srcdir)/Makefile.common
 
 SUBDIRS = arch device
 
-AM_CPPFLAGS = -Wall $(STD_DEFINES_AND_INCLUDES) -I${srcdir}/arch/common -I${srcdir}/device/common
-AM_CXXFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
-AM_CFLAGS = -lpthread $(LIBOSMOCORE_CFLAGS) $(LIBOSMOCTRL_CFLAGS) $(LIBOSMOVTY_CFLAGS)
+AM_CPPFLAGS = \
+	-Wall \
+	$(STD_DEFINES_AND_INCLUDES) \
+	-I${srcdir}/arch/common \
+	-I${srcdir}/device/common \
+	-I$(top_srcdir)/libosmo-trx/include \
+	-I$(top_builddir)/libosmo-trx/include \
+	$(NULL)
+
+AM_CXXFLAGS = \
+	-lpthread \
+	$(LIBOSMOCORE_CFLAGS) \
+	$(LIBOSMOCTRL_CFLAGS) \
+	$(LIBOSMOVTY_CFLAGS) \
+	$(NULL)
+
+AM_CFLAGS = \
+	-lpthread \
+	$(LIBOSMOCORE_CFLAGS) \
+	$(LIBOSMOCTRL_CFLAGS) \
+	$(LIBOSMOVTY_CFLAGS) \
+	$(NULL)
 
 noinst_LTLIBRARIES = libtransceiver_common.la
 
@@ -37,7 +56,6 @@ COMMON_SOURCES = \
 	sigProcLib.cpp \
 	signalVector.cpp \
 	Transceiver.cpp \
-	proto_trxd.c \
 	grgsm_vitac/grgsm_vitac.cpp \
 	grgsm_vitac/viterbi_detector.cc
 
@@ -67,8 +85,7 @@ noinst_HEADERS = \
 	sigProcLib.h \
 	signalVector.h \
 	Transceiver.h \
-	Resampler.h \
-	proto_trxd.h
+	Resampler.h
 
 if ENABLE_MULTI_ARFCN
 noinst_HEADERS += \
@@ -80,6 +97,7 @@ endif
 
 COMMON_LDADD = \
 	libtransceiver_common.la \
+	$(top_builddir)/libosmo-trx/src/libosmotrx.la \
 	$(ARCH_LA) \
 	$(GSM_LA) \
 	$(COMMON_LA) \
