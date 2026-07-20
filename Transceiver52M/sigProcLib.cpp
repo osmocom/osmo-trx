@@ -542,19 +542,6 @@ static PulseSequence *generateGSMPulse(int sps)
   return pulse;
 }
 
-/* Convert -1..+1 soft bits to 0..1 soft bits */
-void vectorSlicer(float *dest, const float *src, size_t len)
-{
-	size_t i;
-	for (i = 0; i < len; i++) {
-		dest[i] = 0.5 * (src[i] + 1.0f);
-		if (dest[i] > 1.0)
-			dest[i] = 1.0;
-		else if (dest[i] < 0.0)
-			dest[i] = 0.0;
-	}
-}
-
 static signalVector *rotateBurst(const BitVector &wBurst,
                                  int guardPeriodLength, int sps)
 {

@@ -59,9 +59,6 @@ bool sigProcLibSetup();
 /** Destroy the signal processing library */
 void sigProcLibDestroy(void);
 
-/** Operate soft slicer on a soft-bit vector */
-void vectorSlicer(float *dest, const float *src, size_t len);
-
 /** GMSK modulate a GSM burst of bits */
 signalVector *modulateBurst(const BitVector &wBurst,
                             int guardPeriodLength,
