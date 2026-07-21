@@ -44,7 +44,7 @@ class Transceiver;
 extern Transceiver *transceiver;
 
 /* The latest TRXD header format version advertised/accepted by this TRX implementation */
-#define TRX_DATA_FORMAT_VER	1
+#define TRX_DATA_FORMAT_VER	2
 
 /** Channel descriptor for transceiver object and channel number pair */
 struct TrxChanThParams {
@@ -186,6 +186,15 @@ struct ctrl_sock_state {
   Thread *mTxLowerLoopThread;                   ///< thread to push bursts into transmit FIFO
   std::vector<Thread *> mTxPriorityQueueServiceLoopThreads; ///< thread to process transmit bursts from GSM core
 
+  /* TRXDv2 uplink PDU batching (see osmo-gsm-manuals trx_if.adoc, combination
+   * "b"): all BURST.ind PDUs for one TDMA frame on a given channel are
+   * accumulated into a single datagram, flushed once the next frame's PDU
+   * arrives (i.e. keyed off a change in FN, not off tn==7, since not every
+   * timeslot is necessarily active). Batching across channels (TRXN) is not
+   * supported. Unused (kept NULL) for channels negotiated at TRXDv0/v1. */
+  std::vector<struct msgb *> mBurstIndBatch;
+  std::vector<uint32_t> mBurstIndBatchFn;
+
   GSM::Time mTransmitLatency;             ///< latency between basestation clock and transmit deadline clock
   GSM::Time mLatencyUpdateTime;           ///< last time latency was updated
   GSM::Time mTransmitDeadlineClock;       ///< deadline for pushing bursts into transmit FIFO
@@ -207,6 +216,19 @@ struct ctrl_sock_state {
 
   /** Pull and demodulate a burst from the receive FIFO */
   int pullRadioVector(size_t chan, struct osmo_trxd_burst_ind *ind);
+
+  /** Send one BURST.ind PDU as its own datagram (TRXDv0/v1) */
+  bool sendBurstInd(size_t chan, const struct osmo_trxd_burst_ind *bi);
+
+  /** Append one BURST.ind PDU to the per-channel TRXDv2 batch, flushing the
+   *  previous frame's batch first if this PDU belongs to a new frame */
+  bool queueBurstIndBatched(size_t chan, const struct osmo_trxd_burst_ind *bi);
+
+  /** Write out and reset the accumulated TRXDv2 batch for a channel, if any */
+  bool flushBurstIndBatch(size_t chan);
+
+  /** Handle one parsed BURST.req PDU (one out of a batch, or a lone one) */
+  bool handleBurstReq(size_t chan, const struct osmo_trxd_burst_req *br);
 
   /** Set modulus for specific timeslot */
   void setModulus(size_t timeslot, size_t chan);
