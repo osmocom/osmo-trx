@@ -69,4 +69,5 @@ struct trx_cfg {
 	} overrides;
 	bool use_va;
 	bool usrp1_singledb;
+	bool trxd_batch; /* Batch BURST.ind PDUs per TDMA frame when TRXDv2 is negotiated? */
 };

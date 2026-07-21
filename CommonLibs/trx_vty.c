@@ -645,6 +645,19 @@ DEFUN(cfg_usrp1_singledb, cfg_usrp1_singledb_cmd,
 	return CMD_SUCCESS;
 }
 
+DEFUN(cfg_trxd_batch, cfg_trxd_batch_cmd,
+	"trxd-batch (disable|enable)",
+	"BURST.ind PDU batching once TRXDv2 is negotiated (default=enable)\n"
+	"Send one BURST.ind datagram per burst\n"
+	"Batch all BURST.ind PDUs of a TDMA frame into one datagram\n")
+{
+	struct trx_ctx *trx = trx_from_vty(vty);
+
+	trx->cfg.trxd_batch = (strcmp(argv[0], "enable") == 0);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_chan_rx_path, cfg_chan_rx_path_cmd,
 	"rx-path NAME",
 	"Set the Rx Path\n"
@@ -742,6 +755,8 @@ static int config_write_trx(struct vty *vty)
 		vty_out(vty, " viterbi-eq %s%s", trx->cfg.use_va ? "enable" : "disable", VTY_NEWLINE);
 	if (trx->cfg.usrp1_singledb)
 		vty_out(vty, " usrp1-singledb %s%s", trx->cfg.usrp1_singledb ? "enable" : "disable", VTY_NEWLINE);
+	if (!trx->cfg.trxd_batch)
+		vty_out(vty, " trxd-batch disable%s", VTY_NEWLINE);
 	trx_rate_ctr_threshold_write_config(vty, " ");
 
 	for (i = 0; i < trx->cfg.num_chans; i++) {
@@ -781,6 +796,7 @@ static void trx_dump_vty(struct vty *vty, struct trx_ctx *trx)
 		trx->cfg.sched_rr ? "Enabled" : "Disabled", VTY_NEWLINE);
 	vty_out(vty, " Stack size per Thread in BYTE (0 = OS default): %u%s", trx->cfg.stack_size, VTY_NEWLINE);
 	vty_out(vty, " Single daughterboard (for USRP1): %s%s", trx->cfg.usrp1_singledb ? "Enabled" : "Disabled", VTY_NEWLINE);
+	vty_out(vty, " TRXDv2 BURST.ind batching: %s%s", trx->cfg.trxd_batch ? "Enabled" : "Disabled", VTY_NEWLINE);
 	vty_out(vty, " Channels: %u%s", trx->cfg.num_chans, VTY_NEWLINE);
 	for (i = 0; i < trx->cfg.num_chans; i++) {
 		chan = &trx->cfg.chans[i];
@@ -854,6 +870,7 @@ struct trx_ctx *vty_trx_ctx_alloc(void *talloc_ctx)
 	trx->cfg.filler = FILLER_ZERO;
 	trx->cfg.rssi_offset = 0.0f;
 	trx->cfg.dev_args = talloc_strdup(trx, "");
+	trx->cfg.trxd_batch = true;
 
 	return trx;
 }
@@ -894,6 +911,7 @@ int trx_vty_init(struct trx_ctx* trx)
 	install_element(TRX_NODE, &cfg_no_ctr_error_threshold_cmd);
 	install_element(TRX_NODE, &cfg_stack_size_cmd);
 	install_element(TRX_NODE, &cfg_usrp1_singledb_cmd);
+	install_element(TRX_NODE, &cfg_trxd_batch_cmd);
 
 	install_element(TRX_NODE, &cfg_chan_cmd);
 	install_element(TRX_NODE, &cfg_ul_fn_offset_cmd);

@@ -1342,9 +1342,8 @@ bool Transceiver::driveReceiveFIFO(size_t chan)
   if (!(bi.flags & OSMO_TRXD_F_NOPE_IND) && log_check_level(DTRXDUL, LOGL_DEBUG))
     logRxBurst(chan, &bi);
 
-  /* TODO: make batching configurable via VTY, so it can be disabled even
-   * when TRXDv2 is negotiated (e.g. to trade datagram count for latency) */
-  if (mVersionTRXD[chan] < 2)
+  /* batching is a TRXDv2 feature, and can also be disabled via VTY */
+  if (mVersionTRXD[chan] < 2 || !cfg->trxd_batch)
     return sendBurstInd(chan, &bi);
 
   return queueBurstIndBatched(chan, &bi);
