@@ -1,0 +1,4 @@
+usr/include/osmocom/trx/*
+usr/lib/*/libosmotrx.so
+usr/lib/*/libosmotrx.la
+usr/lib/*/pkgconfig/libosmotrx.pc

@@ -21,7 +21,8 @@ override_dh_auto_configure:
 		$(NULL)
 
 override_dh_strip:
-	dh_strip --dbg-package=osmo-trx-dbg
+	dh_strip -posmo-trx-uhd -posmo-trx-usrp1 -posmo-trx-lms -posmo-trx-ipc --dbg-package=osmo-trx-dbg
+	dh_strip -plibosmotrx0 --dbg-package=libosmo-trx-dbg
 
 # Don't create .pdf.gz files (barely saves space and they can't be opened directly by most pdf readers)
 override_dh_compress:

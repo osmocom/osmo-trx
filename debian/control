@@ -15,7 +15,8 @@ Build-Depends: debhelper (>= 10),
                liblimesuite-dev,
                libbladerf-dev,
                libosmocore-dev (>= 1.10.0),
-               osmo-gsm-manuals-dev (>= 1.6.0)
+               osmo-gsm-manuals-dev (>= 1.6.0),
+               doxygen
 Standards-Version: 3.9.6
 Vcs-Browser: https://gitea.osmocom.org/cellular-infrastructure/osmo-trx
 Vcs-Git: https://gitea.osmocom.org/cellular-infrastructure/osmo-trx
@@ -30,9 +31,68 @@ Package: osmo-trx-dbg
 Architecture: any
 Section: debug
 Priority: extra
-Depends: osmo-trx-uhd (= ${binary:Version}), osmo-trx-usrp1 (= ${binary:Version}), osmo-trx-lms (= ${binary:Version}), osmo-trx-ipc (= ${binary:Version}), ${misc:Depends}
+Depends: osmo-trx-uhd (= ${binary:Version}),
+         osmo-trx-usrp1 (= ${binary:Version}),
+         osmo-trx-lms (= ${binary:Version}),
+         osmo-trx-ipc (= ${binary:Version}),
+         ${misc:Depends}
 Description: Debug symbols for the osmo-trx-*
  Make debugging possible
+
+Package: libosmotrx0
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Multi-Arch: same
+Description: Osmocom TRX protocol (TRXC/TRXD) library
+ The libosmo-trx library implements the TRXC/TRXD (OpenBTS-style TRX)
+ protocol, spoken over UDP sockets between a transceiver (e.g. OsmoTRX)
+ and L1 software (e.g. OsmoBTS): message codecs, a TRXC client command
+ queue engine, and osmo_io based socket endpoint management.
+
+Package: libosmo-trx-dev
+Section: libdevel
+Architecture: any
+Depends: ${misc:Depends},
+         libosmocore-dev,
+         libosmotrx0 (= ${binary:Version})
+Multi-Arch: same
+Description: Development headers for the Osmocom TRX protocol library
+ The libosmo-trx library implements the TRXC/TRXD (OpenBTS-style TRX)
+ protocol, spoken over UDP sockets between a transceiver (e.g. OsmoTRX)
+ and L1 software (e.g. OsmoBTS): message codecs, a TRXC client command
+ queue engine, and osmo_io based socket endpoint management.
+ .
+ This package contains the development files needed for developing with
+ the libosmo-trx library.
+
+Package: libosmo-trx-doc
+Architecture: all
+Section: doc
+Depends: ${misc:Depends},
+         libosmotrx0,
+         libjs-jquery
+Description: Documentation for the Osmocom TRX protocol library
+ The libosmo-trx library implements the TRXC/TRXD (OpenBTS-style TRX)
+ protocol, spoken over UDP sockets between a transceiver (e.g. OsmoTRX)
+ and L1 software (e.g. OsmoBTS): message codecs, a TRXC client command
+ queue engine, and osmo_io based socket endpoint management.
+ .
+ This package contains the documentation for the libosmo-trx library.
+
+Package: libosmo-trx-dbg
+Section: debug
+Architecture: any
+Priority: extra
+Depends: libosmotrx0 (= ${binary:Version}), ${misc:Depends}
+Multi-Arch: same
+Description: Debug symbols for the Osmocom TRX protocol library
+ The libosmo-trx library implements the TRXC/TRXD (OpenBTS-style TRX)
+ protocol, spoken over UDP sockets between a transceiver (e.g. OsmoTRX)
+ and L1 software (e.g. OsmoBTS): message codecs, a TRXC client command
+ queue engine, and osmo_io based socket endpoint management.
+ .
+ This package contains the debug symbols for the library.
 
 Package: osmo-trx-uhd
 Architecture: any
