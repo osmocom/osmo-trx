@@ -30,6 +30,7 @@
 #include "Interthread.h"
 #include <iostream>
 #include <mutex>
+#include <unistd.h>
 
 std::mutex dbg_cout;
 
@@ -52,7 +53,7 @@ void* qWriter(void*)
 		CERR("queue write " << *p);
 		gQ.write(p);
 		q_last_write_val = i;
-		if (random()%2) sleep(1);
+		if (random()%2) usleep(1000);
 	}
 	p = new int;
 	*p = -1;
@@ -88,7 +89,7 @@ void* mapWriter(void*)
 		CERR("map write " << *p);
 		gMap.write(i,p);
 		m_last_write_val = i;
-		if (random()%2) sleep(1);
+		if (random()%2) usleep(1000);
 	}
 	return NULL;
 }
