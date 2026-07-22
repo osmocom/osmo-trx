@@ -16,6 +16,7 @@ Transceiver52M/osmo-trx-ms-blade
 Transceiver52M/osmo-trx-ms-uhd
 Transceiver52M/osmo-trx-ms-ipc
 Transceiver52M/device/ipc/uhddev_ipc.cpp
+proxy/src/osmo-trx-proxy
 
 .clang-format
 

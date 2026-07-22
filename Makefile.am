@@ -35,6 +35,13 @@ endif
 # Order must be preserved
 SUBDIRS += \
 	libosmo-trx \
+	$(NULL)
+
+if ENABLE_PROXY
+SUBDIRS += proxy
+endif
+
+SUBDIRS += \
 	CommonLibs \
 	GSM \
 	Transceiver52M \

@@ -162,6 +162,11 @@ AC_ARG_WITH(mstrx, [
         [enable MS TRX])
 ])
 
+AC_ARG_WITH(proxy, [
+    AS_HELP_STRING([--with-proxy],
+        [enable osmo-trx-proxy [default=enabled]])
+])
+
 AC_ARG_WITH(neon, [
     AS_HELP_STRING([--with-neon],
         [enable ARM NEON support])
@@ -288,6 +293,7 @@ AM_CONDITIONAL(DEVICE_BLADE, [test "x$with_bladerf" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM, [test "x$with_neon" = "xyes" || test "x$with_neon_vfpv4" = "xyes"])
 AM_CONDITIONAL(ARCH_ARM_A15, [test "x$with_neon_vfpv4" = "xyes"])
 AM_CONDITIONAL(ENABLE_MS_TRX, [test "x$with_mstrx" = "xyes"])
+AM_CONDITIONAL(ENABLE_PROXY, [test "x$with_proxy" != "xno"])
 
 # Disable Multi ARFCN support
 AC_ARG_ENABLE(multi-arfcn,
@@ -375,6 +381,8 @@ AC_CONFIG_FILES([\
     libosmo-trx/src/Makefile \
     libosmo-trx/libosmo-trx.pc \
     libosmo-trx/Doxyfile.trx \
+    proxy/Makefile \
+    proxy/src/Makefile \
     CommonLibs/Makefile \
     GSM/Makefile \
     Transceiver52M/Makefile \
