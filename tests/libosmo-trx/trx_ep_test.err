@@ -1,0 +1,6 @@
+DLGLOBAL NOTICE ep_trx: Opening TRXC/TRXD connections l=127.0.0.1:16700<->r=127.0.0.1:16800
+DLGLOBAL NOTICE ep_l1: Opening TRXC/TRXD connections l=127.0.0.1:16800<->r=127.0.0.1:16700
+DLGLOBAL INFO ep_l1: chan=0: using TRXD PDU version 2
+DLGLOBAL INFO ep_trx: chan=0: using TRXD PDU version 2
+DLGLOBAL NOTICE ep_l1: Closing TRXC/TRXD connections l=127.0.0.1:16800<->r=127.0.0.1:16700
+DLGLOBAL NOTICE ep_trx: Closing TRXC/TRXD connections l=127.0.0.1:16700<->r=127.0.0.1:16800

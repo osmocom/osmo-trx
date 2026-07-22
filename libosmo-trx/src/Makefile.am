@@ -20,6 +20,7 @@ libosmotrx_la_SOURCES = \
 	trxc.c \
 	trxc_client.c \
 	trxd.c \
+	trx_ep.c \
 	$(NULL)
 
 libosmotrx_la_LDFLAGS = \

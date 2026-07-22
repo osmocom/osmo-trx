@@ -1,0 +1,18 @@
+=== clock indication (TRX -> L1) ===
+l1: rx_clck_ind: fn=402312
+=== ctrl: CMD (L1 -> TRX), RSP (TRX -> L1) ===
+trx: rx_ctrl_msg(chan=0): 'CMD POWERON'
+l1: rx_ctrl_msg(chan=0): 'RSP POWERON 0'
+=== burst req, TRXDv0 (L1 -> TRX) ===
+trx: rx_burst_req(chan=0): BURST.req tn=3 fn=100000 att=10 mod=GMSK burst_len=148
+=== burst ind, TRXDv0 (TRX -> L1), another channel ===
+l1: rx_burst_ind(chan=1): BURST.ind tn=5 fn=100005 rssi=-63 toa256=-512 mod=GMSK burst_len=148
+=== switch chan 0 to TRXDv2 ===
+=== burst req batch, TRXDv2 (L1 -> TRX) ===
+empty batch breaker: rc=-42
+batch breaker: rc=0
+trx: rx_burst_req(chan=0): BURST.req tn=1 fn=200000 att=10 trx_num=0 mod=GMSK set=0 tsc=7 burst_len=148
+trx: rx_burst_req(chan=0): BURST.req tn=2 fn=200000 att=10 trx_num=0 mod=GMSK set=0 tsc=7 burst_len=148
+=== burst ind, TRXDv2 with NOPE (TRX -> L1) ===
+l1: rx_burst_ind(chan=0): NOPE.ind tn=5 fn=200005 trx_num=0 rssi=-63 toa256=-512 C/I=-150 cB
+Done

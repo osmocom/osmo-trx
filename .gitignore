@@ -23,6 +23,7 @@ Transceiver52M/device/ipc/uhddev_ipc.cpp
 tests/libosmo-trx/trxc_test
 tests/libosmo-trx/trxc_client_test
 tests/libosmo-trx/trxd_test
+tests/libosmo-trx/trx_ep_test
 tests/CommonLibs/BitVectorTest
 tests/CommonLibs/F16Test
 tests/CommonLibs/InterthreadTest
