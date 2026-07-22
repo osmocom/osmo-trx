@@ -18,6 +18,7 @@ lib_LTLIBRARIES = libosmo-trx.la
 
 libosmo_trx_la_SOURCES = \
 	trxc.c \
+	trxc_client.c \
 	trxd.c \
 	$(NULL)
 

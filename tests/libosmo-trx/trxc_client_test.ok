@@ -1,0 +1,73 @@
+=== test_basic ===
+tx_msg: 'CMD POWERON'
+rx_rsp: 'RSP POWERON 0'
+rsp_cb(poweron): 'RSP POWERON 0'
+=== test_queueing ===
+tx_msg: 'CMD RXTUNE 890000'
+rx_rsp: 'RSP RXTUNE 0 890000'
+rsp_cb(rxtune): 'RSP RXTUNE 0 890000'
+tx_msg: 'CMD TXTUNE 935000'
+rx_rsp: 'RSP TXTUNE 0 935000'
+rsp_cb(txtune): 'RSP TXTUNE 0 935000'
+tx_msg: 'CMD SETSLOT 0 1'
+rx_rsp: 'RSP SETSLOT 0 0 1'
+rsp_cb(setslot): 'RSP SETSLOT 0 0 1'
+=== test_dup_rsp ===
+tx_msg: 'CMD POWERON'
+rx_rsp: 'RSP POWERON 0'
+rsp_cb(poweron): 'RSP POWERON 0'
+rx_rsp: 'RSP POWERON 0'
+rx_rsp: 'RSP POWEROFF 0'
+	rc=-2
+=== test_retrans ===
+tx_msg: 'CMD POWERON'
+(time passes: 2 s)
+tx_msg: 'CMD POWERON'
+(time passes: 2 s)
+tx_msg: 'CMD POWERON'
+rx_rsp: 'RSP POWERON 0'
+rsp_cb(poweron): 'RSP POWERON 0'
+(time passes: 10 s)
+=== test_rsp_cb_retry ===
+tx_msg: 'CMD POWERON'
+rx_rsp: 'RSP POWERON 1'
+rsp_retry_cb: 'RSP POWERON 1'
+(time passes: 5 s)
+tx_msg: 'CMD POWERON'
+rx_rsp: 'RSP POWERON 0'
+rsp_retry_cb: 'RSP POWERON 0'
+=== test_fatal_error ===
+tx_msg: 'CMD RXTUNE 890000'
+rx_rsp: 'RSP RXTUNE 1 890000'
+fatal_error: 'RSP RXTUNE 1 890000'
+	rc=-22
+=== test_negotiate_format ===
+tx_msg: 'CMD SETFORMAT 2'
+rx_rsp: 'RSP SETFORMAT 2 2'
+setformat_cb: ver_use=2
+tx_msg: 'CMD SETFORMAT 2'
+rx_rsp: 'RSP SETFORMAT 1 2'
+setformat_cb: ver_use=1
+tx_msg: 'CMD SETFORMAT 2'
+rx_rsp: 'RSP ERR 1'
+setformat_cb: ver_use=0
+tx_msg: 'CMD SETFORMAT 2'
+rx_rsp: 'RSP SETFORMAT 5 2'
+fatal_error: 'RSP SETFORMAT 5 2'
+	rc=-22
+=== test_flush ===
+tx_msg: 'CMD RXTUNE 890000'
+rx_rsp: 'RSP RXTUNE 0 890000'
+	rc=-2
+(time passes: 10 s)
+=== test_flush_in_rsp_cb ===
+tx_msg: 'CMD POWEROFF'
+rx_rsp: 'RSP POWEROFF 0'
+rsp_flush_cb: 'RSP POWEROFF 0', flushing the queue
+(time passes: 10 s)
+=== test_malformed ===
+rx_rsp: 'MALFORMED MESSAGE'
+	rc=-22
+rx_rsp: 'IND CLOCK 1234'
+	rc=-22
+Done

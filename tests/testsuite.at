@@ -56,6 +56,13 @@ cat $abs_srcdir/libosmo-trx/trxc_test.ok > expout
 AT_CHECK([$abs_top_builddir/tests/libosmo-trx/trxc_test], [], [expout], [])
 AT_CLEANUP
 
+AT_SETUP([trxc_client_test])
+AT_KEYWORDS([trxc_client_test])
+cat $abs_srcdir/libosmo-trx/trxc_client_test.ok > expout
+cat $abs_srcdir/libosmo-trx/trxc_client_test.err > experr
+AT_CHECK([$abs_top_builddir/tests/libosmo-trx/trxc_client_test], [], [expout], [experr])
+AT_CLEANUP
+
 AT_SETUP([trxd_test])
 AT_KEYWORDS([trxd_test])
 cat $abs_srcdir/libosmo-trx/trxd_test.ok > expout
