@@ -1,0 +1,7 @@
+Document: libosmo-trx-doc
+Title: Documentation for the libosmo-trx library
+Section: Programming
+
+Format: HTML
+Index: /usr/share/doc/libosmo-trx/html/index.html
+Files: /usr/share/doc/libosmo-trx/html/*.html
