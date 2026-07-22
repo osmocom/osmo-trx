@@ -21,14 +21,19 @@ LDADD = \
 
 EXTRA_DIST = \
 	trxc_test.ok \
+	trxc_client_test.ok \
+	trxc_client_test.err \
 	trxd_test.ok \
 	$(NULL)
 
 check_PROGRAMS = \
 	trxc_test \
+	trxc_client_test \
 	trxd_test \
 	$(NULL)
 
 trxc_test_SOURCES = trxc_test.c
+
+trxc_client_test_SOURCES = trxc_client_test.c
 
 trxd_test_SOURCES = trxd_test.c
