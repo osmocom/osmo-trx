@@ -73,6 +73,8 @@ tests/testsuite.log
 *.sw?
 
 # manuals
+libosmo-trx/Doxyfile.trx
+libosmo-trx/doc
 doc/manuals/*.html
 doc/manuals/*.svg
 doc/manuals/*.pdf
