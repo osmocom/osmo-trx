@@ -3,6 +3,7 @@
 *.lo
 *.la
 libosmo-trx/libosmotrx.pc
+libosmo-trx/Doxyfile.trx
 Transceiver52M/osmo-trx-uhd
 Transceiver52M/osmo-trx-usrp1
 Transceiver52M/osmo-trx-lms

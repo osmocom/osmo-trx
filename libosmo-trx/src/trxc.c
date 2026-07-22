@@ -168,6 +168,8 @@ const char *osmo_trxc_msg_name(const struct osmo_trxc_msg *msg)
 
 /*! Parse a clock indication ("IND CLOCK <fn>").
  *  \param[out] fn TDMA frame number (validated to be < GSM_TDMA_HYPERFRAME)
+ *  \param[in] buf message buffer (not necessarily zero-terminated)
+ *  \param[in] len length of the message in the buffer
  *  \returns 0 on success; negative on error */
 int osmo_trxc_clock_ind_parse(uint32_t *fn, const char *buf, size_t len)
 {

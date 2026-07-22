@@ -122,6 +122,15 @@ then
 	CPPFLAGS="$CPPFLAGS $WERROR_FLAGS"
 fi
 
+dnl used to generate libosmo-trx/Doxyfile.trx API documentation
+AC_ARG_ENABLE(doxygen,
+	[AS_HELP_STRING(
+		[--disable-doxygen],
+		[Disable generation of libosmo-trx documentation using doxygen],
+	)],
+	[doxygen=$enableval], [doxygen="yes"])
+AC_PATH_PROG(DOXYGEN, doxygen, false)
+AM_CONDITIONAL(HAVE_DOXYGEN, test $DOXYGEN != false && test "x$doxygen" = "xyes")
 
 AC_ARG_WITH(uhd, [
     AS_HELP_STRING([--with-uhd],
@@ -366,6 +375,7 @@ AC_CONFIG_FILES([\
     libosmo-trx/include/Makefile \
     libosmo-trx/src/Makefile \
     libosmo-trx/libosmotrx.pc \
+    libosmo-trx/Doxyfile.trx \
     CommonLibs/Makefile \
     GSM/Makefile \
     Transceiver52M/Makefile \
