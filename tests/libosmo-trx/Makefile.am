@@ -24,12 +24,15 @@ EXTRA_DIST = \
 	trxc_client_test.ok \
 	trxc_client_test.err \
 	trxd_test.ok \
+	trx_ep_test.ok \
+	trx_ep_test.err \
 	$(NULL)
 
 check_PROGRAMS = \
 	trxc_test \
 	trxc_client_test \
 	trxd_test \
+	trx_ep_test \
 	$(NULL)
 
 trxc_test_SOURCES = trxc_test.c
@@ -37,3 +40,5 @@ trxc_test_SOURCES = trxc_test.c
 trxc_client_test_SOURCES = trxc_client_test.c
 
 trxd_test_SOURCES = trxd_test.c
+
+trx_ep_test_SOURCES = trx_ep_test.c

@@ -1,0 +1,10 @@
+DLGLOBAL INFO (ep=ep_trx) Opening TRXC/TRXD connections l=127.0.0.1:16700<->r=127.0.0.1:16800
+DLGLOBAL INFO (ep=ep_bts) Opening TRXC/TRXD connections l=127.0.0.1:16800<->r=127.0.0.1:16700
+DLGLOBAL INFO (ep=ep_trx) Closing TRXC/TRXD connections l=127.0.0.1:16700<->r=127.0.0.1:16800
+DLGLOBAL INFO (ep=ep_bts) Closing TRXC/TRXD connections l=127.0.0.1:16800<->r=127.0.0.1:16700
+DLGLOBAL INFO (ep=ep_trx) Opening TRXC/TRXD connections l=127.0.0.1:16700<->r=127.0.0.1:16800
+DLGLOBAL INFO (ep=ep_bts) Opening TRXC/TRXD connections l=127.0.0.1:16800<->r=127.0.0.1:16700
+DLGLOBAL INFO (ep=ep_bts, chan=0) Using TRXD PDU version 2
+DLGLOBAL INFO (ep=ep_trx, chan=0) Using TRXD PDU version 2
+DLGLOBAL INFO (ep=ep_trx) Closing TRXC/TRXD connections l=127.0.0.1:16700<->r=127.0.0.1:16800
+DLGLOBAL INFO (ep=ep_bts) Closing TRXC/TRXD connections l=127.0.0.1:16800<->r=127.0.0.1:16700

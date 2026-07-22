@@ -68,3 +68,10 @@ AT_KEYWORDS([trxd_test])
 cat $abs_srcdir/libosmo-trx/trxd_test.ok > expout
 AT_CHECK([$abs_top_builddir/tests/libosmo-trx/trxd_test], [], [expout], [])
 AT_CLEANUP
+
+AT_SETUP([trx_ep_test])
+AT_KEYWORDS([trx_ep_test])
+cat $abs_srcdir/libosmo-trx/trx_ep_test.ok > expout
+cat $abs_srcdir/libosmo-trx/trx_ep_test.err > experr
+AT_CHECK([$abs_top_builddir/tests/libosmo-trx/trx_ep_test], [], [expout], [experr])
+AT_CLEANUP
