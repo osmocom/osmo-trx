@@ -194,6 +194,79 @@ static void test_clk_ind(void)
 	OSMO_ASSERT(rc < 0);
 }
 
+static void test_setslot_parse_one(const char *params)
+{
+	struct osmo_trxc_msg msg = { .type = OSMO_TRXC_MT_CMD, .cmd = "SETSLOT" };
+	struct osmo_trxc_setslot ss;
+	char buf[OSMO_TRXC_MSG_BUF_SIZE];
+	int rc;
+
+	snprintf(msg.params, sizeof(msg.params), "%s", params);
+
+	rc = osmo_trxc_setslot_parse(&ss, &msg);
+	if (rc < 0) {
+		printf("'%s' -> rc=%d\n", params, rc);
+		return;
+	}
+
+	printf("'%s' -> tn=%u vamos=%d comb=%s num_tsc=%u",
+	       params, ss.tn, ss.vamos,
+	       ss.vamos ? osmo_trxc_vamos_comb_name(ss.vamos_comb) : "(numeric)",
+	       ss.num_tsc);
+	if (!ss.vamos)
+		printf(" chan_comb=%d", ss.chan_comb);
+	for (unsigned int i = 0; i < ss.num_tsc; i++)
+		printf(" C%u/S%u", ss.tsc[i].tsc, ss.tsc[i].tsc_set);
+	printf("\n");
+
+	/* re-encode and compare against the original params */
+	rc = osmo_trxc_setslot_build(buf, sizeof(buf), &ss);
+	OSMO_ASSERT(rc > 0 && rc == (int)strlen(buf));
+	printf("\tre-encoded: '%s'\n", buf);
+	OSMO_ASSERT(strcmp(buf, params) == 0);
+}
+
+static void test_setslot(void)
+{
+	static const char * const good[] = {
+		"0 0",
+		"7 13",
+		"4 1 C7/S1",		/* manual example */
+		"0 VFF C0/S1 C0/S2",	/* manual example */
+		"3 VHH C1/S3 C1/S4",	/* manual example */
+		"1 VFH C2/S1 C2/S4",	/* manual example */
+		"2 HVHH C0/S1 C0/S1 C0/S2", /* manual example */
+	};
+	static const char * const bad[] = {
+		"8 0",			/* tn out of range */
+		"0 14",			/* chan_comb out of range */
+		"0 -1",			/* chan_comb out of range */
+		"0",			/* missing chan_comb */
+		"",			/* missing everything */
+		"x 0",			/* tn not numeric */
+		"0 x",			/* chan_comb not numeric, not a known VAMOS name */
+		"0 0 bogus",		/* trailing token not a C<tsc>/S<tsc_set> */
+		"0 HVHH C0/S1 C0/S1 C0/S2 C0/S3", /* too many TSC overrides */
+	};
+	struct osmo_trxc_msg msg = { .type = OSMO_TRXC_MT_CMD, .cmd = "SETSLOT" };
+	struct osmo_trxc_setslot ss;
+	int rc;
+
+	printf("=== %s ===\n", __func__);
+
+	for (unsigned int i = 0; i < ARRAY_SIZE(good); i++)
+		test_setslot_parse_one(good[i]);
+	for (unsigned int i = 0; i < ARRAY_SIZE(bad); i++)
+		test_setslot_parse_one(bad[i]);
+
+	/* build() range check */
+	memset(&ss, 0, sizeof(ss));
+	ss.tn = 8;
+	rc = osmo_trxc_setslot_build(msg.params, sizeof(msg.params), &ss);
+	printf("build with out of range tn: rc=%d\n", rc);
+	OSMO_ASSERT(rc < 0);
+}
+
 int main(int argc, char **argv)
 {
 	test_msg_parse();
@@ -201,6 +274,7 @@ int main(int argc, char **argv)
 	test_params_scan();
 	test_long_params();
 	test_clk_ind();
+	test_setslot();
 
 	printf("Done\n");
 	return 0;

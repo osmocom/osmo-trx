@@ -4,6 +4,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+
+#include <osmocom/core/utils.h>
 
 /*! Maximum length of a command verb (incl. '\0') */
 #define OSMO_TRXC_CMD_LEN_MAX		32
@@ -61,3 +64,63 @@ const char *osmo_trxc_msg_name(const struct osmo_trxc_msg *msg);
 /* Clock socket: "IND CLOCK <fn>" */
 int osmo_trxc_clock_ind_parse(uint32_t *fn, const char *buf, size_t len);
 int osmo_trxc_clock_ind_build(char *buf, size_t buf_size, uint32_t fn);
+
+/* SETSLOT: "<tn> <chan_comb> [C<tsc>/S<tsc_set> ...]" */
+
+/*! Classic (non-VAMOS) GSM TS 05.02 channel combinations, as used by the
+ * <chan_comb> parameter of SETSLOT. Numeric values match the wire format. */
+enum osmo_trxc_chan_comb {
+	OSMO_TRXC_CHAN_COMB_UNUSED		= 0, /*!< Channel is transmitted, but unused */
+	OSMO_TRXC_CHAN_COMB_TCHF		= 1,
+	OSMO_TRXC_CHAN_COMB_TCHH_IDLE		= 2, /*!< TCH/HS, idle every other slot */
+	OSMO_TRXC_CHAN_COMB_TCHH		= 3,
+	OSMO_TRXC_CHAN_COMB_BCCH		= 4, /*!< DL: FCCH+SCH+CCCH+BCCH, UL: RACH */
+	OSMO_TRXC_CHAN_COMB_BCCH_SDCCH4	= 5, /*!< DL: +SDCCH/4+SACCH/4, UL: +SDCCH/4 */
+	OSMO_TRXC_CHAN_COMB_CCCH		= 6, /*!< DL: CCCH+BCCH, UL: RACH */
+	OSMO_TRXC_CHAN_COMB_SDCCH8		= 7, /*!< SDCCH/8 + SACCH/8 */
+	OSMO_TRXC_CHAN_COMB_TCHF_FACCH_SACCHM	= 8,
+	OSMO_TRXC_CHAN_COMB_TCHF_SACCHM	= 9,
+	OSMO_TRXC_CHAN_COMB_TCHFD_SACCHMD	= 10,
+	OSMO_TRXC_CHAN_COMB_PBCCH		= 11, /*!< PBCCH+PCCCH+PDTCH+PACCH+PTCCH */
+	OSMO_TRXC_CHAN_COMB_PCCCH		= 12, /*!< PCCCH+PDTCH+PACCH+PTCCH */
+	OSMO_TRXC_CHAN_COMB_PDTCH		= 13, /*!< PDTCH+PACCH+PTCCH */
+};
+
+/*! VAMOS-enabled channel combinations: the <chan_comb> parameter of SETSLOT
+ * is symbolic (not numeric) for these. */
+enum osmo_trxc_vamos_comb {
+	OSMO_TRXC_VAMOS_COMB_VFF = 1,	/*!< V0(TCH/F) & V1(TCH/F) */
+	OSMO_TRXC_VAMOS_COMB_VHH,	/*!< V0(TCH/H0)&V1(TCH/H0) + V0(TCH/H1)&V1(TCH/H1) */
+	OSMO_TRXC_VAMOS_COMB_VFH,	/*!< V0(TCH/F) & V1(TCH/H0) + V0(TCH/F) & V1(TCH/H1) */
+	OSMO_TRXC_VAMOS_COMB_HVHH,	/*!< TCH/H0 + V0(TCH/H1) & V1(TCH/H1) (mixed) */
+};
+
+extern const struct value_string osmo_trxc_vamos_comb_names[];
+static inline const char *osmo_trxc_vamos_comb_name(enum osmo_trxc_vamos_comb comb)
+{
+	return get_value_string(osmo_trxc_vamos_comb_names, comb);
+}
+
+#define OSMO_TRXC_SETSLOT_TSC_MAX	3 /*!< up to 3 sub-channels (VAMOS "HVHH") */
+
+/*! One "C<tsc>/S<tsc_set>" override, as used by SETSLOT for (VAMOS)
+ * sub-channels that don't use the endpoint-wide TSC (SETTSC). */
+struct osmo_trxc_setslot_tsc {
+	uint8_t tsc;
+	uint8_t tsc_set;
+};
+
+/*! Parsed SETSLOT parameters. */
+struct osmo_trxc_setslot {
+	uint8_t tn;
+	bool vamos;	/*!< false: chan_comb is valid, true: vamos_comb is valid */
+	union {
+		enum osmo_trxc_chan_comb chan_comb;
+		enum osmo_trxc_vamos_comb vamos_comb;
+	};
+	unsigned int num_tsc;	/*!< number of valid entries in tsc[] */
+	struct osmo_trxc_setslot_tsc tsc[OSMO_TRXC_SETSLOT_TSC_MAX];
+};
+
+int osmo_trxc_setslot_parse(struct osmo_trxc_setslot *ss, const struct osmo_trxc_msg *msg);
+int osmo_trxc_setslot_build(char *buf, size_t buf_size, const struct osmo_trxc_setslot *ss);

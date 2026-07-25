@@ -44,6 +44,14 @@ static const struct value_string trxc_msg_type_names[] = {
 	{ 0, NULL }
 };
 
+const struct value_string osmo_trxc_vamos_comb_names[] = {
+	{ OSMO_TRXC_VAMOS_COMB_VFF,  "VFF" },
+	{ OSMO_TRXC_VAMOS_COMB_VHH,  "VHH" },
+	{ OSMO_TRXC_VAMOS_COMB_VFH,  "VFH" },
+	{ OSMO_TRXC_VAMOS_COMB_HVHH, "HVHH" },
+	{ 0, NULL }
+};
+
 /*! Parse a TRXC message ("CMD <verb> [<params>]", "RSP <verb> <status>
  *  [<params>]" or "IND <verb> <params>") from a zero-terminated buffer.
  *  \param[out] msg parsed message
@@ -192,4 +200,87 @@ int osmo_trxc_clock_ind_build(char *buf, size_t buf_size, uint32_t fn)
 	if (rc < 0 || (size_t)rc >= buf_size)
 		return -EMSGSIZE;
 	return rc;
+}
+
+/*! Parse SETSLOT parameters ("<tn> <chan_comb> [C<tsc>/S<tsc_set> ...]")
+ *  from an already-parsed TRXC message's msg->params.
+ *  \returns 0 on success; negative on error */
+int osmo_trxc_setslot_parse(struct osmo_trxc_setslot *ss, const struct osmo_trxc_msg *msg)
+{
+	char params[OSMO_TRXC_PARAMS_LEN_MAX];
+	char *saveptr, *tok;
+	unsigned int tn;
+	int comb;
+
+	memset(ss, 0, sizeof(*ss));
+
+	OSMO_STRLCPY_ARRAY(params, msg->params);
+
+	tok = strtok_r(params, " ", &saveptr);
+	if (tok == NULL || sscanf(tok, "%u", &tn) != 1)
+		return -EINVAL;
+	if (tn > 7)
+		return -ERANGE;
+	ss->tn = tn;
+
+	tok = strtok_r(NULL, " ", &saveptr);
+	if (tok == NULL)
+		return -EINVAL;
+	comb = get_string_value(osmo_trxc_vamos_comb_names, tok);
+	if (comb >= 0) {
+		ss->vamos = true;
+		ss->vamos_comb = comb;
+	} else {
+		if (sscanf(tok, "%d", &comb) != 1)
+			return -EINVAL;
+		if (comb < OSMO_TRXC_CHAN_COMB_UNUSED || comb > OSMO_TRXC_CHAN_COMB_PDTCH)
+			return -ERANGE;
+		ss->vamos = false;
+		ss->chan_comb = comb;
+	}
+
+	while ((tok = strtok_r(NULL, " ", &saveptr)) != NULL) {
+		unsigned int tsc, tsc_set;
+
+		if (ss->num_tsc >= OSMO_TRXC_SETSLOT_TSC_MAX)
+			return -E2BIG;
+		if (sscanf(tok, "C%u/S%u", &tsc, &tsc_set) != 2)
+			return -EINVAL;
+		ss->tsc[ss->num_tsc].tsc = tsc;
+		ss->tsc[ss->num_tsc].tsc_set = tsc_set;
+		ss->num_tsc++;
+	}
+
+	return 0;
+}
+
+/*! Serialize SETSLOT parameters ("<tn> <chan_comb> [C<tsc>/S<tsc_set> ...]")
+ *  into the given buffer (zero-terminated), for use as msg->params.
+ *  \returns length of the string (excl. '\0') on success; negative on error */
+int osmo_trxc_setslot_build(char *buf, size_t buf_size, const struct osmo_trxc_setslot *ss)
+{
+	unsigned int i;
+	int rc, len;
+
+	if (ss->tn > 7)
+		return -ERANGE;
+
+	if (ss->vamos)
+		rc = snprintf(buf, buf_size, "%u %s", ss->tn,
+			      osmo_trxc_vamos_comb_name(ss->vamos_comb));
+	else
+		rc = snprintf(buf, buf_size, "%u %d", ss->tn, ss->chan_comb);
+	if (rc < 0 || (size_t)rc >= buf_size)
+		return -EMSGSIZE;
+	len = rc;
+
+	for (i = 0; i < ss->num_tsc; i++) {
+		rc = snprintf(buf + len, buf_size - len, " C%u/S%u",
+			      ss->tsc[i].tsc, ss->tsc[i].tsc_set);
+		if (rc < 0 || (size_t)rc >= buf_size - (size_t)len)
+			return -EMSGSIZE;
+		len += rc;
+	}
+
+	return len;
 }
