@@ -52,4 +52,29 @@ parse oversized params: rc=-90
 'IND KCOLC 123' -> rc=-22
 'CMD CLOCK 123' -> rc=-22
 build with out of range fn: rc=-34
+=== test_setslot ===
+'0 0' -> tn=0 vamos=0 comb=(numeric) num_tsc=0 chan_comb=0
+	re-encoded: '0 0'
+'7 13' -> tn=7 vamos=0 comb=(numeric) num_tsc=0 chan_comb=13
+	re-encoded: '7 13'
+'4 1 C7/S1' -> tn=4 vamos=0 comb=(numeric) num_tsc=1 chan_comb=1 C7/S1
+	re-encoded: '4 1 C7/S1'
+'0 VFF C0/S1 C0/S2' -> tn=0 vamos=1 comb=VFF num_tsc=2 C0/S1 C0/S2
+	re-encoded: '0 VFF C0/S1 C0/S2'
+'3 VHH C1/S3 C1/S4' -> tn=3 vamos=1 comb=VHH num_tsc=2 C1/S3 C1/S4
+	re-encoded: '3 VHH C1/S3 C1/S4'
+'1 VFH C2/S1 C2/S4' -> tn=1 vamos=1 comb=VFH num_tsc=2 C2/S1 C2/S4
+	re-encoded: '1 VFH C2/S1 C2/S4'
+'2 HVHH C0/S1 C0/S1 C0/S2' -> tn=2 vamos=1 comb=HVHH num_tsc=3 C0/S1 C0/S1 C0/S2
+	re-encoded: '2 HVHH C0/S1 C0/S1 C0/S2'
+'8 0' -> rc=-34
+'0 14' -> rc=-34
+'0 -1' -> rc=-34
+'0' -> rc=-22
+'' -> rc=-22
+'x 0' -> rc=-22
+'0 x' -> rc=-22
+'0 0 bogus' -> rc=-22
+'0 HVHH C0/S1 C0/S1 C0/S2 C0/S3' -> rc=-7
+build with out of range tn: rc=-34
 Done
