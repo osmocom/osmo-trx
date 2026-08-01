@@ -26,4 +26,14 @@ trx: rx_burst_req(chan=0): BURST.req tn=2 fn=200000 att=10 trx_num=0 mod=GMSK se
 BURST.ind batch flush
 bts: rx_burst_ind(chan=0): NOPE.ind tn=5 fn=200005 trx_num=0 rssi=-63 toa256=-512 C/I=-150 cB
 bts: rx_burst_ind(chan=0): BURST.ind tn=6 fn=200005 trx_num=0 rssi=-63 toa256=-512 C/I=-150 cB mod=GMSK set=0 tsc=7 burst_len=148
+=== test_ctrl_close_flush(do_free=0): starting testcase ===
+=== test_ctrl_close_flush(): TRXC CMDs sent right before osmo_trx_ep_close() (BTS -> TRX) ===
+bts: closed_cb()
+trx: rx_ctrl_msg(chan=0): 'CMD POWEROFF'
+trx: rx_ctrl_msg(chan=1): 'CMD RFMUTE 1'
+=== test_ctrl_close_flush(do_free=1): starting testcase ===
+=== test_ctrl_close_flush(): TRXC CMDs sent right before osmo_trx_ep_close() (BTS -> TRX) ===
+bts: closed_cb()
+trx: rx_ctrl_msg(chan=0): 'CMD POWEROFF'
+trx: rx_ctrl_msg(chan=1): 'CMD RFMUTE 1'
 Done

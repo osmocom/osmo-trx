@@ -59,12 +59,22 @@ struct osmo_trx_ep_chan {
 	struct osmo_io_fd *data_iofd;
 	uint8_t pdu_ver;		/* TRXD PDU version in use */
 	struct msgb *tx_msg;		/* pending TRXDv2 Tx batch */
+	/* Bytes handed to osmo_iofd_write_msgb() on ctrl_iofd but not yet
+	 * completed (per trx_ep_ctrl_write_cb()), used by trx_ep_ctrl_close()
+	 * to tell whether a flush is needed on teardown.  Non-zero here also
+	 * means ctrl_iofd is currently being flushed asynchronously after
+	 * osmo_trx_ep_close(); see osmo_trx_ep_is_closing(). */
+	size_t ctrl_wr_pending;
 };
 
 /*! Sockets currently bound */
 #define OSMO_TRX_EP_F_OPEN			(1 << 0)
 /*! Enable the clock socket (base_port + 0) */
 #define OSMO_TRX_EP_F_CLOCK_SOCKET		(1 << 1)
+/*! osmo_trx_ep_free() was called while a chan's ctrl socket was still
+ * flushing: the actual free is deferred to trx_ep_ctrl_close_write_cb(),
+ * once the last one completes. */
+#define OSMO_TRX_EP_F_PENDING_FREE		(1 << 2)
 
 struct osmo_trx_ep {
 	uint32_t flags;			/* see OSMO_TRX_EP_F_* */
@@ -78,6 +88,10 @@ struct osmo_trx_ep {
 	struct osmo_io_fd *clck_iofd;
 	struct osmo_trx_ep_chan *chans;	/* array of num_chans channels */
 	unsigned int num_chans;
+	/* called once osmo_trx_ep_close() has fully completed, i.e. every
+	 * ctrl chan is closed (immediately if nothing needed flushing, or
+	 * once the last async flush finishes); see osmo_trx_ep_set_closed_cb() */
+	osmo_trx_ep_closed_cb_t closed_cb;
 };
 
 /*! Default base UDP port, see osmo_trx_ep_set_base_port() */
@@ -234,9 +248,108 @@ static void trx_ep_write_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg)
 	/* nothing to do, but osmo_io requires a write call-back */
 }
 
+/* Track bytes still pending on a channel's ctrl_iofd, so trx_ep_ctrl_close()
+ * can tell whether anything is still in flight at teardown time. */
+static void trx_ep_ctrl_write_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg)
+{
+	struct osmo_trx_ep_chan *chan = osmo_iofd_get_data(iofd);
+
+	if (res > 0) {
+		OSMO_ASSERT((size_t)res <= chan->ctrl_wr_pending);
+		chan->ctrl_wr_pending -= res;
+	} else {
+		/* discard: nothing will complete this write again, so a
+		 * stale non-zero count here would wedge trx_ep_ctrl_close()
+		 * into (uselessly) waiting for it forever on teardown */
+		LOGEPCH(chan->ep, chan->num, LOGL_ERROR,
+			"%s(): write failed (res=%d), discarding %zu pending byte(s)\n",
+			__func__, res, chan->ctrl_wr_pending);
+		chan->ctrl_wr_pending = 0;
+	}
+}
+
 /***********************************************************************
  * open/close
  ***********************************************************************/
+
+/*! Write call-back for a channel's ctrl_iofd while it is being flushed
+ * asynchronously after osmo_trx_ep_close(): a 'goodbye' TRXC message
+ * (e.g. "CMD POWEROFF") may have been enqueued via
+ * osmo_trx_ep_send_ctrl_msg() right before tearing down the endpoint;
+ * osmo_iofd_free() would otherwise drop it together with the (now
+ * pointless) rest of the Tx queue.  Keeps waiting until every byte
+ * enqueued on it has actually completed (or a write fails), then frees
+ * the iofd and, if osmo_trx_ep_free() was called on the (kept alive)
+ * endpoint in the meantime and no other channel is still flushing,
+ * finally frees the endpoint too. */
+static void trx_ep_ctrl_close_write_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg)
+{
+	struct osmo_trx_ep_chan *chan = osmo_iofd_get_data(iofd);
+	struct osmo_trx_ep *ep = chan->ep;
+
+	if (res > 0) {
+		OSMO_ASSERT((size_t)res <= chan->ctrl_wr_pending);
+		chan->ctrl_wr_pending -= res;
+		/* keep waiting until every enqueued byte has actually completed */
+		if (chan->ctrl_wr_pending > 0) {
+			LOGEPCH(ep, chan->num, LOGL_DEBUG,
+				"%s(): wrote %d byte(s), %zu still pending\n",
+				__func__, res, chan->ctrl_wr_pending);
+			return;
+		}
+		LOGEPCH(ep, chan->num, LOGL_DEBUG,
+			"%s(): wrote %d byte(s), flush completed\n",
+			__func__, res);
+	} else {
+		LOGEPCH(ep, chan->num, LOGL_ERROR,
+			"%s(): flush aborted (res=%d), discarding %zu pending byte(s)\n",
+			__func__, res, chan->ctrl_wr_pending);
+		chan->ctrl_wr_pending = 0;
+	}
+
+	osmo_iofd_free(chan->ctrl_iofd);
+	chan->ctrl_iofd = NULL;
+
+	if (osmo_trx_ep_is_closing(ep))
+		return; /* other ctrl chans are still closing */
+
+	if (ep->closed_cb != NULL)
+		ep->closed_cb(ep);
+
+	if (~ep->flags & OSMO_TRX_EP_F_PENDING_FREE)
+		return; /* deferred free() is not pending */
+
+	LOGEP(ep, LOGL_DEBUG, "%s(): last flush completed, free()ing\n", __func__);
+	talloc_free(ep);
+}
+
+static const struct osmo_io_ops trx_ep_ctrl_close_ioops = {
+	.write_cb = &trx_ep_ctrl_close_write_cb,
+};
+
+/* Close a channel's ctrl_iofd, flushing (best-effort) any still-in-flight
+ * Tx data first instead of dropping it immediately. */
+static void trx_ep_ctrl_close(struct osmo_trx_ep_chan *chan)
+{
+	struct osmo_io_fd *iofd = chan->ctrl_iofd;
+
+	if (iofd == NULL)
+		return;
+
+	if (chan->ctrl_wr_pending == 0) {
+		LOGEPCH(chan->ep, chan->num, LOGL_DEBUG,
+			"%s(): nothing pending, closing immediately\n", __func__);
+		osmo_iofd_free(iofd);
+		chan->ctrl_iofd = NULL;
+		return;
+	}
+
+	LOGEPCH(chan->ep, chan->num, LOGL_DEBUG,
+		"%s(): %zu byte(s) still pending, flushing asynchronously\n",
+		__func__, chan->ctrl_wr_pending);
+
+	osmo_iofd_set_ioops(iofd, &trx_ep_ctrl_close_ioops);
+}
 
 static const struct osmo_io_ops trx_ep_clck_ioops = {
 	.read_cb = &trx_ep_clck_read_cb,
@@ -245,7 +358,7 @@ static const struct osmo_io_ops trx_ep_clck_ioops = {
 
 static const struct osmo_io_ops trx_ep_ctrl_ioops = {
 	.read_cb = &trx_ep_ctrl_read_cb,
-	.write_cb = &trx_ep_write_cb,
+	.write_cb = &trx_ep_ctrl_write_cb,
 };
 
 static const struct osmo_io_ops trx_ep_data_ioops = {
@@ -323,8 +436,10 @@ static int trx_ep_chan_open(struct osmo_trx_ep_chan *chan)
 /* Close a channel's ctrl+data sockets and drop its pending Tx batch */
 static void trx_ep_chan_close(struct osmo_trx_ep_chan *chan)
 {
-	osmo_iofd_free(chan->ctrl_iofd);
-	chan->ctrl_iofd = NULL;
+	/* trx_ep_ctrl_close() clears chan->ctrl_iofd itself, but only once
+	 * it's actually safe to: immediately if nothing was pending, or
+	 * later from trx_ep_ctrl_close_write_cb() if a flush is needed. */
+	trx_ep_ctrl_close(chan);
 	osmo_iofd_free(chan->data_iofd);
 	chan->data_iofd = NULL;
 	msgb_free(chan->tx_msg);
@@ -362,12 +477,17 @@ struct osmo_trx_ep *osmo_trx_ep_alloc(void *ctx, unsigned int num_chans)
 }
 
 /*! Open the clock/ctrl/data sockets of the given endpoint.
- *  \returns 0 on success; -EALREADY if already open; other negative
- *  values on error (all sockets closed) */
+ *  \returns 0 on success; -EALREADY if already open; -EBUSY if a previous
+ *  osmo_trx_ep_close() is still flushing a ctrl socket (see
+ *  osmo_trx_ep_is_closing()); other negative values on error (all sockets
+ *  closed) */
 int osmo_trx_ep_open(struct osmo_trx_ep *ep)
 {
 	if (ep->flags & OSMO_TRX_EP_F_OPEN)
 		return -EALREADY;
+
+	if (osmo_trx_ep_is_closing(ep))
+		return -EBUSY;
 
 	if (ep->laddr == NULL || ep->raddr == NULL)
 		return -EINVAL;
@@ -401,8 +521,11 @@ ret_error:
 	return -EIO;
 }
 
-/*! Close all sockets of the given endpoint (drops pending Tx batches).
- *  No-op if not opened. */
+/*! Close all sockets of the given endpoint.  No-op if not opened.
+ *  Any TRXC message still queued on a ctrl socket (e.g. a 'goodbye'
+ *  "CMD POWEROFF" sent right before teardown) is flushed asynchronously
+ *  (best-effort) instead of being dropped; pending Tx data batches are
+ *  dropped. */
 void osmo_trx_ep_close(struct osmo_trx_ep *ep)
 {
 	if (~ep->flags & OSMO_TRX_EP_F_OPEN)
@@ -419,14 +542,34 @@ void osmo_trx_ep_close(struct osmo_trx_ep *ep)
 		trx_ep_chan_close(&ep->chans[i]);
 
 	ep->flags &= ~OSMO_TRX_EP_F_OPEN;
+
+	/* if any chan started an async flush, trx_ep_ctrl_close_sendto_cb()
+	 * calls closed_cb() once the last one completes instead */
+	if (ep->closed_cb != NULL && !osmo_trx_ep_is_closing(ep))
+		ep->closed_cb(ep);
 }
 
-/*! Free the given endpoint instance (closes all sockets) */
+/*! Free the given endpoint instance (closes all sockets).  If a ctrl socket
+ *  is still flushing (see osmo_trx_ep_is_closing()), the endpoint itself is
+ *  kept alive until the flush completes (see trx_ep_ctrl_close_write_cb()),
+ *  which then finishes this deferred free. */
 void osmo_trx_ep_free(struct osmo_trx_ep *ep)
 {
 	if (ep == NULL)
 		return;
+
 	osmo_trx_ep_close(ep);
+
+	if (osmo_trx_ep_is_closing(ep)) {
+		/* Detach from the caller's (possibly about-to-be-freed)
+		 * talloc parent: ep must outlive it until the flush
+		 * completes, since the still-flushing iofd is a talloc
+		 * child of ep. */
+		talloc_steal(OTC_GLOBAL, ep);
+		ep->flags |= OSMO_TRX_EP_F_PENDING_FREE;
+		return;
+	}
+
 	talloc_free(ep);
 }
 
@@ -434,6 +577,25 @@ void osmo_trx_ep_free(struct osmo_trx_ep *ep)
 bool osmo_trx_ep_is_open(const struct osmo_trx_ep *ep)
 {
 	return ep->flags & OSMO_TRX_EP_F_OPEN;
+}
+
+/*! Whether a ctrl socket from a previous osmo_trx_ep_close() is still
+ *  flushing a queued TRXC message in the background (see trx_ep_ctrl_close()). */
+bool osmo_trx_ep_is_closing(const struct osmo_trx_ep *ep)
+{
+	for (unsigned int i = 0; i < ep->num_chans; i++) {
+		if (ep->chans[i].ctrl_wr_pending > 0)
+			return true;
+	}
+	return false;
+}
+
+/*! Set the call-back invoked once osmo_trx_ep_close() has fully completed:
+ *  immediately if no ctrl chan needed flushing, or once the last async
+ *  flush finishes (see osmo_trx_ep_is_closing()) otherwise. */
+void osmo_trx_ep_set_closed_cb(struct osmo_trx_ep *ep, osmo_trx_ep_closed_cb_t closed_cb)
+{
+	ep->closed_cb = closed_cb;
 }
 
 /*! Set the application-private data */
@@ -455,11 +617,19 @@ unsigned int osmo_trx_ep_get_num_chans(const struct osmo_trx_ep *ep)
 }
 
 /*! Change the number of channels; only valid before osmo_trx_ep_open().
- *  \returns 0 on success; -EBUSY if the endpoint is already open; -EINVAL
- *  if num_chans is 0; -ENOMEM on allocation failure */
+ *  \returns 0 on success; -EBUSY if the endpoint is already open or a ctrl
+ *  socket from a previous osmo_trx_ep_close() is still flushing (see
+ *  osmo_trx_ep_is_closing()); -EINVAL if num_chans is 0; -ENOMEM on
+ *  allocation failure */
 int osmo_trx_ep_set_num_chans(struct osmo_trx_ep *ep, unsigned int num_chans)
 {
 	if (ep->flags & OSMO_TRX_EP_F_OPEN)
+		return -EBUSY;
+
+	/* re-allocating ep->chans below would leave a still-flushing
+	 * channel's ctrl_iofd pointing at freed memory (its write_cb looks
+	 * up its struct osmo_trx_ep_chan via osmo_iofd_get_data()) */
+	if (osmo_trx_ep_is_closing(ep))
 		return -EBUSY;
 
 	if (num_chans == 0)
@@ -651,6 +821,7 @@ int osmo_trx_ep_send_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 			      const struct osmo_trxc_msg *tmsg)
 {
 	struct msgb *msg;
+	size_t len;
 	int rc;
 
 	OSMO_ASSERT(chan < ep->num_chans);
@@ -662,10 +833,13 @@ int osmo_trx_ep_send_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 		return rc;
 	}
 	msgb_put(msg, rc);
+	len = msgb_length(msg);
 
 	rc = osmo_iofd_write_msgb(ep->chans[chan].ctrl_iofd, msg);
 	if (rc < 0)
 		msgb_free(msg);
+	else
+		ep->chans[chan].ctrl_wr_pending += len;
 	return rc;
 }
 

@@ -69,6 +69,13 @@ int osmo_trx_ep_open(struct osmo_trx_ep *ep);
 void osmo_trx_ep_close(struct osmo_trx_ep *ep);
 void osmo_trx_ep_free(struct osmo_trx_ep *ep);
 bool osmo_trx_ep_is_open(const struct osmo_trx_ep *ep);
+bool osmo_trx_ep_is_closing(const struct osmo_trx_ep *ep);
+
+/*! Called once osmo_trx_ep_close() has fully completed (see
+ *  osmo_trx_ep_set_closed_cb()) */
+typedef void (*osmo_trx_ep_closed_cb_t)(struct osmo_trx_ep *ep);
+void osmo_trx_ep_set_closed_cb(struct osmo_trx_ep *ep, osmo_trx_ep_closed_cb_t closed_cb);
+
 void osmo_trx_ep_set_priv(struct osmo_trx_ep *ep, void *priv);
 void *osmo_trx_ep_get_priv(const struct osmo_trx_ep *ep);
 int osmo_trx_ep_set_name(struct osmo_trx_ep *ep, const char *fmt, ...);

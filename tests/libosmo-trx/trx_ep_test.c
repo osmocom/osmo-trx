@@ -91,6 +91,11 @@ void osmo_trx_ep_rx_burst_req(struct osmo_trx_ep *ep, unsigned int chan,
 	       ep_label(ep), chan, osmo_trxd_burst_req_name(br));
 }
 
+static void ep_closed_cb(struct osmo_trx_ep *ep)
+{
+	printf("%s: closed_cb()\n", ep_label(ep));
+}
+
 static void fill_burst_req(struct osmo_trxd_burst_req *br, uint32_t fn)
 {
 	*br = (struct osmo_trxd_burst_req){
@@ -171,6 +176,7 @@ static void ep_close_free(struct osmo_trx_ep *ep)
 {
 	osmo_trx_ep_close(ep);
 	OSMO_ASSERT(osmo_trx_ep_is_open(ep) == false);
+	OSMO_ASSERT(osmo_trx_ep_is_closing(ep) == false);
 	osmo_trx_ep_free(ep);
 }
 
@@ -287,6 +293,61 @@ static void test_burst_req_ind(void)
 	ep_close_free(ep_bts);
 }
 
+static void test_ctrl_close_flush(bool do_free)
+{
+	struct osmo_trx_ep *ep_trx = ep_alloc("trx", OSMO_TRX_EP_MODE_TRX);
+	struct osmo_trx_ep *ep_bts = ep_alloc("bts", OSMO_TRX_EP_MODE_L1);
+
+	printf("=== %s(do_free=%d): starting testcase ===\n", __func__, (int)do_free);
+
+	ep_set_num_chans(ep_trx, 3);
+	ep_set_num_chans(ep_bts, 3);
+
+	ep_open(ep_trx);
+	ep_open(ep_bts);
+
+	static const struct osmo_trxc_msg cmd_rfmute = {
+		.type = OSMO_TRXC_MT_CMD,
+		.cmd = OSMO_TRXC_CMD_RFMUTE,
+		.params = "1",
+	};
+
+	static const struct osmo_trxc_msg cmd_poweroff = {
+		.type = OSMO_TRXC_MT_CMD,
+		.cmd = OSMO_TRXC_CMD_POWEROFF,
+	};
+
+	printf("=== %s(): TRXC CMDs sent right before osmo_trx_ep_close() (BTS -> TRX) ===\n", __func__);
+	osmo_trx_ep_send_ctrl_msg(ep_bts, 1, &cmd_rfmute);
+	osmo_trx_ep_send_ctrl_msg(ep_bts, 0, &cmd_poweroff);
+
+	osmo_trx_ep_set_closed_cb(ep_bts, ep_closed_cb);
+	osmo_trx_ep_close(ep_bts);
+	OSMO_ASSERT(osmo_trx_ep_is_open(ep_bts) == false);
+	OSMO_ASSERT(osmo_trx_ep_is_closing(ep_bts) == true);
+
+	/* osmo_trx_ep_open() is expected to fail while closing */
+	OSMO_ASSERT(osmo_trx_ep_open(ep_bts) == -EBUSY);
+	/* osmo_trx_ep_set_num_chans() is expected to fail too */
+	OSMO_ASSERT(osmo_trx_ep_set_num_chans(ep_bts, 16) == -EBUSY);
+
+	if (do_free) {
+		OSMO_ASSERT(talloc_parent(ep_bts) == test_ctx);
+		osmo_trx_ep_free(ep_bts); /* osmo_trx_ep_free() postpones the actual free() */
+		OSMO_ASSERT(talloc_parent(ep_bts) == OTC_GLOBAL);
+		OSMO_ASSERT(osmo_trx_ep_is_closing(ep_bts) == true);
+		OSMO_ASSERT(osmo_trx_ep_is_open(ep_bts) == false);
+		flush_io(); /* after flushing, the ep is finally free()ed! */
+	} else {
+		flush_io();
+		OSMO_ASSERT(osmo_trx_ep_is_closing(ep_bts) == false);
+		OSMO_ASSERT(osmo_trx_ep_is_open(ep_bts) == false);
+		ep_close_free(ep_bts);
+	}
+
+	ep_close_free(ep_trx);
+}
+
 int main(int argc, char **argv)
 {
 	test_ctx = talloc_named_const(NULL, 0, "trx_ep_test");
@@ -301,6 +362,8 @@ int main(int argc, char **argv)
 
 	test_clck_ctrl();
 	test_burst_req_ind();
+	test_ctrl_close_flush(false);
+	test_ctrl_close_flush(true);
 
 	printf("Done\n");
 	return 0;
