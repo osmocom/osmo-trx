@@ -58,9 +58,9 @@ static void fake_time_passes(time_t sec)
 	osmo_timers_update();
 }
 
-static int tx_msg_cb(struct osmo_trxc_client *client, const char *buf, size_t len)
+static int tx_msg_cb(struct osmo_trxc_client *client, const struct osmo_trxc_msg *msg)
 {
-	printf("tx_msg: '%s'\n", buf);
+	printf("tx_msg: '%s'\n", osmo_trxc_msg_name(msg));
 	return 0;
 }
 

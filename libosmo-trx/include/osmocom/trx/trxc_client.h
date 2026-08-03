@@ -29,17 +29,16 @@ typedef int osmo_trxc_client_rsp_cb(struct osmo_trxc_client *client,
 				    const struct osmo_trxc_msg *rsp,
 				    void *cb_data);
 
-/*! Transmit call-back, invoked to emit a serialized TRXC message (mandatory,
+/*! Transmit call-back, invoked to emit a parsed TRXC message (mandatory,
  *  see osmo_trxc_client_set_tx_msg_cb()).
- *  E.g. write() / osmo_iofd_write_msgb() on the app's ctrl socket.
+ *  E.g. osmo_trx_ep_send_ctrl_msg() for osmo_trx_ep users, or
+ *  osmo_trxc_msg_build() + write() on a self-managed ctrl socket.
  *  \param[in] client TRXC client instance
- *  \param[in] buf serialized TRXC message to transmit
- *  \param[in] len length of buf, in bytes
- *  \returns number of bytes transmitted on success; negative on error
- *	     (logged by the engine, otherwise ignored: the retransmit
- *	     timer still governs delivery) */
+ *  \param[in] msg TRXC message to transmit
+ *  \returns 0 on success; negative on error (logged by the engine,
+ *	     otherwise ignored: the retransmit timer still governs delivery) */
 typedef int osmo_trxc_client_tx_msg_cb(struct osmo_trxc_client *client,
-				       const char *buf, size_t len);
+				       const struct osmo_trxc_msg *msg);
 
 /*! Fatal error call-back, invoked when a critical command definitively fails
  *  (optional; default: log), see osmo_trxc_client_set_fatal_error_cb().
@@ -75,6 +74,8 @@ int osmo_trxc_client_send_cmd(struct osmo_trxc_client *client, uint32_t flags,
 			      const char *cmd, const char *fmt, ...);
 void osmo_trxc_client_flush(struct osmo_trxc_client *client);
 
+int osmo_trxc_client_rx_msg(struct osmo_trxc_client *client,
+			    const struct osmo_trxc_msg *rsp);
 int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t len);
 
 /*! TRXD PDU version negotiation result call-back.
