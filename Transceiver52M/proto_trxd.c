@@ -39,7 +39,7 @@ static void trxd_fill_v0_specific(struct trxd_hdr_v0_specific *v0, const struct 
 
 	/* in 1/256 symbols, round to closest integer */
 	toa_int = (int) lround(bi->toa * 256.0);
-	v0->rssi = bi->rssi;
+	v0->rssi = (uint8_t) lround(bi->rssi);
 	osmo_store16be(toa_int, &v0->toa);
 }
 
