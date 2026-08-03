@@ -38,7 +38,7 @@ static void trxd_fill_v0_specific(struct trxd_hdr_v0_specific *v0, const struct 
 	int toa_int;
 
 	/* in 1/256 symbols, round to closest integer */
-	toa_int = (int) (bi->toa * 256.0 + 0.5);
+	toa_int = (int) lround(bi->toa * 256.0);
 	v0->rssi = bi->rssi;
 	osmo_store16be(toa_int, &v0->toa);
 }
@@ -48,7 +48,7 @@ static void trxd_fill_v1_specific(struct trxd_hdr_v1_specific *v1, const struct 
 	int16_t ci_int_cB;
 
 	/* deciBels->centiBels, round to closest integer */
-	ci_int_cB = (int16_t)((bi->ci * 10) + 0.5);
+	ci_int_cB = (int16_t) lround(bi->ci * 10.0);
 
 	v1->idle = !!bi->idle;
 	v1->modulation = (bi->modulation == MODULATION_GMSK) ?
