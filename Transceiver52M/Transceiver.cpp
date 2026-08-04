@@ -57,6 +57,13 @@ Transceiver *transceiver;
 /* Number of running values use in noise average */
 #define NOISE_CNT			20
 
+/* Worst-case size of a batched TRXDv2 datagram (either direction): up to 8
+ * timeslots per frame, each sized as generously as a lone PDU
+ * (OSMO_TRXD_MSG_BUF_SIZE already covers header + max burst payload for one
+ * PDU; PDUs after the first omit the 4-byte FN, so this is a safe
+ * over-estimate, not a tight bound). */
+#define TRX_TRXD_BATCH_BUF_SIZE		(8 * OSMO_TRXD_MSG_BUF_SIZE)
+
 
 static void dispatch_trx_rate_ctr_change(TransceiverState *state, unsigned int chan) {
         thread_enable_cancel(false);
@@ -146,7 +153,7 @@ Transceiver::Transceiver(const struct trx_cfg *cfg,
     mTxPriorityQueueServiceLoopThreads(mChans), mTransmitLatency(wTransmitLatency), mRadioInterface(wRadioInterface),
     mOn(false),mForceClockInterface(false), mTxFreq(0.0), mRxFreq(0.0), mTSC(0), mMaxExpectedDelayAB(0),
     mMaxExpectedDelayNB(0), mWriteBurstToDiskMask(0), mVersionTRXD(mChans), mStates(mChans),
-    mBurstIndMsg(mChans)
+    mBurstIndMsg(mChans), mBurstIndBatchFn(mChans)
 {
   txFullScale = mRadioInterface->fullScaleInputValue();
   rxFullScale = mRadioInterface->fullScaleOutputValue();
@@ -156,8 +163,10 @@ Transceiver::Transceiver(const struct trx_cfg *cfg,
       mHandover[i][j] = false;
   }
 
+  /* Sized for the batched (TRXDv2) case, the larger of the two users of
+   * this buffer; also plenty for the single-PDU (TRXDv0/v1) case. */
   for (size_t i = 0; i < mChans; i++) {
-    mBurstIndMsg[i] = msgb_alloc(OSMO_TRXD_MSG_BUF_SIZE, "trxd_burst_ind");
+    mBurstIndMsg[i] = msgb_alloc(TRX_TRXD_BATCH_BUF_SIZE, "trxd_burst_ind");
     OSMO_ASSERT(mBurstIndMsg[i] != NULL);
   }
 }
@@ -373,6 +382,9 @@ void Transceiver::stop()
     mTxPriorityQueueServiceLoopThreads[i]->join();
     delete mRxServiceLoopThreads[i];
     delete mTxPriorityQueueServiceLoopThreads[i];
+
+    /* Rx thread is joined, so no concurrent access to the batch anymore */
+    flushBurstIndBatch(i);
 
     mTxPriorityQueues[i].clear();
   }
@@ -1093,29 +1105,9 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
   return 0;
 }
 
-bool Transceiver::driveTxPriorityQueue(size_t chan)
+bool Transceiver::handleBurstReq(size_t chan, const struct osmo_trxd_burst_req *br)
 {
-  char buffer[OSMO_TRXD_MSG_BUF_SIZE];
-  int msgLen;
-  struct osmo_trxd_parse_state st;
-  struct osmo_trxd_burst_req br;
-  int rc;
-
-  // check data socket
-  msgLen = read(mDataSockets[chan], buffer, sizeof(buffer));
-  if (msgLen <= 0) {
-    LOGCHAN(chan, DTRXDDL, NOTICE) << "mDataSockets read(" << mDataSockets[chan] << ") failed: " << msgLen;
-    return false;
-  }
-
-  osmo_trxd_parse_state_init(&st);
-  rc = osmo_trxd_burst_req_parse(&st, &br, (const uint8_t *) buffer, msgLen);
-  if (rc < 0) {
-    LOGCHAN(chan, DTRXDDL, ERROR) << "failed to parse BURST.req (rc=" << rc << ")";
-    return false;
-  }
-
-  switch (br.burst_len) {
+  switch (br->burst_len) {
   case gSlotLen: /* GSM burst */
     break;
   case EDGE_BURST_NBITS: /* EDGE burst */
@@ -1126,19 +1118,19 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
     break;
   default:
     LOGCHAN(chan, DTRXDDL, ERROR) << "badly formatted packet on GSM->TRX interface (burst_len="
-                                  << br.burst_len << ")";
+                                  << br->burst_len << ")";
     return false;
   }
 
-  LOGCHAN(chan, DTRXDDL, DEBUG) << "Rx TRXD message: fn=" << br.fn << ", tn=" << unsigned(br.tn)
-                                << ", burst_len=" << br.burst_len;
+  LOGCHAN(chan, DTRXDDL, DEBUG) << "Rx TRXD message: fn=" << br->fn << ", tn=" << unsigned(br->tn)
+                                << ", burst_len=" << br->burst_len;
 
   TransceiverState *state = &mStates[chan];
-  GSM::Time currTime = GSM::Time(br.fn, br.tn);
+  GSM::Time currTime = GSM::Time(br->fn, br->tn);
 
   /* Verify proper FN order in DL stream */
-  if (state->first_dl_fn_rcv[br.tn]) {
-    int32_t delta = GSM::FNDelta(currTime.FN(), state->last_dl_time_rcv[br.tn].FN());
+  if (state->first_dl_fn_rcv[br->tn]) {
+    int32_t delta = GSM::FNDelta(currTime.FN(), state->last_dl_time_rcv[br->tn].FN());
     if (delta == 1) {
         /* usual expected scenario, continue code flow */
     } else if (delta == 0) {
@@ -1148,7 +1140,7 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
       return true;
     } else if (delta < 0) {
       LOGCHAN(chan, DTRXDDL, INFO) << "Rx TRXD msg with previous FN " << currTime
-                                     << " vs last " << state->last_dl_time_rcv[br.tn];
+                                     << " vs last " << state->last_dl_time_rcv[br->tn];
        state->ctrs.tx_trxd_fn_outoforder++;
        dispatch_trx_rate_ctr_change(state, chan);
        /* Allow adding radio vector below, since it gets sorted in the queue */
@@ -1158,25 +1150,69 @@ bool Transceiver::driveTxPriorityQueue(size_t chan)
          * setups. Also, osmo-trx supports optionally filling empty bursts on
          * its own. In that case bts-trx is not obliged to submit all bursts. */
       LOGCHAN(chan, DTRXDDL, INFO) << "Rx TRXD msg with future FN " << currTime
-                                     << " vs last " << state->last_dl_time_rcv[br.tn]
+                                     << " vs last " << state->last_dl_time_rcv[br->tn]
                                      << ", " << delta - 1 << " FN lost";
       state->ctrs.tx_trxd_fn_skipped += delta - 1;
       dispatch_trx_rate_ctr_change(state, chan);
     }
     if (delta > 0)
-      state->last_dl_time_rcv[br.tn] = currTime;
+      state->last_dl_time_rcv[br->tn] = currTime;
   } else { /* Initial check, simply store state */
-    state->first_dl_fn_rcv[br.tn] = true;
-    state->last_dl_time_rcv[br.tn] = currTime;
+    state->first_dl_fn_rcv[br->tn] = true;
+    state->last_dl_time_rcv[br->tn] = currTime;
   }
 
-  BitVector newBurst(br.burst_len);
+  BitVector newBurst(br->burst_len);
   BitVector::iterator itr = newBurst.begin();
-  const ubit_t *bufferItr = br.burst;
+  const ubit_t *bufferItr = br->burst;
   while (itr < newBurst.end())
     *itr++ = *bufferItr++;
 
-  addRadioVector(chan, newBurst, br.att, currTime);
+  addRadioVector(chan, newBurst, br->att, currTime);
+
+  return true;
+}
+
+bool Transceiver::driveTxPriorityQueue(size_t chan)
+{
+  char buffer[TRX_TRXD_BATCH_BUF_SIZE];
+  int msgLen;
+  struct osmo_trxd_parse_state st;
+  struct osmo_trxd_burst_req br;
+  const uint8_t *pos;
+  size_t remain;
+  int rc;
+
+  // check data socket
+  msgLen = read(mDataSockets[chan], buffer, sizeof(buffer));
+  if (msgLen <= 0) {
+    LOGCHAN(chan, DTRXDDL, NOTICE) << "mDataSockets read(" << mDataSockets[chan] << ") failed: " << msgLen;
+    return false;
+  }
+
+  /* Normally a single PDU per datagram (TRXDv0/v1, or unbatched TRXDv2),
+   * but the BTS side may also send us a TRXDv2 batch (multiple PDUs for
+   * the same FN, one per timeslot): keep parsing while BATCH.ind is set. */
+  osmo_trxd_parse_state_init(&st);
+  pos = (const uint8_t *) buffer;
+  remain = (size_t) msgLen;
+
+  do {
+    rc = osmo_trxd_burst_req_parse(&st, &br, pos, remain);
+    /* rc == 0 shouldn't happen (a parsed PDU is never empty), but treat it
+     * as an error too: rc <= 0 here would leave pos/remain stuck, spinning
+     * this loop forever on a re-parse of the exact same input. */
+    if (rc <= 0) {
+      LOGCHAN(chan, DTRXDDL, ERROR) << "failed to parse BURST.req (rc=" << rc << ")";
+      return false;
+    }
+
+    if (!handleBurstReq(chan, &br))
+      return false;
+
+    pos += rc;
+    remain -= rc;
+  } while (br.flags & OSMO_TRXD_F_BATCH_IND);
 
   return true;
 }
@@ -1226,25 +1262,14 @@ void Transceiver::logRxBurst(size_t chan, const struct osmo_trxd_burst_ind *bi)
     << " bits: "   << os;
 }
 
-bool Transceiver::driveReceiveFIFO(size_t chan)
+
+bool Transceiver::sendBurstInd(size_t chan, const struct osmo_trxd_burst_ind *bi)
 {
-  struct osmo_trxd_burst_ind bi;
   struct msgb *msg;
   int rc;
 
-  if ((rc = pullRadioVector(chan, &bi)) < 0) {
-    if (rc == -ENOENT) { /* timeslot off, continue processing */
-      LOGCHAN(chan, DTRXDUL, DEBUG) << unsigned(bi.tn) << ":" << bi.fn << " timeslot is off";
-      return true;
-    }
-    return false; /* other errors: we want to stop the process */
-  }
-
-  if (!(bi.flags & OSMO_TRXD_F_NOPE_IND) && log_check_level(DTRXDUL, LOGL_DEBUG))
-    logRxBurst(chan, &bi);
-
   msg = mBurstIndMsg[chan];
-  rc = osmo_trxd_burst_ind_build(msg, mVersionTRXD[chan], &bi);
+  rc = osmo_trxd_burst_ind_build(msg, mVersionTRXD[chan], bi);
   if (rc < 0) {
     LOGCHAN(chan, DTRXDUL, ERROR) << "failed to build BURST.ind (rc=" << rc << ")";
     msgb_trim(msg, 0);
@@ -1260,6 +1285,74 @@ bool Transceiver::driveReceiveFIFO(size_t chan)
   }
 
   return true;
+}
+
+bool Transceiver::flushBurstIndBatch(size_t chan)
+{
+  struct msgb *msg = mBurstIndMsg[chan];
+  int rc;
+
+  if (msgb_length(msg) == 0)
+    return true; /* nothing accumulated */
+
+  osmo_trxd_build_fin(msg, mVersionTRXD[chan]);
+
+  rc = write(mDataSockets[chan], msgb_data(msg), msgb_length(msg));
+  msgb_trim(msg, 0);
+  if (rc < 0) {
+    LOGCHAN(chan, DTRXDUL, NOTICE) << "mDataSockets write(" << mDataSockets[chan] << ") failed: " << rc;
+    return false;
+  }
+
+  return true;
+}
+
+bool Transceiver::queueBurstIndBatched(size_t chan, const struct osmo_trxd_burst_ind *bi)
+{
+  struct msgb *msg = mBurstIndMsg[chan];
+  int rc;
+
+  if (msgb_length(msg) > 0 && mBurstIndBatchFn[chan] != bi->fn) {
+    /* previous frame's batch is complete (a PDU for a new FN showed up) */
+    if (!flushBurstIndBatch(chan))
+      return false;
+  }
+
+  if (msgb_length(msg) == 0)
+    mBurstIndBatchFn[chan] = bi->fn;
+
+  rc = osmo_trxd_burst_ind_build(msg, mVersionTRXD[chan], bi);
+  if (rc < 0) {
+    LOGCHAN(chan, DTRXDUL, ERROR) << "failed to build batched BURST.ind (rc=" << rc << ")";
+    msgb_trim(msg, 0);
+    return false;
+  }
+
+  return true;
+}
+
+bool Transceiver::driveReceiveFIFO(size_t chan)
+{
+  struct osmo_trxd_burst_ind bi;
+  int rc;
+
+  if ((rc = pullRadioVector(chan, &bi)) < 0) {
+    if (rc == -ENOENT) { /* timeslot off, continue processing */
+      LOGCHAN(chan, DTRXDUL, DEBUG) << unsigned(bi.tn) << ":" << bi.fn << " timeslot is off";
+      return true;
+    }
+    return false; /* other errors: we want to stop the process */
+  }
+
+  if (!(bi.flags & OSMO_TRXD_F_NOPE_IND) && log_check_level(DTRXDUL, LOGL_DEBUG))
+    logRxBurst(chan, &bi);
+
+  /* TODO: make batching configurable via VTY, so it can be disabled even
+   * when TRXDv2 is negotiated (e.g. to trade datagram count for latency) */
+  if (mVersionTRXD[chan] < 2)
+    return sendBurstInd(chan, &bi);
+
+  return queueBurstIndBatched(chan, &bi);
 }
 
 void Transceiver::driveTxFIFO()

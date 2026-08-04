@@ -44,7 +44,7 @@ class Transceiver;
 extern Transceiver *transceiver;
 
 /* The latest TRXD header format version advertised/accepted by this TRX implementation */
-#define TRX_DATA_FORMAT_VER	1
+#define TRX_DATA_FORMAT_VER	2
 
 /** Channel descriptor for transceiver object and channel number pair */
 struct TrxChanThParams {
@@ -209,6 +209,19 @@ struct ctrl_sock_state {
   /** Pull and demodulate a burst from the receive FIFO */
   int pullRadioVector(size_t chan, struct osmo_trxd_burst_ind *ind);
 
+  /** Send one BURST.ind PDU as its own datagram (TRXDv0/v1) */
+  bool sendBurstInd(size_t chan, const struct osmo_trxd_burst_ind *bi);
+
+  /** Append one BURST.ind PDU to the per-channel TRXDv2 batch, flushing the
+   *  previous frame's batch first if this PDU belongs to a new frame */
+  bool queueBurstIndBatched(size_t chan, const struct osmo_trxd_burst_ind *bi);
+
+  /** Write out and reset the accumulated TRXDv2 batch for a channel, if any */
+  bool flushBurstIndBatch(size_t chan);
+
+  /** Handle one parsed BURST.req PDU (one out of a batch, or a lone one) */
+  bool handleBurstReq(size_t chan, const struct osmo_trxd_burst_req *br);
+
   /** Set modulus for specific timeslot */
   void setModulus(size_t timeslot, size_t chan);
 
@@ -238,10 +251,21 @@ struct ctrl_sock_state {
   std::vector<unsigned> mVersionTRXD;  ///< Format version to use for TRXD protocol communication, per channel
   std::vector<TransceiverState> mStates;
 
-  /* Per-channel BURST.ind scratch buffer (driveReceiveFIFO()): allocated
-   * once in the constructor, then reused (trimmed, not freed) for every
-   * burst to avoid an alloc/free pair on the Rx hot path. */
+  /* Per-channel BURST.ind Tx scratch buffer (sendBurstInd(),
+   * queueBurstIndBatched()/flushBurstIndBatch()): allocated once in the
+   * constructor, then reused (trimmed, not freed) for every burst to avoid
+   * an alloc/free pair on the Rx hot path.
+   *
+   * Doubles as the TRXDv2 uplink PDU batching accumulator (see
+   * osmo-gsm-manuals trx_if.adoc, combination "b"): all BURST.ind PDUs for
+   * one TDMA frame on a given channel are accumulated into a single
+   * datagram, flushed once the next frame's PDU arrives (i.e. keyed off a
+   * change in FN, not off tn==7, since not every timeslot is necessarily
+   * active). Batching across channels (TRXN) is not supported. A channel
+   * only ever exercises one of the two usages, decided once by the
+   * negotiated TRXD version (mVersionTRXD), so the two never conflict. */
   std::vector<struct msgb *> mBurstIndMsg;
+  std::vector<uint32_t> mBurstIndBatchFn;
 
   /** Start and stop I/O threads through the control socket API */
   bool start();
