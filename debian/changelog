@@ -1,3 +1,36 @@
+osmo-trx (1.8.0) unstable; urgency=medium
+
+  [ Pau Espin Pedrol ]
+  * Drop logging of stderr loglvel at startup
+  * configure.ac: Update deprecated AC_PROG_LIBTOOL to LT_INIT
+  * Depend on libosmogsm explicitly
+  * configure.ac: Avoid building shared libraries by default
+  * ipc: Makefile.am: Pick already compiled UHDDevice.o object
+  * Drop libusb dependency
+
+  [ Oliver Smith ]
+  * checkpatch.conf: lint more code
+  * debian/*.install: make paths consistent
+
+  [ Timur Davydov ]
+  * fix(threads): centralize portable strerror handling
+  * radio: improve API documentation in RadioDevice
+  * build: add --disable-multi-arfcn configure option
+  * transceiver: make control command parsing arguments const
+  * transceiver: replace sprintf() with snprintf() in ctrl_sock_handle_rx
+
+  [ Jack Lee ]
+  * trx-usrp1: make single daughterboard VTY configurable
+
+  [ Manawyrm ]
+  * Transceiver52M: fix viterbi-eq soft bits on platforms where char is unsigned
+
+  [ Vadim Yanitskiy ]
+  * tests: speed up InterthreadTest by shrinking the fuzz sleep
+  * .gitignore: add doc/manuals/vty/osmotrx-*-vty-reference.{pdf,xml.inc}
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Thu, 20 Aug 2026 12:55:26 +0200
+
 osmo-trx (1.7.2) unstable; urgency=medium
 
   [ Pau Espin Pedrol ]
