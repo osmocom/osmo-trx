@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include <osmocom/core/utils.h>
 #include <osmocom/core/talloc.h>
 #include <osmocom/core/linuxlist.h>
 
@@ -33,10 +34,12 @@
 
 #include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/trx.h>
+#include <osmocom/proxy/clck_gen.h>
 #include <osmocom/proxy/logging.h>
 
 struct proxy_trx *proxy_trx_alloc(struct proxy_ctx *proxy, const char *name)
 {
+	const unsigned int num_chans = 1;
 	struct proxy_trx *trx;
 
 	trx = talloc_zero(proxy, struct proxy_trx);
@@ -44,11 +47,12 @@ struct proxy_trx *proxy_trx_alloc(struct proxy_ctx *proxy, const char *name)
 		return NULL;
 
 	trx->name = talloc_strdup(trx, name);
-	trx->ep = osmo_trx_ep_alloc(trx, 1);
+	trx->ep = osmo_trx_ep_alloc(trx, num_chans);
 	if (trx->ep == NULL) {
 		talloc_free(trx);
 		return NULL;
 	}
+	proxy_trx_set_num_chans(trx, num_chans);
 
 	osmo_trx_ep_set_priv(trx->ep, trx);
 	osmo_trx_ep_set_name(trx->ep, "%s", name);
@@ -86,9 +90,24 @@ void proxy_trx_free(struct proxy_trx *trx)
 {
 	if (!trx)
 		return;
+	proxy_trx_set_power(trx, false);
 	osmo_trx_ep_free(trx->ep);
 	llist_del(&trx->list);
 	talloc_free(trx);
+}
+
+/*! Update the endpoint's power state;
+ * (de)registers it with the TDMA clock generator as appropriate. */
+void proxy_trx_set_power(struct proxy_trx *trx, bool on)
+{
+	if (trx->powered == on)
+		return;
+
+	LOGP_TRX(trx, DTRXC, LOGL_INFO,
+		 "Power %s\n", on ? "on" : "off");
+
+	trx->powered = on;
+	clck_gen_trx_list_updated();
 }
 
 int proxy_trx_open(struct proxy_trx *trx)
@@ -104,5 +123,23 @@ int proxy_trx_open(struct proxy_trx *trx)
 		return rc;
 	}
 
+	if (rc == 0) { /* first successful open: num_chans is now fixed */
+		trx->chans = talloc_zero_array(trx, struct proxy_trx_chan, trx->num_chans);
+		OSMO_ASSERT(trx->chans != NULL);
+	}
+
+	return 0;
+}
+
+/*! Change the number of channels; must be called before proxy_trx_open(). */
+int proxy_trx_set_num_chans(struct proxy_trx *trx, unsigned int num_chans)
+{
+	int rc;
+
+	rc = osmo_trx_ep_set_num_chans(trx->ep, num_chans);
+	if (rc)
+		return rc;
+
+	trx->num_chans = num_chans;
 	return 0;
 }

@@ -179,9 +179,9 @@ DEFUN(cfg_ep_num_chans,
 	int num_chans = atoi(argv[0]);
 	int rc;
 
-	rc = osmo_trx_ep_set_num_chans(trx->ep, num_chans);
+	rc = proxy_trx_set_num_chans(trx, num_chans);
 	if (rc) {
-		vty_out(vty, "%% osmo_trx_ep_set_num_chans(%d) failed: rc=%d%s",
+		vty_out(vty, "%% proxy_trx_set_num_chans(%d) failed: rc=%d%s",
 			num_chans, rc, VTY_NEWLINE);
 		return CMD_WARNING;
 	}
@@ -231,7 +231,7 @@ static int config_write_proxy(struct vty *vty)
 		if (laddr && strcmp(laddr, g_proxy_ctx->bind_addr) != 0)
 			vty_out(vty, "  bind-addr %s%s", laddr, VTY_NEWLINE);
 		vty_out(vty, "  base-port %u%s", osmo_trx_ep_get_base_port(trx->ep), VTY_NEWLINE);
-		vty_out(vty, "  num-chans %u%s", osmo_trx_ep_get_num_chans(trx->ep), VTY_NEWLINE);
+		vty_out(vty, "  num-chans %u%s", trx->num_chans, VTY_NEWLINE);
 
 		if (!osmo_trx_ep_get_clock_socket(trx->ep))
 			vty_out(vty, "  no clock-socket%s", VTY_NEWLINE);

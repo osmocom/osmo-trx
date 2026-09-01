@@ -42,6 +42,7 @@
 #include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/vty.h>
 #include <osmocom/proxy/trx.h>
+#include <osmocom/proxy/clck_gen.h>
 #include <osmocom/proxy/logging.h>
 
 void *g_talloc_ctx;
@@ -118,6 +119,11 @@ int main(int argc, char **argv)
 	log_set_print_filename_pos(osmo_stderr_target, LOG_FILENAME_POS_LINE_END);
 
 	proxy_vty_init();
+
+	if (clck_gen_init() < 0) {
+		LOGP(DPROXY, LOGL_FATAL, "Failed to set up the TDMA clock generator\n");
+		return 1;
+	}
 
 	handle_options(argc, argv);
 

@@ -18,6 +18,8 @@ osmo_trx_proxy_SOURCES = \
 	proxy.c \
 	vty.c \
 	trx.c \
+	clck_gen.c \
+	ctrl_cmd.c \
 	logging.c \
 	$(NULL)
 
