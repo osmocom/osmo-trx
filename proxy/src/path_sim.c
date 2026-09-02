@@ -27,6 +27,7 @@
 
 #include <osmocom/trx/trxd.h>
 
+#include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/trx.h>
 #include <osmocom/proxy/path_sim.h>
 
@@ -118,4 +119,35 @@ void path_sim_apply(struct osmo_trxd_burst_ind *bi,
 
 	bi->ci_cb = dst->path_sim.ci + path_sim_jitter(dst->path_sim.ci_jitter);
 	bi->flags |= OSMO_TRXD_F_CI_CB;
+}
+
+static int path_sim_measure_rssi(const struct proxy_trx_chan *tx)
+{
+	if (tx->path_sim.flags & PATH_SIM_F_FAKE_RSSI)
+		return tx->path_sim.rssi;
+
+	return (tx->path_sim.tx_power - tx->path_sim.tx_att) - PATH_SIM_PATH_LOSS_DEFAULT;
+}
+
+/*! Emulate a power measurement (MEASURE CTRL command) on a given Tx
+ * frequency: if some powered-on channel is currently transmitting on it,
+ * return the RSSI it would be measured at (same path-loss formula, or
+ * FAKE_RSSI override, as path_sim_apply()); otherwise return rssi_noise. */
+int path_sim_measure(uint32_t freq_hz, int rssi_noise)
+{
+	struct proxy_trx *trx;
+
+	llist_for_each_entry(trx, &g_proxy_ctx->trx_list, list) {
+		unsigned int chan;
+
+		if (!trx->powered)
+			continue;
+
+		for (chan = 0; chan < trx->num_chans; chan++) {
+			if (trx->chans[chan].tx_freq == freq_hz)
+				return path_sim_measure_rssi(&trx->chans[chan]);
+		}
+	}
+
+	return rssi_noise;
 }

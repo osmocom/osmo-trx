@@ -30,3 +30,4 @@ void path_sim_apply(struct osmo_trxd_burst_ind *bi,
 		    struct proxy_trx_chan *dst,
 		    const struct osmo_trxd_burst_req *br,
 		    const struct proxy_trx_chan *src);
+int path_sim_measure(uint32_t freq_hz, int rssi_noise);

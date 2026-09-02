@@ -29,6 +29,7 @@
 #include <osmocom/trx/ep.h>
 #include <osmocom/trx/trxc.h>
 
+#include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/trx.h>
 #include <osmocom/proxy/path_sim.h>
 #include <osmocom/proxy/logging.h>
@@ -36,6 +37,7 @@
 /* Not part of the well-known OSMO_TRXC_CMD_* verbs (libosmo-trx/trxc.h) since
  * they are specific to this transceiver's RF path simulation. */
 #define CTRL_CMD_SETTA		"SETTA"
+#define CTRL_CMD_MEASURE	"MEASURE"
 #define CTRL_CMD_FAKE_TOA	"FAKE_TOA"
 #define CTRL_CMD_FAKE_RSSI	"FAKE_RSSI"
 #define CTRL_CMD_FAKE_CI	"FAKE_CI"
@@ -274,6 +276,23 @@ static void ctrl_cmd_fake_drop(struct proxy_trx *trx, unsigned int chan,
 		  "Dropping %d burst(s), every %d frame(s)\n", amount, period);
 }
 
+static void ctrl_cmd_measure(struct proxy_trx *trx, unsigned int chan,
+			     const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	int freq_khz, rssi;
+
+	if (osmo_trxc_msg_params_scan(cmd, "%d", &freq_khz) != 1) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to parse target frequency: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		rsp->status = 1;
+		return;
+	}
+
+	rssi = path_sim_measure(freq_khz * 1000, g_proxy_ctx->path_sim_noise_dbm);
+	snprintf(rsp->params, sizeof(rsp->params), "%d %d", freq_khz, rssi);
+}
+
 void osmo_trx_ep_rx_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 			     const struct osmo_trxc_msg *cmd)
 {
@@ -304,6 +323,8 @@ void osmo_trx_ep_rx_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 		ctrl_cmd_rfmute(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_SETTA)) {
 		ctrl_cmd_setta(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, CTRL_CMD_MEASURE)) {
+		ctrl_cmd_measure(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_FAKE_TOA)) {
 		ctrl_cmd_fake_toa(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_FAKE_RSSI)) {

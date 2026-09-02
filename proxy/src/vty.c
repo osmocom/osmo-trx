@@ -91,6 +91,19 @@ DEFUN(cfg_proxy_bind_addr,
 	return CMD_SUCCESS;
 }
 
+DEFUN(cfg_proxy_pm_rssi_noise,
+      cfg_proxy_pm_rssi_noise_cmd,
+      "pm-rssi-noise <-150-0>",
+      "Set the RSSI reported by MEASURE for a frequency with no Tx found\n"
+      "RSSI in dBm\n")
+{
+	struct proxy_ctx *proxy = vty->index;
+
+	proxy->path_sim_noise_dbm = atoi(argv[0]);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_proxy_ep,
       cfg_proxy_ep_cmd,
       "ep NAME",
@@ -220,6 +233,7 @@ static int config_write_proxy(struct vty *vty)
 	vty_out(vty, "proxy%s", VTY_NEWLINE);
 	if (g_proxy_ctx->bind_addr)
 		vty_out(vty, " bind-addr %s%s", g_proxy_ctx->bind_addr, VTY_NEWLINE);
+	vty_out(vty, " pm-rssi-noise %d%s", g_proxy_ctx->path_sim_noise_dbm, VTY_NEWLINE);
 
 	llist_for_each_entry(trx, &g_proxy_ctx->trx_list, list) {
 		const char *raddr = osmo_trx_ep_get_raddr(trx->ep);
@@ -322,6 +336,7 @@ int proxy_vty_init(void)
 	install_element(CONFIG_NODE, &cfg_proxy_cmd);
 	install_node(&proxy_node, config_write_proxy);
 	install_element(PROXY_NODE, &cfg_proxy_bind_addr_cmd);
+	install_element(PROXY_NODE, &cfg_proxy_pm_rssi_noise_cmd);
 	install_element(PROXY_NODE, &cfg_proxy_ep_cmd);
 	install_element(PROXY_NODE, &cfg_no_proxy_ep_cmd);
 

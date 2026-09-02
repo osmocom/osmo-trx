@@ -45,6 +45,7 @@ struct proxy_ctx *proxy_ctx_alloc(void *talloc_ctx)
 		return NULL;
 
 	proxy->bind_addr = talloc_strdup(proxy, PROXY_DEFAULT_BIND_ADDR);
+	proxy->path_sim_noise_dbm = PROXY_DEFAULT_PM_RSSI_NOISE;
 	INIT_LLIST_HEAD(&proxy->trx_list);
 
 	return proxy;

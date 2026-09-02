@@ -13,8 +13,12 @@
 #define PROXY_DEFAULT_MS_NAME		"ms"
 #define PROXY_DEFAULT_MS_PORT		6700
 
+/*! RSSI (dBm) reported by MEASURE for a frequency with no Tx found on it */
+#define PROXY_DEFAULT_PM_RSSI_NOISE	-110
+
 struct proxy_ctx {
 	char *bind_addr;
+	int path_sim_noise_dbm; /*!< dBm, MEASURE result for frequencies with no Tx found */
 	struct llist_head trx_list; /*!< struct proxy_trx::list */
 };
 
