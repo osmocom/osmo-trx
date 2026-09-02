@@ -289,7 +289,7 @@ static void ctrl_cmd_measure(struct proxy_trx *trx, unsigned int chan,
 		return;
 	}
 
-	rssi = path_sim_measure(freq_khz * 1000, g_proxy_ctx->path_sim_noise_dbm);
+	rssi = path_sim_measure(freq_khz * 1000, g_proxy_ctx->path_sim);
 	snprintf(rsp->params, sizeof(rsp->params), "%d %d", freq_khz, rssi);
 }
 

@@ -41,6 +41,7 @@
 #include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/vty.h>
 #include <osmocom/proxy/trx.h>
+#include <osmocom/proxy/path_sim.h>
 
 extern void *g_talloc_ctx;
 
@@ -99,7 +100,46 @@ DEFUN(cfg_proxy_pm_rssi_noise,
 {
 	struct proxy_ctx *proxy = vty->index;
 
-	proxy->path_sim_noise_dbm = atoi(argv[0]);
+	path_sim_cfg_set_noise_dbm(proxy->path_sim, atoi(argv[0]));
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_proxy_path_loss,
+      cfg_proxy_path_loss_cmd,
+      "path-loss <0-200>",
+      "Set the simulated RF path loss used to compute the reported RSSI\n"
+      "Path loss in dB\n")
+{
+	struct proxy_ctx *proxy = vty->index;
+
+	path_sim_cfg_set_path_loss_db(proxy->path_sim, atoi(argv[0]));
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_proxy_nom_toa256,
+      cfg_proxy_nom_toa256_cmd,
+      "nominal-toa256 <-32768-32767>",
+      "Set the default reported ToA for a forwarded burst\n"
+      "ToA in 1/256 of a symbol period\n")
+{
+	struct proxy_ctx *proxy = vty->index;
+
+	path_sim_cfg_set_nom_toa256(proxy->path_sim, atoi(argv[0]));
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_proxy_nom_ci,
+      cfg_proxy_nom_ci_cmd,
+      "nominal-ci <-1280-1280>",
+      "Set the default reported C/I for a forwarded burst\n"
+      "C/I in centiBels\n")
+{
+	struct proxy_ctx *proxy = vty->index;
+
+	path_sim_cfg_set_nom_ci_cb(proxy->path_sim, atoi(argv[0]));
 
 	return CMD_SUCCESS;
 }
@@ -202,6 +242,20 @@ DEFUN(cfg_ep_num_chans,
 	return CMD_SUCCESS;
 }
 
+DEFUN(cfg_ep_tx_power,
+      cfg_ep_tx_power_cmd,
+      "tx-power <-100-100>",
+      "Set the nominal Tx power reported by NOMTXPOWER and used to compute "
+      "the RSSI of bursts sent from this endpoint\n"
+      "Tx power in dBm\n")
+{
+	struct proxy_trx *trx = vty->index;
+
+	trx->tx_power = atoi(argv[0]);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_ep_clock_socket,
       cfg_ep_clock_socket_cmd,
       "clock-socket",
@@ -233,7 +287,10 @@ static int config_write_proxy(struct vty *vty)
 	vty_out(vty, "proxy%s", VTY_NEWLINE);
 	if (g_proxy_ctx->bind_addr)
 		vty_out(vty, " bind-addr %s%s", g_proxy_ctx->bind_addr, VTY_NEWLINE);
-	vty_out(vty, " pm-rssi-noise %d%s", g_proxy_ctx->path_sim_noise_dbm, VTY_NEWLINE);
+	vty_out(vty, " pm-rssi-noise %d%s", path_sim_cfg_get_noise_dbm(g_proxy_ctx->path_sim), VTY_NEWLINE);
+	vty_out(vty, " path-loss %d%s", path_sim_cfg_get_path_loss_db(g_proxy_ctx->path_sim), VTY_NEWLINE);
+	vty_out(vty, " nominal-toa256 %d%s", path_sim_cfg_get_nom_toa256(g_proxy_ctx->path_sim), VTY_NEWLINE);
+	vty_out(vty, " nominal-ci %d%s", path_sim_cfg_get_nom_ci_cb(g_proxy_ctx->path_sim), VTY_NEWLINE);
 
 	llist_for_each_entry(trx, &g_proxy_ctx->trx_list, list) {
 		const char *raddr = osmo_trx_ep_get_raddr(trx->ep);
@@ -246,6 +303,7 @@ static int config_write_proxy(struct vty *vty)
 			vty_out(vty, "  bind-addr %s%s", laddr, VTY_NEWLINE);
 		vty_out(vty, "  base-port %u%s", osmo_trx_ep_get_base_port(trx->ep), VTY_NEWLINE);
 		vty_out(vty, "  num-chans %u%s", trx->num_chans, VTY_NEWLINE);
+		vty_out(vty, "  tx-power %d%s", trx->tx_power, VTY_NEWLINE);
 
 		if (!osmo_trx_ep_get_clock_socket(trx->ep))
 			vty_out(vty, "  no clock-socket%s", VTY_NEWLINE);
@@ -337,6 +395,9 @@ int proxy_vty_init(void)
 	install_node(&proxy_node, config_write_proxy);
 	install_element(PROXY_NODE, &cfg_proxy_bind_addr_cmd);
 	install_element(PROXY_NODE, &cfg_proxy_pm_rssi_noise_cmd);
+	install_element(PROXY_NODE, &cfg_proxy_path_loss_cmd);
+	install_element(PROXY_NODE, &cfg_proxy_nom_toa256_cmd);
+	install_element(PROXY_NODE, &cfg_proxy_nom_ci_cmd);
 	install_element(PROXY_NODE, &cfg_proxy_ep_cmd);
 	install_element(PROXY_NODE, &cfg_no_proxy_ep_cmd);
 
@@ -345,6 +406,7 @@ int proxy_vty_init(void)
 	install_element(EP_NODE, &cfg_ep_bind_addr_cmd);
 	install_element(EP_NODE, &cfg_ep_base_port_cmd);
 	install_element(EP_NODE, &cfg_ep_num_chans_cmd);
+	install_element(EP_NODE, &cfg_ep_tx_power_cmd);
 	install_element(EP_NODE, &cfg_ep_clock_socket_cmd);
 	install_element(EP_NODE, &cfg_ep_no_clock_socket_cmd);
 

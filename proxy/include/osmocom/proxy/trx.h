@@ -11,6 +11,9 @@
 struct osmo_trx_ep;
 struct proxy_ctx;
 
+/*! dBm, nominal Tx power (per endpoint) */
+#define PROXY_TRX_DEFAULT_TX_POWER	50
+
 /*! Per-channel state: each channel is conceptually its own (child)
  * transceiver with an independent Rx/Tx frequency, sharing the endpoint's
  * power state and clock. */
@@ -27,6 +30,7 @@ struct proxy_trx {
 	char *name;
 	struct osmo_trx_ep *ep;
 	bool powered;		/*!< POWERON/POWEROFF applies to all channels at once */
+	int tx_power;		/*!< dBm, nominal Tx power (path_sim_state::tx_power) */
 	unsigned int num_chans;	/*!< mirrors osmo_trx_ep_get_num_chans(ep) */
 	struct proxy_trx_chan *chans; /*!< array of num_chans entries, allocated on open */
 };

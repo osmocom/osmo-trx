@@ -25,35 +25,103 @@
 
 #include <stdlib.h>
 
+#include <osmocom/core/talloc.h>
+
 #include <osmocom/trx/trxd.h>
 
 #include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/trx.h>
 #include <osmocom/proxy/path_sim.h>
 
-#define PATH_SIM_NOMINAL_TX_POWER_DEFAULT	50	/* dBm */
-#define PATH_SIM_TX_ATT_DEFAULT			0	/* dB */
-#define PATH_SIM_PATH_LOSS_DEFAULT		110	/* dB */
-#define PATH_SIM_CI_DEFAULT			90	/* cB */
+/* Defaults for struct path_sim_cfg */
+#define PATH_SIM_CFG_DEFAULT_NOISE_DBM		-110
+#define PATH_SIM_CFG_DEFAULT_PATH_LOSS_DB	110
+#define PATH_SIM_CFG_DEFAULT_TOA256		0
+#define PATH_SIM_CFG_DEFAULT_CI_CB		90
 
 /* Values reported for NOPE.ind (burst dropped / RF muted) */
 #define PATH_SIM_TOA256_NOISE_DEFAULT		0
 #define PATH_SIM_RSSI_NOISE_DEFAULT		-110
 #define PATH_SIM_CI_NOISE_DEFAULT		-30
 
-/*! Reset a channel's RF path simulation state to nominal defaults. */
-void path_sim_state_reset(struct path_sim_state *ps)
+/*! Global RF path simulation configuration (see path_sim.h). */
+struct path_sim_cfg {
+	int noise_dbm;		/*!< dBm, MEASURE result for frequencies with no Tx found */
+	int path_loss_db;	/*!< dB, RF path loss used by the RSSI formula */
+	int nom_toa256;		/*!< default reported ToA for BURST.ind, 1/256 symbol periods */
+	int nom_ci_cb;		/*!< default reported C/I for BURST.ind, in cB */
+};
+
+/*! Global RF path simulation configuration. Opaque; use the accessors below. */
+struct path_sim_cfg *path_sim_cfg_alloc(void *talloc_ctx)
+{
+	struct path_sim_cfg *cfg;
+
+	cfg = talloc_zero(talloc_ctx, struct path_sim_cfg);
+	if (cfg == NULL)
+		return NULL;
+
+	cfg->noise_dbm = PATH_SIM_CFG_DEFAULT_NOISE_DBM;
+	cfg->path_loss_db = PATH_SIM_CFG_DEFAULT_PATH_LOSS_DB;
+	cfg->nom_toa256 = PATH_SIM_CFG_DEFAULT_TOA256;
+	cfg->nom_ci_cb = PATH_SIM_CFG_DEFAULT_CI_CB;
+
+	return cfg;
+}
+
+void path_sim_cfg_set_noise_dbm(struct path_sim_cfg *cfg, int noise_dbm)
+{
+	cfg->noise_dbm = noise_dbm;
+}
+
+int path_sim_cfg_get_noise_dbm(const struct path_sim_cfg *cfg)
+{
+	return cfg->noise_dbm;
+}
+
+void path_sim_cfg_set_path_loss_db(struct path_sim_cfg *cfg, int path_loss_db)
+{
+	cfg->path_loss_db = path_loss_db;
+}
+
+int path_sim_cfg_get_path_loss_db(const struct path_sim_cfg *cfg)
+{
+	return cfg->path_loss_db;
+}
+
+void path_sim_cfg_set_nom_toa256(struct path_sim_cfg *cfg, int nom_toa256)
+{
+	cfg->nom_toa256 = nom_toa256;
+}
+
+int path_sim_cfg_get_nom_toa256(const struct path_sim_cfg *cfg)
+{
+	return cfg->nom_toa256;
+}
+
+void path_sim_cfg_set_nom_ci_cb(struct path_sim_cfg *cfg, int nom_ci_cb)
+{
+	cfg->nom_ci_cb = nom_ci_cb;
+}
+
+int path_sim_cfg_get_nom_ci_cb(const struct path_sim_cfg *cfg)
+{
+	return cfg->nom_ci_cb;
+}
+
+/*! Reset a channel's RF path simulation state to the given nominal Tx power,
+ * ToA and C/I defaults. */
+void path_sim_state_reset(struct path_sim_state *ps, int tx_power, int toa256, int ci)
 {
 	ps->flags = 0;
-	ps->tx_power = PATH_SIM_NOMINAL_TX_POWER_DEFAULT;
-	ps->tx_att = PATH_SIM_TX_ATT_DEFAULT;
+	ps->tx_power = tx_power;
+	ps->tx_att = 0;
 	ps->ta = 0;
-	ps->toa256 = 0;
+	ps->toa256 = toa256;
 	ps->toa256_jitter = 0;
-	ps->rssi = PATH_SIM_NOMINAL_TX_POWER_DEFAULT -
-		   PATH_SIM_TX_ATT_DEFAULT - PATH_SIM_PATH_LOSS_DEFAULT;
+	ps->rssi = 0; /* unused unless PATH_SIM_F_FAKE_RSSI is set */
 	ps->rssi_jitter = 0;
-	ps->ci = PATH_SIM_CI_DEFAULT;
+	ps->ci = ci;
 	ps->ci_jitter = 0;
 	ps->burst_drop_amount = 0;
 	ps->burst_drop_period = 1;
@@ -88,7 +156,8 @@ static int path_sim_jitter(int threshold)
 void path_sim_apply(struct osmo_trxd_burst_ind *bi,
 		    struct proxy_trx_chan *dst,
 		    const struct osmo_trxd_burst_req *br,
-		    const struct proxy_trx_chan *src)
+		    const struct proxy_trx_chan *src,
+		    const struct path_sim_cfg *cfg)
 {
 	bool nope = bi->flags & OSMO_TRXD_F_NOPE_IND;
 
@@ -114,26 +183,27 @@ void path_sim_apply(struct osmo_trxd_burst_ind *bi,
 		bi->rssi = dst->path_sim.rssi + path_sim_jitter(dst->path_sim.rssi_jitter);
 	} else {
 		int tx_power = src->path_sim.tx_power - src->path_sim.tx_att;
-		bi->rssi = tx_power - (int)br->att - PATH_SIM_PATH_LOSS_DEFAULT;
+		bi->rssi = tx_power - (int)br->att - cfg->path_loss_db;
 	}
 
 	bi->ci_cb = dst->path_sim.ci + path_sim_jitter(dst->path_sim.ci_jitter);
 	bi->flags |= OSMO_TRXD_F_CI_CB;
 }
 
-static int path_sim_measure_rssi(const struct proxy_trx_chan *tx)
+static int path_sim_measure_rssi(const struct proxy_trx_chan *tx, const struct path_sim_cfg *cfg)
 {
 	if (tx->path_sim.flags & PATH_SIM_F_FAKE_RSSI)
 		return tx->path_sim.rssi;
 
-	return (tx->path_sim.tx_power - tx->path_sim.tx_att) - PATH_SIM_PATH_LOSS_DEFAULT;
+	return (tx->path_sim.tx_power - tx->path_sim.tx_att) - cfg->path_loss_db;
 }
 
 /*! Emulate a power measurement (MEASURE CTRL command) on a given Tx
  * frequency: if some powered-on channel is currently transmitting on it,
  * return the RSSI it would be measured at (same path-loss formula, or
- * FAKE_RSSI override, as path_sim_apply()); otherwise return rssi_noise. */
-int path_sim_measure(uint32_t freq_hz, int rssi_noise)
+ * FAKE_RSSI override, as path_sim_apply()); otherwise return the configured
+ * noise floor. */
+int path_sim_measure(uint32_t freq_hz, const struct path_sim_cfg *cfg)
 {
 	struct proxy_trx *trx;
 
@@ -145,9 +215,9 @@ int path_sim_measure(uint32_t freq_hz, int rssi_noise)
 
 		for (chan = 0; chan < trx->num_chans; chan++) {
 			if (trx->chans[chan].tx_freq == freq_hz)
-				return path_sim_measure_rssi(&trx->chans[chan]);
+				return path_sim_measure_rssi(&trx->chans[chan], cfg);
 		}
 	}
 
-	return rssi_noise;
+	return cfg->noise_dbm;
 }

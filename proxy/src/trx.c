@@ -48,6 +48,7 @@ struct proxy_trx *proxy_trx_alloc(struct proxy_ctx *proxy, const char *name)
 		return NULL;
 
 	trx->name = talloc_strdup(trx, name);
+	trx->tx_power = PROXY_TRX_DEFAULT_TX_POWER;
 	trx->ep = osmo_trx_ep_alloc(trx, num_chans);
 	if (trx->ep == NULL) {
 		talloc_free(trx);
@@ -127,8 +128,11 @@ int proxy_trx_open(struct proxy_trx *trx)
 	if (rc == 0) { /* first successful open: num_chans is now fixed */
 		trx->chans = talloc_zero_array(trx, struct proxy_trx_chan, trx->num_chans);
 		OSMO_ASSERT(trx->chans != NULL);
-		for (unsigned int i = 0; i < trx->num_chans; i++)
-			path_sim_state_reset(&trx->chans[i].path_sim);
+		for (unsigned int i = 0; i < trx->num_chans; i++) {
+			path_sim_state_reset(&trx->chans[i].path_sim, trx->tx_power,
+					     path_sim_cfg_get_nom_toa256(g_proxy_ctx->path_sim),
+					     path_sim_cfg_get_nom_ci_cb(g_proxy_ctx->path_sim));
+		}
 	}
 
 	return 0;

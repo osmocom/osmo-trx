@@ -59,7 +59,8 @@ static void burst_fwd_to_chan(struct proxy_trx *src, unsigned int src_chan,
 
 	osmo_ubit2sbit(bi.burst, br->burst, br->burst_len);
 	path_sim_apply(&bi, &dst->chans[dst_chan],
-		       br, &src->chans[src_chan]);
+		       br, &src->chans[src_chan],
+		       g_proxy_ctx->path_sim);
 
 	osmo_trx_ep_send_burst_ind(dst->ep, dst_chan, &bi);
 }
