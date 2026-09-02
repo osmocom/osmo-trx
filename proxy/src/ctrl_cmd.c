@@ -28,6 +28,7 @@
 
 #include <osmocom/trx/ep.h>
 #include <osmocom/trx/trxc.h>
+#include <osmocom/trx/trxd.h>
 
 #include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/trx.h>
@@ -182,6 +183,36 @@ static void ctrl_cmd_setslot(struct proxy_trx *trx, unsigned int chan,
 
 	trx->chans[chan].ts[ss.tn].cfg = ss;
 	trx->chans[chan].ts[ss.tn].valid = true;
+}
+
+/* SETFORMAT negotiates the TRXD PDU version used on the data socket: the
+ * response status carries the version to use (the requested one, or our
+ * preferred version if out of range), not a plain ACK/NACK. */
+static void ctrl_cmd_setformat(struct proxy_trx *trx, unsigned int chan,
+			       const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	int ver_req;
+
+	if (osmo_trxc_msg_params_scan(cmd, "%d", &ver_req) != 1 || ver_req < 0) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to parse command arguments: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		/* -1 is the reserved status for "no suitable version" / malformed
+		 * request (see trx_if.adoc); clear params, there is no valid
+		 * <ver_req> to echo back. */
+		rsp->status = -1;
+		rsp->params[0] = '\0';
+		return;
+	}
+
+	if (ver_req > OSMO_TRXD_PDU_VER_MAX)
+		ver_req = OSMO_TRXD_PDU_VER_MAX;
+
+	osmo_trx_ep_set_pdu_ver(trx->ep, chan, ver_req);
+	rsp->status = ver_req;
+
+	LOGP_TRXCH(trx, chan, DTRXC, LOGL_INFO,
+		   "TRXD header version set to %d\n", ver_req);
 }
 
 /* FAKE_TOA/FAKE_RSSI/FAKE_CI: "<delta>" adjusts the current value by delta;
@@ -340,6 +371,8 @@ void osmo_trx_ep_rx_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 		ctrl_cmd_rfmute(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, OSMO_TRXC_CMD_SETSLOT)) {
 		ctrl_cmd_setslot(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, OSMO_TRXC_CMD_SETFORMAT)) {
+		ctrl_cmd_setformat(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_SETTA)) {
 		ctrl_cmd_setta(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_MEASURE)) {
