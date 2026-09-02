@@ -167,6 +167,23 @@ static void ctrl_cmd_rfmute(struct proxy_trx *trx, unsigned int chan,
 		   "RF mute %s\n", trx->chans[chan].rf_muted ? "on" : "off");
 }
 
+static void ctrl_cmd_setslot(struct proxy_trx *trx, unsigned int chan,
+			     const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	struct osmo_trxc_setslot ss;
+
+	if (osmo_trxc_setslot_parse(&ss, cmd) < 0) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to parse command arguments: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		rsp->status = 1;
+		return;
+	}
+
+	trx->chans[chan].ts[ss.tn].cfg = ss;
+	trx->chans[chan].ts[ss.tn].valid = true;
+}
+
 /* FAKE_TOA/FAKE_RSSI/FAKE_CI: "<delta>" adjusts the current value by delta;
  * "<value> <threshold>" sets an absolute value with a +/-threshold random
  * jitter applied on every forwarded burst (see path_sim_apply()). */
@@ -321,6 +338,8 @@ void osmo_trx_ep_rx_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 		ctrl_cmd_nomtxpower(trx, chan, &rsp);
 	} else if (!strcmp(cmd->cmd, OSMO_TRXC_CMD_RFMUTE)) {
 		ctrl_cmd_rfmute(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, OSMO_TRXC_CMD_SETSLOT)) {
+		ctrl_cmd_setslot(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_SETTA)) {
 		ctrl_cmd_setta(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_MEASURE)) {

@@ -6,6 +6,8 @@
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/logging.h>
 
+#include <osmocom/trx/trxc.h>
+
 #include <osmocom/proxy/path_sim.h>
 
 struct osmo_trx_ep;
@@ -13,6 +15,15 @@ struct proxy_ctx;
 
 /*! dBm, nominal Tx power (per endpoint) */
 #define PROXY_TRX_DEFAULT_TX_POWER	50
+
+/*! TDMA timeslots per GSM frame */
+#define PROXY_TRX_NUM_TS	8
+
+/*! Per-timeslot config received via SETSLOT. */
+struct proxy_trx_ts {
+	struct osmo_trxc_setslot cfg;
+	bool valid;		/*!< has SETSLOT been received for this TS? */
+};
 
 /*! Per-channel state: each channel is conceptually its own (child)
  * transceiver with an independent Rx/Tx frequency, sharing the endpoint's
@@ -22,6 +33,7 @@ struct proxy_trx_chan {
 	uint32_t tx_freq;	/*!< Tx frequency in Hz, 0 if not (yet) tuned */
 	bool rf_muted;		/*!< RFMUTE: force NOPE.ind on bursts this channel transmits */
 	struct path_sim_state path_sim; /*!< RF path simulation state (path_sim.c) */
+	struct proxy_trx_ts ts[PROXY_TRX_NUM_TS]; /*!< per-timeslot config (SETSLOT) */
 };
 
 /*! One virtual transceiver endpoint */
