@@ -6,6 +6,8 @@
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/logging.h>
 
+#include <osmocom/proxy/path_sim.h>
+
 struct osmo_trx_ep;
 struct proxy_ctx;
 
@@ -15,6 +17,8 @@ struct proxy_ctx;
 struct proxy_trx_chan {
 	uint32_t rx_freq;	/*!< Rx frequency in Hz, 0 if not (yet) tuned */
 	uint32_t tx_freq;	/*!< Tx frequency in Hz, 0 if not (yet) tuned */
+	bool rf_muted;		/*!< RFMUTE: force NOPE.ind on bursts this channel transmits */
+	struct path_sim_state path_sim; /*!< RF path simulation state (path_sim.c) */
 };
 
 /*! One virtual transceiver endpoint */

@@ -21,6 +21,7 @@ osmo_trx_proxy_SOURCES = \
 	clck_gen.c \
 	ctrl_cmd.c \
 	burst_fwd.c \
+	path_sim.c \
 	logging.c \
 	$(NULL)
 

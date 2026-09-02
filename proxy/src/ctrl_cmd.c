@@ -30,7 +30,16 @@
 #include <osmocom/trx/trxc.h>
 
 #include <osmocom/proxy/trx.h>
+#include <osmocom/proxy/path_sim.h>
 #include <osmocom/proxy/logging.h>
+
+/* Not part of the well-known OSMO_TRXC_CMD_* verbs (libosmo-trx/trxc.h) since
+ * they are specific to this transceiver's RF path simulation. */
+#define CTRL_CMD_SETTA		"SETTA"
+#define CTRL_CMD_FAKE_TOA	"FAKE_TOA"
+#define CTRL_CMD_FAKE_RSSI	"FAKE_RSSI"
+#define CTRL_CMD_FAKE_CI	"FAKE_CI"
+#define CTRL_CMD_FAKE_DROP	"FAKE_DROP"
 
 static void ctrl_cmd_poweron(struct proxy_trx *trx, struct osmo_trxc_msg *rsp)
 {
@@ -96,6 +105,175 @@ static void ctrl_cmd_txtune(struct proxy_trx *trx, unsigned int chan,
 	snprintf(rsp->params, sizeof(rsp->params), "%u", freq_khz);
 }
 
+static void ctrl_cmd_setta(struct proxy_trx *trx, unsigned int chan,
+			   const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	int ta;
+
+	if (osmo_trxc_msg_params_scan(cmd, "%d", &ta) != 1) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): failed to parse Timing Advance: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		rsp->status = 1;
+		return;
+	}
+
+	trx->chans[chan].path_sim.ta = ta;
+
+	LOGP_TRXCH(trx, chan, DTRXC, LOGL_INFO, "Timing Advance set to %d\n", ta);
+}
+
+static void ctrl_cmd_setpower(struct proxy_trx *trx, unsigned int chan,
+			      const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	int att;
+
+	if (osmo_trxc_msg_params_scan(cmd, "%d", &att) != 1) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to parse Tx power attenuation: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		rsp->status = 1;
+		return;
+	}
+
+	trx->chans[chan].path_sim.tx_att = att;
+
+	LOGP_TRXCH(trx, chan, DTRXC, LOGL_INFO, "Tx power attenuation set to %d dB\n", att);
+}
+
+static void ctrl_cmd_nomtxpower(struct proxy_trx *trx, unsigned int chan, struct osmo_trxc_msg *rsp)
+{
+	snprintf(rsp->params, sizeof(rsp->params), "%d", trx->chans[chan].path_sim.tx_power);
+}
+
+static void ctrl_cmd_rfmute(struct proxy_trx *trx, unsigned int chan,
+			    const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	int mute;
+
+	if (osmo_trxc_msg_params_scan(cmd, "%d", &mute) != 1) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to parse command arguments: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		rsp->status = 1;
+		return;
+	}
+
+	trx->chans[chan].rf_muted = mute > 0;
+
+	LOGP_TRXCH(trx, chan, DTRXC, LOGL_INFO,
+		   "RF mute %s\n", trx->chans[chan].rf_muted ? "on" : "off");
+}
+
+/* FAKE_TOA/FAKE_RSSI/FAKE_CI: "<delta>" adjusts the current value by delta;
+ * "<value> <threshold>" sets an absolute value with a +/-threshold random
+ * jitter applied on every forwarded burst (see path_sim_apply()). */
+
+static void ctrl_cmd_fake_toa(struct proxy_trx *trx, unsigned int chan,
+			      const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	struct path_sim_state *ps = &trx->chans[chan].path_sim;
+	int value, threshold;
+
+	if (osmo_trxc_msg_params_scan(cmd, "%d %d", &value, &threshold) == 2) {
+		if (threshold < 0) {
+			rsp->status = 1;
+			return;
+		}
+		ps->toa256 = value;
+		ps->toa256_jitter = threshold;
+	} else if (osmo_trxc_msg_params_scan(cmd, "%d", &value) == 1) {
+		ps->toa256 += value;
+	} else {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to parse command arguments: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		rsp->status = 1;
+	}
+}
+
+static void ctrl_cmd_fake_rssi(struct proxy_trx *trx, unsigned int chan,
+			       const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	struct path_sim_state *ps = &trx->chans[chan].path_sim;
+	int value, threshold;
+
+	if (osmo_trxc_msg_params_scan(cmd, "%d %d", &value, &threshold) == 2) {
+		if (threshold < 0) {
+			rsp->status = 1;
+			return;
+		}
+		ps->rssi = value;
+		ps->rssi_jitter = threshold;
+	} else if (osmo_trxc_msg_params_scan(cmd, "%d", &value) == 1) {
+		ps->rssi = value;
+		ps->rssi_jitter = 0;
+	} else {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to parse command arguments: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		rsp->status = 1;
+		return;
+	}
+
+	ps->flags |= PATH_SIM_F_FAKE_RSSI;
+}
+
+static void ctrl_cmd_fake_ci(struct proxy_trx *trx, unsigned int chan,
+			     const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	struct path_sim_state *ps = &trx->chans[chan].path_sim;
+	int value, threshold;
+
+	if (osmo_trxc_msg_params_scan(cmd, "%d %d", &value, &threshold) == 2) {
+		if (threshold < 0) {
+			rsp->status = 1;
+			return;
+		}
+		ps->ci = value;
+		ps->ci_jitter = threshold;
+	} else if (osmo_trxc_msg_params_scan(cmd, "%d", &value) == 1) {
+		ps->ci += value;
+	} else {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to parse command arguments: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		rsp->status = 1;
+	}
+}
+
+static void ctrl_cmd_fake_drop(struct proxy_trx *trx, unsigned int chan,
+			       const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	struct path_sim_state *ps = &trx->chans[chan].path_sim;
+	int amount, period;
+
+	if (osmo_trxc_msg_params_scan(cmd, "%d %d", &amount, &period) == 2) {
+		if (amount < 0 || period <= 0) {
+			rsp->status = 1;
+			return;
+		}
+	} else if (osmo_trxc_msg_params_scan(cmd, "%d", &amount) == 1) {
+		if (amount < 0) {
+			rsp->status = 1;
+			return;
+		}
+		period = 1;
+	} else {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to parse command arguments: '%s'\n",
+			   __func__, osmo_trxc_msg_name(cmd));
+		rsp->status = 1;
+		return;
+	}
+
+	ps->burst_drop_amount = amount;
+	ps->burst_drop_period = period;
+
+	LOGP_TRXCH(trx, chan, DTRXC, LOGL_INFO,
+		  "Dropping %d burst(s), every %d frame(s)\n", amount, period);
+}
+
 void osmo_trx_ep_rx_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 			     const struct osmo_trxc_msg *cmd)
 {
@@ -118,6 +296,22 @@ void osmo_trx_ep_rx_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 		ctrl_cmd_rxtune(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, OSMO_TRXC_CMD_TXTUNE)) {
 		ctrl_cmd_txtune(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, OSMO_TRXC_CMD_SETPOWER)) {
+		ctrl_cmd_setpower(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, OSMO_TRXC_CMD_NOMTXPOWER)) {
+		ctrl_cmd_nomtxpower(trx, chan, &rsp);
+	} else if (!strcmp(cmd->cmd, OSMO_TRXC_CMD_RFMUTE)) {
+		ctrl_cmd_rfmute(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, CTRL_CMD_SETTA)) {
+		ctrl_cmd_setta(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, CTRL_CMD_FAKE_TOA)) {
+		ctrl_cmd_fake_toa(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, CTRL_CMD_FAKE_RSSI)) {
+		ctrl_cmd_fake_rssi(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, CTRL_CMD_FAKE_CI)) {
+		ctrl_cmd_fake_ci(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, CTRL_CMD_FAKE_DROP)) {
+		ctrl_cmd_fake_drop(trx, chan, cmd, &rsp);
 	} else {
 		LOGP_TRXCH(trx, chan, DTRXC, LOGL_INFO,
 			   "Unhandled command '%s'\n", cmd->cmd);

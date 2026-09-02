@@ -35,6 +35,7 @@
 #include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/trx.h>
 #include <osmocom/proxy/clck_gen.h>
+#include <osmocom/proxy/path_sim.h>
 #include <osmocom/proxy/logging.h>
 
 struct proxy_trx *proxy_trx_alloc(struct proxy_ctx *proxy, const char *name)
@@ -126,6 +127,8 @@ int proxy_trx_open(struct proxy_trx *trx)
 	if (rc == 0) { /* first successful open: num_chans is now fixed */
 		trx->chans = talloc_zero_array(trx, struct proxy_trx_chan, trx->num_chans);
 		OSMO_ASSERT(trx->chans != NULL);
+		for (unsigned int i = 0; i < trx->num_chans; i++)
+			path_sim_state_reset(&trx->chans[i].path_sim);
 	}
 
 	return 0;

@@ -32,13 +32,8 @@
 
 #include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/trx.h>
+#include <osmocom/proxy/path_sim.h>
 #include <osmocom/proxy/logging.h>
-
-/* Placeholder measurement values, until path_sim.c computes them for real
- * (matches fake_trx.py's FakeTRX nominal defaults: no timing offset, and
- * -60 dBm = 50 dBm nominal Tx power - 0 dB Tx attenuation - 110 dB path loss). */
-#define BURST_FWD_TOA256_DEFAULT	0
-#define BURST_FWD_RSSI_DEFAULT		-60
 
 #define OSMO_TRXD_F_COMMON_MASK	( \
 	OSMO_TRXD_F_NOPE_REQ	| \
@@ -47,15 +42,14 @@
 	OSMO_TRXD_F_TRX_NUM	  \
 	)
 
-static void burst_fwd_to_chan(struct proxy_trx *dst, unsigned int dst_chan,
+static void burst_fwd_to_chan(struct proxy_trx *src, unsigned int src_chan,
+			      struct proxy_trx *dst, unsigned int dst_chan,
 			      const struct osmo_trxd_burst_req *br)
 {
 	struct osmo_trxd_burst_ind bi = {
 		.flags = br->flags & OSMO_TRXD_F_COMMON_MASK,
 		.fn = br->fn,
 		.tn = br->tn,
-		.toa256 = BURST_FWD_TOA256_DEFAULT,
-		.rssi = BURST_FWD_RSSI_DEFAULT,
 		.burst_len = br->burst_len,
 		.mod = br->mod,
 		.tsc_set = br->tsc_set,
@@ -64,6 +58,8 @@ static void burst_fwd_to_chan(struct proxy_trx *dst, unsigned int dst_chan,
 	};
 
 	osmo_ubit2sbit(bi.burst, br->burst, br->burst_len);
+	path_sim_apply(&bi, &dst->chans[dst_chan],
+		       br, &src->chans[src_chan]);
 
 	osmo_trx_ep_send_burst_ind(dst->ep, dst_chan, &bi);
 }
@@ -74,15 +70,17 @@ static void burst_fwd_to_chan(struct proxy_trx *dst, unsigned int dst_chan,
 void osmo_trx_ep_rx_burst_req(struct osmo_trx_ep *ep, unsigned int chan,
 			      const struct osmo_trxd_burst_req *br)
 {
-	const struct proxy_trx *src = osmo_trx_ep_get_priv(ep);
-	const uint32_t tx_freq = src->chans[chan].tx_freq;
-	struct proxy_trx *dst;
+	struct proxy_trx *src = osmo_trx_ep_get_priv(ep);
+	struct proxy_trx *dst = NULL;
+	uint32_t tx_freq;
 
 	if (!src->powered) {
 		LOGP_TRXCH(src, chan, DTRXD, LOGL_NOTICE,
 			   "Rx BURST.req while not powered on, dropping\n");
 		return;
 	}
+
+	tx_freq = src->chans[chan].tx_freq;
 
 	llist_for_each_entry(dst, &g_proxy_ctx->trx_list, list) {
 		unsigned int dst_chan;
@@ -93,7 +91,7 @@ void osmo_trx_ep_rx_burst_req(struct osmo_trx_ep *ep, unsigned int chan,
 		for (dst_chan = 0; dst_chan < dst->num_chans; dst_chan++) {
 			if (dst->chans[dst_chan].rx_freq != tx_freq)
 				continue;
-			burst_fwd_to_chan(dst, dst_chan, br);
+			burst_fwd_to_chan(src, chan, dst, dst_chan, br);
 		}
 	}
 }
