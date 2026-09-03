@@ -26,6 +26,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <osmocom/core/utils.h>
+#include <osmocom/core/talloc.h>
+
 #include <osmocom/trx/ep.h>
 #include <osmocom/trx/trxc.h>
 #include <osmocom/trx/trxd.h>
@@ -38,6 +41,7 @@
 /* Not part of the well-known OSMO_TRXC_CMD_* verbs (libosmo-trx/trxc.h) since
  * they are specific to this transceiver's RF path simulation. */
 #define CTRL_CMD_SETTA		"SETTA"
+#define CTRL_CMD_SETFH		"SETFH"
 #define CTRL_CMD_MEASURE	"MEASURE"
 #define CTRL_CMD_FAKE_TOA	"FAKE_TOA"
 #define CTRL_CMD_FAKE_RSSI	"FAKE_RSSI"
@@ -183,6 +187,82 @@ static void ctrl_cmd_setslot(struct proxy_trx *trx, unsigned int chan,
 
 	trx->chans[chan].ts[ss.tn].cfg = ss;
 	trx->chans[chan].ts[ss.tn].valid = true;
+}
+
+/* Max Mobile Allocation length accepted by SETFH (GSM ARFCN range) */
+#define CTRL_CMD_SETFH_MA_MAX	64
+
+/* Syntax: "CMD SETFH <HSN> <MAIO> <RXF1> <TXF1> [... <RXFN> <TXFN>]",
+ * frequencies in kHz. Configures synthesizer frequency hopping (3GPP TS
+ * 45.002); the per-burst Rx/Tx frequencies are then resolved by TDMA frame
+ * number (see proxy_trx_fh_resolve(), used from burst_fwd.c). */
+static void ctrl_cmd_setfh(struct proxy_trx *trx, unsigned int chan,
+			   const struct osmo_trxc_msg *cmd, struct osmo_trxc_msg *rsp)
+{
+	struct proxy_trx_fh_freq ma[CTRL_CMD_SETFH_MA_MAX];
+	char params[OSMO_TRXC_PARAMS_LEN_MAX];
+	char *saveptr, *tok;
+	unsigned int hsn, maio, ma_len = 0;
+
+	OSMO_STRLCPY_ARRAY(params, cmd->params);
+
+	tok = strtok_r(params, " ", &saveptr);
+	if (tok == NULL || sscanf(tok, "%u", &hsn) != 1 || hsn > 63) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR, "Rx SETFH with invalid HSN\n");
+		rsp->status = 1;
+		return;
+	}
+
+	tok = strtok_r(NULL, " ", &saveptr);
+	if (tok == NULL || sscanf(tok, "%u", &maio) != 1 || maio > 63) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR, "Rx SETFH with invalid MAIO\n");
+		rsp->status = 1;
+		return;
+	}
+
+	while ((tok = strtok_r(NULL, " ", &saveptr)) != NULL) {
+		unsigned int rx_khz, tx_khz;
+		char *tok2;
+
+		if (ma_len >= ARRAY_SIZE(ma) || sscanf(tok, "%u", &rx_khz) != 1) {
+			LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+				   "Rx SETFH with an invalid/too long Mobile Allocation\n");
+			rsp->status = 1;
+			return;
+		}
+
+		tok2 = strtok_r(NULL, " ", &saveptr);
+		if (tok2 == NULL || sscanf(tok2, "%u", &tx_khz) != 1) {
+			LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+				   "Rx SETFH with an odd/malformed Mobile Allocation\n");
+			rsp->status = 1;
+			return;
+		}
+
+		ma[ma_len].rx_freq = rx_khz * 1000;
+		ma[ma_len].tx_freq = tx_khz * 1000;
+		ma_len++;
+	}
+
+	if (ma_len == 0) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "Rx SETFH with an empty Mobile Allocation\n");
+		rsp->status = 1;
+		return;
+	}
+
+	talloc_free(trx->chans[chan].fh);
+	trx->chans[chan].fh = proxy_trx_fh_alloc(trx, hsn, maio, ma, ma_len);
+	if (trx->chans[chan].fh == NULL) {
+		LOGP_TRXCH(trx, chan, DTRXC, LOGL_ERROR,
+			   "%s(): Failed to allocate frequency hopping state\n", __func__);
+		rsp->status = 1;
+		return;
+	}
+
+	LOGP_TRXCH(trx, chan, DTRXC, LOGL_INFO,
+		   "Frequency hopping configured: hsn=%u, maio=%u, ma_len=%u\n",
+		   hsn, maio, ma_len);
 }
 
 /* SETFORMAT negotiates the TRXD PDU version used on the data socket: the
@@ -375,6 +455,8 @@ void osmo_trx_ep_rx_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 		ctrl_cmd_setformat(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_SETTA)) {
 		ctrl_cmd_setta(trx, chan, cmd, &rsp);
+	} else if (!strcmp(cmd->cmd, CTRL_CMD_SETFH)) {
+		ctrl_cmd_setfh(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_MEASURE)) {
 		ctrl_cmd_measure(trx, chan, cmd, &rsp);
 	} else if (!strcmp(cmd->cmd, CTRL_CMD_FAKE_TOA)) {

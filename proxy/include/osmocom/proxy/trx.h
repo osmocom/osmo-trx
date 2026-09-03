@@ -25,6 +25,21 @@ struct proxy_trx_ts {
 	bool valid;		/*!< has SETSLOT been received for this TS? */
 };
 
+/*! One Mobile Allocation entry: the Rx/Tx frequency pair for one ARFCN. */
+struct proxy_trx_fh_freq {
+	uint32_t rx_freq;	/*!< Rx frequency in Hz */
+	uint32_t tx_freq;	/*!< Tx frequency in Hz */
+};
+
+/*! Synthesizer frequency hopping parameters (SETFH), per 3GPP TS 45.002:
+ * HSN, MAIO and the Mobile Allocation (list of Rx/Tx frequency pairs). */
+struct proxy_trx_fh {
+	uint8_t hsn;
+	uint8_t maio;
+	unsigned int ma_len;
+	struct proxy_trx_fh_freq *ma; /*!< talloc array of ma_len entries */
+};
+
 /*! Per-channel state: each channel is conceptually its own (child)
  * transceiver with an independent Rx/Tx frequency, sharing the endpoint's
  * power state and clock. */
@@ -34,6 +49,7 @@ struct proxy_trx_chan {
 	bool rf_muted;		/*!< RFMUTE: force NOPE.ind on bursts this channel transmits */
 	struct path_sim_state path_sim; /*!< RF path simulation state (path_sim.c) */
 	struct proxy_trx_ts ts[PROXY_TRX_NUM_TS]; /*!< per-timeslot config (SETSLOT) */
+	struct proxy_trx_fh *fh; /*!< frequency hopping config (SETFH), NULL if disabled */
 };
 
 /*! One virtual transceiver endpoint */
@@ -62,3 +78,8 @@ void proxy_trx_close(struct proxy_trx *trx);
 
 int proxy_trx_set_num_chans(struct proxy_trx *trx, unsigned int num_chans);
 void proxy_trx_set_power(struct proxy_trx *trx, bool on);
+
+struct proxy_trx_fh *proxy_trx_fh_alloc(void *talloc_ctx, uint8_t hsn, uint8_t maio,
+					const struct proxy_trx_fh_freq *ma, unsigned int ma_len);
+void proxy_trx_fh_resolve(const struct proxy_trx_fh *fh, uint32_t fn,
+			  uint32_t *rx_freq, uint32_t *tx_freq);

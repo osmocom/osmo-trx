@@ -30,6 +30,9 @@
 #include <osmocom/core/talloc.h>
 #include <osmocom/core/linuxlist.h>
 
+#include <osmocom/gsm/gsm_utils.h>
+#include <osmocom/gsm/gsm0502.h>
+
 #include <osmocom/trx/ep.h>
 
 #include <osmocom/proxy/proxy.h>
@@ -149,4 +152,46 @@ int proxy_trx_set_num_chans(struct proxy_trx *trx, unsigned int num_chans)
 
 	trx->num_chans = num_chans;
 	return 0;
+}
+
+/*! Allocate a frequency hopping configuration; ma is copied. */
+struct proxy_trx_fh *proxy_trx_fh_alloc(void *talloc_ctx, uint8_t hsn, uint8_t maio,
+					const struct proxy_trx_fh_freq *ma, unsigned int ma_len)
+{
+	struct proxy_trx_fh *fh;
+
+	if (ma_len == 0)
+		return NULL;
+
+	fh = talloc_zero(talloc_ctx, struct proxy_trx_fh);
+	if (fh == NULL)
+		return NULL;
+
+	fh->ma = talloc_memdup(fh, ma, ma_len * sizeof(*ma));
+	if (fh->ma == NULL) {
+		talloc_free(fh);
+		return NULL;
+	}
+
+	fh->hsn = hsn;
+	fh->maio = maio;
+	fh->ma_len = ma_len;
+
+	return fh;
+}
+
+/*! Resolve the Rx/Tx frequencies to use for the given TDMA frame number. */
+void proxy_trx_fh_resolve(const struct proxy_trx_fh *fh, uint32_t fn,
+			  uint32_t *rx_freq, uint32_t *tx_freq)
+{
+	struct gsm_time gt;
+	uint16_t mai;
+
+	gsm_fn2gsmtime(&gt, fn);
+	mai = gsm0502_hop_seq_gen(&gt, fh->hsn, fh->maio, fh->ma_len, NULL);
+
+	if (rx_freq)
+		*rx_freq = fh->ma[mai].rx_freq;
+	if (tx_freq)
+		*tx_freq = fh->ma[mai].tx_freq;
 }

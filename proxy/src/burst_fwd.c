@@ -66,8 +66,8 @@ static void burst_fwd_to_chan(struct proxy_trx *src, unsigned int src_chan,
 }
 
 /*! Forward a Tx burst request to every powered-on endpoint/channel
- * whose Rx frequency matches the source channel's Tx frequency.
- * TODO: (no frequency hopping support yet, see SETFH in fake_trx.py). */
+ * whose Rx frequency matches the source channel's Tx frequency (resolved
+ * per TDMA frame number if frequency hopping (SETFH) is configured). */
 void osmo_trx_ep_rx_burst_req(struct osmo_trx_ep *ep, unsigned int chan,
 			      const struct osmo_trxd_burst_req *br)
 {
@@ -81,7 +81,10 @@ void osmo_trx_ep_rx_burst_req(struct osmo_trx_ep *ep, unsigned int chan,
 		return;
 	}
 
-	tx_freq = src->chans[chan].tx_freq;
+	if (src->chans[chan].fh != NULL)
+		proxy_trx_fh_resolve(src->chans[chan].fh, br->fn, NULL, &tx_freq);
+	else
+		tx_freq = src->chans[chan].tx_freq;
 
 	llist_for_each_entry(dst, &g_proxy_ctx->trx_list, list) {
 		unsigned int dst_chan;
@@ -90,7 +93,15 @@ void osmo_trx_ep_rx_burst_req(struct osmo_trx_ep *ep, unsigned int chan,
 			continue;
 
 		for (dst_chan = 0; dst_chan < dst->num_chans; dst_chan++) {
-			if (dst->chans[dst_chan].rx_freq != tx_freq)
+			struct proxy_trx_chan *dc = &dst->chans[dst_chan];
+			uint32_t rx_freq;
+
+			if (dc->fh != NULL)
+				proxy_trx_fh_resolve(dc->fh, br->fn, &rx_freq, NULL);
+			else
+				rx_freq = dc->rx_freq;
+
+			if (rx_freq != tx_freq)
 				continue;
 			burst_fwd_to_chan(src, chan, dst, dst_chan, br);
 		}
