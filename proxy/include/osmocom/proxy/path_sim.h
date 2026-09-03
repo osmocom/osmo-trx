@@ -33,6 +33,7 @@ void path_sim_apply(struct osmo_trxd_burst_ind *bi,
 		    const struct proxy_trx_chan *src,
 		    const struct path_sim_cfg *cfg);
 int path_sim_measure(uint32_t freq_hz, const struct path_sim_cfg *cfg);
+void path_sim_fill_nope(struct osmo_trxd_burst_ind *bi, const struct path_sim_cfg *cfg);
 
 struct path_sim_cfg *path_sim_cfg_alloc(void *talloc_ctx);
 

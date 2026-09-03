@@ -190,6 +190,20 @@ void path_sim_apply(struct osmo_trxd_burst_ind *bi,
 	bi->flags |= OSMO_TRXD_F_CI_CB;
 }
 
+/*! Fill in a NOPE.ind for a timeslot where no BURST.req was received at all
+ * this TDMA frame tick (as opposed to path_sim_apply(), which reports on an
+ * actually forwarded burst that got dropped/muted along the way). Reports
+ * the configured noise floor, same as path_sim_measure() would for an idle
+ * frequency. */
+void path_sim_fill_nope(struct osmo_trxd_burst_ind *bi, const struct path_sim_cfg *cfg)
+{
+	bi->flags |= OSMO_TRXD_F_NOPE_IND | OSMO_TRXD_F_CI_CB;
+	bi->burst_len = 0;
+	bi->toa256 = PATH_SIM_TOA256_NOISE_DEFAULT;
+	bi->rssi = cfg->noise_dbm;
+	bi->ci_cb = PATH_SIM_CI_NOISE_DEFAULT;
+}
+
 static int path_sim_measure_rssi(const struct proxy_trx_chan *tx, const struct path_sim_cfg *cfg)
 {
 	if (tx->path_sim.flags & PATH_SIM_F_FAKE_RSSI)

@@ -135,6 +135,7 @@ int proxy_trx_open(struct proxy_trx *trx)
 			path_sim_state_reset(&trx->chans[i].path_sim, trx->tx_power,
 					     path_sim_cfg_get_nom_toa256(g_proxy_ctx->path_sim),
 					     path_sim_cfg_get_nom_ci_cb(g_proxy_ctx->path_sim));
+			INIT_LLIST_HEAD(&trx->chans[i].tx_burst_queue);
 		}
 	}
 

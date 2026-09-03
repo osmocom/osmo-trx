@@ -7,6 +7,7 @@
 #include <osmocom/core/logging.h>
 
 #include <osmocom/trx/trxc.h>
+#include <osmocom/trx/trxd.h>
 
 #include <osmocom/proxy/path_sim.h>
 
@@ -23,6 +24,12 @@ struct proxy_ctx;
 struct proxy_trx_ts {
 	struct osmo_trxc_setslot cfg;
 	bool valid;		/*!< has SETSLOT been received for this TS? */
+	/*! Scratch: this timeslot's Rx burst indication staged for the
+	 * current TDMA frame tick, so dispatch can send it to L1 without
+	 * regard to the order bursts were forwarded in. Reset to NOPE.ind
+	 * at the start of each tick, then a real forwarded burst overwrites
+	 * it if one lands here. See burst_fwd_dispatch() in burst_fwd.c. */
+	struct osmo_trxd_burst_ind bi;
 };
 
 /*! One Mobile Allocation entry: the Rx/Tx frequency pair for one ARFCN. */
@@ -50,6 +57,10 @@ struct proxy_trx_chan {
 	struct path_sim_state path_sim; /*!< RF path simulation state (path_sim.c) */
 	struct proxy_trx_ts ts[PROXY_TRX_NUM_TS]; /*!< per-timeslot config (SETSLOT) */
 	struct proxy_trx_fh *fh; /*!< frequency hopping config (SETFH), NULL if disabled */
+	/*! Queue of struct msgb, each wrapping a copy of one BURST.req
+	 * (struct osmo_trxd_burst_req) awaiting its TDMA frame tick, sorted
+	 * by fn (ascending). See burst_fwd.c. */
+	struct llist_head tx_burst_queue;
 };
 
 /*! One virtual transceiver endpoint */

@@ -3,6 +3,7 @@ SUBDIRS = \
 	$(NULL)
 
 noinst_HEADERS = \
+	include/osmocom/proxy/burst_fwd.h \
 	include/osmocom/proxy/burst_synch.h \
 	include/osmocom/proxy/clck_gen.h \
 	include/osmocom/proxy/logging.h \

@@ -37,6 +37,7 @@
 #include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/trx.h>
 #include <osmocom/proxy/clck_gen.h>
+#include <osmocom/proxy/burst_fwd.h>
 #include <osmocom/proxy/logging.h>
 
 /*! Default "IND CLOCK" period, in frames */
@@ -78,7 +79,7 @@ static int clck_gen_timer_cb(struct osmo_fd *ofd, unsigned int what)
 			}
 		}
 
-		/* TODO: drive per-frame burst forwarding (burst_queue/burst_fwd) */
+		burst_fwd_dispatch(gen->fn);
 
 		GSM_TDMA_FN_INC(gen->fn);
 	}
