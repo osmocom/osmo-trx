@@ -195,9 +195,8 @@ AS_IF([test "x$with_uhd" = "xyes"],[
     # code and therefore requires linking against boost_thread. It's missing in
     # uhd.pc, so work around it here.
     # https://github.com/EttusResearch/uhd/commit/04a83b6e76beef970854da69ba882d717669b49c
-    PKG_CHECK_MODULES(UHD, uhd < 004.002,
-        [LIBS="$LIBS -lboost_thread"],
-        []
+    PKG_CHECK_EXISTS([uhd < 004.002],
+        [LIBS="$LIBS -lboost_thread"]
     )
 ])
 
