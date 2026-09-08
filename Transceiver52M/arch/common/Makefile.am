@@ -1,4 +1,4 @@
-AM_CFLAGS = -Wall -std=gnu99
+AM_CFLAGS = -Wall -std=gnu99 $(FFTWF_CFLAGS)
 
 noinst_LTLIBRARIES = libarch_common.la
 
