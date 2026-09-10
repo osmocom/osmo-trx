@@ -33,6 +33,7 @@
 #include <osmocom/proxy/proxy.h>
 #include <osmocom/proxy/trx.h>
 #include <osmocom/proxy/path_sim.h>
+#include <osmocom/proxy/burst_synch.h>
 #include <osmocom/proxy/logging.h>
 
 #define OSMO_TRXD_F_COMMON_MASK	( \
@@ -56,6 +57,12 @@ static void burst_fwd_to_chan(struct proxy_trx *src, unsigned int src_chan,
 		.tsc = br->tsc,
 		.trx_num = br->trx_num,
 	};
+
+	/* TRXDv0/v1 BURST.req PDUs carry no MTS field at all, so the true
+	 * modulation/TSC of the burst is unknown here: detect it instead of
+	 * asserting a fixed, possibly wrong TSC downstream. */
+	if (~br->flags & OSMO_TRXD_F_TS_INFO)
+		burst_synch_detect(&bi, br);
 
 	osmo_ubit2sbit(bi.burst, br->burst, br->burst_len);
 	path_sim_apply(&bi, &dst->chans[dst_chan],
