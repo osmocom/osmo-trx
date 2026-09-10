@@ -42,6 +42,7 @@
 #include <osmocom/proxy/vty.h>
 #include <osmocom/proxy/trx.h>
 #include <osmocom/proxy/path_sim.h>
+#include <osmocom/proxy/clck_gen.h>
 
 extern void *g_talloc_ctx;
 
@@ -140,6 +141,41 @@ DEFUN(cfg_proxy_nom_ci,
 	struct proxy_ctx *proxy = vty->index;
 
 	path_sim_cfg_set_nom_ci_cb(proxy->path_sim, atoi(argv[0]));
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_proxy_clck_gen_start_fn,
+      cfg_proxy_clck_gen_start_fn_cmd,
+      "clck-gen start-fn (random|<0-2715647>)",
+      "Configure the shared TDMA clock generator\n"
+      "Set the frame number the clock generator starts counting from\n"
+      "Start from a random frame number every time it (re)starts (default)\n"
+      "Start from this fixed frame number\n")
+{
+	int fn = !strcmp(argv[0], "random") ? CLCK_GEN_START_FN_RANDOM : atoi(argv[0]);
+
+	if (clck_gen_set_start_fn(fn) < 0) {
+		vty_out(vty, "%% Invalid starting frame number: %d%s", fn, VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_proxy_clck_gen_ind_period,
+      cfg_proxy_clck_gen_ind_period_cmd,
+      "clck-gen ind-period <1-2715648>",
+      "Configure the shared TDMA clock generator\n"
+      "Set how many frames apart \"IND CLOCK\" is sent (default: 102)\n"
+      "Period in frames\n")
+{
+	unsigned int period = atoi(argv[0]);
+
+	if (clck_gen_set_ind_period(period) < 0) {
+		vty_out(vty, "%% Invalid IND CLOCK period: %u%s", period, VTY_NEWLINE);
+		return CMD_WARNING;
+	}
 
 	return CMD_SUCCESS;
 }
@@ -287,6 +323,11 @@ static int config_write_proxy(struct vty *vty)
 	vty_out(vty, "proxy%s", VTY_NEWLINE);
 	if (g_proxy_ctx->bind_addr)
 		vty_out(vty, " bind-addr %s%s", g_proxy_ctx->bind_addr, VTY_NEWLINE);
+	if (clck_gen_get_start_fn() == CLCK_GEN_START_FN_RANDOM)
+		vty_out(vty, " clck-gen start-fn random%s", VTY_NEWLINE);
+	else
+		vty_out(vty, " clck-gen start-fn %d%s", clck_gen_get_start_fn(), VTY_NEWLINE);
+	vty_out(vty, " clck-gen ind-period %u%s", clck_gen_get_ind_period(), VTY_NEWLINE);
 	vty_out(vty, " pm-rssi-noise %d%s", path_sim_cfg_get_noise_dbm(g_proxy_ctx->path_sim), VTY_NEWLINE);
 	vty_out(vty, " path-loss %d%s", path_sim_cfg_get_path_loss_db(g_proxy_ctx->path_sim), VTY_NEWLINE);
 	vty_out(vty, " nominal-toa256 %d%s", path_sim_cfg_get_nom_toa256(g_proxy_ctx->path_sim), VTY_NEWLINE);
@@ -398,6 +439,8 @@ int proxy_vty_init(void)
 	install_element(PROXY_NODE, &cfg_proxy_path_loss_cmd);
 	install_element(PROXY_NODE, &cfg_proxy_nom_toa256_cmd);
 	install_element(PROXY_NODE, &cfg_proxy_nom_ci_cmd);
+	install_element(PROXY_NODE, &cfg_proxy_clck_gen_start_fn_cmd);
+	install_element(PROXY_NODE, &cfg_proxy_clck_gen_ind_period_cmd);
 	install_element(PROXY_NODE, &cfg_proxy_ep_cmd);
 	install_element(PROXY_NODE, &cfg_no_proxy_ep_cmd);
 
