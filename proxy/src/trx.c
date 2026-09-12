@@ -29,6 +29,7 @@
 #include <osmocom/core/utils.h>
 #include <osmocom/core/talloc.h>
 #include <osmocom/core/linuxlist.h>
+#include <osmocom/core/msgb.h>
 
 #include <osmocom/gsm/gsm_utils.h>
 #include <osmocom/gsm/gsm0502.h>
@@ -101,6 +102,22 @@ void proxy_trx_free(struct proxy_trx *trx)
 	talloc_free(trx);
 }
 
+static void proxy_trx_chan_reset_params(struct proxy_trx *trx, unsigned int chan)
+{
+	struct proxy_trx_chan *c = &trx->chans[chan];
+
+	c->rx_freq = 0;
+	c->tx_freq = 0;
+	c->rf_muted = false;
+	talloc_free(c->fh);
+	c->fh = NULL;
+	path_sim_state_reset(&c->path_sim, trx->tx_power,
+			     path_sim_cfg_get_nom_toa256(g_proxy_ctx->path_sim),
+			     path_sim_cfg_get_nom_ci_cb(g_proxy_ctx->path_sim));
+	memset(c->ts, 0, sizeof(c->ts));
+	msgb_queue_free(&c->tx_burst_queue);
+}
+
 /*! Update the endpoint's power state;
  * (de)registers it with the TDMA clock generator as appropriate. */
 void proxy_trx_set_power(struct proxy_trx *trx, bool on)
@@ -111,7 +128,14 @@ void proxy_trx_set_power(struct proxy_trx *trx, bool on)
 	LOGP_TRX(trx, DTRXC, LOGL_INFO,
 		 "Power %s\n", on ? "on" : "off");
 
+	/* reset all per-chan parameters on POWEROFF */
+	if (!on) {
+		for (unsigned int chan = 0; chan < trx->num_chans; chan++)
+			proxy_trx_chan_reset_params(trx, chan);
+	}
+
 	trx->powered = on;
+
 	clck_gen_trx_list_updated();
 }
 
