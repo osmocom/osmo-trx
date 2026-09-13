@@ -70,6 +70,7 @@ struct proxy_trx {
 	struct osmo_trx_ep *ep;
 	bool powered;		/*!< POWERON/POWEROFF applies to all channels at once */
 	int tx_power;		/*!< dBm, nominal Tx power (path_sim_state::tx_power) */
+	uint8_t trxd_max_ver;	/*!< highest TRXD PDU version SETFORMAT may negotiate */
 	unsigned int num_chans;	/*!< mirrors osmo_trx_ep_get_num_chans(ep) */
 	struct proxy_trx_chan *chans; /*!< array of num_chans entries, allocated on open */
 };

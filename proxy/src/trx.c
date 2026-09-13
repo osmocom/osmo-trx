@@ -53,6 +53,7 @@ struct proxy_trx *proxy_trx_alloc(struct proxy_ctx *proxy, const char *name)
 
 	trx->name = talloc_strdup(trx, name);
 	trx->tx_power = PROXY_TRX_DEFAULT_TX_POWER;
+	trx->trxd_max_ver = OSMO_TRXD_PDU_VER_MAX;
 	trx->ep = osmo_trx_ep_alloc(trx, num_chans);
 	if (trx->ep == NULL) {
 		talloc_free(trx);

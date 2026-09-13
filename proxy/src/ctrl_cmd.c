@@ -285,8 +285,8 @@ static void ctrl_cmd_setformat(struct proxy_trx *trx, unsigned int chan,
 		return;
 	}
 
-	if (ver_req > OSMO_TRXD_PDU_VER_MAX)
-		ver_req = OSMO_TRXD_PDU_VER_MAX;
+	if (ver_req > trx->trxd_max_ver)
+		ver_req = trx->trxd_max_ver;
 
 	osmo_trx_ep_set_pdu_ver(trx->ep, chan, ver_req);
 	rsp->status = ver_req;

@@ -292,6 +292,20 @@ DEFUN(cfg_ep_tx_power,
 	return CMD_SUCCESS;
 }
 
+DEFUN(cfg_ep_trxd_max_version,
+      cfg_ep_trxd_max_version_cmd,
+      "trxd-max-version <0-" OSMO_STRINGIFY_VAL(OSMO_TRXD_PDU_VER_MAX) ">",
+      "Set the highest TRXD PDU version SETFORMAT may negotiate "
+      "(default: " OSMO_STRINGIFY_VAL(OSMO_TRXD_PDU_VER_MAX) ")\n"
+      "TRXD PDU version\n")
+{
+	struct proxy_trx *trx = vty->index;
+
+	trx->trxd_max_ver = atoi(argv[0]);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_ep_clock_socket,
       cfg_ep_clock_socket_cmd,
       "clock-socket",
@@ -345,6 +359,8 @@ static int config_write_proxy(struct vty *vty)
 		vty_out(vty, "  base-port %u%s", osmo_trx_ep_get_base_port(trx->ep), VTY_NEWLINE);
 		vty_out(vty, "  num-chans %u%s", trx->num_chans, VTY_NEWLINE);
 		vty_out(vty, "  tx-power %d%s", trx->tx_power, VTY_NEWLINE);
+		if (trx->trxd_max_ver < OSMO_TRXD_PDU_VER_MAX)
+			vty_out(vty, "  trxd-max-version %u%s", trx->trxd_max_ver, VTY_NEWLINE);
 
 		if (!osmo_trx_ep_get_clock_socket(trx->ep))
 			vty_out(vty, "  no clock-socket%s", VTY_NEWLINE);
@@ -450,6 +466,7 @@ int proxy_vty_init(void)
 	install_element(EP_NODE, &cfg_ep_base_port_cmd);
 	install_element(EP_NODE, &cfg_ep_num_chans_cmd);
 	install_element(EP_NODE, &cfg_ep_tx_power_cmd);
+	install_element(EP_NODE, &cfg_ep_trxd_max_version_cmd);
 	install_element(EP_NODE, &cfg_ep_clock_socket_cmd);
 	install_element(EP_NODE, &cfg_ep_no_clock_socket_cmd);
 
