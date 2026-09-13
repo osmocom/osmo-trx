@@ -36,4 +36,7 @@ trx: rx_ctrl_msg(chan=1): 'CMD RFMUTE 1'
 bts: closed_cb()
 trx: rx_ctrl_msg(chan=0): 'CMD POWEROFF'
 trx: rx_ctrl_msg(chan=1): 'CMD RFMUTE 1'
+=== test_ctrl_promisc(): starting testcase ===
+promisc: rx_ctrl_msg(chan=0): 'CMD POWERON'
+foreign rx: 'RSP POWERON 0'
 Done

@@ -33,6 +33,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 
+#include <sys/socket.h>
 #include <netinet/in.h>
 
 #include <osmocom/core/talloc.h>
@@ -59,12 +60,16 @@ struct osmo_trx_ep_chan {
 	struct osmo_io_fd *data_iofd;
 	uint8_t pdu_ver;		/* TRXD PDU version in use */
 	struct msgb *tx_msg;		/* pending TRXDv2 Tx batch */
-	/* Bytes handed to osmo_iofd_write_msgb() on ctrl_iofd but not yet
-	 * completed (per trx_ep_ctrl_write_cb()), used by trx_ep_ctrl_close()
+	/* Bytes handed to osmo_iofd_sendto_msgb() on ctrl_iofd but not yet
+	 * completed (per trx_ep_ctrl_sendto_cb()), used by trx_ep_ctrl_close()
 	 * to tell whether a flush is needed on teardown.  Non-zero here also
 	 * means ctrl_iofd is currently being flushed asynchronously after
 	 * osmo_trx_ep_close(); see osmo_trx_ep_is_closing(). */
 	size_t ctrl_wr_pending;
+	/* Destination for the next ctrl message sent on ctrl_iofd.
+	 * Initialized to the configured peer at open, updated in
+	 * trx_ep_ctrl_recvfrom_cb(). */
+	struct osmo_sockaddr ctrl_peer;
 };
 
 /*! Sockets currently bound */
@@ -72,9 +77,11 @@ struct osmo_trx_ep_chan {
 /*! Enable the clock socket (base_port + 0) */
 #define OSMO_TRX_EP_F_CLOCK_SOCKET		(1 << 1)
 /*! osmo_trx_ep_free() was called while a chan's ctrl socket was still
- * flushing: the actual free is deferred to trx_ep_ctrl_close_write_cb(),
+ * flushing: the actual free is deferred to trx_ep_ctrl_close_sendto_cb(),
  * once the last one completes. */
 #define OSMO_TRX_EP_F_PENDING_FREE		(1 << 2)
+/*! Leave the ctrl socket unconnected, accepting/replying to any peer */
+#define OSMO_TRX_EP_F_CTRL_PROMISC		(1 << 3)
 
 struct osmo_trx_ep {
 	uint32_t flags;			/* see OSMO_TRX_EP_F_* */
@@ -173,7 +180,8 @@ ret_free_msg:
 	msgb_free(msg);
 }
 
-static void trx_ep_ctrl_read_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg)
+static void trx_ep_ctrl_recvfrom_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg,
+				    const struct osmo_sockaddr *saddr)
 {
 	struct osmo_trx_ep_chan *chan = osmo_iofd_get_data(iofd);
 	struct osmo_trx_ep *ep = chan->ep;
@@ -182,6 +190,10 @@ static void trx_ep_ctrl_read_cb(struct osmo_io_fd *iofd, int res, struct msgb *m
 
 	if (res <= 0)
 		goto ret_free_msg;
+
+	/* Remember the sender of every datagram received on ctrl_iofd,
+	 * so the next reply goes back to whoever actually sent it. */
+	chan->ctrl_peer = *saddr;
 
 	rc = osmo_trxc_msg_parse(&tmsg, (const char *)msgb_data(msg), msgb_length(msg));
 	if (rc < 0) {
@@ -250,7 +262,8 @@ static void trx_ep_write_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg)
 
 /* Track bytes still pending on a channel's ctrl_iofd, so trx_ep_ctrl_close()
  * can tell whether anything is still in flight at teardown time. */
-static void trx_ep_ctrl_write_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg)
+static void trx_ep_ctrl_sendto_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg,
+				  const struct osmo_sockaddr *daddr)
 {
 	struct osmo_trx_ep_chan *chan = osmo_iofd_get_data(iofd);
 
@@ -282,7 +295,8 @@ static void trx_ep_ctrl_write_cb(struct osmo_io_fd *iofd, int res, struct msgb *
  * the iofd and, if osmo_trx_ep_free() was called on the (kept alive)
  * endpoint in the meantime and no other channel is still flushing,
  * finally frees the endpoint too. */
-static void trx_ep_ctrl_close_write_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg)
+static void trx_ep_ctrl_close_sendto_cb(struct osmo_io_fd *iofd, int res, struct msgb *msg,
+					const struct osmo_sockaddr *daddr)
 {
 	struct osmo_trx_ep_chan *chan = osmo_iofd_get_data(iofd);
 	struct osmo_trx_ep *ep = chan->ep;
@@ -324,7 +338,7 @@ static void trx_ep_ctrl_close_write_cb(struct osmo_io_fd *iofd, int res, struct 
 }
 
 static const struct osmo_io_ops trx_ep_ctrl_close_ioops = {
-	.write_cb = &trx_ep_ctrl_close_write_cb,
+	.sendto_cb = &trx_ep_ctrl_close_sendto_cb,
 };
 
 /* Close a channel's ctrl_iofd, flushing (best-effort) any still-in-flight
@@ -357,8 +371,8 @@ static const struct osmo_io_ops trx_ep_clck_ioops = {
 };
 
 static const struct osmo_io_ops trx_ep_ctrl_ioops = {
-	.read_cb = &trx_ep_ctrl_read_cb,
-	.write_cb = &trx_ep_ctrl_write_cb,
+	.recvfrom_cb = &trx_ep_ctrl_recvfrom_cb,
+	.sendto_cb = &trx_ep_ctrl_sendto_cb,
 };
 
 static const struct osmo_io_ops trx_ep_data_ioops = {
@@ -366,26 +380,34 @@ static const struct osmo_io_ops trx_ep_data_ioops = {
 	.write_cb = &trx_ep_write_cb,
 };
 
-/* Open a single UDP socket (base port + ofs) and set up osmo_io for it */
+/* Open a single UDP socket (base port + ofs) and set up osmo_io for it.
+ * connect_socket == false leaves the socket unconnected (bind-only),
+ * accepting datagrams from and replying to any peer. */
 static struct osmo_io_fd *trx_ep_open_iofd(struct osmo_trx_ep *ep, uint16_t ofs,
 					   const struct osmo_io_ops *ioops,
-					   unsigned int buf_size, void *data)
+					   enum osmo_io_fd_mode mode,
+					   unsigned int buf_size, void *data,
+					   bool connect_socket)
 {
+	unsigned int flags = OSMO_SOCK_F_BIND | OSMO_SOCK_F_NONBLOCK;
 	char sock_name[OSMO_SOCK_NAME_MAXLEN];
 	struct osmo_io_fd *iofd;
 	int fd;
 
+	if (connect_socket)
+		flags |= OSMO_SOCK_F_CONNECT;
+
 	fd = osmo_sock_init2(AF_UNSPEC, SOCK_DGRAM, IPPROTO_UDP,
 			     ep->laddr, trx_ep_port(ep, true, ofs),
 			     ep->raddr, trx_ep_port(ep, false, ofs),
-			     OSMO_SOCK_F_BIND | OSMO_SOCK_F_CONNECT | OSMO_SOCK_F_NONBLOCK);
+			     flags);
 	if (fd < 0) {
 		LOGEP(ep, LOGL_ERROR, "Failed to open a socket (ofs=%u): %d\n", ofs, fd);
 		return NULL;
 	}
 
 	osmo_sock_get_name_buf(sock_name, sizeof(sock_name), fd);
-	iofd = osmo_iofd_setup(ep, fd, sock_name, OSMO_IO_FD_MODE_READ_WRITE, ioops, data);
+	iofd = osmo_iofd_setup(ep, fd, sock_name, mode, ioops, data);
 	if (iofd == NULL) {
 		close(fd);
 		return NULL;
@@ -415,16 +437,36 @@ static void trx_ep_chan_init(struct osmo_trx_ep_chan *chan, struct osmo_trx_ep *
 static int trx_ep_chan_open(struct osmo_trx_ep_chan *chan)
 {
 	struct osmo_trx_ep *ep = chan->ep;
+	const bool connect_ctrl = !(ep->flags & OSMO_TRX_EP_F_CTRL_PROMISC);
 
 	chan->ctrl_iofd = trx_ep_open_iofd(ep, 2 * chan->num + 1, &trx_ep_ctrl_ioops,
-					   OSMO_TRXC_MSG_BUF_SIZE, chan);
+					   OSMO_IO_FD_MODE_RECVFROM_SENDTO,
+					   OSMO_TRXC_MSG_BUF_SIZE, chan, connect_ctrl);
 	if (chan->ctrl_iofd == NULL) {
 		LOGEPCH(ep, chan->num, LOGL_ERROR, "Failed to open TRXC socket\n");
 		return -EIO;
 	}
 
+	/* connect()ed: seed ctrl_peer with the actual peer so a CMD sent
+	 * from the L1 side (osmo_trx_ep mode L1) before ever receiving
+	 * anything has somewhere to go; trx_ep_ctrl_recvfrom_cb() keeps it
+	 * up to date afterwards. */
+	if (connect_ctrl) {
+		struct osmo_sockaddr *peer = &chan->ctrl_peer;
+		socklen_t peer_len = sizeof(peer->u);
+
+		if (getpeername(osmo_iofd_get_fd(chan->ctrl_iofd), &peer->u.sa, &peer_len) < 0) {
+			/* not fatal: ctrl_peer just stays unset until the first inbound
+			 * datagram updates it via trx_ep_ctrl_recvfrom_cb() */
+			LOGEPCH(ep, chan->num, LOGL_ERROR,
+				"getpeername() failed on TRXC socket: %s\n",
+				strerror(errno));
+		}
+	}
+
 	chan->data_iofd = trx_ep_open_iofd(ep, 2 * chan->num + 2, &trx_ep_data_ioops,
-					   TRX_EP_DATA_BUF_SIZE, chan);
+					   OSMO_IO_FD_MODE_READ_WRITE,
+					   TRX_EP_DATA_BUF_SIZE, chan, true);
 	if (chan->data_iofd == NULL) {
 		LOGEPCH(ep, chan->num, LOGL_ERROR, "Failed to open TRXD socket\n");
 		return -EIO;
@@ -438,7 +480,7 @@ static void trx_ep_chan_close(struct osmo_trx_ep_chan *chan)
 {
 	/* trx_ep_ctrl_close() clears chan->ctrl_iofd itself, but only once
 	 * it's actually safe to: immediately if nothing was pending, or
-	 * later from trx_ep_ctrl_close_write_cb() if a flush is needed. */
+	 * later from trx_ep_ctrl_close_sendto_cb() if a flush is needed. */
 	trx_ep_ctrl_close(chan);
 	osmo_iofd_free(chan->data_iofd);
 	chan->data_iofd = NULL;
@@ -504,7 +546,8 @@ int osmo_trx_ep_open(struct osmo_trx_ep *ep)
 
 	if (ep->flags & OSMO_TRX_EP_F_CLOCK_SOCKET) {
 		ep->clck_iofd = trx_ep_open_iofd(ep, 0, &trx_ep_clck_ioops,
-						 OSMO_TRXC_MSG_BUF_SIZE, ep);
+						 OSMO_IO_FD_MODE_READ_WRITE,
+						 OSMO_TRXC_MSG_BUF_SIZE, ep, true);
 		if (ep->clck_iofd == NULL)
 			goto ret_error;
 	}
@@ -551,7 +594,7 @@ void osmo_trx_ep_close(struct osmo_trx_ep *ep)
 
 /*! Free the given endpoint instance (closes all sockets).  If a ctrl socket
  *  is still flushing (see osmo_trx_ep_is_closing()), the endpoint itself is
- *  kept alive until the flush completes (see trx_ep_ctrl_close_write_cb()),
+ *  kept alive until the flush completes (see trx_ep_ctrl_close_sendto_cb()),
  *  which then finishes this deferred free. */
 void osmo_trx_ep_free(struct osmo_trx_ep *ep)
 {
@@ -734,6 +777,29 @@ bool osmo_trx_ep_get_clock_socket(const struct osmo_trx_ep *ep)
 	return ep->flags & OSMO_TRX_EP_F_CLOCK_SOCKET;
 }
 
+/*! Enable/disable promiscuous ctrl socket mode (default: false): leaves the
+ * ctrl socket unconnected, accepting TRXC PDUs from any peer instead of only
+ * the configured one, e.g. a test tool injecting extra TRXC commands from
+ * its own socket.  The RSP always goes back to whoever actually sent the
+ * CMD, promiscuous or not (see trx_ep_ctrl_recvfrom_cb() and chan->ctrl_peer). */
+int osmo_trx_ep_set_ctrl_promisc(struct osmo_trx_ep *ep, bool enable)
+{
+	if (ep->flags & OSMO_TRX_EP_F_OPEN)
+		return -EBUSY;
+
+	if (enable)
+		ep->flags |= OSMO_TRX_EP_F_CTRL_PROMISC;
+	else
+		ep->flags &= ~OSMO_TRX_EP_F_CTRL_PROMISC;
+	return 0;
+}
+
+/*! Whether promiscuous ctrl socket mode is enabled */
+bool osmo_trx_ep_get_ctrl_promisc(const struct osmo_trx_ep *ep)
+{
+	return ep->flags & OSMO_TRX_EP_F_CTRL_PROMISC;
+}
+
 /*! Set the name (log prefix) of the given instance, e.g. "phy0" */
 int osmo_trx_ep_set_name(struct osmo_trx_ep *ep, const char *fmt, ...)
 {
@@ -820,11 +886,13 @@ int osmo_trx_ep_send_clck_ind(struct osmo_trx_ep *ep, uint32_t fn)
 int osmo_trx_ep_send_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 			      const struct osmo_trxc_msg *tmsg)
 {
+	struct osmo_trx_ep_chan *c;
 	struct msgb *msg;
 	size_t len;
 	int rc;
 
 	OSMO_ASSERT(chan < ep->num_chans);
+	c = &ep->chans[chan];
 
 	msg = msgb_alloc_c(ep, OSMO_TRXC_MSG_BUF_SIZE, "trx_ep_ctrl_tx");
 	rc = osmo_trxc_msg_build((char *)msgb_data(msg), msgb_tailroom(msg), tmsg);
@@ -835,11 +903,11 @@ int osmo_trx_ep_send_ctrl_msg(struct osmo_trx_ep *ep, unsigned int chan,
 	msgb_put(msg, rc);
 	len = msgb_length(msg);
 
-	rc = osmo_iofd_write_msgb(ep->chans[chan].ctrl_iofd, msg);
+	rc = osmo_iofd_sendto_msgb(c->ctrl_iofd, msg, 0, &c->ctrl_peer);
 	if (rc < 0)
 		msgb_free(msg);
 	else
-		ep->chans[chan].ctrl_wr_pending += len;
+		c->ctrl_wr_pending += len;
 	return rc;
 }
 

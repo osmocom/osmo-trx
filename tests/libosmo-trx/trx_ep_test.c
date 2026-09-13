@@ -27,6 +27,11 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 #include <osmocom/core/application.h>
 #include <osmocom/core/logging.h>
@@ -37,6 +42,7 @@
 #include <osmocom/trx/ep.h>
 
 #define TEST_BASE_PORT 16700
+#define TEST_PROMISC_BASE_PORT 16720
 
 static void *test_ctx = NULL;
 
@@ -348,6 +354,66 @@ static void test_ctrl_close_flush(bool do_free)
 	ep_close_free(ep_trx);
 }
 
+/* osmo_trx_ep_{get,set}_ctrl_promisc(): with promisc enabled, a channel's
+ * ctrl socket is left unconnected (bind-only), so it accepts a CMD from any
+ * peer, not just the configured raddr, and replies to whoever actually sent
+ * it - e.g. a test tool injecting extra TRXC commands from its own socket. */
+static void test_ctrl_promisc(void)
+{
+	struct sockaddr_in dst = { .sin_family = AF_INET };
+	struct sockaddr_in from;
+	socklen_t from_len;
+	struct osmo_trx_ep *ep;
+	int fd, rc, len;
+
+	printf("=== %s(): starting testcase ===\n", __func__);
+
+	ep = ep_alloc("promisc", OSMO_TRX_EP_MODE_TRX);
+	osmo_trx_ep_set_base_port(ep, TEST_PROMISC_BASE_PORT);
+
+	OSMO_ASSERT(osmo_trx_ep_get_ctrl_promisc(ep) == false);
+	OSMO_ASSERT(osmo_trx_ep_set_ctrl_promisc(ep, true) == 0);
+	OSMO_ASSERT(osmo_trx_ep_get_ctrl_promisc(ep) == true);
+
+	ep_open(ep);
+
+	/* config setters, including this one, are expected to fail once open */
+	OSMO_ASSERT(osmo_trx_ep_set_ctrl_promisc(ep, false) == -EBUSY);
+
+	/* chan 0 ctrl; source port of the foreign peer is left to the kernel
+	 * (no bind() before sendto() below) */
+	dst.sin_port = htons(TEST_PROMISC_BASE_PORT + 1);
+	OSMO_ASSERT(inet_pton(AF_INET, "127.0.0.1", &dst.sin_addr) == 1);
+
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	OSMO_ASSERT(fd >= 0);
+
+	char buf[OSMO_TRXC_MSG_BUF_SIZE];
+	static const struct osmo_trxc_msg cmd_poweron = {
+		.type = OSMO_TRXC_MT_CMD,
+		.cmd = OSMO_TRXC_CMD_POWERON,
+	};
+
+	len = osmo_trxc_msg_build(buf, sizeof(buf), &cmd_poweron);
+	OSMO_ASSERT(len > 0);
+	rc = sendto(fd, buf, len, 0, (const struct sockaddr *)&dst, sizeof(dst));
+	OSMO_ASSERT(rc == len);
+
+	flush_io();
+
+	/* the RSP must come back to us (the foreign sender), not to raddr */
+	from_len = sizeof(from);
+	rc = recvfrom(fd, buf, sizeof(buf) - 1, MSG_DONTWAIT,
+		      (struct sockaddr *)&from, &from_len);
+	OSMO_ASSERT(rc > 0);
+	buf[rc] = '\0';
+	OSMO_ASSERT(from.sin_addr.s_addr == dst.sin_addr.s_addr);
+	printf("foreign rx: '%s'\n", buf);
+
+	close(fd);
+	ep_close_free(ep);
+}
+
 int main(int argc, char **argv)
 {
 	test_ctx = talloc_named_const(NULL, 0, "trx_ep_test");
@@ -364,6 +430,8 @@ int main(int argc, char **argv)
 	test_burst_req_ind();
 	test_ctrl_close_flush(false);
 	test_ctrl_close_flush(true);
+
+	test_ctrl_promisc();
 
 	printf("Done\n");
 	return 0;

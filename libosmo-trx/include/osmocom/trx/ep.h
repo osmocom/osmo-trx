@@ -106,6 +106,10 @@ uint16_t osmo_trx_ep_get_base_port(const struct osmo_trx_ep *ep);
 int osmo_trx_ep_set_clock_socket(struct osmo_trx_ep *ep, bool enable);
 bool osmo_trx_ep_get_clock_socket(const struct osmo_trx_ep *ep);
 
+/*! Unconnected ctrl socket accepting/replying to any peer; default: false */
+int osmo_trx_ep_set_ctrl_promisc(struct osmo_trx_ep *ep, bool enable);
+bool osmo_trx_ep_get_ctrl_promisc(const struct osmo_trx_ep *ep);
+
 /*! Per-channel TRXD PDU version in use (set after SETFORMAT negotiation) */
 int osmo_trx_ep_set_pdu_ver(struct osmo_trx_ep *ep, unsigned int chan, uint8_t ver);
 int osmo_trx_ep_get_pdu_ver(const struct osmo_trx_ep *ep, unsigned int chan);

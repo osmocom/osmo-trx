@@ -22,8 +22,8 @@ DLGLOBAL INFO (ep=ep_bts) Closing TRXC/TRXD connections l=127.0.0.1:16800<->r=12
 DLGLOBAL DEBUG (ep=ep_bts, chan=0) trx_ep_ctrl_close(): 12 byte(s) still pending, flushing asynchronously
 DLGLOBAL DEBUG (ep=ep_bts, chan=1) trx_ep_ctrl_close(): 12 byte(s) still pending, flushing asynchronously
 DLGLOBAL DEBUG (ep=ep_bts, chan=2) trx_ep_ctrl_close(): nothing pending, closing immediately
-DLGLOBAL DEBUG (ep=ep_bts, chan=0) trx_ep_ctrl_close_write_cb(): wrote 12 byte(s), flush completed
-DLGLOBAL DEBUG (ep=ep_bts, chan=1) trx_ep_ctrl_close_write_cb(): wrote 12 byte(s), flush completed
+DLGLOBAL DEBUG (ep=ep_bts, chan=0) trx_ep_ctrl_close_sendto_cb(): wrote 12 byte(s), flush completed
+DLGLOBAL DEBUG (ep=ep_bts, chan=1) trx_ep_ctrl_close_sendto_cb(): wrote 12 byte(s), flush completed
 DLGLOBAL INFO (ep=ep_trx) Closing TRXC/TRXD connections l=127.0.0.1:16700<->r=127.0.0.1:16800
 DLGLOBAL DEBUG (ep=ep_trx, chan=0) trx_ep_ctrl_close(): nothing pending, closing immediately
 DLGLOBAL DEBUG (ep=ep_trx, chan=1) trx_ep_ctrl_close(): nothing pending, closing immediately
@@ -34,10 +34,13 @@ DLGLOBAL INFO (ep=ep_bts) Closing TRXC/TRXD connections l=127.0.0.1:16800<->r=12
 DLGLOBAL DEBUG (ep=ep_bts, chan=0) trx_ep_ctrl_close(): 12 byte(s) still pending, flushing asynchronously
 DLGLOBAL DEBUG (ep=ep_bts, chan=1) trx_ep_ctrl_close(): 12 byte(s) still pending, flushing asynchronously
 DLGLOBAL DEBUG (ep=ep_bts, chan=2) trx_ep_ctrl_close(): nothing pending, closing immediately
-DLGLOBAL DEBUG (ep=ep_bts, chan=0) trx_ep_ctrl_close_write_cb(): wrote 12 byte(s), flush completed
-DLGLOBAL DEBUG (ep=ep_bts, chan=1) trx_ep_ctrl_close_write_cb(): wrote 12 byte(s), flush completed
-DLGLOBAL DEBUG (ep=ep_bts) trx_ep_ctrl_close_write_cb(): last flush completed, free()ing
+DLGLOBAL DEBUG (ep=ep_bts, chan=0) trx_ep_ctrl_close_sendto_cb(): wrote 12 byte(s), flush completed
+DLGLOBAL DEBUG (ep=ep_bts, chan=1) trx_ep_ctrl_close_sendto_cb(): wrote 12 byte(s), flush completed
+DLGLOBAL DEBUG (ep=ep_bts) trx_ep_ctrl_close_sendto_cb(): last flush completed, free()ing
 DLGLOBAL INFO (ep=ep_trx) Closing TRXC/TRXD connections l=127.0.0.1:16700<->r=127.0.0.1:16800
 DLGLOBAL DEBUG (ep=ep_trx, chan=0) trx_ep_ctrl_close(): nothing pending, closing immediately
 DLGLOBAL DEBUG (ep=ep_trx, chan=1) trx_ep_ctrl_close(): nothing pending, closing immediately
 DLGLOBAL DEBUG (ep=ep_trx, chan=2) trx_ep_ctrl_close(): nothing pending, closing immediately
+DLGLOBAL INFO (ep=ep_promisc) Opening TRXC/TRXD connections l=127.0.0.1:16720<->r=127.0.0.1:16820
+DLGLOBAL INFO (ep=ep_promisc) Closing TRXC/TRXD connections l=127.0.0.1:16720<->r=127.0.0.1:16820
+DLGLOBAL DEBUG (ep=ep_promisc, chan=0) trx_ep_ctrl_close(): nothing pending, closing immediately
