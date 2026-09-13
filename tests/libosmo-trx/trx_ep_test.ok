@@ -22,10 +22,14 @@ bts: rx_burst_ind(chan=1): BURST.ind tn=5 fn=100005 rssi=-63 toa256=-512 mod=GMS
 BURST.req batch flush
 trx: rx_burst_req(chan=0): BURST.req tn=1 fn=200000 att=10 trx_num=0 mod=GMSK set=0 tsc=7 burst_len=148
 trx: rx_burst_req(chan=0): BURST.req tn=2 fn=200000 att=10 trx_num=0 mod=GMSK set=0 tsc=7 burst_len=148
+=== test_burst_req_ind(): BURST.req, TRXDv2 with batching disabled (BTS -> TRX) ===
+trx: rx_burst_req(chan=0): BURST.req tn=1 fn=300000 att=10 trx_num=0 mod=GMSK set=0 tsc=7 burst_len=148
 === test_burst_req_ind(): BURST.ind batch, TRXDv2 with NOPE (TRX -> BTS) ===
 BURST.ind batch flush
 bts: rx_burst_ind(chan=0): NOPE.ind tn=5 fn=200005 trx_num=0 rssi=-63 toa256=-512 C/I=-150 cB
 bts: rx_burst_ind(chan=0): BURST.ind tn=6 fn=200005 trx_num=0 rssi=-63 toa256=-512 C/I=-150 cB mod=GMSK set=0 tsc=7 burst_len=148
+=== test_burst_req_ind(): BURST.ind, TRXDv2 with batching disabled (TRX -> BTS) ===
+bts: rx_burst_ind(chan=0): BURST.ind tn=5 fn=300005 trx_num=0 rssi=-63 toa256=-512 C/I=-150 cB mod=GMSK set=0 tsc=7 burst_len=148
 === test_ctrl_close_flush(do_free=0): starting testcase ===
 === test_ctrl_close_flush(): TRXC CMDs sent right before osmo_trx_ep_close() (BTS -> TRX) ===
 bts: closed_cb()

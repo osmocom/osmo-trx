@@ -82,6 +82,9 @@ struct osmo_trx_ep_chan {
 #define OSMO_TRX_EP_F_PENDING_FREE		(1 << 2)
 /*! Leave the ctrl socket unconnected, accepting/replying to any peer */
 #define OSMO_TRX_EP_F_CTRL_PROMISC		(1 << 3)
+/*! Send one datagram per PDU instead of batching a TDMA frame's worth of
+ * BURST.ind/req PDUs into one, even if TRXDv2+ is negotiated */
+#define OSMO_TRX_EP_F_NO_PDU_BATCH		(1 << 4)
 
 struct osmo_trx_ep {
 	uint32_t flags;			/* see OSMO_TRX_EP_F_* */
@@ -800,6 +803,26 @@ bool osmo_trx_ep_get_ctrl_promisc(const struct osmo_trx_ep *ep)
 	return ep->flags & OSMO_TRX_EP_F_CTRL_PROMISC;
 }
 
+/*! Enable/disable batching BURST.ind/req PDUs on the data sockets (default:
+ * true): when enabled and TRXDv2 (or higher) is negotiated on a channel, a
+ * TDMA frame's worth of PDUs is accumulated and sent in a single datagram
+ * (see osmo_trx_ep_send_burst_ind()/_req()); when disabled, every PDU is
+ * sent in its own datagram regardless of the negotiated TRXD PDU version,
+ * trading datagram count for latency.  May be changed at any time. */
+void osmo_trx_ep_set_pdu_batch(struct osmo_trx_ep *ep, bool enable)
+{
+	if (enable)
+		ep->flags &= ~OSMO_TRX_EP_F_NO_PDU_BATCH;
+	else
+		ep->flags |= OSMO_TRX_EP_F_NO_PDU_BATCH;
+}
+
+/*! Whether batching BURST.ind/req PDUs on the data sockets is enabled */
+bool osmo_trx_ep_get_pdu_batch(const struct osmo_trx_ep *ep)
+{
+	return (ep->flags & OSMO_TRX_EP_F_NO_PDU_BATCH) == 0;
+}
+
 /*! Set the name (log prefix) of the given instance, e.g. "phy0" */
 int osmo_trx_ep_set_name(struct osmo_trx_ep *ep, const char *fmt, ...)
 {
@@ -963,8 +986,8 @@ int osmo_trx_ep_send_burst_ind(struct osmo_trx_ep *ep, unsigned int chan,
 		return rc;
 	}
 
-	/* TRXDv2 and higher: wait for osmo_trx_ep_send_burst_fin() */
-	if (c->pdu_ver >= 2) {
+	/* TRXDv2 and higher: wait for osmo_trx_ep_send_burst_fin() (unless disabled) */
+	if (c->pdu_ver >= 2 && (~ep->flags & OSMO_TRX_EP_F_NO_PDU_BATCH)) {
 		c->tx_msg = msg;
 		return 0;
 	}
@@ -1007,8 +1030,8 @@ int osmo_trx_ep_send_burst_req(struct osmo_trx_ep *ep, unsigned int chan,
 		return rc;
 	}
 
-	/* TRXDv2 and higher: wait for osmo_trx_ep_send_burst_fin() */
-	if (c->pdu_ver >= 2) {
+	/* TRXDv2 and higher: wait for osmo_trx_ep_send_burst_fin() (unless disabled) */
+	if (c->pdu_ver >= 2 && (~ep->flags & OSMO_TRX_EP_F_NO_PDU_BATCH)) {
 		c->tx_msg = msg;
 		return 0;
 	}

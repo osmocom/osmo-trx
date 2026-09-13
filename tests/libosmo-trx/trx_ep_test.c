@@ -279,6 +279,18 @@ static void test_burst_req_ind(void)
 	printf("BURST.req batch flush\n");
 	flush_io();
 
+	printf("=== %s(): BURST.req, TRXDv2 with batching disabled (BTS -> TRX) ===\n", __func__);
+	OSMO_ASSERT(osmo_trx_ep_get_pdu_batch(ep_bts) == true);
+	osmo_trx_ep_set_pdu_batch(ep_bts, false);
+	OSMO_ASSERT(osmo_trx_ep_get_pdu_batch(ep_bts) == false);
+	fill_burst_req(&br, 300000);
+	br.tn = 1;
+	OSMO_ASSERT(osmo_trx_ep_send_burst_req(ep_bts, 0, &br) == 0);
+	/* nothing was accumulated: there is nothing to flush */
+	OSMO_ASSERT(osmo_trx_ep_send_burst_fin(ep_bts, 0) == -ENOMSG);
+	flush_io();
+	osmo_trx_ep_set_pdu_batch(ep_bts, true); /* restore default */
+
 	printf("=== %s(): BURST.ind batch, TRXDv2 with NOPE (TRX -> BTS) ===\n", __func__);
 	/* an empty batch cannot be flushed */
 	OSMO_ASSERT(osmo_trx_ep_send_burst_fin(ep_trx, 0) == -ENOMSG);
@@ -294,6 +306,17 @@ static void test_burst_req_ind(void)
 	OSMO_ASSERT(osmo_trx_ep_send_burst_fin(ep_trx, 0) == 0);
 	printf("BURST.ind batch flush\n");
 	flush_io();
+
+	printf("=== %s(): BURST.ind, TRXDv2 with batching disabled (TRX -> BTS) ===\n", __func__);
+	OSMO_ASSERT(osmo_trx_ep_get_pdu_batch(ep_trx) == true);
+	osmo_trx_ep_set_pdu_batch(ep_trx, false);
+	OSMO_ASSERT(osmo_trx_ep_get_pdu_batch(ep_trx) == false);
+	fill_burst_ind(&bi, 300005);
+	OSMO_ASSERT(osmo_trx_ep_send_burst_ind(ep_trx, 0, &bi) == 0);
+	/* nothing was accumulated: there is nothing to flush */
+	OSMO_ASSERT(osmo_trx_ep_send_burst_fin(ep_trx, 0) == -ENOMSG);
+	flush_io();
+	osmo_trx_ep_set_pdu_batch(ep_trx, true); /* restore default */
 
 	ep_close_free(ep_trx);
 	ep_close_free(ep_bts);
