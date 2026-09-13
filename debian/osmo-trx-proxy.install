@@ -1,3 +1,4 @@
 etc/osmocom/osmo-trx-proxy.cfg
+lib/systemd/system/osmo-trx-proxy.service
 usr/bin/osmo-trx-proxy
 usr/share/doc/osmo-trx/examples/osmo-trx-proxy/osmo-trx-proxy.cfg /usr/share/doc/osmo-trx/examples/osmo-trx-proxy/
