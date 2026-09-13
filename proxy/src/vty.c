@@ -306,6 +306,32 @@ DEFUN(cfg_ep_trxd_max_version,
 	return CMD_SUCCESS;
 }
 
+DEFUN(cfg_ep_trxd_pdu_batch,
+      cfg_ep_trxd_pdu_batch_cmd,
+      "trxd-pdu-batch",
+      "Batch all BURST.ind PDUs of a TDMA frame into one datagram "
+      "(TRXDv2 and higher, default)\n")
+{
+	struct proxy_trx *trx = vty->index;
+
+	osmo_trx_ep_set_pdu_batch(trx->ep, true);
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_ep_no_trxd_pdu_batch,
+      cfg_ep_no_trxd_pdu_batch_cmd,
+      "no trxd-pdu-batch",
+      NO_STR "Send one datagram per BURST.ind PDU instead of batching a "
+      "TDMA frame's worth into one\n")
+{
+	struct proxy_trx *trx = vty->index;
+
+	osmo_trx_ep_set_pdu_batch(trx->ep, false);
+
+	return CMD_SUCCESS;
+}
+
 DEFUN(cfg_ep_clock_socket,
       cfg_ep_clock_socket_cmd,
       "clock-socket",
@@ -361,6 +387,8 @@ static int config_write_proxy(struct vty *vty)
 		vty_out(vty, "  tx-power %d%s", trx->tx_power, VTY_NEWLINE);
 		if (trx->trxd_max_ver < OSMO_TRXD_PDU_VER_MAX)
 			vty_out(vty, "  trxd-max-version %u%s", trx->trxd_max_ver, VTY_NEWLINE);
+		if (!osmo_trx_ep_get_pdu_batch(trx->ep))
+			vty_out(vty, "  no trxd-pdu-batch%s", VTY_NEWLINE);
 
 		if (!osmo_trx_ep_get_clock_socket(trx->ep))
 			vty_out(vty, "  no clock-socket%s", VTY_NEWLINE);
@@ -467,6 +495,8 @@ int proxy_vty_init(void)
 	install_element(EP_NODE, &cfg_ep_num_chans_cmd);
 	install_element(EP_NODE, &cfg_ep_tx_power_cmd);
 	install_element(EP_NODE, &cfg_ep_trxd_max_version_cmd);
+	install_element(EP_NODE, &cfg_ep_trxd_pdu_batch_cmd);
+	install_element(EP_NODE, &cfg_ep_no_trxd_pdu_batch_cmd);
 	install_element(EP_NODE, &cfg_ep_clock_socket_cmd);
 	install_element(EP_NODE, &cfg_ep_no_clock_socket_cmd);
 
