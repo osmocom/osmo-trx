@@ -189,6 +189,15 @@ Description: MS side transceiver (bladeRF)
  between different telecommunication associations for developing new
  generations of mobile phone networks. (post-2G/GSM)
 
+Package: osmo-trx-proxy
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Virtual TRX endpoint proxy for testing without SDR hardware
+ osmo-trx-proxy speaks the TRXC/TRXD protocol on one or more virtual TRX
+ endpoints, simulating an RF path (path loss, ToA, C/I) between them instead
+ of driving actual SDR hardware. It allows testing L1 software (e.g.
+ OsmoBTS) or MS-side stacks (e.g. osmocom-bb/trxcon) without a radio.
+
 Package: osmo-trx-doc
 Architecture: all
 Section: doc
