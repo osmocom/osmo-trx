@@ -27,9 +27,12 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
+#include <inttypes.h>
 
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/select.h>
+#include <osmocom/core/timer_compat.h>
 #include <osmocom/gsm/gsm0502.h>
 
 #include <osmocom/trx/ep.h>
@@ -43,26 +46,58 @@
 /*! Default "IND CLOCK" period, in frames */
 #define CLCK_GEN_IND_PERIOD	102
 
+/*! Maximum number of 'missed' frame periods we can tolerate before assuming
+ * the PC clock skewed (e.g. someone changed the system time, or the process
+ * got stuck/suspended for a while). */
+#define CLCK_GEN_MAX_FN_SKEW	50
+
 struct clck_gen {
 	struct osmo_fd timerfd;
 	uint32_t fn;
 	bool running;
 	int start_fn;			/*!< CLCK_GEN_START_FN_RANDOM, or a fixed FN */
 	uint32_t ind_period;		/*!< send "IND CLOCK" every N frames */
+	struct timespec last_tick;	/*!< CLOCK_MONOTONIC time of the last timer_cb() */
 };
+
+/*! Number of micro-seconds elapsed between \a last and \a now */
+static int64_t compute_elapsed_us(const struct timespec *last, const struct timespec *now)
+{
+	struct timespec elapsed;
+
+	timespecsub(now, last, &elapsed);
+	return (int64_t)(elapsed.tv_sec * 1000000) + (elapsed.tv_nsec / 1000);
+}
 
 static struct clck_gen g_clck_gen = {
 	.start_fn = CLCK_GEN_START_FN_RANDOM,
 	.ind_period = CLCK_GEN_IND_PERIOD,
 };
 
+static void clck_gen_stop(struct clck_gen *gen);
+
 static int clck_gen_timer_cb(struct osmo_fd *ofd, unsigned int what)
 {
 	struct clck_gen *gen = ofd->data;
+	struct timespec tv_now;
 	uint64_t expire_count;
+	int64_t elapsed_us;
 
 	if (read(ofd->fd, &expire_count, sizeof(expire_count)) != sizeof(expire_count))
 		return 0;
+
+	/* check for PC clock skew (system time change, process stalled/suspended, ...) */
+	clock_gettime(CLOCK_MONOTONIC, &tv_now);
+	elapsed_us = compute_elapsed_us(&gen->last_tick, &tv_now);
+	gen->last_tick = tv_now;
+	if (elapsed_us > GSM_TDMA_FN_DURATION_uS * CLCK_GEN_MAX_FN_SKEW || elapsed_us < 0) {
+		LOGP(DTRXC, LOGL_FATAL,
+		     "PC clock skew too high (elapsed %" PRId64 " us): "
+		     "stopping the TDMA clock generator\n",
+		     elapsed_us);
+		clck_gen_stop(gen);
+		return 0;
+	}
 
 	while (expire_count-- > 0) {
 		const struct proxy_trx *trx;
@@ -99,6 +134,8 @@ static void clck_gen_start(struct clck_gen *gen)
 		gen->fn = rand() % GSM_TDMA_HYPERFRAME;
 	else
 		gen->fn = (uint32_t)gen->start_fn;
+
+	clock_gettime(CLOCK_MONOTONIC, &gen->last_tick);
 
 	if (osmo_timerfd_schedule(&gen->timerfd, &first, &interval) < 0) {
 		LOGP(DTRXC, LOGL_ERROR, "Failed to start the TDMA clock generator\n");
