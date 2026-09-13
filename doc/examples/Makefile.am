@@ -8,6 +8,7 @@ EXTRA_DIST = \
 	osmo-trx-lms/osmo-trx-limesdr.cfg \
 	osmo-trx-lms/osmo-trx-lms.cfg \
 	osmo-trx-ipc/osmo-trx-ipc.cfg \
+	osmo-trx-proxy/osmo-trx-proxy.cfg \
 	$(NULL)
 
 OSMOCONF_FILES =
@@ -28,6 +29,10 @@ endif
 
 if DEVICE_IPC
 OSMOCONF_FILES += osmo-trx-ipc/osmo-trx-ipc.cfg
+endif
+
+if ENABLE_PROXY
+OSMOCONF_FILES += osmo-trx-proxy/osmo-trx-proxy.cfg
 endif
 
 osmoconf_DATA = $(OSMOCONF_FILES)
