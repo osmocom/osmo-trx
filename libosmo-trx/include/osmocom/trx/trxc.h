@@ -86,6 +86,12 @@ enum osmo_trxc_chan_comb {
 	OSMO_TRXC_CHAN_COMB_PDTCH		= 13, /*!< PDTCH+PACCH+PTCCH */
 };
 
+extern const struct value_string osmo_trxc_chan_comb_names[];
+static inline const char *osmo_trxc_chan_comb_name(enum osmo_trxc_chan_comb comb)
+{
+	return get_value_string(osmo_trxc_chan_comb_names, comb);
+}
+
 /*! VAMOS-enabled channel combinations: the \c chan_comb parameter of SETSLOT
  * is symbolic (not numeric) for these. */
 enum osmo_trxc_vamos_comb {

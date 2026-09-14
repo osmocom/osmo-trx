@@ -44,6 +44,24 @@ static const struct value_string trxc_msg_type_names[] = {
 	{ 0, NULL }
 };
 
+const struct value_string osmo_trxc_chan_comb_names[] = {
+	{ OSMO_TRXC_CHAN_COMB_UNUSED,		 "UNUSED" },
+	{ OSMO_TRXC_CHAN_COMB_TCHF,		 "TCH/F" },
+	{ OSMO_TRXC_CHAN_COMB_TCHH_IDLE,	 "TCH/H (sub-ch 1 idle)" },
+	{ OSMO_TRXC_CHAN_COMB_TCHH,		 "TCH/H" },
+	{ OSMO_TRXC_CHAN_COMB_BCCH,		 "BCCH" },
+	{ OSMO_TRXC_CHAN_COMB_BCCH_SDCCH4,	 "BCCH+SDCCH/4" },
+	{ OSMO_TRXC_CHAN_COMB_CCCH,		 "CCCH" },
+	{ OSMO_TRXC_CHAN_COMB_SDCCH8,		 "SDCCH/8" },
+	{ OSMO_TRXC_CHAN_COMB_TCHF_FACCH_SACCHM, "TCH/F+FACCH+SACCH/M" },
+	{ OSMO_TRXC_CHAN_COMB_TCHF_SACCHM,	 "TCH/F+SACCH/M" },
+	{ OSMO_TRXC_CHAN_COMB_TCHFD_SACCHMD,	 "TCH/FD+SACCH/MD" },
+	{ OSMO_TRXC_CHAN_COMB_PBCCH,		 "PBCCH" },
+	{ OSMO_TRXC_CHAN_COMB_PCCCH,		 "PCCCH" },
+	{ OSMO_TRXC_CHAN_COMB_PDTCH,		 "PDTCH" },
+	{ 0, NULL }
+};
+
 const struct value_string osmo_trxc_vamos_comb_names[] = {
 	{ OSMO_TRXC_VAMOS_COMB_VFF,  "VFF" },
 	{ OSMO_TRXC_VAMOS_COMB_VHH,  "VHH" },
