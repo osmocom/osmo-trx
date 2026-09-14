@@ -397,21 +397,128 @@ static int config_write_proxy(struct vty *vty)
 	return CMD_SUCCESS;
 }
 
-DEFUN(show_proxy,
-      show_proxy_cmd,
-      "show proxy",
-      SHOW_STR "Display configured virtual TRX endpoints\n")
+DEFUN(show_ep_list,
+      show_ep_list_cmd,
+      "show ep-list",
+      SHOW_STR "Display a brief list of configured virtual TRX endpoints\n")
 {
 	struct proxy_trx *trx;
 
 	llist_for_each_entry(trx, &g_proxy_ctx->trx_list, list) {
-		vty_out(vty, "Endpoint '%s': %s:%u, %u channel(s), %s%s",
+		vty_out(vty, "Endpoint '%s' (%s): l=%s:%u<->r=%s:%u, %u channel(s), power %s%s",
 			trx->name,
-			osmo_trx_ep_get_raddr(trx->ep),
-			osmo_trx_ep_get_base_port(trx->ep),
-			osmo_trx_ep_get_num_chans(trx->ep),
 			osmo_trx_ep_is_open(trx->ep) ? "open" : "closed",
+			osmo_trx_ep_get_laddr(trx->ep),
+			osmo_trx_ep_get_base_port(trx->ep),
+			osmo_trx_ep_get_raddr(trx->ep),
+			osmo_trx_ep_get_base_port(trx->ep) + 100,
+			osmo_trx_ep_get_num_chans(trx->ep),
+			trx->powered ? "on" : "off",
 			VTY_NEWLINE);
+	}
+
+	return CMD_SUCCESS;
+}
+
+static void show_ep_vty(struct vty *vty, struct proxy_trx *trx)
+{
+	vty_out(vty, "Endpoint '%s' (%s):%s",
+		trx->name, osmo_trx_ep_is_open(trx->ep) ? "open" : "closed", VTY_NEWLINE);
+	vty_out(vty, "  Address: l=%s:%u<->r=%s:%u%s",
+		osmo_trx_ep_get_laddr(trx->ep), osmo_trx_ep_get_base_port(trx->ep),
+		osmo_trx_ep_get_raddr(trx->ep), osmo_trx_ep_get_base_port(trx->ep) + 100,
+		VTY_NEWLINE);
+	vty_out(vty, "  Power: %s (%d dBm)%s",
+		trx->powered ? "on" : "off", trx->tx_power, VTY_NEWLINE);
+	vty_out(vty, "  TRXD PDU max version: %u%s", trx->trxd_max_ver, VTY_NEWLINE);
+	vty_out(vty, "  TRXD PDU batching: %s%s",
+		osmo_trx_ep_get_pdu_batch(trx->ep) ? "enabled" : "disabled", VTY_NEWLINE);
+
+	/* endpoint not open yet, no channel info available */
+	if (trx->chans == NULL)
+		return;
+
+	for (unsigned int chan = 0; chan < trx->num_chans; chan++) {
+		const struct proxy_trx_chan *c = &trx->chans[chan];
+
+		vty_out(vty, "  Channel %u:%s", chan, VTY_NEWLINE);
+		vty_out(vty, "    RF state: %s%s", c->rf_muted ? "muted" : "not muted", VTY_NEWLINE);
+		vty_out(vty, "    TRXD PDU version: %d%s",
+			osmo_trx_ep_get_pdu_ver(trx->ep, chan), VTY_NEWLINE);
+
+		if (c->fh == NULL) {
+			vty_out(vty, "    Rx frequency: %u kHz%s", c->rx_freq / 1000, VTY_NEWLINE);
+			vty_out(vty, "    Tx frequency: %u kHz%s", c->tx_freq / 1000, VTY_NEWLINE);
+		} else {
+			vty_out(vty, "    Freq. hopping HSN: %u%s", c->fh->hsn, VTY_NEWLINE);
+			vty_out(vty, "    Freq. hopping MAIO: %u%s", c->fh->maio, VTY_NEWLINE);
+			vty_out(vty, "    Freq. hopping MA length: %u%s", c->fh->ma_len, VTY_NEWLINE);
+		}
+
+		vty_out(vty, "    Tx power: %d dBm (%d dB attenuated)%s",
+			c->path_sim.tx_power, c->path_sim.tx_att, VTY_NEWLINE);
+		vty_out(vty, "    Timing Advance: %d%s", c->path_sim.ta, VTY_NEWLINE);
+		vty_out(vty, "    Reported ToA: %d (jitter %d) 1/256 symbols%s",
+			c->path_sim.toa256, c->path_sim.toa256_jitter, VTY_NEWLINE);
+		if (c->path_sim.flags & PATH_SIM_F_FAKE_RSSI) {
+			vty_out(vty, "    Reported RSSI: %d (jitter %d) dBm (fake)%s",
+				c->path_sim.rssi, c->path_sim.rssi_jitter, VTY_NEWLINE);
+		} else {
+			vty_out(vty, "    Reported RSSI: computed from path-loss%s", VTY_NEWLINE);
+		}
+		vty_out(vty, "    Reported C/I: %d (jitter %d) cB%s",
+			c->path_sim.ci, c->path_sim.ci_jitter, VTY_NEWLINE);
+		if (c->path_sim.burst_drop_amount > 0) {
+			vty_out(vty, "    Dropping bursts: %u left, every %u%s",
+				c->path_sim.burst_drop_amount,
+				c->path_sim.burst_drop_period,
+				VTY_NEWLINE);
+		}
+
+		for (unsigned int tn = 0; tn < PROXY_TRX_NUM_TS; tn++) {
+			const struct proxy_trx_ts *ts = &c->ts[tn];
+
+			vty_out(vty, "    Timeslot %u: ", tn);
+			if (!ts->valid) {
+				vty_out(vty, "(not configured)%s", VTY_NEWLINE);
+				continue;
+			}
+
+			if (ts->cfg.vamos) {
+				vty_out(vty, "%s (VAMOS)%s",
+					osmo_trxc_vamos_comb_name(ts->cfg.vamos_comb), VTY_NEWLINE);
+			} else {
+				vty_out(vty, "%s%s",
+					osmo_trxc_chan_comb_name(ts->cfg.chan_comb), VTY_NEWLINE);
+			}
+
+			for (unsigned int ss = 0; ss < ts->cfg.num_tsc; ss++) {
+				vty_out(vty, "      Sub-channel %u: TSC %u (set %u)%s",
+					ss, ts->cfg.tsc[ss].tsc, ts->cfg.tsc[ss].tsc_set, VTY_NEWLINE);
+			}
+		}
+	}
+}
+
+DEFUN(show_ep,
+      show_ep_cmd,
+      "show ep [NAME]",
+      SHOW_STR "Display detailed information about virtual TRX endpoint(s)\n"
+      "Endpoint name\n")
+{
+	struct proxy_trx *trx;
+	bool found = false;
+
+	llist_for_each_entry(trx, &g_proxy_ctx->trx_list, list) {
+		if (argc > 0 && strcmp(trx->name, argv[0]) != 0)
+			continue;
+		show_ep_vty(vty, trx);
+		found = true;
+	}
+
+	if (argc > 0 && !found) {
+		vty_out(vty, "%% Endpoint '%s' does not exist%s", argv[0], VTY_NEWLINE);
+		return CMD_WARNING;
 	}
 
 	return CMD_SUCCESS;
@@ -474,7 +581,8 @@ int proxy_vty_init(void)
 	osmo_talloc_vty_add_cmds();
 	osmo_cpu_sched_vty_init(g_talloc_ctx);
 
-	install_element_ve(&show_proxy_cmd);
+	install_element_ve(&show_ep_list_cmd);
+	install_element_ve(&show_ep_cmd);
 
 	install_element(CONFIG_NODE, &cfg_proxy_cmd);
 	install_node(&proxy_node, config_write_proxy);
