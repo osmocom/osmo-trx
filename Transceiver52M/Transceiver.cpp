@@ -1060,18 +1060,25 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
   } else if (!strcmp(cmd.cmd, "SETFORMAT")) {
     // set TRXD protocol version
     unsigned version_recv = 0;
-    osmo_trxc_msg_params_scan(&cmd, "%u", &version_recv);
-    LOGCHAN(chan, DTRXCTRL, INFO) << "BTS requests TRXD version switch: " << version_recv;
-    if (version_recv > TRX_DATA_FORMAT_VER) {
-      LOGCHAN(chan, DTRXCTRL, INFO) << "rejecting TRXD version " << version_recv
-                                    << " in favor of " <<  TRX_DATA_FORMAT_VER;
-      rsp.status = TRX_DATA_FORMAT_VER;
+    if (osmo_trxc_msg_params_scan(&cmd, "%u", &version_recv) != 1) {
+      LOGCHAN(chan, DTRXCTRL, NOTICE) << "bogus message on control interface";
+      /* Unlike other commands, SETFORMAT's status is not a generic ACK/NACK
+       * but the negotiated/preferred version; -1 is the reserved value for
+       * "no suitable version" / malformed request. */
+      rsp.status = -1;
     } else {
-      LOGCHAN(chan, DTRXCTRL, NOTICE) << "switching to TRXD version " << version_recv;
-      mVersionTRXD[chan] = version_recv;
-      rsp.status = version_recv;
+      LOGCHAN(chan, DTRXCTRL, INFO) << "BTS requests TRXD version switch: " << version_recv;
+      if (version_recv > TRX_DATA_FORMAT_VER) {
+        LOGCHAN(chan, DTRXCTRL, INFO) << "rejecting TRXD version " << version_recv
+                                      << " in favor of " <<  TRX_DATA_FORMAT_VER;
+        rsp.status = TRX_DATA_FORMAT_VER;
+      } else {
+        LOGCHAN(chan, DTRXCTRL, NOTICE) << "switching to TRXD version " << version_recv;
+        mVersionTRXD[chan] = version_recv;
+        rsp.status = version_recv;
+      }
+      snprintf(rsp.params, sizeof(rsp.params), "%u", version_recv);
     }
-    snprintf(rsp.params, sizeof(rsp.params), "%u", version_recv);
   } else if (!strcmp(cmd.cmd, "RFMUTE")) {
     // (Un)mute RF TX and RX
     unsigned mute = 0;
