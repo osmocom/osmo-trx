@@ -702,7 +702,7 @@ static inline int8_t energy_to_rssi_dbm(float energy, double rxFullScale, double
 
 /*
  * Pull bursts from the FIFO and handle according to the slot
- * and burst correlation type. Equalzation is currently disabled.
+ * and burst correlation type. Equalization is currently disabled.
  * returns 0 on success (bi filled), negative on error (bi content undefined):
  *        -ENOENT: timeslot is off (fn and tn in bi are filled),
  *        -EIO: read error
