@@ -62,6 +62,7 @@ char *osmo_trxc_msg_name_buf(char *buf, size_t buf_size,
 #define OSMO_TRXC_CMD_HANDOVER		"HANDOVER"
 #define OSMO_TRXC_CMD_NOHANDOVER	"NOHANDOVER"
 #define OSMO_TRXC_CMD_RFMUTE		"RFMUTE"
+#define OSMO_TRXC_CMD_NOISELEV		"NOISELEV"
 #define OSMO_TRXC_CMD_SETFH		"SETFH"
 #define OSMO_TRXC_CMD_ERR		"ERR" /*!< verb of a reject response */
 

@@ -935,10 +935,10 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
 
   LOGCHAN(chan, DTRXCTRL, INFO) << "command is '" << osmo_trxc_msg_name(&cmd) << "'";
 
-  if (!strcmp(cmd.cmd, "POWEROFF")) {
+  if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_POWEROFF)) {
     stop();
     rsp.status = 0;
-  } else if (!strcmp(cmd.cmd, "POWERON")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_POWERON)) {
     if (start()) {
       rsp.status = 0;
       for (int i = 0; i < 8; i++) {
@@ -946,21 +946,21 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
           mHandover[i][j] = false;
       }
     }
-  } else if (!strcmp(cmd.cmd, "HANDOVER")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_HANDOVER)) {
     unsigned ts = 0, ss = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%u %u", &ts, &ss) == 2 && ts <= 7 && ss <= 7) {
       mHandover[ts][ss] = true;
       rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%u %u", ts, ss);
-  } else if (!strcmp(cmd.cmd, "NOHANDOVER")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_NOHANDOVER)) {
     unsigned ts = 0, ss = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%u %u", &ts, &ss) == 2 && ts <= 7 && ss <= 7) {
       mHandover[ts][ss] = false;
       rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%u %u", ts, ss);
-  } else if (!strcmp(cmd.cmd, "SETMAXDLY")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_SETMAXDLY)) {
     //set expected maximum time-of-arrival for Access Bursts
     int maxDelay = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%d", &maxDelay) == 1) {
@@ -968,7 +968,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
       rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%d", maxDelay);
-  } else if (!strcmp(cmd.cmd, "SETMAXDLYNB")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_SETMAXDLYNB)) {
     //set expected maximum time-of-arrival for Normal Bursts
     int maxDelay = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%d", &maxDelay) == 1) {
@@ -976,14 +976,14 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
       rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%d", maxDelay);
-  } else if (!strcmp(cmd.cmd, "SETRXGAIN")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_SETRXGAIN)) {
     int newGain = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%d", &newGain) == 1) {
       newGain = mRadioInterface->setRxGain(newGain, chan);
       rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%d", newGain);
-  } else if (!strcmp(cmd.cmd, "NOISELEV")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_NOISELEV)) {
     if (mOn) {
       float lev = mStates[chan].mNoiseLev;
       rsp.status = 0;
@@ -992,7 +992,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
     } else {
       snprintf(rsp.params, sizeof(rsp.params), "0");
     }
-  } else if (!strcmp(cmd.cmd, "SETPOWER")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_SETPOWER)) {
     int power = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%d", &power) == 1) {
       power = mRadioInterface->setPowerAttenuation(power, chan);
@@ -1000,7 +1000,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
       rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%d", power);
-  } else if (!strcmp(cmd.cmd, "ADJPOWER")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_ADJPOWER)) {
     int power = mStates[chan].mPower, step;
     if (osmo_trxc_msg_params_scan(&cmd, "%d", &step) == 1) {
       power = mStates[chan].mPower + step;
@@ -1009,11 +1009,11 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
       rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%d", power);
-  } else if (!strcmp(cmd.cmd, "NOMTXPOWER")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_NOMTXPOWER)) {
     int power = mRadioInterface->getNominalTxPower(chan);
     rsp.status = 0;
     snprintf(rsp.params, sizeof(rsp.params), "%d", power);
-  } else if (!strcmp(cmd.cmd, "RXTUNE")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_RXTUNE)) {
     // tune receiver
     int freqKhz = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%d", &freqKhz) == 1) {
@@ -1024,7 +1024,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
         rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%d", freqKhz);
-  } else if (!strcmp(cmd.cmd, "TXTUNE")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_TXTUNE)) {
     // tune txmtr
     int freqKhz = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%d", &freqKhz) == 1) {
@@ -1035,7 +1035,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
         rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%d", freqKhz);
-  } else if (!strcmp(cmd.cmd, "SETTSC")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_SETTSC)) {
     // set TSC
     unsigned TSC = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%u", &TSC) == 1 && TSC <= 7) {
@@ -1044,7 +1044,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
       rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%u", TSC);
-  } else if (!strcmp(cmd.cmd, "SETSLOT")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_SETSLOT)) {
     // set slot type
     struct osmo_trxc_setslot ss;
     if (osmo_trxc_setslot_parse(&ss, &cmd) < 0) {
@@ -1057,7 +1057,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
       rsp.status = 0;
     }
     snprintf(rsp.params, sizeof(rsp.params), "%s", cmd.params);
-  } else if (!strcmp(cmd.cmd, "SETFORMAT")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_SETFORMAT)) {
     // set TRXD protocol version
     unsigned version_recv = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%u", &version_recv) != 1) {
@@ -1079,7 +1079,7 @@ int Transceiver::ctrl_sock_handle_rx(int chan)
       }
       snprintf(rsp.params, sizeof(rsp.params), "%u", version_recv);
     }
-  } else if (!strcmp(cmd.cmd, "RFMUTE")) {
+  } else if (!strcmp(cmd.cmd, OSMO_TRXC_CMD_RFMUTE)) {
     // (Un)mute RF TX and RX
     unsigned mute = 0;
     if (osmo_trxc_msg_params_scan(&cmd, "%u", &mute) == 1) {
