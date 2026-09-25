@@ -361,8 +361,7 @@ static int config_write_proxy(struct vty *vty)
 	struct proxy_trx *trx;
 
 	vty_out(vty, "proxy%s", VTY_NEWLINE);
-	if (g_proxy_ctx->bind_addr)
-		vty_out(vty, " bind-addr %s%s", g_proxy_ctx->bind_addr, VTY_NEWLINE);
+	vty_out(vty, " bind-addr %s%s", g_proxy_ctx->bind_addr, VTY_NEWLINE);
 	if (clck_gen_get_start_fn() == CLCK_GEN_START_FN_RANDOM)
 		vty_out(vty, " clck-gen start-fn random%s", VTY_NEWLINE);
 	else
