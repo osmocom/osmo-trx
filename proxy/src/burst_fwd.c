@@ -44,8 +44,7 @@
 #define OSMO_TRXD_F_COMMON_MASK	( \
 	OSMO_TRXD_F_NOPE_REQ	| \
 	OSMO_TRXD_F_MOD_TYPE	| \
-	OSMO_TRXD_F_TS_INFO	| \
-	OSMO_TRXD_F_TRX_NUM	  \
+	OSMO_TRXD_F_TS_INFO	  \
 	)
 
 /*! The BURST.req copy wrapped in a queued struct msgb
@@ -60,14 +59,14 @@ static void burst_fwd_to_chan(struct proxy_trx *src, unsigned int src_chan,
 			      const struct osmo_trxd_burst_req *br)
 {
 	struct osmo_trxd_burst_ind bi = {
-		.flags = br->flags & OSMO_TRXD_F_COMMON_MASK,
+		.flags = (br->flags & OSMO_TRXD_F_COMMON_MASK) | OSMO_TRXD_F_TRX_NUM,
 		.fn = br->fn,
 		.tn = br->tn,
 		.burst_len = br->burst_len,
 		.mod = br->mod,
 		.tsc_set = br->tsc_set,
 		.tsc = br->tsc,
-		.trx_num = br->trx_num,
+		.trx_num = dst_chan,
 	};
 
 	/* TRXDv0/v1 BURST.req PDUs carry no MTS field at all, so the true
@@ -175,7 +174,12 @@ static void burst_fwd_reset_bi(uint32_t fn)
 			struct proxy_trx_chan *c = &trx->chans[chan];
 
 			for (unsigned int tn = 0; tn < PROXY_TRX_NUM_TS; tn++) {
-				c->ts[tn].bi = (struct osmo_trxd_burst_ind){ .fn = fn, .tn = tn };
+				c->ts[tn].bi = (struct osmo_trxd_burst_ind){
+					.flags = OSMO_TRXD_F_TRX_NUM,
+					.fn = fn,
+					.tn = tn,
+					.trx_num = chan,
+				};
 				path_sim_fill_nope(&c->ts[tn].bi, g_proxy_ctx->path_sim);
 			}
 		}
