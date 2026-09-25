@@ -99,6 +99,16 @@ static int clck_gen_timer_cb(struct osmo_fd *ofd, unsigned int what)
 		return 0;
 	}
 
+	/* the number of expirations is also bounded by the skew limit */
+	if (expire_count > CLCK_GEN_MAX_FN_SKEW) {
+		LOGP(DTRXC, LOGL_FATAL,
+		     "Too many timer expirations (%" PRIu64 "): "
+		     "stopping the TDMA clock generator\n",
+		     expire_count);
+		clck_gen_stop(gen);
+		return 0;
+	}
+
 	while (expire_count-- > 0) {
 		const struct proxy_trx *trx;
 
