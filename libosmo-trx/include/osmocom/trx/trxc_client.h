@@ -79,7 +79,9 @@ int osmo_trxc_client_rx_msg(struct osmo_trxc_client *client,
 int osmo_trxc_client_rx(struct osmo_trxc_client *client, const char *buf, size_t len);
 
 /*! TRXD PDU version negotiation result call-back.
- *  \param[in] ver_use the negotiated version to be used */
+ *  \param[in] client TRXC client instance
+ *  \param[in] ver_use the negotiated version to be used
+ *  \param[in] cb_data data that was passed to osmo_trxc_client_negotiate_format() */
 typedef void osmo_trxc_setformat_cb(struct osmo_trxc_client *client,
 				    uint8_t ver_use, void *cb_data);
 int osmo_trxc_client_negotiate_format(struct osmo_trxc_client *client,
